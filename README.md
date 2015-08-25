@@ -15,3 +15,9 @@ Exchange is a rewrite of APTrust's original bagman code, which is functionally c
 The first of these goals is the most important. The code must be clear and maintainable for the long term.
 
 The existing bagman code will continue to run until this code is complete.
+
+## Testing
+
+```
+go test github.com/APTrust/exchange/...
+```
