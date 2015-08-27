@@ -11,6 +11,8 @@ import (
 	"sync"
 )
 
+var IsPartnerBuild = false
+
 // magicMime is the MimeMagic database. We want
 // just one copy of this open at a time.
 var magicMime *magicmime.Magic

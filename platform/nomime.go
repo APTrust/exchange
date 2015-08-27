@@ -9,6 +9,8 @@
 // machines.
 package platform
 
+var IsPartnerBuild = true
+
 func GuessMimeType(absPath string) (mimeType string, err error) {
 	return "mime type disabled", nil
 }
