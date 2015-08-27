@@ -1,7 +1,6 @@
 package platform_test
 
 import (
-	"fmt"
 	"github.com/APTrust/exchange/platform"
 	"io"
 	"io/ioutil"
@@ -13,7 +12,7 @@ import (
 // runtime.GOOS == "windows"
 
 func setupMimeTest(t *testing.T) (string) {
-	tempfile, err := ioutil.TempFile("", "mime_test.txt")
+	tempfile, err := ioutil.TempFile("", "mime_test")
 	if err != nil {
 		t.Error(err)
 	}
@@ -22,7 +21,6 @@ func setupMimeTest(t *testing.T) (string) {
 		t.Error(err)
 	}
 	tempfile.Close()
-	fmt.Println(tempfile.Name())
 	return tempfile.Name()
 }
 
