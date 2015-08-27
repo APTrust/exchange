@@ -1,4 +1,4 @@
-package config
+package exchange
 
 import (
 	"encoding/json"
