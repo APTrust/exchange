@@ -1,4 +1,4 @@
-// +build partners
+// +build windows
 
 package platform
 
