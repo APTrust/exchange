@@ -10,9 +10,6 @@ import (
 // errors, this structure records exactly what went wrong.
 type BagReadResult struct {
 
-	// This is set to true when bag validation starts.
-	Started        bool
-
 	// Path is the absolute filepath to the untarred bag.
 	// E.g. /mnt/apt_data/ncsu.1840.16-2928
 	Path           string
@@ -24,19 +21,12 @@ type BagReadResult struct {
 	// TODO: Record file stats here?
 	Files          []string
 
-	// Errors is a list of strings describing errors that occurred
-	// during bag validation.
-	Errors         []string
-
 	// Tags is a list of tags (name-value pairs) extracted from the
 	// bag's tag files.
 	Tags           []Tag
 
-	// ChecksumErrors is a list of error objects describing files
-	// the don't match the checksums in the bag manifest. This list
-	// is separate from errors because it comes from the bagins
-	// bag parsing library.
-	ChecksumErrors []error
+	// Result contains general result information about this process.
+	Result         Result
 }
 
 // This Tag struct is essentially the same as the bagins
@@ -91,15 +81,4 @@ func (result *BagReadResult) AltId() []string {
 	altId := make([]string, 1)
 	altId[0] = result.TagValue("Internal-Sender-Identifier")
 	return altId
-}
-
-
-// Result Interface functions
-
-func (result *BagReadResult) Succeeded() bool {
-	return result.Started && len(result.Errors) == 0
-}
-
-func (result *BagReadResult) AddError(errStr string) {
-	result.Errors = append(result.Errors, errStr)
 }
