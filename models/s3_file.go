@@ -18,6 +18,8 @@ type S3File struct {
 	BucketName string
 
 	// The S3 Key, with object name, size, etag, last modified, etc.
+	//
+	// TODO: On delete jobs, you'll need to fetch the key object from S3.
 	Key        s3.Key
 
 	// If we attempted to delete this file from S3 and got an error

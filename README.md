@@ -21,3 +21,15 @@ The existing bagman code will continue to run until this code is complete.
 ```
 go test github.com/APTrust/exchange/...
 ```
+
+## TODO
+
+Most of the TODOs are embedded in the code, and you can find them with this:
+
+```
+grep -r TODO . --include=*.go
+```
+
+This is the list of global TODOs (not related to a specific package).
+
+* Aim for ~100% test coverage. Run the above test command with the -cover option to see coverage.
