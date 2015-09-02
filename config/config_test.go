@@ -1,12 +1,12 @@
-package exchange_test
+package config_test
 
 import (
-	"github.com/APTrust/exchange"
+	"github.com/APTrust/exchange/config"
 	"testing"
 )
 
 func TestExpandFilePaths(t *testing.T) {
-	config := &exchange.Config{
+	config := &config.Config{
 		TarDirectory: "~/tmp/tar",
 		LogDirectory: "~/tmp/log",
 		RestoreDirectory: "~/tmp/restore",

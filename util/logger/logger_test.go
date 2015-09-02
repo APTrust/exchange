@@ -2,7 +2,7 @@ package logger_test
 
 import (
 	"testing"
-	"github.com/APTrust/exchange"
+	"github.com/APTrust/exchange/config"
 	"github.com/APTrust/exchange/util/fileutil"
 	"github.com/APTrust/exchange/util/logger"
 	"github.com/op/go-logging"
@@ -16,12 +16,12 @@ import (
 
 // Get a barebones config object with just enough info to
 // set up logging. Log to a temp dir.
-func getLoggingTestConfig(t *testing.T) (*exchange.Config) {
+func getLoggingTestConfig(t *testing.T) (*config.Config) {
 	logDir, err := ioutil.TempDir("", "exchange_log_test")
 	if err != nil {
 		t.Errorf("Can't create temp dir to test logging: %v", err)
 	}
-	return &exchange.Config{
+	return &config.Config{
 		LogDirectory: logDir,
 		LogLevel: logging.ERROR,
 		LogToStderr: false,
@@ -29,7 +29,7 @@ func getLoggingTestConfig(t *testing.T) (*exchange.Config) {
 }
 
 // Delete temp log dir after tests.
-func teardownLoggerTest(config *exchange.Config) {
+func teardownLoggerTest(config *config.Config) {
 	os.RemoveAll(config.AbsLogDirectory())
 }
 

@@ -1,5 +1,5 @@
 // Common vars and constants, shared by many parts of the bagman library.
-package exchange
+package constants
 
 import (
 	"regexp"
