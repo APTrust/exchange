@@ -1,6 +1,7 @@
 package result
 
 import (
+	"fmt"
 	"time"
 )
 
@@ -22,12 +23,12 @@ type Result struct {
 	// bag.
 	StartedAt      time.Time
 
-	// CompletedAt describes when the attempt to read the bag completed.
-	// If CompletedAt.IsZero(), we have not yet attempted to read the
+	// FinishedAt describes when the attempt to read the bag completed.
+	// If FinishedAt.IsZero(), we have not yet attempted to read the
 	// bag. Note that the attempt may have completed without succeeding.
 	// Check the Succeeded() method to see if the process actually
 	// completed successfully.
-	CompletedAt    time.Time
+	FinishedAt    time.Time
 
 	// Retry indicates whether we should retry a failed process.
 	// After non-fatal errors, such as network timeout, this will
@@ -44,7 +45,7 @@ func NewResult() Result {
 		AttemptNumber: 1,
 		Errors: make([]string, 0),
 		StartedAt: time.Time{},
-		CompletedAt: time.Time{},
+		FinishedAt: time.Time{},
 		Retry: true,
 	}
 }
@@ -58,11 +59,11 @@ func (result *Result) Started() bool {
 }
 
 func (result *Result) Finish()  {
-	result.CompletedAt = time.Now()
+	result.FinishedAt = time.Now()
 }
 
-func (result *Result) Completed() bool {
-	return !result.CompletedAt.IsZero()
+func (result *Result) Finished() bool {
+	return !result.FinishedAt.IsZero()
 }
 
 func (result *Result) RunTime() time.Duration {
@@ -70,7 +71,7 @@ func (result *Result) RunTime() time.Duration {
 	if startTime.IsZero() {
 		return time.Duration(0)
 	}
-	endTime := result.CompletedAt
+	endTime := result.FinishedAt
 	if endTime.IsZero() {
 		endTime = time.Now()
 	}
@@ -78,9 +79,9 @@ func (result *Result) RunTime() time.Duration {
 }
 
 func (result *Result) Succeeded() bool {
-	return result.Completed() && len(result.Errors) == 0
+	return result.Finished() && len(result.Errors) == 0
 }
 
-func (result *Result) AddError(errStr string) {
-	result.Errors = append(result.Errors, errStr)
+func (result *Result) AddError(format string, a ...interface{}) {
+	result.Errors = append(result.Errors, fmt.Sprintf(format, a...))
 }
