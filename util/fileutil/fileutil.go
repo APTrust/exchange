@@ -14,19 +14,19 @@ import (
 	"strings"
 )
 
-// BagmanHome returns the absolute path to the bagman root directory,
+// ExchangeHome returns the absolute path to the bagman root directory,
 // which contains source, config and test files. This will usually be
 // something like /home/xxx/go/src/github.com/APTrust/bagman. You can
 // set this explicitly by defining an environment variable called
 // BAGMAN_HOME. Otherwise, this function will try to infer the value
 // by appending to the environment variable GOPATH. If neither of
 // those variables is set, this returns an error.
-func BagmanHome() (bagmanHome string, err error) {
-	bagmanHome = os.Getenv("BAGMAN_HOME")
+func ExchangeHome() (bagmanHome string, err error) {
+	bagmanHome = os.Getenv("EXCHANGE_HOME")
 	if bagmanHome == "" {
 		goHome := os.Getenv("GOPATH")
 		if goHome != "" {
-			bagmanHome = filepath.Join(goHome, "src", "github.com", "APTrust", "bagman")
+			bagmanHome = filepath.Join(goHome, "src", "github.com", "APTrust", "exchange")
 		} else {
 			err = fmt.Errorf("Cannot determine bagman home because neither " +
 				"BAGMAN_HOME nor GOPATH is set in environment.")
@@ -51,7 +51,7 @@ func LoadRelativeFile(relativePath string) ([]byte, error) {
 // Converts a relative path within the bagman directory tree
 // to an absolute path.
 func RelativeToAbsPath(relativePath string) (string, error) {
-	bagmanHome, err := BagmanHome()
+	bagmanHome, err := ExchangeHome()
 	if err != nil {
 		return "", err
 	}
