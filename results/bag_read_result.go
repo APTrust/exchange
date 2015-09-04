@@ -25,8 +25,8 @@ type BagReadResult struct {
 	// bag's tag files.
 	Tags           []Tag
 
-	// Result contains general result information about this process.
-	Result         Result
+	// Summary contains general result information about this process.
+	Summary         Summary
 }
 
 // This Tag struct is essentially the same as the bagins

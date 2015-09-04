@@ -25,8 +25,8 @@ func TestNewS3FetchResultWithKey(t *testing.T) {
 	if s3result.Key.ETag != key.ETag {
 		t.Errorf("Expected etag '%s', got '%s'", key.ETag, s3result.Key.ETag)
 	}
-	if s3result.Result.Retry != true {
-		t.Errorf("S3FetchResult.Result was not properly initialized")
+	if s3result.Summary.Retry != true {
+		t.Errorf("S3FetchResult.Summary was not properly initialized")
 	}
 }
 
@@ -38,8 +38,8 @@ func TestNewS3FetchResultWithName(t *testing.T) {
 	if s3result.Key.Key != "Key Wee" {
 		t.Errorf("Expected key 'Key Wee', got '%s'", s3result.Key.Key)
 	}
-	if s3result.Result.Retry != true {
-		t.Errorf("S3FetchResult.Result was not properly initialized")
+	if s3result.Summary.Retry != true {
+		t.Errorf("S3FetchResult.Summary was not properly initialized")
 	}
 }
 

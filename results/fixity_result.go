@@ -25,7 +25,7 @@ type FixityResult struct {
 	Sha256        string
 
 	// Information about the result of this operation.
-	Result        Result
+	Summary       Summary
 }
 
 
@@ -33,7 +33,7 @@ func NewFixityResult(gf *models.GenericFile) (*FixityResult) {
 	return &FixityResult {
 		GenericFile: gf,
 		S3FileExists: true,
-		Result: NewResult(),
+		Summary: NewSummary(),
 	}
 }
 
@@ -43,9 +43,9 @@ func (result *FixityResult) BucketAndKey() (string, string, error) {
 	length := len(parts)
 	if length < 4 {
 		// This error is fatal, so don't retry.
-		result.Result.AddError("GenericFile URI '%s' is invalid", result.GenericFile.URI)
-		result.Result.Retry = false
-		return "","", fmt.Errorf(result.Result.Errors[0])
+		result.Summary.AddError("GenericFile URI '%s' is invalid", result.GenericFile.URI)
+		result.Summary.Retry = false
+		return "","", fmt.Errorf(result.Summary.Errors[0])
 	}
 	bucket := parts[length - 2]
 	key := parts[length - 1]

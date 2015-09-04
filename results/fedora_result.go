@@ -14,7 +14,7 @@ type FedoraResult struct {
 	GenericFilePaths []string
 	MetadataRecords  []*models.MetadataRecord
 	IsNewObject      bool
-	Result           Result
+	Summary          Summary
 }
 
 // Creates a new FedoraResult object with the specified IntellectualObject
@@ -24,7 +24,7 @@ func NewFedoraResult(objectIdentifier string, genericFilePaths []string) *Fedora
 		ObjectIdentifier: objectIdentifier,
 		GenericFilePaths: genericFilePaths,
 		IsNewObject:      true,
-		Result:           NewResult(),
+		Summary:          NewSummary(),
 	}
 }
 

@@ -50,10 +50,10 @@ func TestBucketAndKeyWithBadUri(t *testing.T) {
 		t.Errorf("BucketAndKey() should have returned an error for invalid URI")
 		return
 	}
-	if result.Result.Errors[0] != "GenericFile URI 'http://example.com' is invalid" {
+	if result.Summary.Errors[0] != "GenericFile URI 'http://example.com' is invalid" {
 		t.Errorf("BucketAndKey() did not set descriptive error message for bad URI")
 	}
-	if result.Result.Retry == true {
+	if result.Summary.Retry == true {
 		t.Errorf("Retry should have been set to false after fatal error.")
 	}
 }
@@ -225,6 +225,6 @@ func TestBuildPremisEvent_Failure(t *testing.T) {
 	}
 	if premisEvent.OutcomeInformation != "Expected digest 'fedcba9876543210', got 'xxx-xxx-xxx'" {
 		t.Errorf("PremisEvent.OutcomeInformation expected '%s' but got '%s'",
-			result.Result.Errors[0], premisEvent.OutcomeInformation)
+			result.Summary.Errors[0], premisEvent.OutcomeInformation)
 	}
 }

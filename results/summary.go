@@ -5,7 +5,7 @@ import (
 	"time"
 )
 
-type Result struct {
+type Summary struct {
 	// This is set to true when the process that produces
 	// this result starts.
 	Attempted      bool
@@ -39,8 +39,8 @@ type Result struct {
 	Retry          bool
 }
 
-func NewResult() Result {
-	return Result{
+func NewSummary() Summary {
+	return Summary{
 		Attempted: false,
 		AttemptNumber: 1,
 		Errors: make([]string, 0),
@@ -50,38 +50,38 @@ func NewResult() Result {
 	}
 }
 
-func (result *Result) Start() {
-	result.StartedAt = time.Now()
+func (summary *Summary) Start() {
+	summary.StartedAt = time.Now()
 }
 
-func (result *Result) Started() bool {
-	return !result.StartedAt.IsZero()
+func (summary *Summary) Started() bool {
+	return !summary.StartedAt.IsZero()
 }
 
-func (result *Result) Finish()  {
-	result.FinishedAt = time.Now()
+func (summary *Summary) Finish()  {
+	summary.FinishedAt = time.Now()
 }
 
-func (result *Result) Finished() bool {
-	return !result.FinishedAt.IsZero()
+func (summary *Summary) Finished() bool {
+	return !summary.FinishedAt.IsZero()
 }
 
-func (result *Result) RunTime() time.Duration {
-	startTime := result.StartedAt
+func (summary *Summary) RunTime() time.Duration {
+	startTime := summary.StartedAt
 	if startTime.IsZero() {
 		return time.Duration(0)
 	}
-	endTime := result.FinishedAt
+	endTime := summary.FinishedAt
 	if endTime.IsZero() {
 		endTime = time.Now()
 	}
 	return endTime.Sub(startTime)
 }
 
-func (result *Result) Succeeded() bool {
-	return result.Finished() && len(result.Errors) == 0
+func (summary *Summary) Succeeded() bool {
+	return summary.Finished() && len(summary.Errors) == 0
 }
 
-func (result *Result) AddError(format string, a ...interface{}) {
-	result.Errors = append(result.Errors, fmt.Sprintf(format, a...))
+func (summary *Summary) AddError(format string, a ...interface{}) {
+	summary.Errors = append(summary.Errors, fmt.Sprintf(format, a...))
 }

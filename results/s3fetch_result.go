@@ -15,14 +15,14 @@ type S3FetchResult struct {
 	LocalMd5      string
 	Md5Verified   bool
 	Md5Verifiable bool
-	Result        Result
+	Summary       Summary
 }
 
 func NewS3FetchResultWithKey(bucketName string, key s3.Key) (*S3FetchResult) {
 	return &S3FetchResult{
 		BucketName: bucketName,
 		Key: key,
-		Result: NewResult(),
+		Summary: NewSummary(),
 	}
 }
 
@@ -30,7 +30,7 @@ func NewS3FetchResultWithName(bucketName, keyName string) (*S3FetchResult) {
 	return &S3FetchResult{
 		BucketName: bucketName,
 		Key: s3.Key{ Key: keyName },
-		Result: NewResult(),
+		Summary: NewSummary(),
 	}
 }
 
