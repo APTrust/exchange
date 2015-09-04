@@ -85,3 +85,15 @@ func (summary *Summary) Succeeded() bool {
 func (summary *Summary) AddError(format string, a ...interface{}) {
 	summary.Errors = append(summary.Errors, fmt.Sprintf(format, a...))
 }
+
+func (summary *Summary) HasErrors() bool {
+	return len(summary.Errors) > 0
+}
+
+func (summary *Summary) FirstError() string {
+	firstError := ""
+	if len(summary.Errors) > 0 {
+		firstError = summary.Errors[0]
+	}
+	return firstError
+}

@@ -110,3 +110,29 @@ func TestAddError(t *testing.T) {
 		t.Errorf("Incorrect text if Error 2: %s", s.Errors[0])
 	}
 }
+
+func TestHasErrors(t *testing.T) {
+	s := results.NewSummary()
+	if s.HasErrors() {
+		t.Errorf("HasErrors() should have returned false")
+	}
+	s.AddError("First error is number %d", 1)
+	if !s.HasErrors() {
+		t.Errorf("HasErrors() should have returned true")
+	}
+}
+
+func TestFirstError(t *testing.T) {
+	s := results.NewSummary()
+	if s.FirstError() != "" {
+		t.Errorf("FirstError() should have returned empty string")
+	}
+	s.AddError("First error is number %d", 1)
+	if s.FirstError() != "First error is number 1" {
+		t.Errorf("FirstError() returned the wrong error")
+	}
+	s.AddError("Second error is number %d", 2)
+	if s.FirstError() != "First error is number 1" {
+		t.Errorf("FirstError() returned the wrong error")
+	}
+}

@@ -45,7 +45,7 @@ func (result *FixityResult) BucketAndKey() (string, string, error) {
 		// This error is fatal, so don't retry.
 		result.Summary.AddError("GenericFile URI '%s' is invalid", result.GenericFile.URI)
 		result.Summary.Retry = false
-		return "","", fmt.Errorf(result.Summary.Errors[0])
+		return "","", fmt.Errorf(result.Summary.FirstError())
 	}
 	bucket := parts[length - 2]
 	key := parts[length - 1]
