@@ -3,6 +3,7 @@ package models
 import (
 	"fmt"
 	"github.com/APTrust/exchange/util"
+	"github.com/APTrust/exchange/util/s3util"
 	"github.com/crowdmob/goamz/s3"
 	"time"
 )
@@ -39,6 +40,21 @@ type S3File struct {
 	DeleteSkippedPerConfig bool
 }
 
+func NewS3FileWithKey(bucketName string, key s3.Key) (*S3File) {
+	return &S3File{
+		BucketName: bucketName,
+		Key: key,
+	}
+}
+
+func NewS3FileWithName(bucketName, keyName string) (*S3File) {
+	return &S3File{
+		BucketName: bucketName,
+		Key: s3.Key{ Key: keyName },
+	}
+}
+
+
 // Returns the object identifier that will identify this bag
 // in fedora. That's the institution identifier, followed by
 // a slash and the tar file name, minus the .tar extension
@@ -64,4 +80,10 @@ func (s3File *S3File) BagName() (string) {
 // Returns true if we attempted to delete this file.
 func (s3File *S3File) DeleteAttempted() bool {
 	return s3File.ErrorMessage != "" || s3File.DeletedAt.IsZero() == false
+}
+
+// Returns true of the S3 key is complete. In some cases, we only
+// have the Key.Key and we have to fetch the rest from S3.
+func (s3File *S3File) KeyIsComplete() bool {
+	return s3util.KeyIsComplete(s3File.Key)
 }

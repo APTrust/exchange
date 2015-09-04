@@ -7,6 +7,38 @@ import (
 	"time"
 )
 
+func TestNewS3FileWithKey(t *testing.T) {
+	key := s3.Key{
+		Key: "yadda.yadda",
+		Size: 54321,
+		ETag: "81726354afdc",
+	}
+	s3File := models.NewS3FileWithKey("bucket1", key)
+	if s3File.BucketName != "bucket1" {
+		t.Errorf("Expected bucket 'bucket1', got '%s'", s3File.BucketName)
+	}
+	if s3File.Key.Key != key.Key {
+		t.Errorf("Expected key '%s', got '%s'", key.Key, s3File.Key.Key)
+	}
+	if s3File.Key.Size != key.Size {
+		t.Errorf("Expected size %d, got %d", key.Size, s3File.Key.Size)
+	}
+	if s3File.Key.ETag != key.ETag {
+		t.Errorf("Expected etag '%s', got '%s'", key.ETag, s3File.Key.ETag)
+	}
+}
+
+func TestNewS3FileWithName(t *testing.T) {
+	s3File := models.NewS3FileWithName("bucket1", "Key Wee")
+	if s3File.BucketName != "bucket1" {
+		t.Errorf("Expected bucket 'bucket1', got '%s'", s3File.BucketName)
+	}
+	if s3File.Key.Key != "Key Wee" {
+		t.Errorf("Expected key 'Key Wee', got '%s'", s3File.Key.Key)
+	}
+}
+
+
 func TestDeleteAttempted(t *testing.T) {
 	cf := models.S3File {
 		BucketName: "charley",
@@ -66,5 +98,17 @@ func TestObjectName(t *testing.T) {
 	}
 	if objname != "uc.edu/cin.1234" {
 		t.Errorf("BagName returned '%s'; expected 'uc.edu/cin.1234'", objname)
+	}
+}
+
+func TestKeyIsComplete(t *testing.T) {
+	s3file := models.NewS3FileWithName("buckey-dent", "file-in-a-cake.xml")
+	if s3file.KeyIsComplete() {
+		t.Errorf("KeyIsComplete should have returned false")
+	}
+	s3file.Key.Size = 4800
+	s3file.Key.ETag = "aec157cfbc1a34d52"
+	if !s3file.KeyIsComplete() {
+		t.Errorf("KeyIsComplete should have returned true")
 	}
 }
