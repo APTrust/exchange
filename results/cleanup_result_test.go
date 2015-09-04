@@ -1,8 +1,8 @@
-package result_test
+package results_test
 
 import (
 	"encoding/json"
-	"github.com/APTrust/exchange/result"
+	"github.com/APTrust/exchange/results"
 	"io/ioutil"
 	"path/filepath"
 	"testing"
@@ -12,7 +12,7 @@ import (
 func TestDeleteAttemptedAndSucceeded(t *testing.T) {
 	// TODO: Need a more reliable way to get path to test data file
 	filepath := filepath.Join("..", "testdata", "cleanup_result.json")
-	var result result.CleanupResult
+	var result results.CleanupResult
 	file, err := ioutil.ReadFile(filepath)
 	if err != nil {
 		t.Errorf("Error loading cleanup result test file '%s': %v", filepath, err)

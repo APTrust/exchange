@@ -1,13 +1,13 @@
-package result_test
+package results_test
 
 import (
-	"github.com/APTrust/exchange/result"
+	"github.com/APTrust/exchange/results"
 	"testing"
 	"time"
 )
 
 func TestNewResult(t *testing.T) {
-	r := result.NewResult()
+	r := results.NewResult()
 	if r.Attempted {
 		t.Errorf("result.Attempted should be false")
 	}
@@ -29,7 +29,7 @@ func TestNewResult(t *testing.T) {
 }
 
 func TestResultStart(t *testing.T) {
-	r := result.NewResult()
+	r := results.NewResult()
 	r.Start()
 	if r.StartedAt.IsZero() {
 		t.Errorf("result.StartedAt should not be zero")
@@ -37,7 +37,7 @@ func TestResultStart(t *testing.T) {
 }
 
 func TestResultStarted(t *testing.T) {
-	r := result.NewResult()
+	r := results.NewResult()
 	r.Start()
 	if r.Started() == false {
 		t.Errorf("result.Started() should have returned true")
@@ -45,7 +45,7 @@ func TestResultStarted(t *testing.T) {
 }
 
 func TestResultFinish(t *testing.T) {
-	r := result.NewResult()
+	r := results.NewResult()
 	r.Finish()
 	if r.FinishedAt.IsZero() {
 		t.Errorf("result.FinishedAt should not be zero")
@@ -53,7 +53,7 @@ func TestResultFinish(t *testing.T) {
 }
 
 func TestResultFinished(t *testing.T) {
-	r := result.NewResult()
+	r := results.NewResult()
 	r.Finish()
 	if r.Finished() == false {
 		t.Errorf("result.Finished() should have returned true")
@@ -61,7 +61,7 @@ func TestResultFinished(t *testing.T) {
 }
 
 func TestResultRuntime(t *testing.T) {
-	r := result.NewResult()
+	r := results.NewResult()
 	now := time.Now()
 	fiveMinutesAgo := now.Add(-5 * time.Minute)
 	r.StartedAt = fiveMinutesAgo
@@ -73,7 +73,7 @@ func TestResultRuntime(t *testing.T) {
 }
 
 func TestResultSucceeded(t *testing.T) {
-	r := result.NewResult()
+	r := results.NewResult()
 
 	// Not finished.
 	if r.Succeeded() == true {
@@ -94,7 +94,7 @@ func TestResultSucceeded(t *testing.T) {
 }
 
 func TestAddError(t *testing.T) {
-	r := result.NewResult()
+	r := results.NewResult()
 	r.AddError("First error is number %d", 1)
 	if len(r.Errors) != 1 {
 		t.Errorf("Expected 1 error, found %d", len(r.Errors))

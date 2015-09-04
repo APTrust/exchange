@@ -1,7 +1,7 @@
-package result_test
+package results_test
 
 import (
-	"github.com/APTrust/exchange/result"
+	"github.com/APTrust/exchange/results"
 	"github.com/APTrust/exchange/models"
 	"testing"
 	"time"
@@ -29,7 +29,7 @@ func getGenericFile() (*models.GenericFile) {
 }
 
 func TestBucketAndKey(t *testing.T) {
-	result := result.NewFixityResult(getGenericFile())
+	result := results.NewFixityResult(getGenericFile())
 	bucket, key, err := result.BucketAndKey()
 	if err != nil {
 		t.Errorf("BucketAndKey() returned error: %v", err)
@@ -43,7 +43,7 @@ func TestBucketAndKey(t *testing.T) {
 }
 
 func TestBucketAndKeyWithBadUri(t *testing.T) {
-	result := result.NewFixityResult(getGenericFile())
+	result := results.NewFixityResult(getGenericFile())
 	result.GenericFile.URI = "http://example.com"
 	_, _, err := result.BucketAndKey()
 	if err == nil {
@@ -60,7 +60,7 @@ func TestBucketAndKeyWithBadUri(t *testing.T) {
 
 
 func TestSha256Matches(t *testing.T) {
-	result := result.NewFixityResult(getGenericFile())
+	result := results.NewFixityResult(getGenericFile())
 	result.Sha256 = sha256sum
 	matches, err := result.Sha256Matches()
 	if err != nil {
@@ -82,7 +82,7 @@ func TestSha256Matches(t *testing.T) {
 }
 
 func TestMissingChecksums(t *testing.T) {
-	result := result.NewFixityResult(getGenericFile())
+	result := results.NewFixityResult(getGenericFile())
 	_, err := result.Sha256Matches()
 	if err == nil {
 		t.Errorf("Sha256Matches should have returned a usage error")
@@ -97,7 +97,7 @@ func TestMissingChecksums(t *testing.T) {
 }
 
 func TestGotDigestFromPreservationFile(t *testing.T) {
-	result := result.NewFixityResult(getGenericFile())
+	result := results.NewFixityResult(getGenericFile())
 	if result.GotDigestFromPreservationFile() == true {
 		t.Errorf("GotDigestFromPreservationFile() should have returned false")
 	}
@@ -108,7 +108,7 @@ func TestGotDigestFromPreservationFile(t *testing.T) {
 }
 
 func TestGenericFileHasDigest(t *testing.T) {
-	result := result.NewFixityResult(getGenericFile())
+	result := results.NewFixityResult(getGenericFile())
 	if result.GenericFileHasDigest() == false {
 		t.Errorf("GenericFileHasDigest() should have returned true")
 	}
@@ -122,14 +122,14 @@ func TestGenericFileHasDigest(t *testing.T) {
 }
 
 func TestFedoraSha256(t *testing.T) {
-	result := result.NewFixityResult(getGenericFile())
+	result := results.NewFixityResult(getGenericFile())
 	if result.FedoraSha256() != sha256sum {
 		t.Errorf("FedoraSha256() should have returned", sha256sum)
 	}
 }
 
 func TestFixityCheckPossible(t *testing.T) {
-	result := result.NewFixityResult(getGenericFile())
+	result := results.NewFixityResult(getGenericFile())
 	result.Sha256 = sha256sum
 	if result.FixityCheckPossible() == false {
 		t.Errorf("FixityCheckPossible() should have returned true")
@@ -150,7 +150,7 @@ func TestFixityCheckPossible(t *testing.T) {
 
 
 func TestBuildPremisEvent_Success(t *testing.T) {
-	result := result.NewFixityResult(getGenericFile())
+	result := results.NewFixityResult(getGenericFile())
 	result.Sha256 = sha256sum
 	premisEvent, err := result.BuildPremisEvent()
 	if err != nil {
@@ -190,7 +190,7 @@ func TestBuildPremisEvent_Success(t *testing.T) {
 }
 
 func TestBuildPremisEvent_Failure(t *testing.T) {
-	result := result.NewFixityResult(getGenericFile())
+	result := results.NewFixityResult(getGenericFile())
 	result.Sha256 = "xxx-xxx-xxx"
 	premisEvent, err := result.BuildPremisEvent()
 	if err != nil {

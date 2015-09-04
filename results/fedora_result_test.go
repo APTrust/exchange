@@ -1,19 +1,19 @@
-package result_test
+package results_test
 
 import (
-	"github.com/APTrust/exchange/result"
+	"github.com/APTrust/exchange/results"
 	"github.com/APTrust/exchange/util/testutil"
 	"testing"
 )
 
-func getFedoraResult() *result.FedoraResult {
+func getFedoraResult() *results.FedoraResult {
 	genericFilePaths := []string {
 		"data/metadata.xml",
 		"data/object.properties",
 		"data/ORIGINAL/1",
 		"data/ORIGINAL/1-metadata.xml",
 	}
-	return result.NewFedoraResult("ncsu.edu/ncsu.1840.16-2928", genericFilePaths)
+	return results.NewFedoraResult("ncsu.edu/ncsu.1840.16-2928", genericFilePaths)
 }
 
 func TestFedoraResultAddRecord(t *testing.T) {

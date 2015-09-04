@@ -1,7 +1,7 @@
-package result_test
+package results_test
 
 import (
-	"github.com/APTrust/exchange/result"
+	"github.com/APTrust/exchange/results"
 	"github.com/crowdmob/goamz/s3"
 	"testing"
 )
@@ -12,7 +12,7 @@ func TestNewS3FetchResultWithKey(t *testing.T) {
 		Size: 54321,
 		ETag: "81726354afdc",
 	}
-	s3result := result.NewS3FetchResultWithKey("bucket1", key)
+	s3result := results.NewS3FetchResultWithKey("bucket1", key)
 	if s3result.BucketName != "bucket1" {
 		t.Errorf("Expected bucket 'bucket1', got '%s'", s3result.BucketName)
 	}
@@ -31,7 +31,7 @@ func TestNewS3FetchResultWithKey(t *testing.T) {
 }
 
 func TestNewS3FetchResultWithName(t *testing.T) {
-	s3result := result.NewS3FetchResultWithName("bucket1", "Key Wee")
+	s3result := results.NewS3FetchResultWithName("bucket1", "Key Wee")
 	if s3result.BucketName != "bucket1" {
 		t.Errorf("Expected bucket 'bucket1', got '%s'", s3result.BucketName)
 	}
@@ -44,7 +44,7 @@ func TestNewS3FetchResultWithName(t *testing.T) {
 }
 
 func TestKeyIsComplete(t *testing.T) {
-	s3result := result.NewS3FetchResultWithName("bucket1", "filename.txt")
+	s3result := results.NewS3FetchResultWithName("bucket1", "filename.txt")
 	if s3result.KeyIsComplete() {
 		t.Errorf("KeyIsComplete should have returned false")
 	}

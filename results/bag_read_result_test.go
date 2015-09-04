@@ -1,15 +1,15 @@
-package result_test
+package results_test
 
 import (
-	"github.com/APTrust/exchange/result"
+	"github.com/APTrust/exchange/results"
 	"testing"
 )
 
 func TestTagValue(t *testing.T) {
-	bagReadResult := &result.BagReadResult{}
-	bagReadResult.Tags = make([]result.Tag, 2)
-	bagReadResult.Tags[0] = result.Tag{Label: "Label One", Value: "Value One"}
-	bagReadResult.Tags[1] = result.Tag{Label: "Label Two", Value: "Value Two"}
+	bagReadResult := &results.BagReadResult{}
+	bagReadResult.Tags = make([]results.Tag, 2)
+	bagReadResult.Tags[0] = results.Tag{Label: "Label One", Value: "Value One"}
+	bagReadResult.Tags[1] = results.Tag{Label: "Label Two", Value: "Value Two"}
 
 	if bagReadResult.TagValue("LABEL ONE") != "Value One" {
 		t.Error("TagValue returned wrong result.")
@@ -26,9 +26,9 @@ func TestTagValue(t *testing.T) {
 }
 
 func TestAccess(t *testing.T) {
-	bagReadResult := &result.BagReadResult{}
-	bagReadResult.Tags = make([]result.Tag, 1)
-	bagReadResult.Tags[0] = result.Tag{
+	bagReadResult := &results.BagReadResult{}
+	bagReadResult.Tags = make([]results.Tag, 1)
+	bagReadResult.Tags[0] = results.Tag{
 		Label: "Access",
 		Value: "consortia",
 	}
@@ -38,7 +38,7 @@ func TestAccess(t *testing.T) {
 	}
 
 	// Test reading of deprecated Rights tag.
-	bagReadResult.Tags[0] = result.Tag{
+	bagReadResult.Tags[0] = results.Tag{
 		Label: "Rights",
 		Value: "institution",
 	}
@@ -46,16 +46,16 @@ func TestAccess(t *testing.T) {
 		t.Error("Access() should have returned institution")
 	}
 
-	bagReadResult.Tags[0] = result.Tag{Label: "X", Value: "Y"}
+	bagReadResult.Tags[0] = results.Tag{Label: "X", Value: "Y"}
 	if bagReadResult.Access() != "" {
 		t.Error("Access() should have returned empty string")
 	}
 }
 
 func TestTitle(t *testing.T) {
-	bagReadResult := &result.BagReadResult{}
-	bagReadResult.Tags = make([]result.Tag, 1)
-	bagReadResult.Tags[0] = result.Tag{
+	bagReadResult := &results.BagReadResult{}
+	bagReadResult.Tags = make([]results.Tag, 1)
+	bagReadResult.Tags[0] = results.Tag{
 		Label: "Title",
 		Value: "Hang on Sloopy",
 	}
@@ -64,16 +64,16 @@ func TestTitle(t *testing.T) {
 		t.Error("Title() should have returned an old song title")
 	}
 
-	bagReadResult.Tags[0] = result.Tag{Label: "X", Value: "Y"}
+	bagReadResult.Tags[0] = results.Tag{Label: "X", Value: "Y"}
 	if bagReadResult.Title() != "" {
 		t.Error("Title() is just making stuff up")
 	}
 }
 
 func TestDescription(t *testing.T) {
-	bagReadResult := &result.BagReadResult{}
-	bagReadResult.Tags = make([]result.Tag, 1)
-	bagReadResult.Tags[0] = result.Tag{
+	bagReadResult := &results.BagReadResult{}
+	bagReadResult.Tags = make([]results.Tag, 1)
+	bagReadResult.Tags[0] = results.Tag{
 		Label: "Internal-Sender-Description",
 		Value: "Loud and obtuse",
 	}
@@ -82,16 +82,16 @@ func TestDescription(t *testing.T) {
 		t.Error("Description() should have returned 'Loud and obtuse'")
 	}
 
-	bagReadResult.Tags[0] = result.Tag{Label: "X", Value: "Y"}
+	bagReadResult.Tags[0] = results.Tag{Label: "X", Value: "Y"}
 	if bagReadResult.Description() != "" {
 		t.Error("Description() is just making stuff up")
 	}
 }
 
 func TestAltId(t *testing.T) {
-	bagReadResult := &result.BagReadResult{}
-	bagReadResult.Tags = make([]result.Tag, 1)
-	bagReadResult.Tags[0] = result.Tag{
+	bagReadResult := &results.BagReadResult{}
+	bagReadResult.Tags = make([]results.Tag, 1)
+	bagReadResult.Tags[0] = results.Tag{
 		Label: "Internal-Sender-Identifier",
 		Value: "abc-123",
 	}
@@ -101,7 +101,7 @@ func TestAltId(t *testing.T) {
 		t.Error("AltId() should have returned 'abc-123'")
 	}
 
-	bagReadResult.Tags[0] = result.Tag{Label: "X", Value: "Y"}
+	bagReadResult.Tags[0] = results.Tag{Label: "X", Value: "Y"}
 	if bagReadResult.AltId()[0] != "" {
 		t.Error("AltId() is just making stuff up")
 	}

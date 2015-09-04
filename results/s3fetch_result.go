@@ -1,4 +1,4 @@
-package result
+package results
 
 import (
 	"github.com/APTrust/exchange/util/s3util"
