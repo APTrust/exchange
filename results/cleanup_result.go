@@ -32,6 +32,8 @@ type CleanupResult struct {
 	// Files contains a list of files/keys to be deleted
 	// from S3.
 	Files              []*models.S3File
+
+	Summary            *Summary
 }
 
 // Returns true if all files were successfully deleted.

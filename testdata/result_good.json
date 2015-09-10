@@ -13,7 +13,6 @@
             }
         }
     },
-    "ErrorMessage": "",
     "FetchResult": {
         "BucketName": "aptrust.receiving.ncsu.edu",
         "Key": "ncsu.1840.16-2928.tar",
@@ -131,7 +130,7 @@
     },
     "BagReadResult": {
         "Path": "/mnt/apt_data/ncsu.1840.16-2928",
-        "Files": [
+        "FilesUnpacked": [
             "aptrust-info.txt",
             "bag-info.txt",
             "bagit.txt",
@@ -183,6 +182,5 @@
         ],
         "ChecksumErrors": null
     },
-    "Stage": "Validate",
-    "Retry": true
+    "Stage": "Validate"
 }

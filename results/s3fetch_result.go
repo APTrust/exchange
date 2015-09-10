@@ -15,7 +15,7 @@ type S3FetchResult struct {
 	LocalMd5      string
 	Md5Verified   bool
 	Md5Verifiable bool
-	Summary       Summary
+	Summary       *Summary
 }
 
 func NewS3FetchResultWithKey(bucketName string, key s3.Key) (*S3FetchResult) {

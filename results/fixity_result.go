@@ -25,7 +25,7 @@ type FixityResult struct {
 	Sha256        string
 
 	// Information about the result of this operation.
-	Summary       Summary
+	Summary       *Summary
 }
 
 

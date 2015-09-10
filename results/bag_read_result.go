@@ -26,7 +26,7 @@ type BagReadResult struct {
 	Tags           []Tag
 
 	// Summary contains general result information about this process.
-	Summary         Summary
+	Summary         *Summary
 }
 
 // This Tag struct is essentially the same as the bagins

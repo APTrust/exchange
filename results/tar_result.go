@@ -13,6 +13,7 @@ type TarResult struct {
 	Warnings      []string
 	FilesUnpacked []string
 	LocalFiles    []*models.LocalFile
+	Summary       *Summary
 }
 
 // Returns true if any of the untarred files are new or updated.

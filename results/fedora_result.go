@@ -14,7 +14,7 @@ type FedoraResult struct {
 	GenericFilePaths []string
 	MetadataRecords  []*models.MetadataRecord
 	IsNewObject      bool
-	Summary          Summary
+	Summary          *Summary
 }
 
 // Creates a new FedoraResult object with the specified IntellectualObject

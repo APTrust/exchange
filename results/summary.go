@@ -2,6 +2,7 @@ package results
 
 import (
 	"fmt"
+	"strings"
 	"time"
 )
 
@@ -39,8 +40,8 @@ type Summary struct {
 	Retry          bool
 }
 
-func NewSummary() Summary {
-	return Summary{
+func NewSummary() *Summary {
+	return &Summary{
 		Attempted: false,
 		AttemptNumber: 1,
 		Errors: make([]string, 0),
@@ -96,4 +97,11 @@ func (summary *Summary) FirstError() string {
 		firstError = summary.Errors[0]
 	}
 	return firstError
+}
+
+func (summary *Summary) AllErrorsAsString() string {
+	if len(summary.Errors) > 0 {
+		return strings.Join(summary.Errors, "\n")
+	}
+	return ""
 }

@@ -136,3 +136,12 @@ func TestFirstError(t *testing.T) {
 		t.Errorf("FirstError() returned the wrong error")
 	}
 }
+
+func TestAllErrorsAsString(t *testing.T) {
+	s := results.NewSummary()
+	s.AddError("First error is number %d", 1)
+	s.AddError("Second error is number %d", 2)
+	if s.AllErrorsAsString() != "First error is number 1\nSecond error is number 2" {
+		t.Errorf("AllErrorsAsString() returned '%s'", s.AllErrorsAsString())
+	}
+}
