@@ -1,16 +1,17 @@
 package results_test
 
 import (
-//	"fmt"
+	"fmt"
 	"github.com/APTrust/exchange/constants"
 	"github.com/APTrust/exchange/models"
 	"github.com/APTrust/exchange/results"
 	"github.com/APTrust/exchange/util"
+	"github.com/APTrust/exchange/util/fileutil"
 	"github.com/crowdmob/goamz/s3"
-//	"path/filepath"
+	"path/filepath"
 	"strings"
 	"testing"
-//	"time"
+	"time"
 )
 
 
@@ -38,6 +39,22 @@ func getResult(stage constants.StageType, successful, retry bool) (result *resul
 	result.Stage = stage
 	result.Summary.Retry = retry
 	return result
+}
+
+func loadIngestResultFixture(t *testing.T) *results.IngestResult {
+	relativePath := filepath.Join("testdata", "ingest_result.json")
+	absPath, err := fileutil.RelativeToAbsPath(relativePath)
+	if err != nil {
+		t.Error(err)
+		return nil
+	}
+	ingestResult := &results.IngestResult{}
+	err = fileutil.JsonFileToObject(absPath, ingestResult)
+	if err != nil {
+		t.Errorf("Error loading test data file '%s': %v", absPath, err)
+		return nil
+	}
+	return ingestResult
 }
 
 // Make sure Ingestresult.IngestStatus() returns the correct
@@ -131,12 +148,11 @@ func assertCorrectSummary(t *testing.T, result *results.IngestResult, expectedSt
 	}
 }
 
-/*
+
 func TestIntellectualObject(t *testing.T) {
-	filepath := filepath.Join("testdata", "result_good.json")
-	result, err := bagman.LoadResult(filepath)
-	if err != nil {
-		t.Errorf("Error loading test data file '%s': %v", filepath, err)
+	result := loadIngestResultFixture(t)
+	if result == nil {
+		return
 	}
 	obj, err := result.IntellectualObject()
 	if err != nil {
@@ -184,10 +200,9 @@ func TestIntellectualObject(t *testing.T) {
 }
 
 func TestGenericFiles(t *testing.T) {
-	filepath := filepath.Join("testdata", "result_good.json")
-	result, err := bagman.LoadResult(filepath)
-	if err != nil {
-		t.Errorf("Error loading test data file '%s': %v", filepath, err)
+	result := loadIngestResultFixture(t)
+	if result == nil {
+		return
 	}
 	emptyTime := time.Time{}
 	genericFiles, err := result.GenericFiles()
@@ -293,10 +308,9 @@ func TestGenericFiles(t *testing.T) {
 }
 
 func TestProcessResultPremisEvents(t *testing.T) {
-	filepath := filepath.Join("testdata", "result_good.json")
-	result, err := bagman.LoadResult(filepath)
-	if err != nil {
-		t.Errorf("Error loading test data file '%s': %v", filepath, err)
+	result := loadIngestResultFixture(t)
+	if result == nil {
+		return
 	}
 	emptyTime := time.Time{}
 	genericFiles, err := result.GenericFiles()
@@ -321,15 +335,15 @@ func TestProcessResultPremisEvents(t *testing.T) {
 				file.Events[1].EventType,
 				"ingest")
 		}
-		if file.Events[1].DateTime != result.TarResult.Files[i].StoredAt {
+		if file.Events[1].DateTime != result.TarResult.LocalFiles[i].StoredAt {
 			t.Errorf("DateTime is %v, expected %v",
 				file.Events[1].DateTime,
-				result.TarResult.Files[i].StoredAt)
+				result.TarResult.LocalFiles[i].StoredAt)
 		}
-		if file.Events[1].OutcomeDetail != result.TarResult.Files[i].StorageMd5 {
+		if file.Events[1].OutcomeDetail != result.TarResult.LocalFiles[i].StorageMd5 {
 			t.Errorf("OutcomeDetail is '%s', expected '%s'",
 				file.Events[1].OutcomeDetail,
-				result.TarResult.Files[i].StorageMd5)
+				result.TarResult.LocalFiles[i].StorageMd5)
 		}
 		if file.Events[1].Identifier == "" {
 			t.Errorf("Ingest event identifier is missing")
@@ -340,12 +354,12 @@ func TestProcessResultPremisEvents(t *testing.T) {
 				file.Events[2].EventType,
 				"fixity_generation")
 		}
-		if file.Events[2].DateTime != result.TarResult.Files[i].Sha256Generated {
+		if file.Events[2].DateTime != result.TarResult.LocalFiles[i].Sha256Generated {
 			t.Errorf("DateTime is %v, expected %v",
 				file.Events[2].DateTime,
-				result.TarResult.Files[i].Sha256Generated)
+				result.TarResult.LocalFiles[i].Sha256Generated)
 		}
-		expected256 := fmt.Sprintf("sha256:%s", result.TarResult.Files[i].Sha256)
+		expected256 := fmt.Sprintf("sha256:%s", result.TarResult.LocalFiles[i].Sha256)
 		if file.Events[2].OutcomeDetail != expected256 {
 			t.Errorf("OutcomeDetail is '%s', expected '%s'",
 				file.Events[2].OutcomeDetail,
@@ -360,15 +374,15 @@ func TestProcessResultPremisEvents(t *testing.T) {
 				file.Events[3].EventType,
 				"identifier_assignment")
 		}
-		if file.Events[3].DateTime != result.TarResult.Files[i].UuidGenerated {
+		if file.Events[3].DateTime != result.TarResult.LocalFiles[i].UuidGenerated {
 			t.Errorf("DateTime is %v, expected %v",
 				file.Events[3].DateTime,
-				result.TarResult.Files[i].UuidGenerated)
+				result.TarResult.LocalFiles[i].UuidGenerated)
 		}
-		if file.Events[3].OutcomeDetail != result.TarResult.Files[i].Identifier {
+		if file.Events[3].OutcomeDetail != result.TarResult.LocalFiles[i].Identifier {
 			t.Errorf("OutcomeDetail is '%s', expected '%s'",
 				file.Events[3].OutcomeDetail,
-				result.TarResult.Files[i].Identifier)
+				result.TarResult.LocalFiles[i].Identifier)
 		}
 		if file.Events[3].Identifier == "" {
 			t.Errorf("Identifier assignement event id is missing")
@@ -379,19 +393,18 @@ func TestProcessResultPremisEvents(t *testing.T) {
 				file.Events[4].EventType,
 				"identifier_assignment")
 		}
-		if file.Events[4].DateTime != result.TarResult.Files[i].UuidGenerated {
+		if file.Events[4].DateTime != result.TarResult.LocalFiles[i].UuidGenerated {
 			t.Errorf("DateTime is %v, expected %v",
 				file.Events[4].DateTime,
-				result.TarResult.Files[i].UuidGenerated)
+				result.TarResult.LocalFiles[i].UuidGenerated)
 		}
-		if file.Events[4].OutcomeDetail != result.TarResult.Files[i].StorageURL {
+		if file.Events[4].OutcomeDetail != result.TarResult.LocalFiles[i].StorageURL {
 			t.Errorf("OutcomeDetail is '%s', expected '%s'",
 				file.Events[4].OutcomeDetail,
-				result.TarResult.Files[i].StorageURL)
+				result.TarResult.LocalFiles[i].StorageURL)
 		}
 		if file.Events[4].Identifier == "" {
 			t.Errorf("Identifier assignement event id is missing")
 		}
 	}
 }
-*/

@@ -73,6 +73,10 @@ func TestJsonFileToObject(t *testing.T) {
 	if err != nil {
 		t.Errorf("JsonFileToObject returned error %v", err)
 	}
+	// Test one nested item in the struct to see if it parsed OK.
+	if ingestResult.TarResult.LocalFiles[0].Uuid != "b21fdb34-1f79-4101-62c5-56918f4782fc" {
+		t.Errorf("JSON parsing didn't get first file UUID.")
+	}
 }
 
 func TestFileExists(t *testing.T) {
