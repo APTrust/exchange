@@ -1,4 +1,5 @@
 {
+    "Stage": "Validate",
     "S3File": {
         "BucketName": "aptrust.receiving.ncsu.edu",
         "Key": {
@@ -13,22 +14,26 @@
             }
         }
     },
-    "FetchResult": {
+    "S3FetchResult": {
         "BucketName": "aptrust.receiving.ncsu.edu",
         "Key": "ncsu.1840.16-2928.tar",
-        "LocalTarFile": "/mnt/apt_data/ncsu.1840.16-2928.tar",
+        "LocalFile": "/mnt/apt_data/ncsu.1840.16-2928.tar",
         "RemoteMd5": "b4f8f3072f73598fc5b65bf416b6019a",
         "LocalMd5": "b4f8f3072f73598fc5b65bf416b6019a",
         "Md5Verified": true,
         "Md5Verifiable": true,
-        "ErrorMessage": "",
-        "Warning": "",
-        "Retry": true
+        "Summary": {
+            "Attempted": true,
+            "AttemptNumber": 2,
+            "Errors": null,
+            "StartedAt": "2014-11-10T22:58:54Z",
+            "FinishedAt": "2014-11-10T23:00:00Z",
+            "Retry": true
+        }
     },
     "TarResult": {
         "InputFile": "/mnt/apt_data/ncsu.1840.16-2928.tar",
         "OutputDir": "/mnt/apt_data/ncsu.1840.16-2928",
-        "ErrorMessage": "",
         "Warnings": null,
         "FilesUnpacked": [
             "aptrust-info.txt",
@@ -41,7 +46,7 @@
             "manifest-md5.txt",
             "tagmanifest-md5.txt"
         ],
-        "Files": [
+        "LocalFiles": [
             {
                 "Path": "data/metadata.xml",
                 "Size": 5105,
@@ -126,7 +131,15 @@
                 "ExistingFile": false,
                 "NeedsSave": true
             }
-        ]
+        ],
+        "Summary": {
+            "Attempted": true,
+            "AttemptNumber": 1,
+            "Errors": null,
+            "StartedAt": "2014-11-10T23:01:06Z",
+            "FinishedAt": "2014-11-10T23:01:59Z",
+            "Retry": true
+        }
     },
     "BagReadResult": {
         "Path": "/mnt/apt_data/ncsu.1840.16-2928",
@@ -141,7 +154,6 @@
             "manifest-md5.txt",
             "tagmanifest-md5.txt"
         ],
-        "ErrorMessage": "",
         "Tags": [
             {
                 "Label": "BagIt-Version",
@@ -180,7 +192,14 @@
                 "Value": "Consortia"
             }
         ],
-        "ChecksumErrors": null
-    },
-    "Stage": "Validate"
+        "ChecksumErrors": null,
+        "Summary": {
+            "Attempted": true,
+            "AttemptNumber": 1,
+            "Errors": null,
+            "StartedAt": "2014-11-10T23:02:14Z",
+            "FinishedAt": "2014-11-10T23:03:06Z",
+            "Retry": true
+        }
+    }
 }

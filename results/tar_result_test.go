@@ -13,7 +13,6 @@ func getTarResult() results.TarResult {
     return results.TarResult {
         InputFile: "/mnt/apt_data/ncsu.1840.16-2928.tar",
         OutputDir: "/mnt/apt_data/ncsu.1840.16-2928",
-        ErrorMessage: "",
         Warnings: nil,
         FilesUnpacked: []string {
             "aptrust-info.txt",

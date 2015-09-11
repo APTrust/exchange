@@ -9,7 +9,6 @@ import (
 type TarResult struct {
 	InputFile     string
 	OutputDir     string
-	ErrorMessage  string
 	Warnings      []string
 	FilesUnpacked []string
 	LocalFiles    []*models.LocalFile

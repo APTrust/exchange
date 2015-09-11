@@ -51,7 +51,7 @@ func TestExchangeHome(t *testing.T) {
 }
 
 func TestLoadRelativeFile(t *testing.T) {
-	path := filepath.Join("testdata", "result_good.json")
+	path := filepath.Join("testdata", "ingest_result.json")
 	data, err := fileutil.LoadRelativeFile(path)
 	if err != nil {
 		t.Error(err)
@@ -145,20 +145,20 @@ func TestRecursiveFileList(t *testing.T) {
 
 func TestCalculateDigests(t *testing.T) {
 	exchangeHome, _ := fileutil.ExchangeHome()
-	absPath := filepath.Join(exchangeHome, "testdata", "result_good.json")
+	absPath := filepath.Join(exchangeHome, "testdata", "ingest_result.json")
 	fileDigest, err := fileutil.CalculateDigests(absPath)
 	if err != nil {
 		t.Errorf("CalculateDigests returned unexpected error: %v", err)
 	}
-	expectedMd5 := "9cd263b67bad7ae264fda8987fd221e7"
+	expectedMd5 := "481b8579327f97e3a69aa6004f728320"
 	if fileDigest.Md5Digest != expectedMd5 {
 		t.Errorf("Expected digest '%s', got '%s'", expectedMd5, fileDigest.Md5Digest)
 	}
-	expectedSha := "3c04086d429b4dcba91891dad54759a465869d381f180908203a73b9e3120a87"
+	expectedSha := "ce9fb176974c6f745ddb3f23e4357e3bda2eadc838a278a6759e18e1d51f8b9e"
 	if fileDigest.Sha256Digest != expectedSha {
 		t.Errorf("Expected digest '%s', got '%s'", expectedSha, fileDigest.Sha256Digest)
 	}
-	if fileDigest.Size != 7718 {
+	if fileDigest.Size != 8301 {
 		t.Errorf("Expected file size 7718, got %d", fileDigest.Size)
 	}
 }
