@@ -16,7 +16,17 @@
     },
     "S3FetchResult": {
         "BucketName": "aptrust.receiving.ncsu.edu",
-        "Key": "ncsu.1840.16-2928.tar",
+        "Key": {
+            "Key": "ncsu.1840.16-2928.tar",
+            "LastModified": "2014-04-25T19:01:20.000Z",
+            "Size": 696320,
+            "ETag": "\"b4f8f3072f73598fc5b65bf416b6019a\"",
+            "StorageClass": "STANDARD",
+            "Owner": {
+                "ID": "e456d2cc2d7bd036ba70b495e28c87b64098b09d022d23ac4ed8e25aeb306b5c",
+                "DisplayName": "aws+aptrust"
+            }
+        },
         "LocalFile": "/mnt/apt_data/ncsu.1840.16-2928.tar",
         "RemoteMd5": "b4f8f3072f73598fc5b65bf416b6019a",
         "LocalMd5": "b4f8f3072f73598fc5b65bf416b6019a",

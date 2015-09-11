@@ -4,6 +4,7 @@ import (
 	"archive/tar"
 	"fmt"
 	"github.com/APTrust/exchange/util/fileutil"
+	"github.com/APTrust/exchange/results"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -58,6 +59,19 @@ func TestLoadRelativeFile(t *testing.T) {
 	}
 	if data == nil || len(data) == 0 {
 		t.Errorf("Read no data out of file '%s'", path)
+	}
+}
+
+func TestJsonFileToObject(t *testing.T) {
+	relativePath := filepath.Join("testdata", "ingest_result.json")
+	absPath, err := fileutil.RelativeToAbsPath(relativePath)
+	if err != nil {
+		t.Errorf("Can't get AbsPath for %s: %v", relativePath, err)
+	}
+	ingestResult := &results.IngestResult{}
+	err = fileutil.JsonFileToObject(absPath, ingestResult)
+	if err != nil {
+		t.Errorf("JsonFileToObject returned error %v", err)
 	}
 }
 
@@ -150,15 +164,15 @@ func TestCalculateDigests(t *testing.T) {
 	if err != nil {
 		t.Errorf("CalculateDigests returned unexpected error: %v", err)
 	}
-	expectedMd5 := "481b8579327f97e3a69aa6004f728320"
+	expectedMd5 := "79da7c8143ddd03b1e040d7c9f409820"
 	if fileDigest.Md5Digest != expectedMd5 {
 		t.Errorf("Expected digest '%s', got '%s'", expectedMd5, fileDigest.Md5Digest)
 	}
-	expectedSha := "ce9fb176974c6f745ddb3f23e4357e3bda2eadc838a278a6759e18e1d51f8b9e"
+	expectedSha := "ec36941a57673449f14c4086e2835fd53b6b4d688f2aef7e268f3629a31f63c4"
 	if fileDigest.Sha256Digest != expectedSha {
 		t.Errorf("Expected digest '%s', got '%s'", expectedSha, fileDigest.Sha256Digest)
 	}
-	if fileDigest.Size != 8301 {
-		t.Errorf("Expected file size 7718, got %d", fileDigest.Size)
+	if fileDigest.Size != 8689 {
+		t.Errorf("Expected file size 8689, got %d", fileDigest.Size)
 	}
 }

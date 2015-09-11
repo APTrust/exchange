@@ -4,6 +4,7 @@ import (
 	"archive/tar"
 	"crypto/md5"
 	"crypto/sha256"
+	"encoding/json"
 	"github.com/APTrust/exchange/platform"
 	"fmt"
 	"io"
@@ -48,6 +49,24 @@ func LoadRelativeFile(relativePath string) ([]byte, error) {
 	return ioutil.ReadFile(absPath)
 }
 
+// Reads data from the file at absPath (an absolute path)
+// and coverts it to an object of whatever type param obj
+// is. Returns an error if there's a problem reading the
+// file or unmarshalling the data into the type you passed in.
+// On success, this returns nil and your object will contain
+// the data from the file.
+func JsonFileToObject(absPath string, obj interface{}) error {
+	data, err := ioutil.ReadFile(absPath)
+	if err != nil {
+		return err
+	}
+	err = json.Unmarshal(data, obj)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 // Converts a relative path within the bagman directory tree
 // to an absolute path.
 func RelativeToAbsPath(relativePath string) (string, error) {
@@ -85,6 +104,7 @@ func ExpandTilde(filePath string) (string, error) {
 }
 
 // Adds a file to a tar archive.
+// TODO: Move this into a tar-related util file!
 func AddToArchive(tarWriter *tar.Writer, filePath, pathWithinArchive string) (error) {
 	finfo, err := os.Stat(filePath)
 	if err != nil {
