@@ -75,7 +75,7 @@ func (gf *GenericFile) SerializeForPharos() ([]byte, error) {
 		"size":                           gf.Size,
 		"created":                        gf.Created,
 		"modified":                       gf.Modified,
-		"checksum_attributes":            gf.Checksums,
+		"checksums":                      gf.Checksums,
 	})
 }
 

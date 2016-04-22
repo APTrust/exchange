@@ -63,6 +63,8 @@
 			"modified": "2014-04-25T18:05:51-05:00",
 			"file_format": "text/plain",
 			"identifier": "uc.edu/cin.675812/data/object.properties",
+			"intellectual_object_identifier": "uc.edu/cin.675812",
+			"intellectual_object_id": 741,
 			"checksums": [
 				{
 					"algorithm": "md5",
@@ -196,6 +198,8 @@
 			"modified": "2014-04-25T18:05:51-05:00",
 			"file_format": "application/xml",
 			"identifier": "uc.edu/cin.675812/data/metadata.xml",
+			"intellectual_object_identifier": "uc.edu/cin.675812",
+			"intellectual_object_id": 741,
 			"checksums": [
 				{
 					"algorithm": "md5",

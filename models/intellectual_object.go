@@ -56,12 +56,14 @@ func (obj *IntellectualObject) AccessValid() bool {
 	return false
 }
 
-// Serialize the subset of IntellectualObject data that fluctus
+// Serialize the subset of IntellectualObject data that Pharos
 // will accept. This is for post/put, where essential info, such
 // as institution id and/or object id will be in the URL.
-func (obj *IntellectualObject) SerializeForFluctus() ([]byte, error) {
+func (obj *IntellectualObject) SerializeForPharos() ([]byte, error) {
 	return json.Marshal(map[string]interface{}{
 		"identifier":     obj.Identifier,
+		"bag_name":       obj.BagName,
+		"institution":    obj.Institution,
 		"title":          obj.Title,
 		"description":    obj.Description,
 		"alt_identifier": obj.AltIdentifier,
