@@ -61,6 +61,19 @@ const (
 	ActionDelete                 = "Delete"
 )
 
+type FixityAlgorithmType string
+
+const (
+	AlgMd5  FixityAlgorithmType = "md5"
+	AlgSha256                   = "sha256"
+)
+
+type IdentifierType string
+
+const (
+	IdTypeURL  IdentifierType = "url"
+	IdTypeUUID                = "uuid"
+)
 
 // List of valid APTrust IntellectualObject AccessRights.
 var AccessRights []string = []string{

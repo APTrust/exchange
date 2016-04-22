@@ -5,7 +5,11 @@ import (
 	"github.com/APTrust/exchange/util/testutil"
 	"path/filepath"
 	"testing"
+	"time"
 )
+
+// Bloomsday
+var TEST_TIMESTAMP time.Time = time.Date(2016, 6, 16, 10, 24, 16, 0, time.UTC)
 
 // Assert that a value in a map is what we expect.
 // Convert int and int64 to float64, because that's what JSON uses

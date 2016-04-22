@@ -141,10 +141,20 @@ func NewEventGenericFileIngest(storedAt time.Time, md5Digest string) (*PremisEve
 
 // We checked fixity against the manifest.
 // If fixity didn't match, we wouldn't be ingesting this.
-func NewEventGenericFileFixityCheck(checksumVerifiedAt time.Time, md5Digest string) (*PremisEvent, error) {
+func NewEventGenericFileFixityCheck(checksumVerifiedAt time.Time, fixityAlg constants.FixityAlgorithmType, digest string, fixityMatched bool) (*PremisEvent, error) {
 	eventId, err := uuid.NewV4()
 	if err != nil {
 		return nil, fmt.Errorf("Error generating UUID for generic file fixity check: %v", err)
+	}
+	object := "Go crypto/md5"
+	agent := "http://golang.org/pkg/crypto/md5/"
+	outcomeInformation := "Fixity matches"
+	if fixityAlg == constants.AlgSha256 {
+		object = "Go language crypto/sha256"
+		agent = "http://golang.org/pkg/crypto/sha256/"
+	}
+	if fixityMatched == false {
+		outcomeInformation = "Fixity did not match"
 	}
 	return &PremisEvent{
 		Identifier:         eventId.String(),
@@ -152,18 +162,24 @@ func NewEventGenericFileFixityCheck(checksumVerifiedAt time.Time, md5Digest stri
 		DateTime:           checksumVerifiedAt,
 		Detail:             "Fixity check against registered hash",
 		Outcome:            string(constants.StatusSuccess),
-		OutcomeDetail:      fmt.Sprintf("md5:%s", md5Digest),
-		Object:             "Go crypto/md5",
-		Agent:              "http://golang.org/pkg/crypto/md5/",
-		OutcomeInformation: "Fixity matches",
+		OutcomeDetail:      fmt.Sprintf("%s:%s", fixityAlg, digest),
+		Object:             object,
+		Agent:              agent,
+		OutcomeInformation: outcomeInformation,
 	}, nil
 }
 
 // We generated a sha256 checksum.
-func NewEventGenericFileFixityGeneration(checksumGeneratedAt time.Time, sha256Digest string) (*PremisEvent, error) {
+func NewEventGenericFileFixityGeneration(checksumGeneratedAt time.Time, fixityAlg constants.FixityAlgorithmType, sha256Digest string) (*PremisEvent, error) {
 	eventId, err := uuid.NewV4()
 	if err != nil {
 		return nil, fmt.Errorf("Error generating UUID for generic file ingest event: %v", err)
+	}
+	object := "Go crypto/md5"
+	agent := "http://golang.org/pkg/crypto/md5/"
+	if fixityAlg == constants.AlgSha256 {
+		object = "Go language crypto/sha256"
+		agent = "http://golang.org/pkg/crypto/sha256/"
 	}
 	return &PremisEvent{
 		Identifier:         eventId.String(),
@@ -172,22 +188,22 @@ func NewEventGenericFileFixityGeneration(checksumGeneratedAt time.Time, sha256Di
 		Detail:             "Calculated new fixity value",
 		Outcome:            string(constants.StatusSuccess),
 		OutcomeDetail:      fmt.Sprintf("sha256:%s", sha256Digest),
-		Object:             "Go language crypto/sha256",
-		Agent:              "http://golang.org/pkg/crypto/sha256/",
+		Object:             object,
+		Agent:              agent,
 		OutcomeInformation: "",
 	}, nil
 }
 
 // We assigned an identifier: either a generic file identifier
 // or a new storage URL.
-func NewEventGenericFileIdentifierAssignment(identifierGeneratedAt time.Time, identifier, identifierType string) (*PremisEvent, error) {
+func NewEventGenericFileIdentifierAssignment(identifierGeneratedAt time.Time, identifierType constants.IdentifierType, identifier string) (*PremisEvent, error) {
 	eventId, err := uuid.NewV4()
 	if err != nil {
 		return nil, fmt.Errorf("Error generating UUID for generic file ingest event: %v", err)
 	}
 	object := "APTrust bag processor"
 	agent := "https://github.com/APTrust/exchange"
-	if identifierType == "uuid" {
+	if identifierType == constants.IdTypeUUID {
 		object = "Go uuid library + goamz S3 library"
 		agent = "http://github.com/nu7hatch/gouuid"
 	}
@@ -205,7 +221,7 @@ func NewEventGenericFileIdentifierAssignment(identifierGeneratedAt time.Time, id
 }
 
 // We saved the file to replication storage.
-func NewEventGenericFileReplication(replicationUrl string) (*PremisEvent, error) {
+func NewEventGenericFileReplication(storedAt time.Time, replicationUrl string) (*PremisEvent, error) {
 	eventId, err := uuid.NewV4()
 	if err != nil {
 		return nil, fmt.Errorf("Error generating UUID for generic file replication event: %v", err)
@@ -213,7 +229,7 @@ func NewEventGenericFileReplication(replicationUrl string) (*PremisEvent, error)
 	return &PremisEvent{
 		Identifier:         eventId.String(),
 		EventType:          "replication",
-		DateTime:           time.Now().UTC(),
+		DateTime:           storedAt,
 		Detail:             "Copied to replication storage and assigned replication URL identifier",
 		Outcome:            string(constants.StatusSuccess),
 		OutcomeDetail:      replicationUrl,
