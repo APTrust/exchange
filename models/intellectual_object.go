@@ -2,11 +2,8 @@ package models
 
 import (
 	"encoding/json"
-	"fmt"
 	"github.com/APTrust/exchange/constants"
-	"github.com/nu7hatch/gouuid"
 	"strings"
-	"time"
 )
 
 /*
@@ -57,61 +54,6 @@ func (obj *IntellectualObject) AccessValid() bool {
 		}
 	}
 	return false
-}
-
-// TODO: Move this into PremisEvent
-func (obj *IntellectualObject) CreateIngestEvent() (*PremisEvent, error) {
-	eventId, err := uuid.NewV4()
-	if err != nil {
-		return nil, fmt.Errorf("Error generating UUID for ingest event: %v", err)
-	}
-	return &PremisEvent{
-		Identifier:         eventId.String(),
-		EventType:          "ingest",
-		DateTime:           time.Now(),
-		Detail:             "Copied all files to perservation bucket",
-		Outcome:            "Success",
-		OutcomeDetail:      fmt.Sprintf("%d files copied", len(obj.GenericFiles)),
-		Object:             "goamz S3 client",
-		Agent:              "https://github.com/crowdmob/goamz",
-		OutcomeInformation: "Multipart put using md5 checksum",
-	}, nil
-}
-
-func (obj *IntellectualObject) CreateIdEvent() (*PremisEvent, error) {
-	eventId, err := uuid.NewV4()
-	if err != nil {
-		return nil, fmt.Errorf("Error generating UUID for ingest event: %v", err)
-	}
-	return &PremisEvent{
-		Identifier:         eventId.String(),
-		EventType:          "identifier_assignment",
-		DateTime:           time.Now(),
-		Detail:             "Assigned bag identifier",
-		Outcome:            "Success",
-		OutcomeDetail:      obj.Identifier,
-		Object:             "APTrust bagman",
-		Agent:              "https://github.com/APTrust/bagman",
-		OutcomeInformation: "Institution domain + tar file name",
-	}, nil
-}
-
-func (obj *IntellectualObject) CreateRightsEvent() (*PremisEvent, error) {
-	eventId, err := uuid.NewV4()
-	if err != nil {
-		return nil, fmt.Errorf("Error generating UUID for ingest access/rights event: %v", err)
-	}
-	return &PremisEvent{
-		Identifier:         eventId.String(),
-		EventType:          "access_assignment",
-		DateTime:           time.Now(),
-		Detail:             "Assigned bag access rights",
-		Outcome:            "Success",
-		OutcomeDetail:      obj.Access,
-		Object:             "APTrust bagman",
-		Agent:              "https://github.com/APTrust/bagman",
-		OutcomeInformation: "Set access to " + obj.Access,
-	}, nil
 }
 
 // Serialize the subset of IntellectualObject data that fluctus

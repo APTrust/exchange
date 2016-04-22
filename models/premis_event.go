@@ -1,7 +1,9 @@
 package models
 
 import (
+	"fmt"
 	"github.com/APTrust/exchange/constants"
+	"github.com/nu7hatch/gouuid"
 	"strings"
 	"time"
 )
@@ -11,11 +13,14 @@ PremisEvent contains information about events that occur during
 the processing of a file or intellectual object, such as the
 verfication of checksums, generation of unique identifiers, etc.
 We use this struct to exchange data in JSON format with the
-fluctus API. Fluctus, in turn, is responsible for managing all of
-this data in Fedora.
+Pharos API.
 */
 type PremisEvent struct {
-	// Identifier is a UUID string assigned by Fedora.
+	// The Pharos id for this event. Will be zero if the event
+	// is not yet in Pharos.
+	Id                 int       `json:"id"`
+
+	// Identifier is a UUID string assigned by Pharos.
 	Identifier         string    `json:"identifier"`
 
 	// EventType is the type of Premis event we want to register: ingest,
@@ -58,4 +63,162 @@ func (premisEvent *PremisEvent) EventTypeValid() bool {
 		}
 	}
 	return false
+}
+
+
+func NewEventObjectIngest(numberOfFilesIngested int) (*PremisEvent, error) {
+	eventId, err := uuid.NewV4()
+	if err != nil {
+		return nil, fmt.Errorf("Error generating UUID for ingest event: %v", err)
+	}
+	return &PremisEvent{
+		Identifier:         eventId.String(),
+		EventType:          "ingest",
+		DateTime:           time.Now(),
+		Detail:             "Copied all files to perservation bucket",
+		Outcome:            "Success",
+		OutcomeDetail:      fmt.Sprintf("%d files copied", numberOfFilesIngested),
+		Object:             "goamz S3 client",
+		Agent:              "https://github.com/crowdmob/goamz",
+		OutcomeInformation: "Multipart put using md5 checksum",
+	}, nil
+}
+
+func NewEventObjectIdentifierAssignment(objectIdentifier string) (*PremisEvent, error) {
+	eventId, err := uuid.NewV4()
+	if err != nil {
+		return nil, fmt.Errorf("Error generating UUID for ingest event: %v", err)
+	}
+	return &PremisEvent{
+		Identifier:         eventId.String(),
+		EventType:          "identifier_assignment",
+		DateTime:           time.Now(),
+		Detail:             "Assigned bag identifier",
+		Outcome:            "Success",
+		OutcomeDetail:      objectIdentifier,
+		Object:             "APTrust exchange",
+		Agent:              "https://github.com/APTrust/exchange",
+		OutcomeInformation: "Institution domain + tar file name",
+	}, nil
+}
+
+func NewEventObjectRights(accessSetting string) (*PremisEvent, error) {
+	eventId, err := uuid.NewV4()
+	if err != nil {
+		return nil, fmt.Errorf("Error generating UUID for ingest access/rights event: %v", err)
+	}
+	return &PremisEvent{
+		Identifier:         eventId.String(),
+		EventType:          "access_assignment",
+		DateTime:           time.Now(),
+		Detail:             "Assigned bag access rights",
+		Outcome:            "Success",
+		OutcomeDetail:      accessSetting,
+		Object:             "APTrust exchange",
+		Agent:              "https://github.com/APTrust/exchange",
+		OutcomeInformation: "Set access to " + accessSetting,
+	}, nil
+}
+
+// We ingested a generic file into primary long-term storage.
+func NewEventGenericFileIngest(storedAt time.Time, md5Digest string) (*PremisEvent, error) {
+	eventId, err := uuid.NewV4()
+	if err != nil {
+		return nil, fmt.Errorf("Error generating UUID for generic file ingest event: %v", err)
+	}
+	return &PremisEvent{
+		Identifier:         eventId.String(),
+		EventType:          "ingest",
+		DateTime:           storedAt,
+		Detail:             "Completed copy to S3",
+		Outcome:            string(constants.StatusSuccess),
+		OutcomeDetail:      fmt.Sprintf("md5:%s", md5Digest),
+		Object:             "exchange + goamz s3 client",
+		Agent:              "https://github.com/APTrust/exchange",
+		OutcomeInformation: "Put using md5 checksum",
+	}, nil
+}
+
+// We checked fixity against the manifest.
+// If fixity didn't match, we wouldn't be ingesting this.
+func NewEventGenericFileFixityCheck(checksumVerifiedAt time.Time, md5Digest string) (*PremisEvent, error) {
+	eventId, err := uuid.NewV4()
+	if err != nil {
+		return nil, fmt.Errorf("Error generating UUID for generic file fixity check: %v", err)
+	}
+	return &PremisEvent{
+		Identifier:         eventId.String(),
+		EventType:          "fixity_check",
+		DateTime:           checksumVerifiedAt,
+		Detail:             "Fixity check against registered hash",
+		Outcome:            string(constants.StatusSuccess),
+		OutcomeDetail:      fmt.Sprintf("md5:%s", md5Digest),
+		Object:             "Go crypto/md5",
+		Agent:              "http://golang.org/pkg/crypto/md5/",
+		OutcomeInformation: "Fixity matches",
+	}, nil
+}
+
+// We generated a sha256 checksum.
+func NewEventGenericFileFixityGeneration(checksumGeneratedAt time.Time, sha256Digest string) (*PremisEvent, error) {
+	eventId, err := uuid.NewV4()
+	if err != nil {
+		return nil, fmt.Errorf("Error generating UUID for generic file ingest event: %v", err)
+	}
+	return &PremisEvent{
+		Identifier:         eventId.String(),
+		EventType:          "fixity_generation",
+		DateTime:           checksumGeneratedAt,
+		Detail:             "Calculated new fixity value",
+		Outcome:            string(constants.StatusSuccess),
+		OutcomeDetail:      fmt.Sprintf("sha256:%s", sha256Digest),
+		Object:             "Go language crypto/sha256",
+		Agent:              "http://golang.org/pkg/crypto/sha256/",
+		OutcomeInformation: "",
+	}, nil
+}
+
+// We assigned an identifier: either a generic file identifier
+// or a new storage URL.
+func NewEventGenericFileIdentifierAssignment(identifierGeneratedAt time.Time, identifier, identifierType string) (*PremisEvent, error) {
+	eventId, err := uuid.NewV4()
+	if err != nil {
+		return nil, fmt.Errorf("Error generating UUID for generic file ingest event: %v", err)
+	}
+	object := "APTrust bag processor"
+	agent := "https://github.com/APTrust/exchange"
+	if identifierType == "uuid" {
+		object = "Go uuid library + goamz S3 library"
+		agent = "http://github.com/nu7hatch/gouuid"
+	}
+	return &PremisEvent{
+		Identifier:         eventId.String(),
+		EventType:          "identifier_assignment",
+		DateTime:           identifierGeneratedAt,
+		Detail:             "Assigned new institution.bag/path identifier",
+		Outcome:            string(constants.StatusSuccess),
+		OutcomeDetail:      identifier,
+		Object:             object,
+		Agent:              agent,
+		OutcomeInformation: "",
+	}, nil
+}
+
+// We saved the file to replication storage.
+func NewEventGenericFileReplication(replicationUrl string) (*PremisEvent, error) {
+	eventId, err := uuid.NewV4()
+	if err != nil {
+		return nil, fmt.Errorf("Error generating UUID for generic file replication event: %v", err)
+	}
+	return &PremisEvent{
+		Identifier:         eventId.String(),
+		EventType:          "replication",
+		DateTime:           time.Now().UTC(),
+		Detail:             "Copied to replication storage and assigned replication URL identifier",
+		Outcome:            string(constants.StatusSuccess),
+		OutcomeDetail:      replicationUrl,
+		Object:             "Go uuid library + goamz S3 library",
+		Agent:              "http://github.com/nu7hatch/gouuid",
+		OutcomeInformation: "",
+	}, nil
 }

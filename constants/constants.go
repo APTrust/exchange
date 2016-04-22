@@ -77,4 +77,5 @@ var EventTypes []string = []string{
 	"identifier_assignment",
 	"quarentine",
 	"delete_action",
+	"replication",
 }
