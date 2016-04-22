@@ -3,6 +3,7 @@ package models_test
 import (
 	"github.com/APTrust/exchange/constants"
 	"github.com/APTrust/exchange/models"
+	"github.com/stretchr/testify/assert"
 	"testing"
 )
 
@@ -32,9 +33,14 @@ func TestNewEventObjectIngest(t *testing.T) {
 	if len(event.Identifier) != 36 {
 		t.Errorf("Event identifier '%s' doesn't look like a UUID", event.Identifier)
 	}
-	if event.EventType != "ingest" {
-		t.Errorf("EventType: expected 'ingest', got '%s'", event.EventType)
-	}
+	assert.Equal(t, "ingest", event.EventType)
+	assert.False(t, event.DateTime.IsZero())
+
+	assertMinStringLength(t, "Detail", event.Detail, 10)
+	assertMinStringLength(t, "Object", event.Object, 10)
+	assertMinStringLength(t, "Agent", event.Agent, 10)
+	assertMinStringLength(t, "OutcomeInformation", event.OutcomeInformation, 10)
+
 }
 
 func TestNewEventObjectIdentifierAssignment(t *testing.T) {

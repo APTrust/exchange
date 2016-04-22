@@ -3,21 +3,10 @@ package models_test
 import (
 	"encoding/json"
 	"github.com/APTrust/exchange/util/testutil"
+	"github.com/stretchr/testify/assert"
 	"path/filepath"
 	"testing"
-	"time"
 )
-
-// Bloomsday
-var TEST_TIMESTAMP time.Time = time.Date(2016, 6, 16, 10, 24, 16, 0, time.UTC)
-
-// Assert that a value in a map is what we expect.
-// Convert int and int64 to float64, because that's what JSON uses
-func assertValue(t *testing.T, testName string, data map[string]interface{}, key string, expected interface{}) {
-	if data[key] != expected {
-		t.Errorf("[%s] For key '%s', expected '%s' but found '%s'", testName, key, expected, data[key])
-	}
-}
 
 func TestTotalFileSize(t *testing.T) {
 	filepath := filepath.Join("testdata", "intel_obj.json")
@@ -47,11 +36,11 @@ func TestSerializeObjectForPharos(t *testing.T) {
 		t.Errorf("Error unmarshalling data: %v", err)
 	}
 
-	assertValue(t, "TestSerializeObjectForPharos", hash, "identifier", "uc.edu/cin.675812")
-	assertValue(t, "TestSerializeObjectForPharos", hash, "bag_name", "cin.675812")
-	assertValue(t, "TestSerializeObjectForPharos", hash, "institution", "uc.edu")
-	assertValue(t, "TestSerializeObjectForPharos", hash, "title", "Notes from the Oesper Collections")
-	assertValue(t, "TestSerializeObjectForPharos", hash, "description", "A collection from Cincinnati")
-	assertValue(t, "TestSerializeObjectForPharos", hash, "alt_identifier", "Photo Collection")
-	assertValue(t, "TestSerializeObjectForPharos", hash, "access", "institution")
+	assert.Equal(t, "uc.edu/cin.675812", hash["identifier"])
+	assert.Equal(t, "cin.675812", hash["bag_name"])
+	assert.Equal(t, "uc.edu", hash["institution"])
+	assert.Equal(t, "Notes from the Oesper Collections", hash["title"])
+	assert.Equal(t, "A collection from Cincinnati", hash["description"])
+	assert.Equal(t, "Photo Collection", hash["alt_identifier"])
+	assert.Equal(t, "institution", hash["access"])
 }

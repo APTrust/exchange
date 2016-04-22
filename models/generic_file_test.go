@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"github.com/APTrust/exchange/models"
 	"github.com/APTrust/exchange/util/testutil"
+	"github.com/stretchr/testify/assert"
 	"path/filepath"
 	"testing"
 )
@@ -14,10 +15,9 @@ func TestInstitutionIdentifier(t *testing.T) {
 	instId, err := genericFile.InstitutionIdentifier()
 	if err != nil {
 		t.Errorf(err.Error())
+		return
 	}
-	if instId != "uc.edu" {
-		t.Errorf("BagName returned '%s'; expected 'uc.edu'", instId)
-	}
+	assert.Equal(t, "uc.edu", instId)
 }
 
 func TestOriginalPath(t *testing.T) {
@@ -28,22 +28,18 @@ func TestOriginalPath(t *testing.T) {
 	origPath, err := genericFile.OriginalPath()
 	if err != nil {
 		t.Errorf(err.Error())
+		return
 	}
-	if origPath != "tagmanifest-sha256.txt" {
-		t.Errorf("Expected 'tagmanifest-sha256.txt', got '%s'",
-			origPath)
-	}
+	assert.Equal(t, "tagmanifest-sha256.txt", origPath)
 
 	// Payload file
 	genericFile.Identifier = "uc.edu/cin.675812/data/object.properties"
 	origPath, err = genericFile.OriginalPath()
 	if err != nil {
 		t.Errorf(err.Error())
+		return
 	}
-	if origPath != "data/object.properties" {
-		t.Errorf("Expected 'data/object.properties', got '%s'",
-			origPath)
-	}
+	assert.Equal(t, "data/object.properties", origPath)
 
 	// Nested custom tag file
 	genericFile.Identifier = "uc.edu/cin.675812/custom/tag/dir/special_info.xml"
@@ -51,11 +47,7 @@ func TestOriginalPath(t *testing.T) {
 	if err != nil {
 		t.Errorf(err.Error())
 	}
-	if origPath != "custom/tag/dir/special_info.xml" {
-		t.Errorf("Expected 'custom/tag/dir/special_info.xml', got '%s'",
-			origPath)
-	}
-
+	assert.Equal(t, "custom/tag/dir/special_info.xml", origPath)
 }
 
 func TestGetChecksum(t *testing.T) {
@@ -71,27 +63,15 @@ func TestGetChecksum(t *testing.T) {
 
 	// MD5
 	md5Checksum := genericFile.GetChecksum("md5")
-	if md5Checksum == nil {
-		t.Errorf("GetChecksum did not return md5 sum")
-	}
-	if md5Checksum.Digest != "c6d8080a39a0622f299750e13aa9c200" {
-		t.Errorf("GetChecksum did not return md5 sum")
-	}
+	assert.Equal(t, "c6d8080a39a0622f299750e13aa9c200", md5Checksum.Digest)
 
 	// SHA256
 	sha256Checksum := genericFile.GetChecksum("sha256")
-	if sha256Checksum == nil {
-		t.Errorf("GetChecksum did not return sha256 sum")
-	}
-	if sha256Checksum.Digest != "a418d61067718141d7254d7376d5499369706e3ade27cb84c4d5519f7cfed790" {
-		t.Errorf("GetChecksum did not return sha256 sum")
-	}
+	assert.Equal(t, "a418d61067718141d7254d7376d5499369706e3ade27cb84c4d5519f7cfed790", sha256Checksum.Digest)
 
 	// bogus checksum
 	bogusChecksum := genericFile.GetChecksum("bogus")
-	if bogusChecksum != nil {
-		t.Errorf("GetChecksum returned something it shouldn't have")
-	}
+	assert.Nil(t, bogusChecksum, "GetChecksum returned something it shouldn't have")
 }
 
 func TestPreservationStorageFileName(t *testing.T) {
@@ -105,12 +85,9 @@ func TestPreservationStorageFileName(t *testing.T) {
 	fileName, err = genericFile.PreservationStorageFileName()
 	if err != nil {
 		t.Errorf("PreservationStorageFileName() returned an error: %v", err)
+		return
 	}
-	expected := "a58a7c00-392f-11e4-916c-0800200c9a66"
-	if fileName != expected {
-		t.Errorf("PreservationStorageFileName() returned '%s', expected '%s'",
-			fileName, expected)
-	}
+	assert.Equal(t, "a58a7c00-392f-11e4-916c-0800200c9a66", fileName)
 }
 
 func TestFindEventsByType(t *testing.T) {
@@ -154,26 +131,26 @@ func TestSerializeFileForPharos(t *testing.T) {
 	}
 
 	// Convert int and int64 to float64, because that's what JSON uses
-	assertValue(t, "TestSerializeFileForPharos", hash, "modified", "2014-04-25T18:05:51-05:00")
-	assertValue(t, "TestSerializeFileForPharos", hash, "size", float64(606))
-	assertValue(t, "TestSerializeFileForPharos", hash, "uri", "https://s3.amazonaws.com/aptrust.test.fixtures/restore_test/data/metadata.xml")
-	assertValue(t, "TestSerializeFileForPharos", hash, "created", "2014-04-25T18:05:51-05:00")
-	assertValue(t, "TestSerializeFileForPharos", hash, "intellectual_object_identifier", "uc.edu/cin.675812")
-	assertValue(t, "TestSerializeFileForPharos", hash, "intellectual_object_id", float64(741))
-	assertValue(t, "TestSerializeFileForPharos", hash, "file_format", "application/xml")
-	assertValue(t, "TestSerializeFileForPharos", hash, "identifier", "uc.edu/cin.675812/data/metadata.xml")
+	assert.Equal(t, "2014-04-25T18:05:51-05:00", hash["modified"])
+	assert.EqualValues(t, 606, hash["size"])
+	assert.Equal(t, "https://s3.amazonaws.com/aptrust.test.fixtures/restore_test/data/metadata.xml", hash["uri"])
+	assert.Equal(t, "2014-04-25T18:05:51-05:00", hash["created"])
+	assert.Equal(t, "uc.edu/cin.675812", hash["intellectual_object_identifier"])
+	assert.EqualValues(t, 741, hash["intellectual_object_id"])
+	assert.Equal(t, "application/xml", hash["file_format"])
+	assert.Equal(t, "uc.edu/cin.675812/data/metadata.xml", hash["identifier"])
 
 	checksums := hash["checksums"].([]interface{})
 	checksum0 := checksums[0].(map[string]interface{})
-	assertValue(t, "TestSerializeFileForPharos Checksum 0", checksum0, "id", float64(0))
-	assertValue(t, "TestSerializeFileForPharos Checksum 0", checksum0, "algorithm", "md5")
-	assertValue(t, "TestSerializeFileForPharos Checksum 0", checksum0, "datetime", "2014-04-25T18:05:51-05:00")
-	assertValue(t, "TestSerializeFileForPharos Checksum 0", checksum0, "digest", "c6d8080a39a0622f299750e13aa9c200")
+	assert.EqualValues(t, 0, checksum0["id"])
+	assert.Equal(t, "md5", checksum0["algorithm"])
+	assert.Equal(t, "2014-04-25T18:05:51-05:00", checksum0["datetime"])
+	assert.Equal(t, "c6d8080a39a0622f299750e13aa9c200", checksum0["digest"])
 
 	checksum1 := checksums[1].(map[string]interface{})
-	assertValue(t, "TestSerializeFileForPharos Checksum 1", checksum1, "id", float64(0))
-	assertValue(t, "TestSerializeFileForPharos Checksum 1", checksum1, "algorithm", "sha256")
-	assertValue(t, "TestSerializeFileForPharos Checksum 1", checksum1, "datetime", "2014-08-12T20:51:20Z")
-	assertValue(t, "TestSerializeFileForPharos Checksum 1", checksum1, "digest", "a418d61067718141d7254d7376d5499369706e3ade27cb84c4d5519f7cfed790")
+	assert.EqualValues(t, 0, checksum1["id"])
+	assert.Equal(t, "sha256", checksum1["algorithm"])
+	assert.Equal(t, "2014-08-12T20:51:20Z", checksum1["datetime"])
+	assert.Equal(t, "a418d61067718141d7254d7376d5499369706e3ade27cb84c4d5519f7cfed790", checksum1["digest"])
 
 }
