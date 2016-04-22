@@ -1,6 +1,7 @@
 package models_test
 
 import (
+	"encoding/json"
 	"github.com/APTrust/exchange/models"
 	"github.com/APTrust/exchange/util/testutil"
 	"path/filepath"
@@ -135,4 +136,20 @@ func TestFindEventsByType(t *testing.T) {
 		t.Errorf("Should have found 2 identifier assignment events")
 	}
 
+}
+
+func TestSerializeForPharos(t *testing.T) {
+	filename := filepath.Join("testdata", "intel_obj.json")
+	intelObj, err := testutil.LoadIntelObjFixture(filename)
+	genericFile := intelObj.GenericFiles[1]
+	data, err := genericFile.SerializeForPharos()
+	if err != nil {
+		t.Errorf("Error serializing for Pharos: %v", err)
+		return
+	}
+	hash := make(map[string]interface{})
+	err = json.Unmarshal(data, &hash)
+	if err != nil {
+		t.Errorf("Error unmarshalling data: %v", err)
+	}
 }

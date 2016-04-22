@@ -26,6 +26,7 @@ such as:
 1994-11-05T08:15:30Z          (UTC)
 */
 type GenericFile struct {
+	// Pharos fields.
 	Id                           int            `json:"id"`
 	Identifier                   string         `json:"identifier"`
 	IntellectualObjectId         int            `json:"intellectual_object_id"`
@@ -37,10 +38,34 @@ type GenericFile struct {
 	Modified                     time.Time      `json:"modified"`
 	Checksums                    []*Checksum    `json:"checksums"`
 	PremisEvents                 []*PremisEvent `json:"premis_events"`
+
+	// Exchange fields. These are for internal housekeeping.
+	// We don't send this data to Pharos.
+	IngestLocalPath              string         `json:"ingest_local_path"`
+	IngestMd5                    string         `json:"ingest_md5"`
+	IngestMd5Verified            time.Time      `json:"ingest_md5_verified"`
+	IngestSha256                 string         `json:"ingest_sha_256"`
+	IngestSha256GeneratedAt      time.Time      `json:"ingest_sha_256_generated_at"`
+	IngestUUID                   string         `json:"ingest_uuid"`
+	IngestUUIDGeneratedAt        time.Time      `json:"ingest_uuid_generated_at"`
+	IngestStorageURL             string         `json:"ingest_storage_url"`
+	IngestStoredAt               time.Time      `json:"ingest_stored_at"`
+	IngestPreviousVersionExists  bool           `json:"ingest_previous_version_exists"`
+	IngestNeedsSave              bool           `json:"ingest_needs_save"`
+	ErrorMessage                 string         `json:"error_message"`
 }
 
+func NewGenericFile() (*GenericFile) {
+	return &GenericFile{
+		IngestPreviousVersionExists: false,
+		IngestNeedsSave: true,
+	}
+}
+
+
 // Serializes a version of GenericFile that Fluctus will accept as post/put input.
-func (gf *GenericFile) SerializeForFluctus() ([]byte, error) {
+// Note that we don't serialize the id or any of our internal housekeeping info.
+func (gf *GenericFile) SerializeForPharos() ([]byte, error) {
 	return json.Marshal(map[string]interface{}{
 		"identifier":                     gf.Identifier,
 		"intellectual_object_id":         gf.IntellectualObjectId,
