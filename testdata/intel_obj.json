@@ -6,7 +6,8 @@
 	"access": "institution",
 	"description": "A collection from Cincinnati",
 	"identifier": "uc.edu/cin.675812",
-	"alt_identifier": ["Photo Collection"],
+	"bag_name": "cin.675812",
+	"alt_identifier": "Photo Collection",
 	"premis_events": [
 		{
 			"identifier": "7c4208bc-e71c-4e82-64e0-190d07280142",

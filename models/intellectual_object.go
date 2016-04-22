@@ -24,12 +24,13 @@ consortial, institution and restricted.
 type IntellectualObject struct {
 	Id            string         `json:"id"`
 	Identifier    string         `json:"identifier"`
+	BagName       string         `json:"bag_name"`
 	Institution   string         `json:"institution"`
 	InstitutionId int            `json:"institution_id"`
 	Title         string         `json:"title"`
 	Description   string         `json:"description"`
 	Access        string         `json:"access"`
-	AltIdentifier []string       `json:"alt_identifier"`
+	AltIdentifier string         `json:"alt_identifier"`
 	GenericFiles  []*GenericFile `json:"generic_files"`
 	Events        []*PremisEvent `json:"events"`
 }
@@ -58,7 +59,7 @@ func (obj *IntellectualObject) AccessValid() bool {
 	return false
 }
 
-
+// TODO: Move this into PremisEvent
 func (obj *IntellectualObject) CreateIngestEvent() (*PremisEvent, error) {
 	eventId, err := uuid.NewV4()
 	if err != nil {
