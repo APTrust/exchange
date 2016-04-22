@@ -3,14 +3,18 @@ package models_test
 import (
 	"github.com/APTrust/exchange/constants"
 	"github.com/APTrust/exchange/models"
+	"github.com/APTrust/exchange/util/logger"
+	"os"
 	"testing"
 	"time"
 )
 
-func TestWorkItemSerializeForFluctus(t *testing.T) {
-	bagDate, _ := time.Parse("2006-01-02T15:04:05.000Z", "2014-07-02T12:00:00.000Z")
-	ingestDate, _ := time.Parse("2006-01-02T15:04:05.000Z", "2014-09-10T12:00:00.000Z")
-	workItem := models.WorkItem{
+var bagDate time.Time = time.Date(2104, 7, 2, 12, 0, 0, 0, time.UTC)
+var ingestDate time.Time = time.Date(2014, 9, 10, 12, 0, 0, 0, time.UTC)
+
+
+func SampleWorkItem() *models.WorkItem {
+	return &models.WorkItem{
 		Id: 9000,
 		ObjectIdentifier: "ncsu.edu/some_object",
 		GenericFileIdentifier: "ncsu.edu/some_object/data/doc.pdf",
@@ -27,12 +31,20 @@ func TestWorkItemSerializeForFluctus(t *testing.T) {
 		Outcome: "happy day!",
 		Retry: true,
 		Reviewed: false,
+		Node: "",
+		Pid: 0,
+		State: "",
+		NeedsAdminReview: false,
 	}
+}
+
+func TestWorkItemSerializeForFluctus(t *testing.T) {
+	workItem := SampleWorkItem()
 	bytes, err := workItem.SerializeForFluctus()
 	if err != nil {
 		t.Error(err)
 	}
-	expected := "{\"action\":\"Ingest\",\"bag_date\":\"2014-07-02T12:00:00Z\",\"bucket\":\"aptrust.receiving.ncsu.edu\",\"date\":\"2014-09-10T12:00:00Z\",\"etag\":\"12345\",\"generic_file_identifier\":\"ncsu.edu/some_object/data/doc.pdf\",\"institution\":\"ncsu.edu\",\"name\":\"Sample Document\",\"note\":\"so many!\",\"object_identifier\":\"ncsu.edu/some_object\",\"outcome\":\"happy day!\",\"retry\":true,\"reviewed\":false,\"stage\":\"Store\",\"status\":\"Success\"}"
+	expected := `{"action":"Ingest","bag_date":"2104-07-02T12:00:00Z","bucket":"aptrust.receiving.ncsu.edu","date":"2014-09-10T12:00:00Z","etag":"12345","generic_file_identifier":"ncsu.edu/some_object/data/doc.pdf","institution":"ncsu.edu","name":"Sample Document","needs_admin_review":false,"node":"","note":"so many!","object_identifier":"ncsu.edu/some_object","outcome":"happy day!","pid":0,"retry":true,"reviewed":false,"stage":"Store","state":"","status":"Success"}`
 	actual := string(bytes)
 	if actual != expected {
 		t.Errorf("WorkItem.SerializeForFluctus expected:\n'%s'\nbut got:\n'%s'", expected, actual)
@@ -230,5 +242,29 @@ func TestHasPendingIngestRequest(t *testing.T) {
 	workItems[2].Status = constants.StatusCancelled
 	if models.HasPendingIngestRequest(workItems) == true {
 		t.Error("HasPendingIngestRequest() should have returned false")
+	}
+}
+
+func TestSetNodePidState(t *testing.T) {
+	item := SampleWorkItem()
+	object := make(map[string]string)
+	object["key"] = "value"
+
+	discardLogger := logger.DiscardLogger("workitem_test")
+	item.SetNodePidState(object, discardLogger)
+	hostname, _ := os.Hostname()
+	if hostname == "" {
+		if item.Node != "hostname?" {
+			t.Error("Expected 'hostname?' for node, but got '%s'", item.Node)
+		} else if item.Node != hostname {
+			t.Error("Expected Node '%s', got '%s'", hostname, item.Node)
+		}
+	}
+	if item.Pid != os.Getpid() {
+		t.Error("Expected Pid %d, got %d", os.Getpid(), item.Pid)
+	}
+	expectedState := "{\"key\":\"value\"}"
+	if item.State != expectedState {
+		t.Error("Expected State '%s', got '%s'", expectedState, item.State)
 	}
 }

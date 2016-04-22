@@ -3,6 +3,8 @@ package models
 import (
 	"encoding/json"
 	"github.com/APTrust/exchange/constants"
+	"github.com/op/go-logging"
+	"os"
 	"time"
 )
 
@@ -45,52 +47,59 @@ type WorkItem struct {
 	Outcome                string               `json:"outcome"`
 	Retry                  bool                 `json:"retry"`
 	Reviewed               bool                 `json:"reviewed"`
+	State                  string               `json:"state"`
+	Node                   string               `json:"node"`
+	Pid                    int                  `json:"pid"`
+	NeedsAdminReview       bool                 `json:"needs_admin_review"`
 }
 
 // Convert WorkItem to JSON, omitting id, which Rails won't permit.
 // For internal use, json.Marshal() works fine.
-func (status *WorkItem) SerializeForFluctus() ([]byte, error) {
+func (item *WorkItem) SerializeForFluctus() ([]byte, error) {
 	return json.Marshal(map[string]interface{}{
-		"name":                    status.Name,
-		"bucket":                  status.Bucket,
-		"etag":                    status.ETag,
-		"bag_date":                status.BagDate,
-		"institution":             status.Institution,
-		"object_identifier":       status.ObjectIdentifier,
-		"generic_file_identifier": status.GenericFileIdentifier,
-		"date":                    status.Date,
-		"note":                    status.Note,
-		"action":                  status.Action,
-		"stage":                   status.Stage,
-		"status":                  status.Status,
-		"outcome":                 status.Outcome,
-		"retry":                   status.Retry,
-		"reviewed":                status.Reviewed,
+		"name":                    item.Name,
+		"bucket":                  item.Bucket,
+		"etag":                    item.ETag,
+		"bag_date":                item.BagDate,
+		"institution":             item.Institution,
+		"object_identifier":       item.ObjectIdentifier,
+		"generic_file_identifier": item.GenericFileIdentifier,
+		"date":                    item.Date,
+		"note":                    item.Note,
+		"action":                  item.Action,
+		"stage":                   item.Stage,
+		"status":                  item.Status,
+		"outcome":                 item.Outcome,
+		"retry":                   item.Retry,
+		"reviewed":                item.Reviewed,
+		"state":                   item.State,
+		"node":                    item.Node,
+		"pid":                     item.Pid,
+		"needs_admin_review":      item.NeedsAdminReview,
 	})
 }
 
 // Returns true if an object's files have been stored in S3 preservation bucket.
-func (status *WorkItem) HasBeenStored() (bool) {
-	if status.Action == constants.ActionIngest {
-		return status.Stage == constants.StageRecord ||
-			status.Stage == constants.StageCleanup ||
-			status.Stage == constants.StageResolve ||
-			(status.Stage == constants.StageStore &&
-			status.Status == constants.StatusPending)
+func (item *WorkItem) HasBeenStored() (bool) {
+	if item.Action == constants.ActionIngest {
+		return item.Stage == constants.StageRecord ||
+			item.Stage == constants.StageCleanup ||
+			item.Stage == constants.StageResolve ||
+			(item.Stage == constants.StageStore && item.Status == constants.StatusPending)
 	} else {
 		return true
 	}
 }
 
-func (status *WorkItem) IsStoring() (bool) {
-	return status.Action == constants.ActionIngest &&
-		status.Stage == constants.StageStore &&
-		status.Status == constants.StatusStarted
+func (item *WorkItem) IsStoring() (bool) {
+	return item.Action == constants.ActionIngest &&
+		item.Stage == constants.StageStore &&
+		item.Status == constants.StatusStarted
 }
 
 // Returns true if we should try to ingest this item.
-func (status *WorkItem) ShouldTryIngest() (bool) {
-	return status.HasBeenStored() == false && status.IsStoring() == false && status.Retry == true
+func (item *WorkItem) ShouldTryIngest() (bool) {
+	return item.HasBeenStored() == false && item.IsStoring() == false && item.Retry == true
 }
 
 // Returns true if the WorkItem records include a delete
@@ -98,8 +107,7 @@ func (status *WorkItem) ShouldTryIngest() (bool) {
 func HasPendingDeleteRequest(workItems []*WorkItem) (bool) {
 	for _, record := range workItems {
 		if record.Action == constants.ActionDelete &&
-			(record.Status == constants.StatusStarted ||
-			record.Status == constants.StatusPending) {
+			(record.Status == constants.StatusStarted || record.Status == constants.StatusPending) {
 			return true
 		}
 	}
@@ -111,8 +119,7 @@ func HasPendingDeleteRequest(workItems []*WorkItem) (bool) {
 func HasPendingRestoreRequest(workItems []*WorkItem) (bool) {
 	for _, record := range workItems {
 		if record.Action == constants.ActionRestore &&
-			(record.Status == constants.StatusStarted ||
-			record.Status == constants.StatusPending) {
+			(record.Status == constants.StatusStarted || record.Status == constants.StatusPending) {
 			return true
 		}
 	}
@@ -124,10 +131,30 @@ func HasPendingRestoreRequest(workItems []*WorkItem) (bool) {
 func HasPendingIngestRequest(workItems []*WorkItem) (bool) {
 	for _, record := range workItems {
 		if record.Action == constants.ActionIngest &&
-			(record.Status == constants.StatusStarted ||
-			record.Status == constants.StatusPending) {
+			(record.Status == constants.StatusStarted || record.Status == constants.StatusPending) {
 			return true
 		}
 	}
 	return false
+}
+
+// Set state, node and pid on WorkItem.
+func (item *WorkItem) SetNodePidState(object interface{}, logger *logging.Logger) {
+	jsonBytes, err := json.Marshal(object)
+	jsonData := ""
+	if err != nil {
+		if logger != nil {
+			logger.Error(err.Error())
+		}
+	} else {
+		jsonData = string(jsonBytes)
+	}
+
+	hostname, err := os.Hostname()
+	if err != nil {
+		hostname = "hostname?"
+	}
+	item.Node = hostname
+	item.Pid = os.Getpid()
+	item.State = jsonData
 }
