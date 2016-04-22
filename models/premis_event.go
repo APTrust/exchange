@@ -76,7 +76,7 @@ func NewEventObjectIngest(numberOfFilesIngested int) (*PremisEvent, error) {
 		EventType:          "ingest",
 		DateTime:           time.Now(),
 		Detail:             "Copied all files to perservation bucket",
-		Outcome:            "Success",
+		Outcome:            string(constants.StatusSuccess),
 		OutcomeDetail:      fmt.Sprintf("%d files copied", numberOfFilesIngested),
 		Object:             "goamz S3 client",
 		Agent:              "https://github.com/crowdmob/goamz",
@@ -94,7 +94,7 @@ func NewEventObjectIdentifierAssignment(objectIdentifier string) (*PremisEvent, 
 		EventType:          "identifier_assignment",
 		DateTime:           time.Now(),
 		Detail:             "Assigned bag identifier",
-		Outcome:            "Success",
+		Outcome:            string(constants.StatusSuccess),
 		OutcomeDetail:      objectIdentifier,
 		Object:             "APTrust exchange",
 		Agent:              "https://github.com/APTrust/exchange",
@@ -112,7 +112,7 @@ func NewEventObjectRights(accessSetting string) (*PremisEvent, error) {
 		EventType:          "access_assignment",
 		DateTime:           time.Now(),
 		Detail:             "Assigned bag access rights",
-		Outcome:            "Success",
+		Outcome:            string(constants.StatusSuccess),
 		OutcomeDetail:      accessSetting,
 		Object:             "APTrust exchange",
 		Agent:              "https://github.com/APTrust/exchange",
@@ -133,7 +133,7 @@ func NewEventGenericFileIngest(storedAt time.Time, md5Digest string) (*PremisEve
 		Detail:             "Completed copy to S3",
 		Outcome:            string(constants.StatusSuccess),
 		OutcomeDetail:      fmt.Sprintf("md5:%s", md5Digest),
-		Object:             "exchange + goamz s3 client",
+		Object:             "exchange + goamz S3 client",
 		Agent:              "https://github.com/APTrust/exchange",
 		OutcomeInformation: "Put using md5 checksum",
 	}, nil
@@ -146,14 +146,16 @@ func NewEventGenericFileFixityCheck(checksumVerifiedAt time.Time, fixityAlg cons
 	if err != nil {
 		return nil, fmt.Errorf("Error generating UUID for generic file fixity check: %v", err)
 	}
-	object := "Go crypto/md5"
+	object := "Go language crypto/md5"
 	agent := "http://golang.org/pkg/crypto/md5/"
 	outcomeInformation := "Fixity matches"
+	outcome := string(constants.StatusSuccess)
 	if fixityAlg == constants.AlgSha256 {
 		object = "Go language crypto/sha256"
 		agent = "http://golang.org/pkg/crypto/sha256/"
 	}
 	if fixityMatched == false {
+		outcome = string(constants.StatusFailed)
 		outcomeInformation = "Fixity did not match"
 	}
 	return &PremisEvent{
@@ -161,7 +163,7 @@ func NewEventGenericFileFixityCheck(checksumVerifiedAt time.Time, fixityAlg cons
 		EventType:          "fixity_check",
 		DateTime:           checksumVerifiedAt,
 		Detail:             "Fixity check against registered hash",
-		Outcome:            string(constants.StatusSuccess),
+		Outcome:            outcome,
 		OutcomeDetail:      fmt.Sprintf("%s:%s", fixityAlg, digest),
 		Object:             object,
 		Agent:              agent,
@@ -170,12 +172,12 @@ func NewEventGenericFileFixityCheck(checksumVerifiedAt time.Time, fixityAlg cons
 }
 
 // We generated a sha256 checksum.
-func NewEventGenericFileFixityGeneration(checksumGeneratedAt time.Time, fixityAlg constants.FixityAlgorithmType, sha256Digest string) (*PremisEvent, error) {
+func NewEventGenericFileFixityGeneration(checksumGeneratedAt time.Time, fixityAlg constants.FixityAlgorithmType, digest string) (*PremisEvent, error) {
 	eventId, err := uuid.NewV4()
 	if err != nil {
 		return nil, fmt.Errorf("Error generating UUID for generic file ingest event: %v", err)
 	}
-	object := "Go crypto/md5"
+	object := "Go language crypto/md5"
 	agent := "http://golang.org/pkg/crypto/md5/"
 	if fixityAlg == constants.AlgSha256 {
 		object = "Go language crypto/sha256"
@@ -187,7 +189,7 @@ func NewEventGenericFileFixityGeneration(checksumGeneratedAt time.Time, fixityAl
 		DateTime:           checksumGeneratedAt,
 		Detail:             "Calculated new fixity value",
 		Outcome:            string(constants.StatusSuccess),
-		OutcomeDetail:      fmt.Sprintf("sha256:%s", sha256Digest),
+		OutcomeDetail:      fmt.Sprintf("%s:%s", fixityAlg, digest),
 		Object:             object,
 		Agent:              agent,
 		OutcomeInformation: "",
@@ -201,17 +203,19 @@ func NewEventGenericFileIdentifierAssignment(identifierGeneratedAt time.Time, id
 	if err != nil {
 		return nil, fmt.Errorf("Error generating UUID for generic file ingest event: %v", err)
 	}
-	object := "APTrust bag processor"
+	object := "APTrust exchange/ingest processor"
 	agent := "https://github.com/APTrust/exchange"
-	if identifierType == constants.IdTypeUUID {
+	detail := "Assigned new institution.bag/path identifier"
+	if identifierType == constants.IdTypeStorageURL {
 		object = "Go uuid library + goamz S3 library"
 		agent = "http://github.com/nu7hatch/gouuid"
+		detail = "Assigned new storage URL identifier"
 	}
 	return &PremisEvent{
 		Identifier:         eventId.String(),
 		EventType:          "identifier_assignment",
 		DateTime:           identifierGeneratedAt,
-		Detail:             "Assigned new institution.bag/path identifier",
+		Detail:             detail,
 		Outcome:            string(constants.StatusSuccess),
 		OutcomeDetail:      identifier,
 		Object:             object,

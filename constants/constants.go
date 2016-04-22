@@ -71,8 +71,8 @@ const (
 type IdentifierType string
 
 const (
-	IdTypeURL  IdentifierType = "url"
-	IdTypeUUID                = "uuid"
+	IdTypeStorageURL  IdentifierType = "url"
+	IdTypeBagAndPath                 = "uuid"
 )
 
 // List of valid APTrust IntellectualObject AccessRights.
