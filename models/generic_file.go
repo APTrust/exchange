@@ -27,6 +27,7 @@ such as:
 */
 type GenericFile struct {
 	// Pharos fields.
+	// If the Id is non-zero, it's been recorded in Pharos.
 	Id                           int            `json:"id"`
 	Identifier                   string         `json:"identifier"`
 	IntellectualObjectId         int            `json:"intellectual_object_id"`

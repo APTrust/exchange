@@ -19,6 +19,7 @@ Access indicate who can access the object. Valid values are
 consortial, institution and restricted.
 */
 type IntellectualObject struct {
+	// If Id is non-zero, this has been recorded in Pharos.
 	Id            string         `json:"id"`
 	Identifier    string         `json:"identifier"`
 	BagName       string         `json:"bag_name"`

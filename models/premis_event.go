@@ -17,7 +17,8 @@ Pharos API.
 */
 type PremisEvent struct {
 	// The Pharos id for this event. Will be zero if the event
-	// is not yet in Pharos.
+	// is not yet in Pharos. If non-zero, it's been recorded
+	// in Pharos.
 	Id                 int       `json:"id"`
 
 	// Identifier is a UUID string assigned by Pharos.
