@@ -86,13 +86,13 @@ func NewLocalFile() (*LocalFile) {
 // Converts LocalFile to GenericFile, which is what
 // Fluctus understands.
 func (file *LocalFile) ToGenericFile() (*GenericFile, error) {
-	checksumAttributes := make([]*ChecksumAttribute, 2)
-	checksumAttributes[0] = &ChecksumAttribute{
+	checksums := make([]*Checksum, 2)
+	checksums[0] = &Checksum{
 		Algorithm: "md5",
 		DateTime:  file.Modified,
 		Digest:    file.Md5,
 	}
-	checksumAttributes[1] = &ChecksumAttribute{
+	checksums[1] = &Checksum{
 		Algorithm: "sha256",
 		DateTime:  file.Sha256Generated,
 		Digest:    file.Sha256,
@@ -103,13 +103,13 @@ func (file *LocalFile) ToGenericFile() (*GenericFile, error) {
 	}
 	genericFile := &GenericFile{
 		Identifier:         file.Identifier,
-		Format:             file.MimeType,
+		FileFormat:         file.MimeType,
 		URI:                file.StorageURL,
 		Size:               file.Size,
 		Created:            file.Modified,
 		Modified:           file.Modified,
-		ChecksumAttributes: checksumAttributes,
-		Events:             events,
+		Checksums:          checksums,
+		PremisEvents:       events,
 	}
 	return genericFile, nil
 }

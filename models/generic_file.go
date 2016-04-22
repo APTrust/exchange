@@ -26,27 +26,31 @@ such as:
 1994-11-05T08:15:30Z          (UTC)
 */
 type GenericFile struct {
-	Id                 string               `json:"id"`
-	Identifier         string               `json:"identifier"`
-	Format             string               `json:"file_format"`
-	URI                string               `json:"uri"`
-	Size               int64                `json:"size"`
-	Created            time.Time            `json:"created"`
-	Modified           time.Time            `json:"modified"`
-	ChecksumAttributes []*ChecksumAttribute `json:"checksum"`
-	Events             []*PremisEvent       `json:"premisEvents"`
+	Id                           int            `json:"id"`
+	Identifier                   string         `json:"identifier"`
+	IntellectualObjectId         int            `json:"intellectual_object_id"`
+	IntellectualObjectIdentifier string         `json:"intellectual_object_identifier"`
+	FileFormat                   string         `json:"file_format"`
+	URI                          string         `json:"uri"`
+	Size                         int64          `json:"size"`
+	Created                      time.Time      `json:"created"`
+	Modified                     time.Time      `json:"modified"`
+	Checksums                    []*Checksum    `json:"checksums"`
+	PremisEvents                 []*PremisEvent `json:"premis_events"`
 }
 
 // Serializes a version of GenericFile that Fluctus will accept as post/put input.
 func (gf *GenericFile) SerializeForFluctus() ([]byte, error) {
 	return json.Marshal(map[string]interface{}{
-		"identifier":          gf.Identifier,
-		"file_format":         gf.Format,
-		"uri":                 gf.URI,
-		"size":                gf.Size,
-		"created":             gf.Created,
-		"modified":            gf.Modified,
-		"checksum_attributes": gf.ChecksumAttributes,
+		"identifier":                     gf.Identifier,
+		"intellectual_object_id":         gf.IntellectualObjectId,
+		"intellectual_object_identifier": gf.IntellectualObjectIdentifier,
+		"file_format":                    gf.FileFormat,
+		"uri":                            gf.URI,
+		"size":                           gf.Size,
+		"created":                        gf.Created,
+		"modified":                       gf.Modified,
+		"checksum_attributes":            gf.Checksums,
 	})
 }
 
@@ -55,24 +59,15 @@ func (gf *GenericFile) SerializeForFluctus() ([]byte, error) {
 // For example, if the identifier is "uc.edu/cin.675812/data/object.properties",
 // this returns "data/object.properties"
 func (gf *GenericFile) OriginalPath() (string, error) {
-	parts := strings.SplitN(gf.Identifier, "/data/", 2)
-	if len(parts) < 2 {
+	parts := strings.SplitN(gf.Identifier, "/", 3)
+	if len(parts) < 3 {
 		return "", fmt.Errorf("GenericFile identifier '%s' is not valid", gf.Identifier)
 	}
-	return fmt.Sprintf("data/%s", parts[1]), nil
-}
-
-// Returns the name of the original bag.
-func (gf *GenericFile) BagName() (string, error) {
-	parts := strings.Split(gf.Identifier, "/")
-	if len(parts) < 2 {
-		return "", fmt.Errorf("GenericFile identifier '%s' is not valid", gf.Identifier)
-	}
-	return parts[1], nil
+	return parts[2], nil
 }
 
 // Returns the name of the institution that owns this file.
-func (gf *GenericFile) InstitutionId() (string, error) {
+func (gf *GenericFile) InstitutionIdentifier() (string, error) {
 	parts := strings.Split(gf.Identifier, "/")
 	if len(parts) < 2 {
 		return "", fmt.Errorf("GenericFile identifier '%s' is not valid", gf.Identifier)
@@ -81,8 +76,8 @@ func (gf *GenericFile) InstitutionId() (string, error) {
 }
 
 // Returns the checksum digest for the given algorithm for this file.
-func (gf *GenericFile) GetChecksum(algorithm string) (*ChecksumAttribute) {
-	for _, cs := range gf.ChecksumAttributes {
+func (gf *GenericFile) GetChecksum(algorithm string) (*Checksum) {
+	for _, cs := range gf.Checksums {
 		if cs != nil && cs.Algorithm == algorithm {
 			return cs
 		}
@@ -93,7 +88,7 @@ func (gf *GenericFile) GetChecksum(algorithm string) (*ChecksumAttribute) {
 // Returns events of the specified type
 func (gf *GenericFile) FindEventsByType(eventType string) ([]PremisEvent) {
 	events := make([]PremisEvent, 0)
-	for _, event := range gf.Events {
+	for _, event := range gf.PremisEvents {
 		if event != nil && event.EventType == eventType {
 			events = append(events, *event)
 		}
@@ -110,21 +105,4 @@ func (gf *GenericFile) PreservationStorageFileName() (string, error) {
 	}
 	parts := strings.Split(gf.URI, "/")
 	return parts[len(parts) - 1], nil
-}
-
-// Converts a generic file to a map structure which can then be
-// serialized to JSON. The resulting structure includes both checksums
-// and premis events, and is intended for the save_batch action of
-// Fluctus' generic_files controller.
-func (gf *GenericFile) ToMapForBulkSave() (map[string]interface{}) {
-	return map[string]interface{}{
-		"identifier":   gf.Identifier,
-		"file_format":  gf.Format,
-		"uri":          gf.URI,
-		"size":         gf.Size,
-		"created":      gf.Created,
-		"modified":     gf.Modified,
-		"checksum":     gf.ChecksumAttributes,
-		"premisEvents": gf.Events,
-	}
 }

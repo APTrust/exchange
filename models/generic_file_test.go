@@ -5,25 +5,12 @@ import (
 	"github.com/APTrust/exchange/util/testutil"
 	"path/filepath"
 	"testing"
-	"time"
 )
 
-func TestBagName(t *testing.T) {
+func TestInstitutionIdentifier(t *testing.T) {
 	genericFile := models.GenericFile{}
 	genericFile.Identifier = "uc.edu/cin.675812/data/object.properties"
-	bagname, err := genericFile.BagName()
-	if err != nil {
-		t.Error(err)
-	}
-	if bagname != "cin.675812" {
-		t.Errorf("BagName returned '%s'; expected 'cin.675812'", bagname)
-	}
-}
-
-func TestInstitutionId(t *testing.T) {
-	genericFile := models.GenericFile{}
-	genericFile.Identifier = "uc.edu/cin.675812/data/object.properties"
-	instId, err := genericFile.InstitutionId()
+	instId, err := genericFile.InstitutionIdentifier()
 	if err != nil {
 		t.Errorf(err.Error())
 	}
@@ -34,17 +21,41 @@ func TestInstitutionId(t *testing.T) {
 
 func TestOriginalPath(t *testing.T) {
 	genericFile := models.GenericFile{}
-	genericFile.Identifier = "uc.edu/cin.675812/data/object.properties"
+
+	// Top-level custom tag file
+	genericFile.Identifier = "uc.edu/cin.675812/tagmanifest-sha256.txt"
 	origPath, err := genericFile.OriginalPath()
 	if err != nil {
 		t.Errorf(err.Error())
 	}
-	if origPath != "data/object.properties" {
-		t.Errorf("OriginalPath returned some kinda shizzle. Expected 'data/object.properties', got '%s'",
+	if origPath != "tagmanifest-sha256.txt" {
+		t.Errorf("Expected 'tagmanifest-sha256.txt', got '%s'",
 			origPath)
 	}
-}
 
+	// Payload file
+	genericFile.Identifier = "uc.edu/cin.675812/data/object.properties"
+	origPath, err = genericFile.OriginalPath()
+	if err != nil {
+		t.Errorf(err.Error())
+	}
+	if origPath != "data/object.properties" {
+		t.Errorf("Expected 'data/object.properties', got '%s'",
+			origPath)
+	}
+
+	// Nested custom tag file
+	genericFile.Identifier = "uc.edu/cin.675812/custom/tag/dir/special_info.xml"
+	origPath, err = genericFile.OriginalPath()
+	if err != nil {
+		t.Errorf(err.Error())
+	}
+	if origPath != "custom/tag/dir/special_info.xml" {
+		t.Errorf("Expected 'custom/tag/dir/special_info.xml', got '%s'",
+			origPath)
+	}
+
+}
 
 func TestGetChecksum(t *testing.T) {
 	filename := filepath.Join("testdata", "intel_obj.json")
@@ -98,77 +109,6 @@ func TestPreservationStorageFileName(t *testing.T) {
 	if fileName != expected {
 		t.Errorf("PreservationStorageFileName() returned '%s', expected '%s'",
 			fileName, expected)
-	}
-}
-
-func TestTotalFileSize(t *testing.T) {
-	filepath := filepath.Join("testdata", "intel_obj.json")
-	obj, err := testutil.LoadIntelObjFixture(filepath)
-	if err != nil {
-		t.Errorf("Error loading test data file '%s': %v", filepath, err)
-	}
-	if obj.TotalFileSize() != 686 {
-		t.Errorf("TotalFileSize() returned '%d', expected 686", obj.TotalFileSize())
-	}
-}
-
-func TestGenericFilesToFluctusMap(t *testing.T) {
-	filepath := filepath.Join("testdata", "intel_obj.json")
-	obj, err := testutil.LoadIntelObjFixture(filepath)
-	if err != nil {
-		t.Errorf("Error loading test data file '%s': %v", filepath, err)
-	}
-	gfMap := obj.GenericFiles[0].ToMapForBulkSave()
-	if gfMap["identifier"] != "uc.edu/cin.675812/data/object.properties" {
-		t.Errorf("identifier expected %s, got %s", "uc.edu/cin.675812/data/object.properties", gfMap["identifier"])
-	}
-	if gfMap["file_format"] != "text/plain" {
-		t.Errorf("file_format expected %s, got %s", "text/plain", gfMap["file_format"])
-	}
-	if gfMap["uri"] != "https://s3.amazonaws.com/aptrust.test.fixtures/restore_test/data/object.properties" {
-		t.Errorf("uri expected %s, got %s", "https://s3.amazonaws.com/aptrust.test.fixtures/restore_test/data/object.properties", gfMap["uri"])
-	}
-	if gfMap["size"] != int64(80) {
-		t.Errorf("size expected %d, got %d", 80, gfMap["size"])
-	}
-
-	expectedTime := "2014-04-25T18:05:51-05:00"
-	created := gfMap["created"].(time.Time).Format(time.RFC3339)
-	if created != expectedTime {
-		t.Errorf("created expected %v, got %v", expectedTime, created)
-	}
-	modified := gfMap["modified"].(time.Time).Format(time.RFC3339)
-	if modified != expectedTime {
-		t.Errorf("modified expected %v, got %v", expectedTime, modified)
-	}
-
-	if len(gfMap["checksum"].([]*models.ChecksumAttribute)) != 2 {
-		t.Errorf("expected 2 checksums, found only %d", len(gfMap["checksum"].([]*models.ChecksumAttribute)))
-	}
-	if len(gfMap["premisEvents"].([]*models.PremisEvent)) != 10 {
-		t.Errorf("expected 10 premis events, found only %d", len(gfMap["premisEvents"].([]*models.PremisEvent)))
-	}
-}
-
-func TestGenericFilesToMaps(t *testing.T) {
-	filepath := filepath.Join("testdata", "intel_obj.json")
-	obj, err := testutil.LoadIntelObjFixture(filepath)
-	if err != nil {
-		t.Errorf("Error loading test data file '%s': %v", filepath, err)
-	}
-	gfMaps := obj.GenericFilesToBulkSaveMaps(-1)
-	if len(gfMaps) != 2 {
-		t.Errorf("Error converting generic files to maps: %v", err)
-	}
-	for _, gfMap := range gfMaps {
-		if len(gfMap["checksum"].([]*models.ChecksumAttribute)) != 2 {
-			t.Errorf("GenericFile should have 2 checksum attributes, found %d",
-				len(gfMap["checksum"].([]*models.ChecksumAttribute)))
-		}
-		if len(gfMap["premisEvents"].([]*models.PremisEvent)) != 10 {
-			t.Errorf("GenericFile should have 10 premis events, found %d",
-				len(gfMap["premisEvents"].([]*models.PremisEvent)))
-		}
 	}
 }
 

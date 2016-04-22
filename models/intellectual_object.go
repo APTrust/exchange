@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/APTrust/exchange/constants"
-	"github.com/APTrust/exchange/util"
 	"github.com/nu7hatch/gouuid"
 	"strings"
 	"time"
@@ -25,7 +24,8 @@ consortial, institution and restricted.
 type IntellectualObject struct {
 	Id            string         `json:"id"`
 	Identifier    string         `json:"identifier"`
-	InstitutionId string         `json:"institution_id"`
+	Institution   string         `json:"institution"`
+	InstitutionId int            `json:"institution_id"`
 	Title         string         `json:"title"`
 	Description   string         `json:"description"`
 	Access        string         `json:"access"`
@@ -58,62 +58,6 @@ func (obj *IntellectualObject) AccessValid() bool {
 	return false
 }
 
-// SerializeForCreate serializes a fluctus intellectual object
-// along with all of its generic files and events in a single shot.
-// The output is a byte array of JSON data.
-//
-// If maxGenericFiles is greater than zero, the JSON data will
-// include only that number of generic files. Otherwise, it will
-// include all of the generic files.
-//
-// Fluctus is somewhat efficient at creating new intellectual
-// objects when all of the files and events are included in the
-// JSON for the initial create request. But some Intellectual Objects
-// contain more than 10,000 files, and if we send all of this data
-// at once to Fluctus, it crashes.
-func (obj *IntellectualObject) SerializeForCreate(maxGenericFiles int) ([]byte, error) {
-	limit := len(obj.GenericFiles)
-	if maxGenericFiles > 0 {
-		limit = util.Min(maxGenericFiles, limit)
-	}
-	genericFileMaps := obj.GenericFilesToBulkSaveMaps(limit)
-
-	events := make([]*PremisEvent, 3)
-	ingestEvent, err := obj.CreateIngestEvent()
-	if err != nil {
-		return nil, err
-	}
-	idEvent, err := obj.CreateIdEvent()
-	if err != nil {
-		return nil, err
-	}
-	rightsEvent, err := obj.CreateRightsEvent()
-	if err != nil {
-		return nil, err
-	}
-	events[0] = idEvent
-	events[1] = ingestEvent
-	events[2] = rightsEvent
-
-	// Even though we're sending only one object,
-	// Fluctus expects an array.
-	objects := make([]map[string]interface{}, 1)
-	objects[0] = map[string]interface{}{
-		"identifier":     obj.Identifier,
-		"title":          obj.Title,
-		"description":    obj.Description,
-		"alt_identifier": obj.AltIdentifier,
-		"access":         obj.Access,
-		"institution_id": obj.InstitutionId,
-		"premisEvents":   events,
-		"generic_files":  genericFileMaps,
-	}
-	jsonBytes, err := json.Marshal(objects)
-	if err != nil {
-		return nil, err
-	}
-	return jsonBytes, nil
-}
 
 func (obj *IntellectualObject) CreateIngestEvent() (*PremisEvent, error) {
 	eventId, err := uuid.NewV4()
@@ -180,23 +124,4 @@ func (obj *IntellectualObject) SerializeForFluctus() ([]byte, error) {
 		"alt_identifier": obj.AltIdentifier,
 		"access":         obj.Access,
 	})
-}
-
-// Converts this object's generic files to maps, so we can serialize to JSON.
-// These map structures work with the save_batch endpoint of the
-// generic_files controller, which takes in a list of generic files
-// along with all of their related checksums and premis events.
-//
-// Param limit describes how many files to return. If limit is less than
-// zero, all files will be returned.
-func (obj *IntellectualObject) GenericFilesToBulkSaveMaps(limit int) ([]map[string]interface{}) {
-	if limit < 0 || limit >= len(obj.GenericFiles) {
-		limit = len(obj.GenericFiles)
-	}
-	files := obj.GenericFiles[0:limit]
-	genericFileMaps := make([]map[string]interface{}, len(files))
-	for i := range files {
-		genericFileMaps[i] = files[i].ToMapForBulkSave()
-	}
-	return genericFileMaps
 }

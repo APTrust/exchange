@@ -42,8 +42,8 @@ func TestToGenericFile(t *testing.T) {
 		t.Errorf("Identifier expected '%s', got '%s'", expectedIdentifier, genericFile.Identifier)
 	}
 	expectedFormat := "application/xml"
-	if genericFile.Format != expectedFormat {
-		t.Errorf("Format expected '%s', got '%s'", expectedFormat, genericFile.Format)
+	if genericFile.FileFormat != expectedFormat {
+		t.Errorf("Format expected '%s', got '%s'", expectedFormat, genericFile.FileFormat)
 	}
 	expectedURI := "https://s3.amazonaws.com/aptrust.test.fixtures/ncsu_files/data/metadata.xml"
 	if genericFile.URI != expectedURI {
@@ -59,11 +59,11 @@ func TestToGenericFile(t *testing.T) {
 	if genericFile.Modified != testdata.Apr_25_2014 {
 		t.Errorf("Modified expected '%v', got '%v'", testdata.Apr_25_2014, genericFile.Modified)
 	}
-	if len(genericFile.ChecksumAttributes) != 2 {
-		t.Errorf("GenericFile should have 2 checksum attributes")
+	if len(genericFile.Checksums) != 2 {
+		t.Errorf("GenericFile should have 2 checksums")
 	}
-	for i := range genericFile.ChecksumAttributes {
-		cs := genericFile.ChecksumAttributes[i]
+	for i := range genericFile.Checksums {
+		cs := genericFile.Checksums[i]
 		if i == 0 {
 			if cs.Algorithm != "md5" {
 				t.Errorf("First algorithm should be md5")
@@ -87,7 +87,7 @@ func TestToGenericFile(t *testing.T) {
 		}
 	}
 	// We'll test individual events below
-	if len(genericFile.Events) != 5 {
+	if len(genericFile.PremisEvents) != 5 {
 		t.Errorf("PremisEvents should contain 5 events")
 	}
 }
