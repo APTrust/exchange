@@ -138,7 +138,7 @@ func TestFindEventsByType(t *testing.T) {
 
 }
 
-func TestSerializeForPharos(t *testing.T) {
+func TestSerializeFileForPharos(t *testing.T) {
 	filename := filepath.Join("testdata", "intel_obj.json")
 	intelObj, err := testutil.LoadIntelObjFixture(filename)
 	genericFile := intelObj.GenericFiles[1]
@@ -154,26 +154,26 @@ func TestSerializeForPharos(t *testing.T) {
 	}
 
 	// Convert int and int64 to float64, because that's what JSON uses
-	assertValue(t, "TestSerializeForPhars", hash, "modified", "2014-04-25T18:05:51-05:00")
-	assertValue(t, "TestSerializeForPhars", hash, "size", float64(606))
-	assertValue(t, "TestSerializeForPhars", hash, "uri", "https://s3.amazonaws.com/aptrust.test.fixtures/restore_test/data/metadata.xml")
-	assertValue(t, "TestSerializeForPhars", hash, "created", "2014-04-25T18:05:51-05:00")
-	assertValue(t, "TestSerializeForPhars", hash, "intellectual_object_identifier", "uc.edu/cin.675812")
-	assertValue(t, "TestSerializeForPhars", hash, "intellectual_object_id", float64(741))
-	assertValue(t, "TestSerializeForPhars", hash, "file_format", "application/xml")
-	assertValue(t, "TestSerializeForPhars", hash, "identifier", "uc.edu/cin.675812/data/metadata.xml")
+	assertValue(t, "TestSerializeFileForPharos", hash, "modified", "2014-04-25T18:05:51-05:00")
+	assertValue(t, "TestSerializeFileForPharos", hash, "size", float64(606))
+	assertValue(t, "TestSerializeFileForPharos", hash, "uri", "https://s3.amazonaws.com/aptrust.test.fixtures/restore_test/data/metadata.xml")
+	assertValue(t, "TestSerializeFileForPharos", hash, "created", "2014-04-25T18:05:51-05:00")
+	assertValue(t, "TestSerializeFileForPharos", hash, "intellectual_object_identifier", "uc.edu/cin.675812")
+	assertValue(t, "TestSerializeFileForPharos", hash, "intellectual_object_id", float64(741))
+	assertValue(t, "TestSerializeFileForPharos", hash, "file_format", "application/xml")
+	assertValue(t, "TestSerializeFileForPharos", hash, "identifier", "uc.edu/cin.675812/data/metadata.xml")
 
 	checksums := hash["checksums"].([]interface{})
 	checksum0 := checksums[0].(map[string]interface{})
-	assertValue(t, "TestSerializeForPhars Checksum 0", checksum0, "id", float64(0))
-	assertValue(t, "TestSerializeForPhars Checksum 0", checksum0, "algorithm", "md5")
-	assertValue(t, "TestSerializeForPhars Checksum 0", checksum0, "datetime", "2014-04-25T18:05:51-05:00")
-	assertValue(t, "TestSerializeForPhars Checksum 0", checksum0, "digest", "c6d8080a39a0622f299750e13aa9c200")
+	assertValue(t, "TestSerializeFileForPharos Checksum 0", checksum0, "id", float64(0))
+	assertValue(t, "TestSerializeFileForPharos Checksum 0", checksum0, "algorithm", "md5")
+	assertValue(t, "TestSerializeFileForPharos Checksum 0", checksum0, "datetime", "2014-04-25T18:05:51-05:00")
+	assertValue(t, "TestSerializeFileForPharos Checksum 0", checksum0, "digest", "c6d8080a39a0622f299750e13aa9c200")
 
 	checksum1 := checksums[1].(map[string]interface{})
-	assertValue(t, "TestSerializeForPhars Checksum 1", checksum1, "id", float64(0))
-	assertValue(t, "TestSerializeForPhars Checksum 1", checksum1, "algorithm", "sha256")
-	assertValue(t, "TestSerializeForPhars Checksum 1", checksum1, "datetime", "2014-08-12T20:51:20Z")
-	assertValue(t, "TestSerializeForPhars Checksum 1", checksum1, "digest", "a418d61067718141d7254d7376d5499369706e3ade27cb84c4d5519f7cfed790")
+	assertValue(t, "TestSerializeFileForPharos Checksum 1", checksum1, "id", float64(0))
+	assertValue(t, "TestSerializeFileForPharos Checksum 1", checksum1, "algorithm", "sha256")
+	assertValue(t, "TestSerializeFileForPharos Checksum 1", checksum1, "datetime", "2014-08-12T20:51:20Z")
+	assertValue(t, "TestSerializeFileForPharos Checksum 1", checksum1, "digest", "a418d61067718141d7254d7376d5499369706e3ade27cb84c4d5519f7cfed790")
 
 }

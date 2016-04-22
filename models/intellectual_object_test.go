@@ -1,6 +1,7 @@
 package models_test
 
 import (
+	"encoding/json"
 	"github.com/APTrust/exchange/util/testutil"
 	"path/filepath"
 	"testing"
@@ -25,6 +26,28 @@ func TestTotalFileSize(t *testing.T) {
 	}
 }
 
-func TestSerializeForFluctus(t *testing.T) {
+func TestSerializeObjectForPharos(t *testing.T) {
+	filename := filepath.Join("testdata", "intel_obj.json")
+	intelObj, err := testutil.LoadIntelObjFixture(filename)
+	if err != nil {
+		t.Errorf("Error loading test data file '%s': %v", filename, err)
+	}
+	data, err := intelObj.SerializeForPharos()
+	if err != nil {
+		t.Errorf("Error serializing for Pharos: %v", err)
+		return
+	}
+	hash := make(map[string]interface{})
+	err = json.Unmarshal(data, &hash)
+	if err != nil {
+		t.Errorf("Error unmarshalling data: %v", err)
+	}
 
+	assertValue(t, "TestSerializeObjectForPharos", hash, "identifier", "uc.edu/cin.675812")
+	assertValue(t, "TestSerializeObjectForPharos", hash, "bag_name", "cin.675812")
+	assertValue(t, "TestSerializeObjectForPharos", hash, "institution", "uc.edu")
+	assertValue(t, "TestSerializeObjectForPharos", hash, "title", "Notes from the Oesper Collections")
+	assertValue(t, "TestSerializeObjectForPharos", hash, "description", "A collection from Cincinnati")
+	assertValue(t, "TestSerializeObjectForPharos", hash, "alt_identifier", "Photo Collection")
+	assertValue(t, "TestSerializeObjectForPharos", hash, "access", "institution")
 }
