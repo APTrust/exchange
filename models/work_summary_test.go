@@ -2,54 +2,41 @@ package models_test
 
 import (
 	"github.com/APTrust/exchange/models"
+	"github.com/stretchr/testify/assert"
 	"testing"
 	"time"
 )
 
 func TestNewResult(t *testing.T) {
 	s := models.NewWorkSummary()
-	if s.Attempted {
-		t.Errorf("result.Attempted should be false")
-	}
-	if s.AttemptNumber != 1 {
-		t.Errorf("result.AttemptNumber: expected 1, got %d", s.AttemptNumber)
-	}
-	if s.Errors == nil {
-		t.Errorf("result.Errors should not be nil")
-	}
- 	if !s.StartedAt.IsZero() {
-		t.Errorf("result.StartedAt should be zero, but it's %v", s.StartedAt)
-	}
- 	if !s.FinishedAt.IsZero() {
-		t.Errorf("result.FinishedAt should be zero, but it's %v", s.FinishedAt)
-	}
-	if s.Retry == false {
-		t.Errorf("result.Retry should be true")
-	}
+	assert.False(t, s.Attempted)
+	assert.Equal(t, 1, s.AttemptNumber)
+	assert.NotNil(t, s.Errors)
+	assert.Equal(t, 0, len(s.Errors))
+	assert.True(t, s.StartedAt.IsZero())
+	assert.True(t, s.FinishedAt.IsZero())
+	assert.True(t, s.Retry)
 }
 
 func TestResultStart(t *testing.T) {
 	s := models.NewWorkSummary()
+	assert.True(t, s.StartedAt.IsZero())
 	s.Start()
-	if s.StartedAt.IsZero() {
-		t.Errorf("result.StartedAt should not be zero")
-	}
+	assert.False(t, s.StartedAt.IsZero())
 }
 
 func TestResultStarted(t *testing.T) {
 	s := models.NewWorkSummary()
+	assert.False(t, s.Started())
 	s.Start()
-	if s.Started() == false {
-		t.Errorf("result.Started() should have returned true")
-	}
+	assert.True(t, s.Started())
 }
 
 func TestResultFinish(t *testing.T) {
 	s := models.NewWorkSummary()
+	assert.True(t, s.FinishedAt.IsZero())
 	s.Finish()
-	if s.FinishedAt.IsZero() {
-		t.Errorf("result.FinishedAt should not be zero")
-	}
+	assert.False(t, s.FinishedAt.IsZero())
 }
 
 func TestResultFinished(t *testing.T) {
@@ -66,82 +53,54 @@ func TestResultRuntime(t *testing.T) {
 	fiveMinutesAgo := now.Add(-5 * time.Minute)
 	s.StartedAt = fiveMinutesAgo
 	s.FinishedAt = now
-	if s.RunTime() != 5 * time.Minute {
-		t.Errorf("result.RunTime() returned %v; expected 5 minutes",
-			s.RunTime())
-	}
+	assert.EqualValues(t, 5 * time.Minute, s.RunTime())
 }
 
 func TestResultSucceeded(t *testing.T) {
 	s := models.NewWorkSummary()
 
 	// Not finished.
-	if s.Succeeded() == true {
-		t.Errorf("s.Succeeded() should have returned false")
-	}
+	assert.False(t, s.Succeeded())
 
 	// Finished with no errors
 	s.Finish()
-	if s.Succeeded() == false {
-		t.Errorf("s.Succeeded() should have returned true")
-	}
+	assert.True(t, s.Succeeded())
 
 	// Finished with errors
 	s.AddError("Oopsie!")
-	if s.Succeeded() == true {
-		t.Errorf("s.Succeeded() should have returned false")
-	}
+	assert.False(t, s.Succeeded())
 }
 
 func TestAddError(t *testing.T) {
 	s := models.NewWorkSummary()
 	s.AddError("First error is number %d", 1)
-	if len(s.Errors) != 1 {
-		t.Errorf("Expected 1 error, found %d", len(s.Errors))
-	}
-	if s.Errors[0] != "First error is number 1" {
-		t.Errorf("Incorrect text if Error 1: %s", s.Errors[0])
-	}
+	assert.Equal(t, 1, len(s.Errors))
+	assert.Equal(t, "First error is number 1", s.Errors[0])
+
 	s.AddError("%s error is number %d", "Second", 2)
-	if len(s.Errors) != 2 {
-		t.Errorf("Expected 2 errors, found %d", len(s.Errors))
-	}
-	if s.Errors[1] != "Second error is number 2" {
-		t.Errorf("Incorrect text if Error 2: %s", s.Errors[0])
-	}
+	assert.Equal(t, 2, len(s.Errors))
+	assert.Equal(t, "Second error is number 2", s.Errors[1])
 }
 
 func TestHasErrors(t *testing.T) {
 	s := models.NewWorkSummary()
-	if s.HasErrors() {
-		t.Errorf("HasErrors() should have returned false")
-	}
+	assert.False(t, s.HasErrors())
 	s.AddError("First error is number %d", 1)
-	if !s.HasErrors() {
-		t.Errorf("HasErrors() should have returned true")
-	}
+	assert.True(t, s.HasErrors())
 }
 
 func TestFirstError(t *testing.T) {
 	s := models.NewWorkSummary()
-	if s.FirstError() != "" {
-		t.Errorf("FirstError() should have returned empty string")
-	}
+	assert.Equal(t, "", s.FirstError())
 	s.AddError("First error is number %d", 1)
-	if s.FirstError() != "First error is number 1" {
-		t.Errorf("FirstError() returned the wrong error")
-	}
+	assert.Equal(t, "First error is number 1", s.FirstError())
 	s.AddError("Second error is number %d", 2)
-	if s.FirstError() != "First error is number 1" {
-		t.Errorf("FirstError() returned the wrong error")
-	}
+	assert.Equal(t, "First error is number 1", s.FirstError())
 }
 
 func TestAllErrorsAsString(t *testing.T) {
 	s := models.NewWorkSummary()
 	s.AddError("First error is number %d", 1)
 	s.AddError("Second error is number %d", 2)
-	if s.AllErrorsAsString() != "First error is number 1\nSecond error is number 2" {
-		t.Errorf("AllErrorsAsString() returned '%s'", s.AllErrorsAsString())
-	}
+	assert.Equal(t, "First error is number 1\nSecond error is number 2", s.AllErrorsAsString())
 }
