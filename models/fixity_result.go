@@ -2,8 +2,6 @@ package models
 
 import (
 	"fmt"
-	"github.com/nu7hatch/gouuid"
-	"time"
 	"strings"
 )
 
@@ -83,41 +81,4 @@ func (result *FixityResult) Sha256Matches() (bool, error) {
 		return false, fmt.Errorf("Fixity check is not possible because one or more checksums are not available.")
 	}
 	return result.FedoraSha256() == result.Sha256, nil
-}
-
-// Returns a PremisEvent describing the result of this fixity check.
-func (result *FixityResult) BuildPremisEvent() (*PremisEvent, error) {
-	detail := "Fixity check against registered hash"
-	outcome := "success"
-	outcomeInformation := "Fixity matches"
-	ok, err := result.Sha256Matches()
-	if err != nil {
-		return nil, err
-	}
-	if ok == false {
-		detail = "Fixity does not match expected value"
-		outcome = "failure"
-		outcomeInformation = fmt.Sprintf("Expected digest '%s', got '%s'",
-			result.FedoraSha256(), result.Sha256)
-	}
-
-	youyoueyedee, err := uuid.NewV4()
-	if err != nil {
-		detailedErr := fmt.Errorf("Error generating UUID for fixity check event: %v", err)
-		return nil, detailedErr
-	}
-
-	premisEvent := &PremisEvent {
-		Identifier: youyoueyedee.String(),
-		EventType: "fixity_check",
-		DateTime: time.Now().UTC(),
-		Detail: detail,
-		Outcome: outcome,
-		OutcomeDetail: result.Sha256,
-		Object: "Go language cryptohash",
-		Agent: "http://golang.org/pkg/crypto/sha256/",
-		OutcomeInformation: outcomeInformation,
-	}
-
-	return premisEvent, nil
 }
