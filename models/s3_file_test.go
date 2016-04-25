@@ -3,6 +3,7 @@ package models_test
 import (
 	"github.com/APTrust/exchange/models"
 	"github.com/crowdmob/goamz/s3"
+	"github.com/stretchr/testify/assert"
 	"testing"
 	"time"
 )
@@ -14,28 +15,16 @@ func TestNewS3FileWithKey(t *testing.T) {
 		ETag: "81726354afdc",
 	}
 	s3File := models.NewS3FileWithKey("bucket1", key)
-	if s3File.BucketName != "bucket1" {
-		t.Errorf("Expected bucket 'bucket1', got '%s'", s3File.BucketName)
-	}
-	if s3File.Key.Key != key.Key {
-		t.Errorf("Expected key '%s', got '%s'", key.Key, s3File.Key.Key)
-	}
-	if s3File.Key.Size != key.Size {
-		t.Errorf("Expected size %d, got %d", key.Size, s3File.Key.Size)
-	}
-	if s3File.Key.ETag != key.ETag {
-		t.Errorf("Expected etag '%s', got '%s'", key.ETag, s3File.Key.ETag)
-	}
+	assert.Equal(t, "bucket1", s3File.BucketName)
+	assert.Equal(t, "yadda.yadda", s3File.Key.Key)
+	assert.EqualValues(t, 54321, s3File.Key.Size)
+	assert.Equal(t, "81726354afdc", s3File.Key.ETag)
 }
 
 func TestNewS3FileWithName(t *testing.T) {
 	s3File := models.NewS3FileWithName("bucket1", "Key Wee")
-	if s3File.BucketName != "bucket1" {
-		t.Errorf("Expected bucket 'bucket1', got '%s'", s3File.BucketName)
-	}
-	if s3File.Key.Key != "Key Wee" {
-		t.Errorf("Expected key 'Key Wee', got '%s'", s3File.Key.Key)
-	}
+	assert.Equal(t, "bucket1", s3File.BucketName)
+	assert.Equal(t, "Key Wee", s3File.Key.Key)
 }
 
 
@@ -45,35 +34,26 @@ func TestDeleteAttempted(t *testing.T) {
 		Key: s3.Key{ Key: "horse"},
 		ErrorMessage: "",
 	}
-	if cf.DeleteAttempted() == true {
-		t.Errorf("DeleteAttempted() should have returned false")
-	}
+	assert.False(t, cf.DeleteAttempted())
 	cf.ErrorMessage = "Oopsie!"
-	if cf.DeleteAttempted() == false {
-		t.Errorf("DeleteAttempted() should have returned true")
-	}
+	assert.True(t, cf.DeleteAttempted())
 	cf.ErrorMessage = ""
 	cf.DeletedAt = time.Now()
-	if cf.DeleteAttempted() == false {
-		t.Errorf("DeleteAttempted() should have returned true")
-	}
+	assert.True(t, cf.DeleteAttempted())
 }
 
 func testFile() (*models.S3File) {
 	return &models.S3File{
 		BucketName: "aptrust.receiving.uc.edu",
-	Key: s3.Key{
-		Key: "cin.675812.tar",
-	},
+		Key: s3.Key{
+			Key: "cin.675812.tar",
+		},
 	}
 }
 
 func TestS3BagName(t *testing.T) {
 	s3File := testFile()
-	bagname := s3File.BagName()
-	if bagname != "uc.edu/cin.675812.tar" {
-		t.Errorf("BagName returned '%s'; expected 'uc.edu/cin.675812.tar'", bagname)
-	}
+	assert.Equal(t, "uc.edu/cin.675812.tar", s3File.BagName())
 }
 
 func TestObjectName(t *testing.T) {
@@ -85,9 +65,7 @@ func TestObjectName(t *testing.T) {
 		t.Error(err)
 		return
 	}
-	if objname != "uc.edu/cin.675812" {
-		t.Errorf("BagName returned '%s'; expected 'uc.edu/cin.675812'", objname)
-	}
+	assert.Equal(t, "uc.edu/cin.675812", objname)
 
 	// Test with multi-part bag
 	s3File.Key.Key = "cin.1234.b003.of191.tar"
@@ -96,19 +74,13 @@ func TestObjectName(t *testing.T) {
 		t.Error(err)
 		return
 	}
-	if objname != "uc.edu/cin.1234" {
-		t.Errorf("BagName returned '%s'; expected 'uc.edu/cin.1234'", objname)
-	}
+	assert.Equal(t, "uc.edu/cin.1234", objname)
 }
 
 func TestKeyIsComplete(t *testing.T) {
 	s3file := models.NewS3FileWithName("buckey-dent", "file-in-a-cake.xml")
-	if s3file.KeyIsComplete() {
-		t.Errorf("KeyIsComplete should have returned false")
-	}
+	assert.False(t, s3file.KeyIsComplete())
 	s3file.Key.Size = 4800
 	s3file.Key.ETag = "aec157cfbc1a34d52"
-	if !s3file.KeyIsComplete() {
-		t.Errorf("KeyIsComplete should have returned true")
-	}
+	assert.True(t, s3file.KeyIsComplete())
 }
