@@ -3,6 +3,7 @@ package models_test
 import (
 	"encoding/json"
 	"github.com/APTrust/exchange/models"
+	"github.com/stretchr/testify/assert"
 	"io/ioutil"
 	"path/filepath"
 	"testing"
@@ -16,42 +17,37 @@ func TestDeleteAttemptedAndSucceeded(t *testing.T) {
 	file, err := ioutil.ReadFile(filepath)
 	if err != nil {
 		t.Errorf("Error loading cleanup result test file '%s': %v", filepath, err)
+		return
 	}
 	err = json.Unmarshal(file, &result)
 	if err != nil {
-		t.Errorf("Error loading cleanup result test file '%s': %v", filepath, err)
+		t.Errorf("Error parson JSON from cleanup result test file '%s': %v", filepath, err)
+		return
 	}
 
-	if result.Succeeded() == false {
-		t.Error("result.Succeeded() should have returned true")
-	}
+	assert.True(t, result.Succeeded())
 	for _, file := range result.Files {
 		if file.DeleteAttempted() == false {
-			t.Error("file.DeleteAttempted() should have returned true")
+			assert.True(t, file.DeleteAttempted())
 		}
 		// Set these for next test
 		file.DeletedAt = time.Time{}
 		file.ErrorMessage = "Spongebob"
 	}
 
-	if result.Succeeded() == true {
-		t.Error("result.Succeeded() should have returned false")
-	}
+	assert.False(t, result.Succeeded())
 	for _, file := range result.Files {
-		if file.DeleteAttempted() == false {
-			t.Error("file.DeleteAttempted() should have returned true")
-		}
+		assert.True(t, file.DeleteAttempted())
 		// Set these for next test
 		file.DeletedAt = time.Time{}
 		file.ErrorMessage = ""
 	}
 
-	if result.Succeeded() == true {
-		t.Error("result.Succeeded() should have returned false")
-	}
+	assert.False(t, result.Succeeded())
 	for _, file := range result.Files {
 		if file.DeleteAttempted() == true {
-			t.Error("file.DeleteAttempted() should have returned false")
+			// Delete not attempted, because DeletedAt == 0
+			assert.False(t, file.DeleteAttempted())
 		}
 	}
 }
