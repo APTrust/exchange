@@ -17,8 +17,13 @@ human-readable message.
 */
 func InitLogger(config *config.Config) *logging.Logger {
 	processName := path.Base(os.Args[0])
+	logDir, err := config.EnsureLogDirectory()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Cannot create log director '%s': %v\n", logDir, err)
+		os.Exit(1)
+	}
 	filename := fmt.Sprintf("%s.log", processName)
-	filename = filepath.Join(config.AbsLogDirectory(), filename)
+	filename = filepath.Join(logDir, filename)
 	if config.LogDirectory != "" {
 		// If this fails, getRotatingFileWriter will panic in just a second
 		_ = os.Mkdir(config.LogDirectory, 0755)
@@ -56,8 +61,13 @@ pure JSON, with one record per line, these files are easy to parse.
 */
 func InitJsonLogger(config *config.Config) *stdlog.Logger {
 	processName := path.Base(os.Args[0])
+	logDir, err := config.EnsureLogDirectory()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Cannot create log director '%s': %v\n", logDir, err)
+		os.Exit(1)
+	}
 	filename := fmt.Sprintf("%s.json", processName)
-	filename = filepath.Join(config.AbsLogDirectory(), filename)
+	filename = filepath.Join(logDir, filename)
 	writer, err := os.OpenFile(filename, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0644);
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Cannot open log file '%s': %v", filename, err)
