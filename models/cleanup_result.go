@@ -1,7 +1,6 @@
-package results
+package models
 
 import (
-	"github.com/APTrust/exchange/models"
 	"time"
 )
 
@@ -31,9 +30,9 @@ type CleanupResult struct {
 	ObjectIdentifier   string
 	// Files contains a list of files/keys to be deleted
 	// from S3.
-	Files              []*models.S3File
+	Files              []*S3File
 
-	Summary            *Summary
+	WorkSummary        *WorkSummary
 }
 
 // Returns true if all files were successfully deleted.

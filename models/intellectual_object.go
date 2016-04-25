@@ -20,18 +20,41 @@ consortial, institution and restricted.
 */
 type IntellectualObject struct {
 	// If Id is non-zero, this has been recorded in Pharos.
-	Id            string         `json:"id"`
-	Identifier    string         `json:"identifier"`
-	BagName       string         `json:"bag_name"`
-	Institution   string         `json:"institution"`
-	InstitutionId int            `json:"institution_id"`
-	Title         string         `json:"title"`
-	Description   string         `json:"description"`
-	Access        string         `json:"access"`
-	AltIdentifier string         `json:"alt_identifier"`
-	GenericFiles  []*GenericFile `json:"generic_files"`
-	Events        []*PremisEvent `json:"events"`
+	Id                   string         `json:"id"`
+	Identifier           string         `json:"identifier"`
+	BagName              string         `json:"bag_name"`
+	Institution          string         `json:"institution"`
+	InstitutionId        int            `json:"institution_id"`
+	Title                string         `json:"title"`
+	Description          string         `json:"description"`
+	Access               string         `json:"access"`
+	AltIdentifier        string         `json:"alt_identifier"`
+	GenericFiles         []*GenericFile `json:"generic_files"`
+	Events               []*PremisEvent `json:"events"`
+
+	// Exchange fields. These do not go to Pharos.
+	IngestS3Bucket       string         `json:"ingest_s3_bucket"`
+	IngestS3Key          string         `json:"ingest_s3_key"`
+	IngestTarFilePath    string         `json:"ingest_tar_file_path"`
+	IngestUntarredPath   string         `json:"ingest_untarred_path"`
+	IngestRemoteMd5      string         `json:"ingest_remote_md5"`
+	IngestLocalMd5       string         `json:"ingest_local_md5"`
+	IngestMd5Verified    string         `json:"ingest_md5_verified"`
+	IngestMd5Verifiable  string         `json:"ingest_md5_verifiable"`
+	IngestFilesIgnored   []string       `json:"ingest_files_ignored"`
+	IngestTags           []Tag          `json:"ingest_tags"`
+	IngestSummary        WorkSummary    `json:"ingest_summary"`
+	IngestErrorMessage   string         `json:"ingest_error_message"`
 }
+
+// This Tag struct is essentially the same as the bagins
+// TagField struct, but its properties are public and can
+// be easily serialized to / deserialized from JSON.
+type Tag struct {
+	Label string
+	Value string
+}
+
 
 // Returns the total number of bytes of all of the generic
 // files in this object. The object's bag size will be slightly

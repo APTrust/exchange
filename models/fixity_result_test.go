@@ -1,7 +1,6 @@
-package results_test
+package models_test
 
 import (
-	"github.com/APTrust/exchange/results"
 	"github.com/APTrust/exchange/models"
 	"testing"
 	"time"
@@ -11,25 +10,25 @@ var md5sum = "1234567890"
 var sha256sum = "fedcba9876543210"
 
 func getGenericFile() (*models.GenericFile) {
-	checksums := make([]*models.ChecksumAttribute, 2)
-	checksums[0] = &models.ChecksumAttribute{
+	checksums := make([]*models.Checksum, 2)
+	checksums[0] = &models.Checksum{
 		Algorithm: "md5",
 		DateTime: time.Date(2014,11,11,12,0,0,0,time.UTC),
 		Digest: md5sum,
 	}
-	checksums[1] = &models.ChecksumAttribute{
+	checksums[1] = &models.Checksum{
 		Algorithm: "sha256",
 		DateTime: time.Date(2014,11,11,12,0,0,0,time.UTC),
 		Digest: sha256sum,
 	}
 	return &models.GenericFile{
 		URI: "https://s3.amazonaws.com/aptrust.preservation.storage/52a928da-89ef-48c6-4627-826d1858349b",
-		ChecksumAttributes: checksums,
+		Checksums: checksums,
 	}
 }
 
 func TestBucketAndKey(t *testing.T) {
-	result := results.NewFixityResult(getGenericFile())
+	result := models.NewFixityResult(getGenericFile())
 	bucket, key, err := result.BucketAndKey()
 	if err != nil {
 		t.Errorf("BucketAndKey() returned error: %v", err)
@@ -43,24 +42,24 @@ func TestBucketAndKey(t *testing.T) {
 }
 
 func TestBucketAndKeyWithBadUri(t *testing.T) {
-	result := results.NewFixityResult(getGenericFile())
+	result := models.NewFixityResult(getGenericFile())
 	result.GenericFile.URI = "http://example.com"
 	_, _, err := result.BucketAndKey()
 	if err == nil {
 		t.Errorf("BucketAndKey() should have returned an error for invalid URI")
 		return
 	}
-	if result.Summary.FirstError() != "GenericFile URI 'http://example.com' is invalid" {
+	if result.WorkSummary.FirstError() != "GenericFile URI 'http://example.com' is invalid" {
 		t.Errorf("BucketAndKey() did not set descriptive error message for bad URI")
 	}
-	if result.Summary.Retry == true {
+	if result.WorkSummary.Retry == true {
 		t.Errorf("Retry should have been set to false after fatal error.")
 	}
 }
 
 
 func TestSha256Matches(t *testing.T) {
-	result := results.NewFixityResult(getGenericFile())
+	result := models.NewFixityResult(getGenericFile())
 	result.Sha256 = sha256sum
 	matches, err := result.Sha256Matches()
 	if err != nil {
@@ -82,14 +81,14 @@ func TestSha256Matches(t *testing.T) {
 }
 
 func TestMissingChecksums(t *testing.T) {
-	result := results.NewFixityResult(getGenericFile())
+	result := models.NewFixityResult(getGenericFile())
 	_, err := result.Sha256Matches()
 	if err == nil {
 		t.Errorf("Sha256Matches should have returned a usage error")
 	}
 
 	result.Sha256 = sha256sum
-	result.GenericFile.ChecksumAttributes = make([]*models.ChecksumAttribute, 2)
+	result.GenericFile.Checksums = make([]*models.Checksum, 2)
 	_, err = result.Sha256Matches()
 	if err == nil {
 		t.Errorf("Sha256Matches should have returned a usage error")
@@ -97,7 +96,7 @@ func TestMissingChecksums(t *testing.T) {
 }
 
 func TestGotDigestFromPreservationFile(t *testing.T) {
-	result := results.NewFixityResult(getGenericFile())
+	result := models.NewFixityResult(getGenericFile())
 	if result.GotDigestFromPreservationFile() == true {
 		t.Errorf("GotDigestFromPreservationFile() should have returned false")
 	}
@@ -108,13 +107,13 @@ func TestGotDigestFromPreservationFile(t *testing.T) {
 }
 
 func TestGenericFileHasDigest(t *testing.T) {
-	result := results.NewFixityResult(getGenericFile())
+	result := models.NewFixityResult(getGenericFile())
 	if result.GenericFileHasDigest() == false {
 		t.Errorf("GenericFileHasDigest() should have returned true")
 	}
 	// Make the SHA256 checksum disappear
-	for i := range result.GenericFile.ChecksumAttributes {
-		result.GenericFile.ChecksumAttributes[i].Algorithm = "Md five and a half"
+	for i := range result.GenericFile.Checksums {
+		result.GenericFile.Checksums[i].Algorithm = "Md five and a half"
 	}
 	if result.GenericFileHasDigest() == true {
 		t.Errorf("GenericFileHasDigest() should have returned false")
@@ -122,14 +121,14 @@ func TestGenericFileHasDigest(t *testing.T) {
 }
 
 func TestFedoraSha256(t *testing.T) {
-	result := results.NewFixityResult(getGenericFile())
+	result := models.NewFixityResult(getGenericFile())
 	if result.FedoraSha256() != sha256sum {
 		t.Errorf("FedoraSha256() should have returned", sha256sum)
 	}
 }
 
 func TestFixityCheckPossible(t *testing.T) {
-	result := results.NewFixityResult(getGenericFile())
+	result := models.NewFixityResult(getGenericFile())
 	result.Sha256 = sha256sum
 	if result.FixityCheckPossible() == false {
 		t.Errorf("FixityCheckPossible() should have returned true")
@@ -140,8 +139,8 @@ func TestFixityCheckPossible(t *testing.T) {
 	}
 	result.Sha256 = sha256sum
 	// Make the SHA256 checksum disappear
-	for i := range result.GenericFile.ChecksumAttributes {
-		result.GenericFile.ChecksumAttributes[i].Algorithm = "Md five and a half"
+	for i := range result.GenericFile.Checksums {
+		result.GenericFile.Checksums[i].Algorithm = "Md five and a half"
 	}
 	if result.FixityCheckPossible() == true {
 		t.Errorf("FixityCheckPossible() should have returned false")
@@ -150,7 +149,7 @@ func TestFixityCheckPossible(t *testing.T) {
 
 
 func TestBuildPremisEvent_Success(t *testing.T) {
-	result := results.NewFixityResult(getGenericFile())
+	result := models.NewFixityResult(getGenericFile())
 	result.Sha256 = sha256sum
 	premisEvent, err := result.BuildPremisEvent()
 	if err != nil {
@@ -190,7 +189,7 @@ func TestBuildPremisEvent_Success(t *testing.T) {
 }
 
 func TestBuildPremisEvent_Failure(t *testing.T) {
-	result := results.NewFixityResult(getGenericFile())
+	result := models.NewFixityResult(getGenericFile())
 	result.Sha256 = "xxx-xxx-xxx"
 	premisEvent, err := result.BuildPremisEvent()
 	if err != nil {
@@ -225,6 +224,6 @@ func TestBuildPremisEvent_Failure(t *testing.T) {
 	}
 	if premisEvent.OutcomeInformation != "Expected digest 'fedcba9876543210', got 'xxx-xxx-xxx'" {
 		t.Errorf("PremisEvent.OutcomeInformation expected '%s' but got '%s'",
-			result.Summary.FirstError(), premisEvent.OutcomeInformation)
+			result.WorkSummary.FirstError(), premisEvent.OutcomeInformation)
 	}
 }

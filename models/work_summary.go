@@ -1,4 +1,4 @@
-package results
+package models
 
 import (
 	"fmt"
@@ -6,7 +6,7 @@ import (
 	"time"
 )
 
-type Summary struct {
+type WorkSummary struct {
 	// This is set to true when the process that produces
 	// this result starts.
 	Attempted      bool
@@ -40,8 +40,8 @@ type Summary struct {
 	Retry          bool
 }
 
-func NewSummary() *Summary {
-	return &Summary{
+func NewWorkSummary() *WorkSummary {
+	return &WorkSummary{
 		Attempted: false,
 		AttemptNumber: 1,
 		Errors: make([]string, 0),
@@ -51,23 +51,23 @@ func NewSummary() *Summary {
 	}
 }
 
-func (summary *Summary) Start() {
+func (summary *WorkSummary) Start() {
 	summary.StartedAt = time.Now()
 }
 
-func (summary *Summary) Started() bool {
+func (summary *WorkSummary) Started() bool {
 	return !summary.StartedAt.IsZero()
 }
 
-func (summary *Summary) Finish()  {
+func (summary *WorkSummary) Finish()  {
 	summary.FinishedAt = time.Now()
 }
 
-func (summary *Summary) Finished() bool {
+func (summary *WorkSummary) Finished() bool {
 	return !summary.FinishedAt.IsZero()
 }
 
-func (summary *Summary) RunTime() time.Duration {
+func (summary *WorkSummary) RunTime() time.Duration {
 	startTime := summary.StartedAt
 	if startTime.IsZero() {
 		return time.Duration(0)
@@ -79,19 +79,19 @@ func (summary *Summary) RunTime() time.Duration {
 	return endTime.Sub(startTime)
 }
 
-func (summary *Summary) Succeeded() bool {
+func (summary *WorkSummary) Succeeded() bool {
 	return summary.Finished() && len(summary.Errors) == 0
 }
 
-func (summary *Summary) AddError(format string, a ...interface{}) {
+func (summary *WorkSummary) AddError(format string, a ...interface{}) {
 	summary.Errors = append(summary.Errors, fmt.Sprintf(format, a...))
 }
 
-func (summary *Summary) HasErrors() bool {
+func (summary *WorkSummary) HasErrors() bool {
 	return len(summary.Errors) > 0
 }
 
-func (summary *Summary) FirstError() string {
+func (summary *WorkSummary) FirstError() string {
 	firstError := ""
 	if len(summary.Errors) > 0 {
 		firstError = summary.Errors[0]
@@ -99,7 +99,7 @@ func (summary *Summary) FirstError() string {
 	return firstError
 }
 
-func (summary *Summary) AllErrorsAsString() string {
+func (summary *WorkSummary) AllErrorsAsString() string {
 	if len(summary.Errors) > 0 {
 		return strings.Join(summary.Errors, "\n")
 	}

@@ -1,13 +1,13 @@
-package results_test
+package models_test
 
 import (
-	"github.com/APTrust/exchange/results"
+	"github.com/APTrust/exchange/models"
 	"testing"
 	"time"
 )
 
 func TestNewResult(t *testing.T) {
-	s := results.NewSummary()
+	s := models.NewWorkSummary()
 	if s.Attempted {
 		t.Errorf("result.Attempted should be false")
 	}
@@ -29,7 +29,7 @@ func TestNewResult(t *testing.T) {
 }
 
 func TestResultStart(t *testing.T) {
-	s := results.NewSummary()
+	s := models.NewWorkSummary()
 	s.Start()
 	if s.StartedAt.IsZero() {
 		t.Errorf("result.StartedAt should not be zero")
@@ -37,7 +37,7 @@ func TestResultStart(t *testing.T) {
 }
 
 func TestResultStarted(t *testing.T) {
-	s := results.NewSummary()
+	s := models.NewWorkSummary()
 	s.Start()
 	if s.Started() == false {
 		t.Errorf("result.Started() should have returned true")
@@ -45,7 +45,7 @@ func TestResultStarted(t *testing.T) {
 }
 
 func TestResultFinish(t *testing.T) {
-	s := results.NewSummary()
+	s := models.NewWorkSummary()
 	s.Finish()
 	if s.FinishedAt.IsZero() {
 		t.Errorf("result.FinishedAt should not be zero")
@@ -53,7 +53,7 @@ func TestResultFinish(t *testing.T) {
 }
 
 func TestResultFinished(t *testing.T) {
-	s := results.NewSummary()
+	s := models.NewWorkSummary()
 	s.Finish()
 	if s.Finished() == false {
 		t.Errorf("result.Finished() should have returned true")
@@ -61,7 +61,7 @@ func TestResultFinished(t *testing.T) {
 }
 
 func TestResultRuntime(t *testing.T) {
-	s := results.NewSummary()
+	s := models.NewWorkSummary()
 	now := time.Now()
 	fiveMinutesAgo := now.Add(-5 * time.Minute)
 	s.StartedAt = fiveMinutesAgo
@@ -73,7 +73,7 @@ func TestResultRuntime(t *testing.T) {
 }
 
 func TestResultSucceeded(t *testing.T) {
-	s := results.NewSummary()
+	s := models.NewWorkSummary()
 
 	// Not finished.
 	if s.Succeeded() == true {
@@ -94,7 +94,7 @@ func TestResultSucceeded(t *testing.T) {
 }
 
 func TestAddError(t *testing.T) {
-	s := results.NewSummary()
+	s := models.NewWorkSummary()
 	s.AddError("First error is number %d", 1)
 	if len(s.Errors) != 1 {
 		t.Errorf("Expected 1 error, found %d", len(s.Errors))
@@ -112,7 +112,7 @@ func TestAddError(t *testing.T) {
 }
 
 func TestHasErrors(t *testing.T) {
-	s := results.NewSummary()
+	s := models.NewWorkSummary()
 	if s.HasErrors() {
 		t.Errorf("HasErrors() should have returned false")
 	}
@@ -123,7 +123,7 @@ func TestHasErrors(t *testing.T) {
 }
 
 func TestFirstError(t *testing.T) {
-	s := results.NewSummary()
+	s := models.NewWorkSummary()
 	if s.FirstError() != "" {
 		t.Errorf("FirstError() should have returned empty string")
 	}
@@ -138,7 +138,7 @@ func TestFirstError(t *testing.T) {
 }
 
 func TestAllErrorsAsString(t *testing.T) {
-	s := results.NewSummary()
+	s := models.NewWorkSummary()
 	s.AddError("First error is number %d", 1)
 	s.AddError("Second error is number %d", 2)
 	if s.AllErrorsAsString() != "First error is number 1\nSecond error is number 2" {

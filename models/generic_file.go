@@ -53,7 +53,7 @@ type GenericFile struct {
 	IngestStoredAt               time.Time      `json:"ingest_stored_at"`
 	IngestPreviousVersionExists  bool           `json:"ingest_previous_version_exists"`
 	IngestNeedsSave              bool           `json:"ingest_needs_save"`
-	ErrorMessage                 string         `json:"error_message"`
+	IngestErrorMessage           string         `json:"ingesterror_message"`
 }
 
 func NewGenericFile() (*GenericFile) {

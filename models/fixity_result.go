@@ -1,8 +1,7 @@
-package results
+package models
 
 import (
 	"fmt"
-	"github.com/APTrust/exchange/models"
 	"github.com/nu7hatch/gouuid"
 	"time"
 	"strings"
@@ -15,7 +14,7 @@ type FixityResult struct {
 
 	// The generic file we're going to look at.
 	// This file is sitting somewhere on S3.
-	GenericFile   *models.GenericFile
+	GenericFile   *GenericFile
 
 	// Does the file exist in S3?
 	S3FileExists  bool
@@ -25,15 +24,15 @@ type FixityResult struct {
 	Sha256        string
 
 	// Information about the result of this operation.
-	Summary       *Summary
+	WorkSummary   *WorkSummary
 }
 
 
-func NewFixityResult(gf *models.GenericFile) (*FixityResult) {
+func NewFixityResult(gf *GenericFile) (*FixityResult) {
 	return &FixityResult {
 		GenericFile: gf,
 		S3FileExists: true,
-		Summary: NewSummary(),
+		WorkSummary: NewWorkSummary(),
 	}
 }
 
@@ -43,9 +42,9 @@ func (result *FixityResult) BucketAndKey() (string, string, error) {
 	length := len(parts)
 	if length < 4 {
 		// This error is fatal, so don't retry.
-		result.Summary.AddError("GenericFile URI '%s' is invalid", result.GenericFile.URI)
-		result.Summary.Retry = false
-		return "","", fmt.Errorf(result.Summary.FirstError())
+		result.WorkSummary.AddError("GenericFile URI '%s' is invalid", result.GenericFile.URI)
+		result.WorkSummary.Retry = false
+		return "","", fmt.Errorf(result.WorkSummary.FirstError())
 	}
 	bucket := parts[length - 2]
 	key := parts[length - 1]
@@ -87,7 +86,7 @@ func (result *FixityResult) Sha256Matches() (bool, error) {
 }
 
 // Returns a PremisEvent describing the result of this fixity check.
-func (result *FixityResult) BuildPremisEvent() (*models.PremisEvent, error) {
+func (result *FixityResult) BuildPremisEvent() (*PremisEvent, error) {
 	detail := "Fixity check against registered hash"
 	outcome := "success"
 	outcomeInformation := "Fixity matches"
@@ -108,7 +107,7 @@ func (result *FixityResult) BuildPremisEvent() (*models.PremisEvent, error) {
 		return nil, detailedErr
 	}
 
-	premisEvent := &models.PremisEvent {
+	premisEvent := &PremisEvent {
 		Identifier: youyoueyedee.String(),
 		EventType: "fixity_check",
 		DateTime: time.Now().UTC(),
