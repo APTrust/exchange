@@ -4,6 +4,7 @@ import (
 	"github.com/APTrust/exchange/constants"
 	"github.com/APTrust/exchange/models"
 	"github.com/APTrust/exchange/util/logger"
+	"github.com/stretchr/testify/assert"
 	"os"
 	"testing"
 	"time"
@@ -45,10 +46,7 @@ func TestWorkItemSerializeForFluctus(t *testing.T) {
 		t.Error(err)
 	}
 	expected := `{"action":"Ingest","bag_date":"2104-07-02T12:00:00Z","bucket":"aptrust.receiving.ncsu.edu","date":"2014-09-10T12:00:00Z","etag":"12345","generic_file_identifier":"ncsu.edu/some_object/data/doc.pdf","institution":"ncsu.edu","name":"Sample Document","needs_admin_review":false,"node":"","note":"so many!","object_identifier":"ncsu.edu/some_object","outcome":"happy day!","pid":0,"retry":true,"reviewed":false,"stage":"Store","state":"","status":"Success"}`
-	actual := string(bytes)
-	if actual != expected {
-		t.Errorf("WorkItem.SerializeForFluctus expected:\n'%s'\nbut got:\n'%s'", expected, actual)
-	}
+	assert.Equal(t, expected, string(bytes))
 }
 
 func TestWorkItemHasBeenStored(t *testing.T) {
@@ -57,35 +55,27 @@ func TestWorkItemHasBeenStored(t *testing.T) {
 		Stage: "Record",
 		Status: "Success",
 	}
-	if workItem.HasBeenStored() == false {
-		t.Error("HasBeenStored() should have returned true")
-	}
+	assert.True(t, workItem.HasBeenStored())
+
 	workItem.Stage = constants.StageCleanup
-	if workItem.HasBeenStored() == false {
-		t.Error("HasBeenStored() should have returned true")
-	}
+	assert.True(t, workItem.HasBeenStored())
+
 	workItem.Stage = constants.StageStore
 	workItem.Status = constants.StatusPending
-	if workItem.HasBeenStored() == false {
-		t.Error("HasBeenStored() should have returned true")
-	}
+	assert.True(t, workItem.HasBeenStored())
+
 	workItem.Stage = constants.StageStore
 	workItem.Status = constants.StatusStarted
-	if workItem.HasBeenStored() == true {
-		t.Error("HasBeenStored() should have returned false")
-	}
+	assert.False(t, workItem.HasBeenStored())
+
 	workItem.Stage = constants.StageFetch
-	if workItem.HasBeenStored() == true {
-		t.Error("HasBeenStored() should have returned false")
-	}
+	assert.False(t, workItem.HasBeenStored())
+
 	workItem.Stage = constants.StageUnpack
-	if workItem.HasBeenStored() == true {
-		t.Error("HasBeenStored() should have returned false")
-	}
+	assert.False(t, workItem.HasBeenStored())
+
 	workItem.Stage = constants.StageValidate
-	if workItem.HasBeenStored() == true {
-		t.Error("HasBeenStored() should have returned false")
-	}
+	assert.False(t, workItem.HasBeenStored())
 }
 
 func TestIsStoring(t *testing.T) {
@@ -94,18 +84,13 @@ func TestIsStoring(t *testing.T) {
 		Stage: "Store",
 		Status: "Started",
 	}
-	if workItem.IsStoring() == false {
-		t.Error("IsStoring() should have returned true")
-	}
+	assert.True(t, workItem.IsStoring())
 	workItem.Status = "Pending"
-	if workItem.IsStoring() == true {
-		t.Error("IsStoring() should have returned false")
-	}
+	assert.False(t, workItem.IsStoring())
+
 	workItem.Status = "Started"
 	workItem.Stage = "Record"
-	if workItem.IsStoring() == true {
-		t.Error("IsStoring() should have returned false")
-	}
+	assert.False(t, workItem.IsStoring())
 }
 
 func TestWorkItemShouldTryIngest(t *testing.T) {
@@ -117,67 +102,47 @@ func TestWorkItemShouldTryIngest(t *testing.T) {
 	}
 
 	// Test stages
-	if workItem.ShouldTryIngest() == false {
-		t.Error("HasBeenStored() should have returned true")
-	}
+	assert.True(t, workItem.ShouldTryIngest())
+
 	workItem.Stage = "Fetch"
-	if workItem.ShouldTryIngest() == false {
-		t.Error("HasBeenStored() should have returned true")
-	}
+	assert.True(t, workItem.ShouldTryIngest())
+
 	workItem.Stage = "Unpack"
-	if workItem.ShouldTryIngest() == false {
-		t.Error("HasBeenStored() should have returned true")
-	}
+	assert.True(t, workItem.ShouldTryIngest())
+
 	workItem.Stage = "Validate"
-	if workItem.ShouldTryIngest() == false {
-		t.Error("HasBeenStored() should have returned true")
-	}
+	assert.True(t, workItem.ShouldTryIngest())
+
 	workItem.Stage = "Record"
-	if workItem.ShouldTryIngest() == true {
-		t.Error("HasBeenStored() should have returned false")
-	}
+	assert.False(t, workItem.ShouldTryIngest())
 
 	// Test Store/Pending and Store/Started
 	workItem.Stage = "Store"
 	workItem.Status = "Started"
-	if workItem.ShouldTryIngest() == true {
-		t.Error("ShouldTryIngest() should have returned false")
-	}
+	assert.False(t, workItem.ShouldTryIngest())
 
 	workItem.Stage = "Store"
 	workItem.Status = "Pending"
-	if workItem.ShouldTryIngest() == true {
-		t.Error("ShouldTryIngest() should have returned false")
-	}
+	assert.False(t, workItem.ShouldTryIngest())
 
 	// Test Retry = false
 	workItem.Status = "Started"
 	workItem.Retry = false
 
 	workItem.Stage = "Receive"
-	if workItem.ShouldTryIngest() == true {
-		t.Error("HasBeenStored() should have returned false")
-	}
+	assert.False(t, workItem.ShouldTryIngest())
 
 	workItem.Stage = "Fetch"
-	if workItem.ShouldTryIngest() == true {
-		t.Error("HasBeenStored() should have returned false")
-	}
+	assert.False(t, workItem.ShouldTryIngest())
 
 	workItem.Stage = "Unpack"
-	if workItem.ShouldTryIngest() == true {
-		t.Error("HasBeenStored() should have returned false")
-	}
+	assert.False(t, workItem.ShouldTryIngest())
 
 	workItem.Stage = "Validate"
-	if workItem.ShouldTryIngest() == true {
-		t.Error("HasBeenStored() should have returned false")
-	}
+	assert.False(t, workItem.ShouldTryIngest())
 
 	workItem.Stage = "Record"
-	if workItem.ShouldTryIngest() == true {
-		t.Error("HasBeenStored() should have returned false")
-	}
+	assert.False(t, workItem.ShouldTryIngest())
 }
 
 func getWorkItems(action constants.ActionType) ([]*models.WorkItem) {
@@ -202,47 +167,35 @@ func getWorkItems(action constants.ActionType) ([]*models.WorkItem) {
 
 func TestHasPendingDeleteRequest(t *testing.T) {
 	workItems := getWorkItems(constants.ActionDelete)
-	if models.HasPendingDeleteRequest(workItems) == false {
-		t.Error("HasPendingDeleteRequest() should have returned true")
-	}
+	assert.True(t, models.HasPendingDeleteRequest(workItems))
+
 	workItems[2].Status = constants.StatusStarted
-	if models.HasPendingDeleteRequest(workItems) == false {
-		t.Error("HasPendingDeleteRequest() should have returned true")
-	}
+	assert.True(t, models.HasPendingDeleteRequest(workItems))
+
 	workItems[2].Status = constants.StatusCancelled
-	if models.HasPendingDeleteRequest(workItems) == true {
-		t.Error("HasPendingDeleteRequest() should have returned false")
-	}
+	assert.False(t, models.HasPendingDeleteRequest(workItems))
 }
 
 func TestHasPendingRestoreRequest(t *testing.T) {
 	workItems := getWorkItems(constants.ActionRestore)
-	if models.HasPendingRestoreRequest(workItems) == false {
-		t.Error("HasPendingRestoreRequest() should have returned true")
-	}
+	assert.True(t, models.HasPendingRestoreRequest(workItems))
+
 	workItems[2].Status = constants.StatusStarted
-	if models.HasPendingRestoreRequest(workItems) == false {
-		t.Error("HasPendingRestoreRequest() should have returned true")
-	}
+	assert.True(t, models.HasPendingRestoreRequest(workItems))
+
 	workItems[2].Status = constants.StatusCancelled
-	if models.HasPendingRestoreRequest(workItems) == true {
-		t.Error("HasPendingRestoreRequest() should have returned false")
-	}
+	assert.False(t, models.HasPendingRestoreRequest(workItems))
 }
 
 func TestHasPendingIngestRequest(t *testing.T) {
 	workItems := getWorkItems(constants.ActionIngest)
-	if models.HasPendingIngestRequest(workItems) == false {
-		t.Error("HasPendingIngestRequest() should have returned true")
-	}
+	assert.True(t, models.HasPendingIngestRequest(workItems))
+
 	workItems[2].Status = constants.StatusStarted
-	if models.HasPendingIngestRequest(workItems) == false {
-		t.Error("HasPendingIngestRequest() should have returned true")
-	}
+	assert.True(t, models.HasPendingIngestRequest(workItems))
+
 	workItems[2].Status = constants.StatusCancelled
-	if models.HasPendingIngestRequest(workItems) == true {
-		t.Error("HasPendingIngestRequest() should have returned false")
-	}
+	assert.False(t, models.HasPendingIngestRequest(workItems))
 }
 
 func TestSetNodePidState(t *testing.T) {
@@ -254,17 +207,10 @@ func TestSetNodePidState(t *testing.T) {
 	item.SetNodePidState(object, discardLogger)
 	hostname, _ := os.Hostname()
 	if hostname == "" {
-		if item.Node != "hostname?" {
-			t.Error("Expected 'hostname?' for node, but got '%s'", item.Node)
-		} else if item.Node != hostname {
-			t.Error("Expected Node '%s', got '%s'", hostname, item.Node)
-		}
+		assert.Equal(t, "hostname?", item.Node)
+	} else {
+		assert.Equal(t, hostname, item.Node)
 	}
-	if item.Pid != os.Getpid() {
-		t.Error("Expected Pid %d, got %d", os.Getpid(), item.Pid)
-	}
-	expectedState := "{\"key\":\"value\"}"
-	if item.State != expectedState {
-		t.Error("Expected State '%s', got '%s'", expectedState, item.State)
-	}
+	assert.EqualValues(t, os.Getpid(), item.Pid)
+	assert.Equal(t, "{\"key\":\"value\"}", item.State)
 }
