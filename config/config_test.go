@@ -32,6 +32,7 @@ func TestLoad(t *testing.T) {
 	assert.Equal(t, 60, appConfig.MaxDaysSinceFixityCheck)
 	assert.Equal(t, "http://localhost:3000", appConfig.PharosURL)
 	assert.Equal(t, "10s", appConfig.PrepareWorker.HeartbeatInterval)
+	assert.Equal(t, 18, len(appConfig.ReceivingBuckets))
 }
 
 func TestEnsurePharosConfig(t *testing.T) {
