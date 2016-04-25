@@ -11,6 +11,15 @@ import (
 )
 
 type WorkerConfig struct {
+	// This describes how often the NSQ client should ping
+	// the NSQ server to let it know it's still there. The
+	// setting must be formatted like so:
+	//
+	// "800ms" for 800 milliseconds
+	// "10s" for ten seconds
+	// "1m" for one minute
+	HeartbeatInterval  string
+
 	// The maximum number of times the worker should try to
 	// process a job. If non-fatal errors cause a job to
 	// fail, it will be requeued this number of times.
@@ -19,19 +28,56 @@ type WorkerConfig struct {
 	// retried.
 	MaxAttempts        uint16
 
+	// Maximum number of jobs a worker will accept from the
+	// queue at one time. Workers that may have to process
+	// very long-running tasks, such as apt_prepare,
+	// apt_store and apt_restore, should set this number
+	// fairly low (20 or so) to prevent messages from
+	// timing out.
+	MaxInFlight        int
+
+	// If the NSQ server does not hear from a client that a
+	// job is complete in this amount of time, the server
+	// considers the job to have timed out and re-queues it.
+	// Long-running jobs such as apt_prepare, apt_store,
+	// apt_record and apt_restore will "touch" the NSQ message
+	// as it moves through each channel in the processing pipeline.
+	// The touch message tells NSQ that it's still working on
+	// the job, and effectively resets NSQ's timer on that
+	// message to zero. Still, very large bags in any of the
+	// long-running processes will need a timeout of "180m" or
+	// so to ensure completion.
+	MessageTimeout     string
+
 	// Number of go routines used to perform network I/O,
 	// such as fetching files from S3, storing files to S3,
-	// and fetching/storing Pharos data. If a worker does
+	// and fetching/storing Fluctus data. If a worker does
 	// no network I/O (such as the TroubleWorker), this
 	// setting is ignored.
 	NetworkConnections int
+
+	// The name of the NSQ Channel the worker should read from.
+	NsqChannel         string
+
+	// The name of the NSQ Topic the worker should listen to.
+	NsqTopic           string
+
+	// This describes how long the NSQ client will wait for
+	// a read from the NSQ server before timing out. The format
+	// is the same as for HeartbeatInterval.
+	ReadTimeout        string
 
 	// Number of go routines to start in the worker to
 	// handle all work other than network I/O. Typically,
 	// this should be close to the number of CPUs.
 	Workers            int
 
+	// This describes how long the NSQ client will wait for
+	// a write to the NSQ server to complete before timing out.
+	// The format is the same as for HeartbeatInterval.
+	WriteTimeout       string
 }
+
 
 type Config struct {
 	// ActiveConfig is the configuration currently
@@ -294,13 +340,13 @@ func loadConfigFile(pathToConfigFile string) (configurations map[string]Config, 
 
 func (config *Config) EnsurePharosConfig() error {
 	if config.PharosURL == "" {
-		return fmt.Errorf("PharosUrl is not set in config file")
+		return fmt.Errorf("PharosUrl is missing from config file")
 	}
-	if os.Getenv("FLUCTUS_API_USER") == "" {
-		return fmt.Errorf("Environment variable FLUCTUS_API_USER is not set")
+	if os.Getenv("PHAROS_API_USER") == "" {
+		return fmt.Errorf("Environment variable PHAROS_API_USER is not set")
 	}
-	if os.Getenv("FLUCTUS_API_KEY") == "" {
-		return fmt.Errorf("Environment variable FLUCTUS_API_KEY is not set")
+	if os.Getenv("PHAROS_API_KEY") == "" {
+		return fmt.Errorf("Environment variable PHAROS_API_KEY is not set")
 	}
 	return nil
 }
@@ -334,25 +380,37 @@ func (config *Config) ExpandFilePaths() {
 }
 
 func (config *Config) createDirectories() (error) {
-	if config.TarDirectory != "" && !fileutil.FileExists(config.TarDirectory) {
+	if config.TarDirectory == "" {
+		return fmt.Errorf("You must defined config.TarDirectory")
+	}
+	if config.LogDirectory == "" {
+		return fmt.Errorf("You must defined config.LogDirectory")
+	}
+	if config.RestoreDirectory == "" {
+		return fmt.Errorf("You must defined config.RestoreDirectory")
+	}
+	if config.ReplicationDirectory == "" {
+		return fmt.Errorf("You must defined config.ReplicationDirectory")
+	}
+	if !fileutil.FileExists(config.TarDirectory) {
 		err := os.MkdirAll(config.TarDirectory, 0755)
 		if err != nil {
 			return err
 		}
 	}
-	if config.LogDirectory != "" && !fileutil.FileExists(config.LogDirectory) {
+	if !fileutil.FileExists(config.LogDirectory) {
 		err := os.MkdirAll(config.LogDirectory, 0755)
 		if err != nil {
 			return err
 		}
 	}
-	if config.RestoreDirectory != "" && !fileutil.FileExists(config.RestoreDirectory) {
+	if !fileutil.FileExists(config.RestoreDirectory) {
 		err := os.MkdirAll(config.RestoreDirectory, 0755)
 		if err != nil {
 			return err
 		}
 	}
-	if config.ReplicationDirectory != "" && !fileutil.FileExists(config.ReplicationDirectory) {
+	if !fileutil.FileExists(config.ReplicationDirectory) {
 		err := os.MkdirAll(config.ReplicationDirectory, 0755)
 		if err != nil {
 			return err

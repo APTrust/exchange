@@ -12,8 +12,8 @@
         "LogToStderr": true,
         "LogLevel": 4,
 
-        "FluctusURL": "http://localhost:3000",
-        "FluctusAPIVersion": "v1",
+        "PharosURL": "http://localhost:3000",
+        "PharosAPIVersion": "v1",
 
         "NsqdHttpAddress": "http://localhost:4151",
         "NsqLookupd": "localhost:4161",
@@ -250,8 +250,8 @@
         "LogToStderr": true,
         "LogLevel": 4,
 
-        "FluctusURL": "http://localhost:3000",
-        "FluctusAPIVersion": "v1",
+        "PharosURL": "http://localhost:3000",
+        "PharosAPIVersion": "v1",
 
         "NsqdHttpAddress": "http://localhost:4151",
         "NsqLookupd": "localhost:4161",
@@ -506,8 +506,8 @@
         "LogToStderr": false,
         "LogLevel": 4,
 
-        "FluctusURL": "http://test.aptrust.org",
-        "FluctusAPIVersion": "v1",
+        "PharosURL": "http://test.aptrust.org",
+        "PharosAPIVersion": "v1",
 
         "NsqdHttpAddress": "http://apt-util.aptrust.org:4151",
         "NsqLookupd": "apt-util.aptrust.org:4161",
@@ -762,8 +762,8 @@
         "LogToStderr": false,
         "LogLevel": 4,
 
-        "FluctusURL": "http://test.aptrust.org",
-        "FluctusAPIVersion": "v1",
+        "PharosURL": "http://test.aptrust.org",
+        "PharosAPIVersion": "v1",
 
         "NsqdHttpAddress": "http://apt-util.aptrust.org:4151",
         "NsqLookupd": "apt-util.aptrust.org:4161",
@@ -1018,8 +1018,8 @@
         "LogToStderr": false,
         "LogLevel": 4,
 
-        "FluctusURL": "https://repository.aptrust.org",
-        "FluctusAPIVersion": "v1",
+        "PharosURL": "https://repository.aptrust.org",
+        "PharosAPIVersion": "v1",
 
         "NsqdHttpAddress": "http://54.175.41.111:4151",
         "NsqLookupd": "54.175.41.111:4161",
