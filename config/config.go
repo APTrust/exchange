@@ -7,6 +7,7 @@ import (
 	"github.com/op/go-logging"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 type WorkerConfig struct {
@@ -20,7 +21,7 @@ type WorkerConfig struct {
 
 	// Number of go routines used to perform network I/O,
 	// such as fetching files from S3, storing files to S3,
-	// and fetching/storing Fluctus data. If a worker does
+	// and fetching/storing Pharos data. If a worker does
 	// no network I/O (such as the TroubleWorker), this
 	// setting is ignored.
 	NetworkConnections int
@@ -70,7 +71,7 @@ type Config struct {
 	// The name of the long-term storage bucket for DPN
 	DPNPreservationBucket   string
 
-	// DPNRecordWorker records DPN storage events in Fluctus
+	// DPNRecordWorker records DPN storage events in Pharos
 	// and through the DPN REST API.
 	DPNRecordWorker         WorkerConfig
 
@@ -105,14 +106,14 @@ type Config struct {
 	// handles ongoing fixity checks.
 	FixityWorker            WorkerConfig
 
-	// The version of the Fluctus API we're using. This should
+	// The version of the Pharos API we're using. This should
 	// start with a v, like v1, v2.2, etc.
-	FluctusAPIVersion       string
+	PharosAPIVersion       string
 
-	// FluctusURL is the URL of the Fluctus server where
+	// PharosURL is the URL of the Pharos server where
 	// we will be recording results and metadata. This should
 	// start with http:// or https://
-	FluctusURL              string
+	PharosURL              string
 
 	// LogDirectory is where we'll write our log files.
 	LogDirectory            string
@@ -134,7 +135,7 @@ type Config struct {
 
 	// Maximum number of days allowed between scheduled
 	// fixity checks. The fixity_reader periodically
-	// queries Fluctus for GenericFiles whose last
+	// queries Pharos for GenericFiles whose last
 	// fixity check was greater than or equal to this
 	// number of days ago. Those items are put into the
 	// fixity_check queue.
@@ -213,68 +214,87 @@ type Config struct {
 
 }
 
-func (config *Config) AbsLogDirectory() string {
+// Ensures that the logging directory exists, creating it if necessary.
+// Returns the absolute path the logging directory.
+func (config *Config) EnsureLogDirectory() (string, error) {
 	config.ExpandFilePaths()
-	config.createDirectories()
+	err := config.createDirectories()
+	if err != nil {
+		return "", err
+	}
 	absPath, err := filepath.Abs(config.LogDirectory)
 	if err != nil {
 		msg := fmt.Sprintf("Cannot get absolute path to log directory. "+
 			"config.LogDirectory is set to '%s'", config.LogDirectory)
 		panic(msg)
 	}
-	return absPath
+	return absPath, err
 }
 
 // This returns the configuration that the user requested.
 // If the user did not specify any configuration (using the
 // -config flag), or if the specified configuration cannot
 // be found, this prints a help message and terminates the
-// program.
-//
-// TODO: Use string param, not pointer!
-func LoadRequestedConfig(requestedConfig *string) (config Config) {
-	configurations := loadConfigFile()
-	config, configExists := configurations[*requestedConfig]
-	if requestedConfig == nil || !configExists {
-		printConfigHelp(*requestedConfig, configurations)
-		os.Exit(1)
-	}
-	config.ActiveConfig = *requestedConfig
-	config.ExpandFilePaths()
-	config.createDirectories()
-	return config
-}
-
-// This prints a message to stdout describing how to specify
-// a valid configuration.
-func printConfigHelp(requestedConfig string, configurations map[string]Config) {
-	fmt.Fprintf(os.Stderr, "Unrecognized config '%s'\n", requestedConfig)
-	fmt.Fprintln(os.Stderr, "Please specify one of the following configurations:")
-	for name, _ := range configurations {
-		fmt.Println(name)
-	}
-	os.Exit(1)
-}
-
-// This function reads the config.json file and returns a list of
-// available configurations.
-func loadConfigFile() (configurations map[string]Config) {
-	file, err := fileutil.LoadRelativeFile(filepath.Join("config", "config.json"))
+// program. Param pathToConfig file should be a path relative
+// to EXCHANGE_HOME. Param requestedConfig should be "dev",
+// "demo", "test" or some other config environment name
+// defined in the config file.
+func Load(pathToConfigFile, requestedConfig string) (config Config, err error) {
+	configurations, err := loadConfigFile(pathToConfigFile)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error reading config file: %v\n", err)
-		os.Exit(1)
+		return Config{}, err
+	}
+	config, configExists := configurations[requestedConfig]
+	if requestedConfig == "" || !configExists {
+		configNames := availableConfigNames(configurations)
+		detailedError := fmt.Errorf("Unrecognized config '%s'. " +
+			"Please specify one of the following configurations: %s",
+			requestedConfig, strings.Join(configNames, ","))
+		return Config{}, detailedError
+	}
+	config.ActiveConfig = requestedConfig
+	config.ExpandFilePaths()
+	err = config.createDirectories()
+	if err != nil {
+		return Config{}, err
+	}
+	return config, nil
+}
+
+func availableConfigNames(configurations map[string]Config) []string {
+	names := make([]string, len(configurations))
+	i := 0
+	for name, _ := range configurations {
+		names[i] = name
+		i++
+	}
+	return names
+}
+
+// This function reads the config.json file and returns a map of
+// available configurations.
+func loadConfigFile(pathToConfigFile string) (configurations map[string]Config, err error) {
+	if pathToConfigFile == "" {
+		filepath.Join("config", "config.json")
+	}
+	file, err := fileutil.LoadRelativeFile(pathToConfigFile)
+	if err != nil {
+		detailedError := fmt.Errorf("Error reading config file '%s': %v\n",
+			pathToConfigFile, err)
+		return nil, detailedError
 	}
 	err = json.Unmarshal(file, &configurations)
 	if err != nil {
-		fmt.Fprint(os.Stderr, "Error parsing JSON from config file:", err)
-		os.Exit(1)
+		detailedError := fmt.Errorf("Error parsing JSON from config file '%s':",
+			pathToConfigFile, err)
+		return nil, detailedError
 	}
-	return configurations
+	return configurations, nil
 }
 
-func (config *Config) EnsureFluctusConfig() error {
-	if config.FluctusURL == "" {
-		return fmt.Errorf("FluctusUrl is not set in config file")
+func (config *Config) EnsurePharosConfig() error {
+	if config.PharosURL == "" {
+		return fmt.Errorf("PharosUrl is not set in config file")
 	}
 	if os.Getenv("FLUCTUS_API_USER") == "" {
 		return fmt.Errorf("Environment variable FLUCTUS_API_USER is not set")
@@ -314,25 +334,25 @@ func (config *Config) ExpandFilePaths() {
 }
 
 func (config *Config) createDirectories() (error) {
-	if !fileutil.FileExists(config.TarDirectory) {
+	if config.TarDirectory != "" && !fileutil.FileExists(config.TarDirectory) {
 		err := os.MkdirAll(config.TarDirectory, 0755)
 		if err != nil {
 			return err
 		}
 	}
-	if !fileutil.FileExists(config.LogDirectory) {
+	if config.LogDirectory != "" && !fileutil.FileExists(config.LogDirectory) {
 		err := os.MkdirAll(config.LogDirectory, 0755)
 		if err != nil {
 			return err
 		}
 	}
-	if !fileutil.FileExists(config.RestoreDirectory) {
+	if config.RestoreDirectory != "" && !fileutil.FileExists(config.RestoreDirectory) {
 		err := os.MkdirAll(config.RestoreDirectory, 0755)
 		if err != nil {
 			return err
 		}
 	}
-	if !fileutil.FileExists(config.ReplicationDirectory) {
+	if config.ReplicationDirectory != "" && !fileutil.FileExists(config.ReplicationDirectory) {
 		err := os.MkdirAll(config.ReplicationDirectory, 0755)
 		if err != nil {
 			return err
