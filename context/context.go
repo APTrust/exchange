@@ -93,8 +93,7 @@ func (context *Context) initPharosClient() {
 		context.Config.PharosURL,
 		context.Config.PharosAPIVersion,
 		os.Getenv("PHAROS_API_USER"),
-		os.Getenv("PHAROS_API_KEY"),
-		context.MessageLog)
+		os.Getenv("PHAROS_API_KEY"))
 	if err != nil {
 		message := fmt.Sprintf("Exiting. Cannot initialize Pharos Client: %v", err)
 		fmt.Fprintln(os.Stderr, message)

@@ -1,0 +1,179 @@
+package network
+
+import (
+	"github.com/APTrust/exchange/models"
+	"io/ioutil"
+	"net/http"
+)
+
+type PharosResponse struct {
+	// ItemCount is the total number of items matching the
+	// specified filters. This is useful for List requests.
+	// Note that the number of items returned in the response
+	// may be fewer than ItemCount. For example, the remote
+	// server may return only 10 of 10,000 matching records
+	// at a time.
+	ItemCount      int
+
+	// The number of the next page of results in a List request.
+	// For example, if we just retrieved the third of twenty
+	// pages, NextPageNumber will be 4. When NextPageNumber is
+	// zero, the server has no more results.
+	NextPageNumber int
+
+	// The HTTP request that was (or would have been) sent to
+	// the Pharos REST server. This is useful for logging and
+	// debugging.
+	Request       *http.Request
+
+	// The HTTP Response from the server. You can get the
+	// HTTP status code, headers, etc. through this. See
+	// https://golang.org/pkg/net/http/#Response for more info.
+	//
+	// Do not try to read Response.Body, since it's already been read
+	// and the stream has been closed. Use the RawResponseData()
+	// method instead.
+	Response       *http.Response
+
+	// The error, if any, that occurred while processing this
+	// request. Errors may come from the server (4xx or 5xx
+	// responses) or from the client (e.g. if it could not
+	// parse the JSON response).
+	Error          error
+
+	// The type of object(s) this response contains.
+	objectType     PharosObjectType
+
+	// A slice of IntellectualObject pointers. Will be nil if
+	// objectType is not IntellectualObject.
+	objects        []*models.IntellectualObject
+
+	// A slice of GenericFile pointers. Will be nil if
+	// objectType is not GenericFile.
+	files          []*models.GenericFile
+
+	// A slice of PremisEvent pointers. Will be nil if
+	// objectType is not PremisEvent.
+	events         []*models.PremisEvent
+
+	// A slice of WorkItem pointers. Will be nil if
+	// objectType is not WorkItem.
+	workItems      []*models.WorkItem
+
+	// Indicates whether the HTTP response body has been
+	// read (and closed).
+	hasBeenRead    bool
+
+	// The raw data contained in the body of the HTTP
+	// respone.
+	data           []byte
+}
+
+type PharosObjectType string
+
+const (
+	PharosIntellectualObject PharosObjectType = "IntellectualObject"
+	PharosGenericFile                         = "GenericFile"
+	PharosPremisEvent                         = "PremisEvent"
+	PharosWorkItem                            = "WorkItem"
+)
+
+// Creates a new PharosResponse and returns a pointer to it.
+func NewPharosResponse(objType PharosObjectType) (*PharosResponse) {
+	return &PharosResponse{
+		ItemCount: 0,
+		NextPageNumber: 0,
+		objectType: objType,
+		hasBeenRead: false,
+	}
+}
+
+// Returns the raw body of the HTTP response as a byte slice.
+// The return value may be nil.
+func (resp *PharosResponse) RawResponseData() ([]byte, error) {
+	if !resp.hasBeenRead {
+		resp.readResponse()
+	}
+	return resp.data, resp.Error
+}
+
+// Reads the body of an HTTP response object, closes the stream, and
+// returns a byte array. The body MUST be closed, or you'll wind up
+// with a lot of open network connections.
+func (resp *PharosResponse) readResponse () {
+	if !resp.hasBeenRead && resp.Response.Body != nil {
+		resp.data, resp.Error = ioutil.ReadAll(resp.Response.Body)
+		resp.Response.Body.Close()
+		resp.hasBeenRead = true
+	}
+}
+
+// Returns the type of object(s) contained in this response.
+func (resp *PharosResponse) ObjectType () (PharosObjectType) {
+	return resp.objectType
+}
+
+// Returns the IntellectualObject parsed from the HTTP response body,
+// or nil.
+func (resp *PharosResponse) IntellectualObject() (*models.IntellectualObject) {
+	if resp.objects != nil && len(resp.objects) > 0 {
+		return resp.objects[0]
+	}
+	return nil
+}
+
+// Returns a list of IntellectualObjects parsed from the HTTP response body.
+func (resp *PharosResponse) IntellectualObjects() ([]*models.IntellectualObject) {
+	if resp.objects == nil {
+		return make([]*models.IntellectualObject, 0)
+	}
+	return resp.objects
+}
+
+// Returns the GenericFile parsed from the HTTP response body,  or nil.
+func (resp *PharosResponse) GenericFile() (*models.GenericFile) {
+	if resp.files != nil && len(resp.files) > 0 {
+		return resp.files[0]
+	}
+	return nil
+}
+
+// Returns a list of GenericFiles parsed from the HTTP response body.
+func (resp *PharosResponse) GenericFiles() ([]*models.GenericFile) {
+	if resp.files == nil {
+		return make([]*models.GenericFile, 0)
+	}
+	return resp.files
+}
+
+// Returns the PremisEvent parsed from the HTTP response body, or nil.
+func (resp *PharosResponse) PremisEvent() (*models.PremisEvent) {
+	if resp.events != nil && len(resp.events) > 0 {
+		return resp.events[0]
+	}
+	return nil
+}
+
+// Returns a list of PremisEvents parsed from the HTTP response body.
+func (resp *PharosResponse) PremisEvents() ([]*models.PremisEvent) {
+	if resp.events == nil {
+		return make([]*models.PremisEvent, 0)
+	}
+	return resp.events
+}
+
+// Returns the WorkItem parsed from the HTTP response body, or nil.
+func (resp *PharosResponse) WorkItem() (*models.WorkItem) {
+	if resp.workItems != nil && len(resp.workItems) > 0 {
+		return resp.workItems[0]
+	}
+	return nil
+}
+
+// Returns a list of WorkItems parsed from the HTTP response body.
+func (resp *PharosResponse) WorkItems() ([]*models.WorkItem) {
+	if resp.workItems == nil {
+		return make([]*models.WorkItem, 0)
+	}
+	return resp.workItems
+}
