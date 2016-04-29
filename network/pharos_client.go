@@ -42,6 +42,32 @@ func NewPharosClient(hostUrl, apiVersion, apiUser, apiKey string) (*PharosClient
 	return &PharosClient{hostUrl, apiVersion, apiUser, apiKey, httpClient, transport, nil}, nil
 }
 
+// Returns a list of depositing member institutions.
+func (client *PharosClient) InstitutionGet(identifier string) (*PharosResponse) {
+	// Set up the response object
+	resp := NewPharosResponse(PharosInstitution)
+	resp.institutions = make([]*models.Institution, 1)
+
+	// Build the url and the request object
+	relativeUrl := fmt.Sprintf("/api/%s/objects/%s", client.apiVersion, escapeSlashes(identifier))
+	absoluteUrl := client.BuildUrl(relativeUrl)
+
+	// Run the request
+	client.DoRequest(resp, "GET", absoluteUrl, nil)
+	if resp.Error != nil {
+		return resp
+	}
+
+	// Parse the JSON from the response body
+	institution := &models.Institution{}
+	resp.Error = json.Unmarshal(resp.data, institution)
+	if resp.Error == nil {
+		resp.institutions[0] = institution
+	}
+	return resp
+}
+
+
 // Returns a list of APTrust depositor institutions.
 func (client *PharosClient) InstitutionList() (*PharosResponse) {
 	// Set up the response object
@@ -83,7 +109,11 @@ func (client *PharosClient) IntellectualObjectGet(identifier string) (*PharosRes
 	}
 
 	// Parse the JSON from the response body
-	resp.Error = json.Unmarshal(resp.data, resp.objects[0])
+	intelObj := &models.IntellectualObject{}
+	resp.Error = json.Unmarshal(resp.data, intelObj)
+	if resp.Error == nil {
+		resp.objects[0] = intelObj
+	}
 	return resp
 }
 
@@ -147,7 +177,11 @@ func (client *PharosClient) IntellectualObjectSave(obj *models.IntellectualObjec
 	}
 
 	// Parse the JSON from the response body
-	resp.Error = json.Unmarshal(resp.data, resp.objects[0])
+	intelObj := &models.IntellectualObject{}
+	resp.Error = json.Unmarshal(resp.data, intelObj)
+	if resp.Error == nil {
+		resp.objects[0] = intelObj
+	}
 	return resp
 }
 
@@ -169,7 +203,11 @@ func (client *PharosClient) GenericFileGet(identifier string) (*PharosResponse) 
 	}
 
 	// Parse the JSON from the response body
-	resp.Error = json.Unmarshal(resp.data, resp.files[0])
+	gf := &models.GenericFile{}
+	resp.Error = json.Unmarshal(resp.data, gf)
+	if resp.Error == nil {
+		resp.files[0] = gf
+	}
 	return resp
 }
 
@@ -229,7 +267,11 @@ func (client *PharosClient) GenericFileSave(obj *models.GenericFile) (*PharosRes
 	}
 
 	// Parse the JSON from the response body
-	resp.Error = json.Unmarshal(resp.data, resp.files[0])
+	gf := &models.GenericFile{}
+	resp.Error = json.Unmarshal(resp.data, gf)
+	if resp.Error == nil {
+		resp.files[0] = gf
+	}
 	return resp
 }
 
@@ -252,14 +294,11 @@ func (client *PharosClient) PremisEventGet(identifier string) (*PharosResponse) 
 	}
 
 	// Parse the JSON from the response body
-	obj := &models.PremisEvent{}
-	resp.Error = json.Unmarshal(resp.data, obj)
-	if resp.Error != nil {
-		return resp
+	event := &models.PremisEvent{}
+	resp.Error = json.Unmarshal(resp.data, event)
+	if resp.Error == nil {
+		resp.events[0] = event
 	}
-
-	// We're good
-	resp.events[0] = obj
 	return resp
 }
 
@@ -325,7 +364,11 @@ func (client *PharosClient) PremisEventSave(obj *models.PremisEvent) (*PharosRes
 	}
 
 	// Parse the JSON from the response body
-	resp.Error = json.Unmarshal(resp.data, resp.events[0])
+	event := &models.PremisEvent{}
+	resp.Error = json.Unmarshal(resp.data, event)
+	if resp.Error == nil {
+		resp.events[0] = event
+	}
 	return resp
 }
 
@@ -396,7 +439,11 @@ func (client *PharosClient) WorkItemSave(obj *models.GenericFile) (*PharosRespon
 	}
 
 	// Parse the JSON from the response body
-	resp.Error = json.Unmarshal(resp.data, resp.workItems[0])
+	workItem := &models.WorkItem{}
+	resp.Error = json.Unmarshal(resp.data, workItem)
+	if resp.Error == nil {
+		resp.workItems[0] = workItem
+	}
 	return resp
 }
 
@@ -417,7 +464,11 @@ func (client *PharosClient) WorkItemGet(id int) (*PharosResponse) {
 	}
 
 	// Parse the JSON from the response body
-	resp.Error = json.Unmarshal(resp.data, resp.workItems[0])
+	workItem := &models.WorkItem{}
+	resp.Error = json.Unmarshal(resp.data, workItem)
+	if resp.Error == nil {
+		resp.workItems[0] = workItem
+	}
 	return resp
 }
 
@@ -438,7 +489,11 @@ func (client *PharosClient) WorkItemGetByEtagNameBagDate(etag, name string, bagD
 	}
 
 	// Parse the JSON from the response body
-	resp.Error = json.Unmarshal(resp.data, resp.workItems[0])
+	workItem := &models.WorkItem{}
+	resp.Error = json.Unmarshal(resp.data, workItem)
+	if resp.Error == nil {
+		resp.workItems[0] = workItem
+	}
 	return resp
 }
 
