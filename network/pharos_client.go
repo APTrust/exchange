@@ -1,6 +1,7 @@
 package network
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"github.com/APTrust/exchange/models"
@@ -12,6 +13,8 @@ import (
 	"time"
 )
 
+// PharosClient supports basic calls to the Pharos Admin REST API.
+// This client does not support the Member API.
 type PharosClient struct {
 	hostUrl      string
 	apiVersion   string
@@ -114,9 +117,38 @@ func (client *PharosClient) IntellectualObjectList(params map[string]string) (*P
 
 // Saves the intellectual object to Pharos. If the object has an ID of zero,
 // this performs a POST to create a new Intellectual Object. If the ID is
-// non-zero, this updates the existing object with a PUT.
+// non-zero, this updates the existing object with a PUT. The response object
+// will contain a new copy of the IntellectualObject if it was successfully
+// saved.
 func (client *PharosClient) IntellectualObjectSave(obj *models.IntellectualObject) (*PharosResponse) {
-	return nil
+	// Set up the response object
+	resp := NewPharosResponse(PharosIntellectualObject)
+	resp.objects = make([]*models.IntellectualObject, 1)
+
+	// URL and method
+	relativeUrl := fmt.Sprintf("/api/%s/objects", client.apiVersion)
+	httpMethod := "POST"
+	if obj.Id > 0 {
+		relativeUrl = fmt.Sprintf("%s/%s", relativeUrl, escapeSlashes(obj.Identifier))
+		httpMethod = "PUT"
+	}
+	absoluteUrl := client.BuildUrl(relativeUrl)
+
+	// Prepare the JSON data
+	postData, err := obj.SerializeForPharos()
+	if err != nil {
+		resp.Error = err
+	}
+
+	// Run the request
+	client.DoRequest(resp, httpMethod, absoluteUrl, bytes.NewBuffer(postData))
+	if resp.Error != nil {
+		return resp
+	}
+
+	// Parse the JSON from the response body
+	resp.Error = json.Unmarshal(resp.data, resp.objects[0])
+	return resp
 }
 
 // Returns the GenericFile having the specified identifier. The identifier
@@ -168,9 +200,37 @@ func (client *PharosClient) GenericFileList(params map[string]string) (*PharosRe
 // Saves a Generic File record to Pharos. If the Generic File's ID is zero,
 // this performs a POST to create a new record. For non-zero IDs, this
 // performs a PUT to update the existing record. Either way, the record
-// must have an IntellectualObject ID.
+// must have an IntellectualObject ID. The response object will have a new
+// copy of the GenericFile if the save was successful.
 func (client *PharosClient) GenericFileSave(obj *models.GenericFile) (*PharosResponse) {
-	return nil
+	// Set up the response object
+	resp := NewPharosResponse(PharosGenericFile)
+	resp.files = make([]*models.GenericFile, 1)
+
+	// URL and method
+	relativeUrl := fmt.Sprintf("/api/%s/files", client.apiVersion)
+	httpMethod := "POST"
+	if obj.Id > 0 {
+		relativeUrl = fmt.Sprintf("%s/%s", relativeUrl, escapeSlashes(obj.Identifier))
+		httpMethod = "PUT"
+	}
+	absoluteUrl := client.BuildUrl(relativeUrl)
+
+	// Prepare the JSON data
+	postData, err := obj.SerializeForPharos()
+	if err != nil {
+		resp.Error = err
+	}
+
+	// Run the request
+	client.DoRequest(resp, httpMethod, absoluteUrl, bytes.NewBuffer(postData))
+	if resp.Error != nil {
+		return resp
+	}
+
+	// Parse the JSON from the response body
+	resp.Error = json.Unmarshal(resp.data, resp.files[0])
+	return resp
 }
 
 // Returns the PREMIS event with the specified identifier. The identifier
@@ -236,9 +296,37 @@ func (client *PharosClient) PremisEventList(params map[string]string) (*PharosRe
 
 // Saves a PREMIS event to Pharos. If the event ID is zero, this issues a
 // POST request to create a new event record. If the ID is non-zero, this
-// issues a PUT to update the existing event.
+// issues a PUT to update the existing event. The response object will
+// have a new copy of the Premis event if the save was successful.
 func (client *PharosClient) PremisEventSave(obj *models.PremisEvent) (*PharosResponse) {
-	return nil
+	// Set up the response object
+	resp := NewPharosResponse(PharosPremisEvent)
+	resp.events = make([]*models.PremisEvent, 1)
+
+	// URL and method
+	relativeUrl := fmt.Sprintf("/api/%s/events", client.apiVersion)
+	httpMethod := "POST"
+	if obj.Id > 0 {
+		relativeUrl = fmt.Sprintf("%s/%s", relativeUrl, escapeSlashes(obj.Identifier))
+		httpMethod = "PUT"
+	}
+	absoluteUrl := client.BuildUrl(relativeUrl)
+
+	// Prepare the JSON data
+	postData, err := json.Marshal(obj)
+	if err != nil {
+		resp.Error = err
+	}
+
+	// Run the request
+	client.DoRequest(resp, httpMethod, absoluteUrl, bytes.NewBuffer(postData))
+	if resp.Error != nil {
+		return resp
+	}
+
+	// Parse the JSON from the response body
+	resp.Error = json.Unmarshal(resp.data, resp.events[0])
+	return resp
 }
 
 // Lists the work items meeting the specified filters, or all work
@@ -279,23 +367,30 @@ func (client *PharosClient) WorkItemList(params map[string]string) (*PharosRespo
 
 // Saves a WorkItem record to Pharos. If the WorkItems's ID is zero,
 // this performs a POST to create a new record. For non-zero IDs, this
-// performs a PUT to update the existing record.
+// performs a PUT to update the existing record. The response object
+// will include a new copy of the WorkItem if it was saved successfully.
 func (client *PharosClient) WorkItemSave(obj *models.GenericFile) (*PharosResponse) {
-	return nil
-}
-
-// Returns the WorkItem with the specified etag, name and bag_date.
-func (client *PharosClient) WorkItemGet(etag, name string, bagDate time.Time) (*PharosResponse) {
 	// Set up the response object
 	resp := NewPharosResponse(PharosWorkItem)
 	resp.workItems = make([]*models.WorkItem, 1)
 
-	// Build the url and the request object
-	relativeUrl := fmt.Sprintf("/api/%s/work_items/%s/%s/%s", client.apiVersion, etag, name, bagDate)
+	// URL and method
+	relativeUrl := fmt.Sprintf("/api/%s/work_items", client.apiVersion)
+	httpMethod := "POST"
+	if obj.Id > 0 {
+		relativeUrl = fmt.Sprintf("%s/%d", relativeUrl, obj.Id)
+		httpMethod = "PUT"
+	}
 	absoluteUrl := client.BuildUrl(relativeUrl)
 
+	// Prepare the JSON data
+	postData, err := obj.SerializeForPharos()
+	if err != nil {
+		resp.Error = err
+	}
+
 	// Run the request
-	client.DoRequest(resp, "GET", absoluteUrl, nil)
+	client.DoRequest(resp, httpMethod, absoluteUrl, bytes.NewBuffer(postData))
 	if resp.Error != nil {
 		return resp
 	}
@@ -306,7 +401,7 @@ func (client *PharosClient) WorkItemGet(etag, name string, bagDate time.Time) (*
 }
 
 // Returns the WorkItem with the specified ID.
-func (client *PharosClient) WorkItemGetById(id int) (*PharosResponse) {
+func (client *PharosClient) WorkItemGet(id int) (*PharosResponse) {
 	// Set up the response object
 	resp := NewPharosResponse(PharosWorkItem)
 	resp.workItems = make([]*models.WorkItem, 1)
@@ -326,6 +421,26 @@ func (client *PharosClient) WorkItemGetById(id int) (*PharosResponse) {
 	return resp
 }
 
+// Returns the WorkItem with the specified etag, name and bag_date.
+func (client *PharosClient) WorkItemGetByEtagNameBagDate(etag, name string, bagDate time.Time) (*PharosResponse) {
+	// Set up the response object
+	resp := NewPharosResponse(PharosWorkItem)
+	resp.workItems = make([]*models.WorkItem, 1)
+
+	// Build the url and the request object
+	relativeUrl := fmt.Sprintf("/api/%s/work_items/%s/%s/%s", client.apiVersion, etag, name, bagDate)
+	absoluteUrl := client.BuildUrl(relativeUrl)
+
+	// Run the request
+	client.DoRequest(resp, "GET", absoluteUrl, nil)
+	if resp.Error != nil {
+		return resp
+	}
+
+	// Parse the JSON from the response body
+	resp.Error = json.Unmarshal(resp.data, resp.workItems[0])
+	return resp
+}
 
 
 // -------------------------------------------------------------------------
