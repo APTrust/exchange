@@ -39,11 +39,32 @@ func NewPharosClient(hostUrl, apiVersion, apiUser, apiKey string) (*PharosClient
 	return &PharosClient{hostUrl, apiVersion, apiUser, apiKey, httpClient, transport, nil}, nil
 }
 
+// Returns a list of APTrust depositor institutions.
+func (client *PharosClient) InstitutionList() (*PharosResponse) {
+	// Set up the response object
+	resp := NewPharosResponse(PharosInstitution)
+	resp.institutions = make([]*models.Institution, 0)
+
+	// Build the url and the request object
+	relativeUrl := fmt.Sprintf("/api/%s/institutions/", client.apiVersion)
+	absoluteUrl := client.BuildUrl(relativeUrl)
+
+	// Run the request
+	client.DoRequest(resp, "GET", absoluteUrl, nil)
+	if resp.Error != nil {
+		return resp
+	}
+
+	// Parse the JSON from the response body
+	resp.Error = json.Unmarshal(resp.data, resp.institutions)
+	return resp
+}
+
+
 // Returns the object with the specified identifier, if it
 // exists. Param identifier is an IntellectualObject identifier
 // in the format "institution.edu/object_name"
 func (client *PharosClient) IntellectualObjectGet(identifier string) (*PharosResponse) {
-
 	// Set up the response object
 	resp := NewPharosResponse(PharosIntellectualObject)
 	resp.objects = make([]*models.IntellectualObject, 1)
@@ -59,14 +80,7 @@ func (client *PharosClient) IntellectualObjectGet(identifier string) (*PharosRes
 	}
 
 	// Parse the JSON from the response body
-	obj := &models.IntellectualObject{}
-	resp.Error = json.Unmarshal(resp.data, obj)
-	if resp.Error != nil {
-		return resp
-	}
-
-	// We're good
-	resp.objects[0] = obj
+	resp.Error = json.Unmarshal(resp.data, resp.objects[0])
 	return resp
 }
 
@@ -78,8 +92,24 @@ func (client *PharosClient) IntellectualObjectGet(identifier string) (*PharosRes
 // * name_contains - Return objects whose name contains the specified string.
 // * name_exact - Return only object with the exact name specified.
 // * state = 'A' for active records, 'D' for deleted. Default is 'A'
-func (client *PharosClient) IntellectualObjectList(params *map[string]string) (*PharosResponse) {
-	return nil
+func (client *PharosClient) IntellectualObjectList(params map[string]string) (*PharosResponse) {
+	// Set up the response object
+	resp := NewPharosResponse(PharosIntellectualObject)
+	resp.objects = make([]*models.IntellectualObject, 0)
+
+	// Build the url and the request object
+	relativeUrl := fmt.Sprintf("/api/%s/objects/?%s", client.apiVersion, BuildQueryString(params))
+	absoluteUrl := client.BuildUrl(relativeUrl)
+
+	// Run the request
+	client.DoRequest(resp, "GET", absoluteUrl, nil)
+	if resp.Error != nil {
+		return resp
+	}
+
+	// Parse the JSON from the response body
+	resp.Error = json.Unmarshal(resp.data, resp.objects)
+	return resp
 }
 
 // Saves the intellectual object to Pharos. If the object has an ID of zero,
@@ -92,15 +122,47 @@ func (client *PharosClient) IntellectualObjectSave(obj *models.IntellectualObjec
 // Returns the GenericFile having the specified identifier. The identifier
 // should be in the format "institution.edu/object_name/path/to/file.ext"
 func (client *PharosClient) GenericFileGet(identifier string) (*PharosResponse) {
-	return nil
+	// Set up the response object
+	resp := NewPharosResponse(PharosGenericFile)
+	resp.files = make([]*models.GenericFile, 1)
+
+	// Build the url and the request object
+	relativeUrl := fmt.Sprintf("/api/%s/files/%s", client.apiVersion, escapeSlashes(identifier))
+	absoluteUrl := client.BuildUrl(relativeUrl)
+
+	// Run the request
+	client.DoRequest(resp, "GET", absoluteUrl, nil)
+	if resp.Error != nil {
+		return resp
+	}
+
+	// Parse the JSON from the response body
+	resp.Error = json.Unmarshal(resp.data, resp.files[0])
+	return resp
 }
 
 // Returns a list of Generic Files. Params include:
 //
 // * intellectual_object_identifier - The identifier of the object to which
 //   the files belong.
-func (client *PharosClient) GenericFileList(params *map[string]string) (*PharosResponse) {
-	return nil
+func (client *PharosClient) GenericFileList(params map[string]string) (*PharosResponse) {
+	// Set up the response object
+	resp := NewPharosResponse(PharosGenericFile)
+	resp.files = make([]*models.GenericFile, 0)
+
+	// Build the url and the request object
+	relativeUrl := fmt.Sprintf("/api/%s/files/?%s", client.apiVersion, BuildQueryString(params))
+	absoluteUrl := client.BuildUrl(relativeUrl)
+
+	// Run the request
+	client.DoRequest(resp, "GET", absoluteUrl, nil)
+	if resp.Error != nil {
+		return resp
+	}
+
+	// Parse the JSON from the response body
+	resp.Error = json.Unmarshal(resp.data, resp.files)
+	return resp
 }
 
 // Saves a Generic File record to Pharos. If the Generic File's ID is zero,
@@ -115,7 +177,30 @@ func (client *PharosClient) GenericFileSave(obj *models.GenericFile) (*PharosRes
 // should be a UUID in string format, with dashes. E.g.
 // "49a7d6b5-cdc1-4912-812e-885c08e90c68"
 func (client *PharosClient) PremisEventGet(identifier string) (*PharosResponse) {
-	return nil
+	// Set up the response object
+	resp := NewPharosResponse(PharosPremisEvent)
+	resp.events = make([]*models.PremisEvent, 1)
+
+	// Build the url and the request object
+	relativeUrl := fmt.Sprintf("/api/%s/events/%s", client.apiVersion, escapeSlashes(identifier))
+	absoluteUrl := client.BuildUrl(relativeUrl)
+
+	// Run the request
+	client.DoRequest(resp, "GET", absoluteUrl, nil)
+	if resp.Error != nil {
+		return resp
+	}
+
+	// Parse the JSON from the response body
+	obj := &models.PremisEvent{}
+	resp.Error = json.Unmarshal(resp.data, obj)
+	if resp.Error != nil {
+		return resp
+	}
+
+	// We're good
+	resp.events[0] = obj
+	return resp
 }
 
 // Returns a list of PREMIS events matching the specified criteria.
@@ -129,8 +214,24 @@ func (client *PharosClient) PremisEventGet(identifier string) (*PharosResponse) 
 //   event types listed in contants/constants.go
 // * created_since - (iso 8601 datetime string) Return events created
 //   on or after the specified datetime.
-func (client *PharosClient) PremisEventList(params *map[string]string) (*PharosResponse) {
-	return nil
+func (client *PharosClient) PremisEventList(params map[string]string) (*PharosResponse) {
+	// Set up the response object
+	resp := NewPharosResponse(PharosPremisEvent)
+	resp.events = make([]*models.PremisEvent, 0)
+
+	// Build the url and the request object
+	relativeUrl := fmt.Sprintf("/api/%s/events/?%s", client.apiVersion, BuildQueryString(params))
+	absoluteUrl := client.BuildUrl(relativeUrl)
+
+	// Run the request
+	client.DoRequest(resp, "GET", absoluteUrl, nil)
+	if resp.Error != nil {
+		return resp
+	}
+
+	// Parse the JSON from the response body
+	resp.Error = json.Unmarshal(resp.data, resp.events)
+	return resp
 }
 
 // Saves a PREMIS event to Pharos. If the event ID is zero, this issues a
@@ -156,8 +257,24 @@ func (client *PharosClient) PremisEventSave(obj *models.PremisEvent) (*PharosRes
 // * node
 // * needs_admin_review
 // * process_after
-func (client *PharosClient) WorkItemList(params *map[string]string) (*PharosResponse) {
-	return nil
+func (client *PharosClient) WorkItemList(params map[string]string) (*PharosResponse) {
+	// Set up the response object
+	resp := NewPharosResponse(PharosWorkItem)
+	resp.workItems = make([]*models.WorkItem, 0)
+
+	// Build the url and the request object
+	relativeUrl := fmt.Sprintf("/api/%s/work_items/?%s", client.apiVersion, BuildQueryString(params))
+	absoluteUrl := client.BuildUrl(relativeUrl)
+
+	// Run the request
+	client.DoRequest(resp, "GET", absoluteUrl, nil)
+	if resp.Error != nil {
+		return resp
+	}
+
+	// Parse the JSON from the response body
+	resp.Error = json.Unmarshal(resp.data, resp.workItems)
+	return resp
 }
 
 // Saves a WorkItem record to Pharos. If the WorkItems's ID is zero,
@@ -169,18 +286,51 @@ func (client *PharosClient) WorkItemSave(obj *models.GenericFile) (*PharosRespon
 
 // Returns the WorkItem with the specified etag, name and bag_date.
 func (client *PharosClient) WorkItemGet(etag, name string, bagDate time.Time) (*PharosResponse) {
-	return nil
+	// Set up the response object
+	resp := NewPharosResponse(PharosWorkItem)
+	resp.workItems = make([]*models.WorkItem, 1)
+
+	// Build the url and the request object
+	relativeUrl := fmt.Sprintf("/api/%s/work_items/%s/%s/%s", client.apiVersion, etag, name, bagDate)
+	absoluteUrl := client.BuildUrl(relativeUrl)
+
+	// Run the request
+	client.DoRequest(resp, "GET", absoluteUrl, nil)
+	if resp.Error != nil {
+		return resp
+	}
+
+	// Parse the JSON from the response body
+	resp.Error = json.Unmarshal(resp.data, resp.workItems[0])
+	return resp
 }
 
 // Returns the WorkItem with the specified ID.
 func (client *PharosClient) WorkItemGetById(id int) (*PharosResponse) {
-	return nil
+	// Set up the response object
+	resp := NewPharosResponse(PharosWorkItem)
+	resp.workItems = make([]*models.WorkItem, 1)
+
+	// Build the url and the request object
+	relativeUrl := fmt.Sprintf("/api/%s/work_items/%d/", client.apiVersion, id)
+	absoluteUrl := client.BuildUrl(relativeUrl)
+
+	// Run the request
+	client.DoRequest(resp, "GET", absoluteUrl, nil)
+	if resp.Error != nil {
+		return resp
+	}
+
+	// Parse the JSON from the response body
+	resp.Error = json.Unmarshal(resp.data, resp.workItems[0])
+	return resp
 }
 
 
 
-// The calls below are mostly for internal use, but are public so
-// we can test them, and so we can use them in special cases.
+// -------------------------------------------------------------------------
+// Utility Methods
+// -------------------------------------------------------------------------
 
 
 // BuildUrl combines the host and protocol in client.hostUrl with
@@ -205,7 +355,7 @@ func (client *PharosClient) BuildUrl(relativeUrl string) string {
 // constructed from bytes.NewBuffer([]byte) for POST and PUT.
 // For the PharosClient, we're typically sending JSON data in
 // the request body.
-func (client *PharosClient) NewJsonRequest(method, absoluteUrl string, requestData io.Reader) (*http.Request, error) {
+func (client *PharosClient) NewJsonRequest(method, absoluteUrl string, requestData io.Reader) (*http.Request, error){
 	req, err := http.NewRequest(method, absoluteUrl, requestData)
 	if err != nil {
 		return nil, err
@@ -270,6 +420,15 @@ func (client *PharosClient) DoRequest(resp *PharosResponse, method, absoluteUrl 
 	// If there's an error reading the response body, it will
 	// be recorded in resp.Error.
 	resp.readResponse()
+}
+
+// Converts a set map of query params into a URL-encoded string.
+func BuildQueryString(params map[string]string) (string) {
+	values := url.Values{}
+	for key, value := range params {
+		values.Add(key, value)
+	}
+	return values.Encode()
 }
 
 // Replaces "/" with "%2F", which golang's url.QueryEscape does not do.

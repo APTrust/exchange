@@ -56,6 +56,10 @@ type PharosResponse struct {
 	// objectType is not PremisEvent.
 	events         []*models.PremisEvent
 
+	// A slice of Institution pointers. Will be nil if
+	// objectType is not Institution.
+	institutions   []*models.Institution
+
 	// A slice of WorkItem pointers. Will be nil if
 	// objectType is not WorkItem.
 	workItems      []*models.WorkItem
@@ -73,6 +77,7 @@ type PharosObjectType string
 
 const (
 	PharosIntellectualObject PharosObjectType = "IntellectualObject"
+	PharosInstitution                         = "Institution"
 	PharosGenericFile                         = "GenericFile"
 	PharosPremisEvent                         = "PremisEvent"
 	PharosWorkItem                            = "WorkItem"
@@ -112,6 +117,23 @@ func (resp *PharosResponse) readResponse () {
 func (resp *PharosResponse) ObjectType () (PharosObjectType) {
 	return resp.objectType
 }
+
+// Returns the Institution parsed from the HTTP response body, or nil.
+func (resp *PharosResponse) Institution() (*models.Institution) {
+	if resp.institutions != nil && len(resp.institutions) > 0 {
+		return resp.institutions[0]
+	}
+	return nil
+}
+
+// Returns a list of Institutions parsed from the HTTP response body.
+func (resp *PharosResponse) Institutions() ([]*models.Institution) {
+	if resp.institutions == nil {
+		return make([]*models.Institution, 0)
+	}
+	return resp.institutions
+}
+
 
 // Returns the IntellectualObject parsed from the HTTP response body,
 // or nil.
