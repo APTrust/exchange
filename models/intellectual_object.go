@@ -20,7 +20,7 @@ consortial, institution and restricted.
 */
 type IntellectualObject struct {
 	// If Id is non-zero, this has been recorded in Pharos.
-	Id                   string         `json:"id"`
+	Id                   int            `json:"id"`
 	Identifier           string         `json:"identifier"`
 	BagName              string         `json:"bag_name"`
 	Institution          string         `json:"institution"`
