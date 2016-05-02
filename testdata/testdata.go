@@ -47,7 +47,7 @@ func MakeGenericFile(eventCount, checksumCount int, objIdentifier string) (*mode
 		IntellectualObjectIdentifier: objIdentifier,
 		FileFormat: RandomFileFormat(),
 		URI: fmt.Sprintf("%s/%s.%s/%s", constants.S3UriPrefix, constants.ReceiveTestBucketPrefix, inst, objName),
-		Size: int64(rand.Intn(5000000)),
+		Size: int64(rand.Intn(5000000) + 1),
 		Created: RandomDateTime(),
 		Modified: RandomDateTime(),
 		Checksums: checksums,
@@ -140,7 +140,7 @@ func MakeS3File() (*models.S3File) {
 	key := s3.Key{
 		Key: fake.Word(),
 		LastModified: RandomDateTime().Format(constants.S3DateFormat),
-		Size: int64(rand.Intn(2000000)),
+		Size: int64(rand.Intn(2000000) + 1),
 		ETag: fake.Word(),
 		StorageClass: fake.JobTitle(),
 		Owner: s3.Owner{},
@@ -210,7 +210,6 @@ func RandomFileFormat() (string) {
 func RandomEventType() (string) {
 	return RandomFromList(constants.EventTypes)
 }
-
 
 func RandomFromList(items []string) (string) {
 	i := int(math.Mod(float64(rand.Intn(200)), float64(len(items))))

@@ -134,3 +134,63 @@ func TestMakeIntellectualObject(t *testing.T) {
 	assert.False(t, obj.IngestSummary.FinishedAt.IsZero())
 	assert.True(t, obj.IngestSummary.Retry)
 }
+
+func TestMakePremisEvent(t *testing.T) {
+	event := testdata.MakePremisEvent()
+	if event == nil {
+		t.Errorf("MakePremisEvent() returned nil")
+		return
+	}
+	assert.NotEqual(t, 0, event.Id)
+	assert.NotEqual(t, "", event.Identifier)
+	assert.NotEqual(t, "", event.EventType)
+	assert.False(t, event.DateTime.IsZero())
+	assert.NotEqual(t, "", event.Detail)
+	assert.NotEqual(t, "", event.Outcome)
+	assert.NotEqual(t, "", event.OutcomeDetail)
+	assert.NotEqual(t, "", event.Object)
+	assert.NotEqual(t, "", event.Agent)
+	assert.NotEqual(t, "", event.OutcomeInformation)
+}
+
+func TestMakeS3File(t *testing.T) {
+	s3File := testdata.MakeS3File()
+	if s3File == nil {
+		t.Errorf("MakeS3File() returned nil")
+		return
+	}
+	assert.NotEqual(t, "", s3File.BucketName)
+	assert.NotEqual(t, "", s3File.Key.Key)
+	assert.NotEqual(t, "", s3File.Key.LastModified)
+	assert.NotEqual(t, 0, s3File.Key.Size)
+	assert.NotEqual(t, "", s3File.Key.ETag)
+	assert.NotEqual(t, "", s3File.Key.StorageClass)
+	assert.NotNil(t, s3File.Key.Owner)
+	assert.Equal(t, "", s3File.ErrorMessage)
+	assert.True(t, s3File.DeletedAt.IsZero())
+	assert.False(t, s3File.DeleteSkippedPerConfig)
+}
+
+func TestMakeTag(t *testing.T) {
+	tag := testdata.MakeTag()
+	if tag == nil {
+		t.Errorf("MakeTag() returned nil")
+		return
+	}
+	assert.NotEqual(t, "", tag.Label)
+	assert.NotEqual(t, "", tag.Value)
+}
+
+func TestMakeWorkSummary(t *testing.T) {
+	ws := testdata.MakeWorkSummary()
+	if ws == nil {
+		t.Errorf("MakeWorkSummary() returned nil")
+		return
+	}
+	assert.True(t, ws.Attempted)
+	assert.Equal(t, 1, ws.AttemptNumber)
+	assert.Equal(t, 0, len(ws.Errors))
+	assert.False(t, ws.StartedAt.IsZero())
+	assert.False(t, ws.FinishedAt.IsZero())
+	assert.True(t, ws.Retry)
+}
