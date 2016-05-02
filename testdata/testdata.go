@@ -15,15 +15,15 @@ import (
 
 func MakeChecksum() (*models.Checksum) {
 	return &models.Checksum{
-		Id: rand.Intn(50000),
-		GenericFileId: rand.Intn(50000),
+		Id: rand.Intn(50000) + 1,
+		GenericFileId: rand.Intn(50000) + 1,
 		Algorithm: RandomAlgorithm(),
 		DateTime: RandomDateTime(),
 		Digest: fake.Sentence(),
 	}
 }
 
-func MakeGenericFile(checksumCount, eventCount int, objIdentifier string) (*models.GenericFile) {
+func MakeGenericFile(eventCount, checksumCount int, objIdentifier string) (*models.GenericFile) {
 	if objIdentifier == "" {
 		objIdentifier = RandomObjectIdentifier()
 	}
@@ -41,9 +41,9 @@ func MakeGenericFile(checksumCount, eventCount int, objIdentifier string) (*mode
 		events[i] = MakePremisEvent()
 	}
 	return &models.GenericFile {
-		Id: rand.Intn(50000),
+		Id: rand.Intn(50000) + 1,
 		Identifier: fileIdentifier,
-		IntellectualObjectId: rand.Intn(50000),
+		IntellectualObjectId: rand.Intn(50000) + 1,
 		IntellectualObjectIdentifier: objIdentifier,
 		FileFormat: RandomFileFormat(),
 		URI: fmt.Sprintf("%s/%s.%s/%s", constants.S3UriPrefix, constants.ReceiveTestBucketPrefix, inst, objName),
@@ -69,7 +69,7 @@ func MakeGenericFile(checksumCount, eventCount int, objIdentifier string) (*mode
 
 func MakeInstitution() (*models.Institution) {
 	return &models.Institution{
-		Id: rand.Intn(50000),
+		Id: rand.Intn(50000) + 1,
 		Name: fake.Product(),
 		BriefName: fake.Word(),
 		Identifier: fake.DomainName(),
@@ -94,11 +94,11 @@ func MakeIntellectualObject(fileCount, eventCount, checksumCount, tagCount int) 
 		tags[i] = MakeTag()
 	}
 	return &models.IntellectualObject{
-		Id: rand.Intn(50000),
+		Id: rand.Intn(50000) + 1,
 		Identifier: objIdentifier,
 		BagName: objName,
 		Institution: inst,
-		InstitutionId: rand.Intn(50000),
+		InstitutionId: rand.Intn(50000) + 1,
 		Title: fake.Words(),
 		Description: fake.Sentence(),
 		Access: RandomAccess(),
@@ -123,7 +123,7 @@ func MakeIntellectualObject(fileCount, eventCount, checksumCount, tagCount int) 
 func MakePremisEvent() (*models.PremisEvent) {
 	_uuid, _ := uuid.NewV4()
 	return &models.PremisEvent{
-		Id: rand.Intn(50000),
+		Id: rand.Intn(50000) + 1,
 		Identifier: _uuid.String(),
 		EventType: RandomEventType(),
 		DateTime: RandomDateTime(),

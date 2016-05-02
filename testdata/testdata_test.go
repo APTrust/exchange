@@ -37,11 +37,11 @@ func TestMakeGenericFile(t *testing.T) {
 	assert.NotEqual(t, 0, gf.Size)
 	assert.False(t, gf.Created.IsZero())
 	assert.False(t, gf.Modified.IsZero())
-	assert.Equal(t, 2, len(gf.Checksums))
+	assert.Equal(t, 3, len(gf.Checksums))
 	for _, cs := range(gf.Checksums) {
 		assert.NotNil(t, cs)
 	}
-	assert.Equal(t, 3, len(gf.PremisEvents))
+	assert.Equal(t, 2, len(gf.PremisEvents))
 	for _, event := range(gf.PremisEvents) {
 		assert.NotNil(t, event)
 	}
@@ -57,4 +57,80 @@ func TestMakeGenericFile(t *testing.T) {
 	assert.False(t, gf.IngestPreviousVersionExists)
 	assert.True(t, gf.IngestNeedsSave)
 	assert.Equal(t, "", gf.IngestErrorMessage)
+}
+
+func TestMakeInstitution(t *testing.T) {
+	inst := testdata.MakeInstitution()
+	if inst == nil {
+		t.Errorf("MakeInstitution() returned nil")
+		return
+	}
+	assert.NotEqual(t, 0, inst.Id)
+	assert.NotEqual(t, "", inst.Name)
+	assert.NotEqual(t, "", inst.BriefName)
+	assert.NotEqual(t, "", inst.Identifier)
+}
+
+func TestMakeIntellectualObject(t *testing.T) {
+	obj := testdata.MakeIntellectualObject(2,4,6,8)
+	if obj == nil {
+		t.Errorf("MakeIntellectualObject() returned nil")
+		return
+	}
+	assert.NotEqual(t, 0, obj.Id)
+	assert.NotEqual(t, "", obj.Identifier)
+	assert.NotEqual(t, "", obj.BagName)
+	assert.NotEqual(t, "", obj.Institution)
+	assert.NotEqual(t, 0, obj.InstitutionId)
+	assert.NotEqual(t, "", obj.Title)
+	assert.NotEqual(t, "", obj.Description)
+	assert.NotEqual(t, "", obj.Access)
+	assert.NotEqual(t, "", obj.AltIdentifier)
+
+	assert.Equal(t, 2, len(obj.GenericFiles))
+	for _, gf := range obj.GenericFiles {
+		if gf == nil {
+			t.Errorf("GenericFile should not be nil")
+		} else {
+			assert.Equal(t, obj.Identifier, gf.IntellectualObjectIdentifier)
+			assert.Equal(t, 4, len(gf.PremisEvents))
+			assert.Equal(t, 6, len(gf.Checksums))
+		}
+	}
+
+	assert.Equal(t, 4, len(obj.Events))
+	for _, event := range obj.Events {
+		assert.NotNil(t, event)
+	}
+
+	assert.Equal(t, 8, len(obj.IngestTags))
+	for _, tag := range obj.IngestTags {
+		assert.NotNil(t, tag)
+		if tag != nil {
+			assert.NotEqual(t, "", tag.Label)
+			assert.NotEqual(t, "", tag.Value)
+		}
+	}
+
+	assert.NotEqual(t, "", obj.Institution)
+	assert.NotEqual(t, "", obj.IngestS3Bucket)
+	assert.NotEqual(t, "", obj.IngestS3Key)
+	assert.NotEqual(t, "", obj.IngestTarFilePath)
+	assert.NotEqual(t, "", obj.IngestUntarredPath)
+	assert.NotEqual(t, "", obj.IngestRemoteMd5)
+	assert.NotEqual(t, "", obj.IngestLocalMd5)
+	assert.False(t, obj.IngestMd5Verified)
+	assert.False(t, obj.IngestMd5Verifiable)
+	assert.Equal(t, "", obj.IngestErrorMessage)
+
+	if obj.IngestSummary == nil {
+		t.Errorf("IngestSummary should not be nil")
+		return
+	}
+	assert.True(t, obj.IngestSummary.Attempted)
+	assert.Equal(t, 1, obj.IngestSummary.AttemptNumber)
+	assert.Equal(t, 0, len(obj.IngestSummary.Errors))
+	assert.False(t, obj.IngestSummary.StartedAt.IsZero())
+	assert.False(t, obj.IngestSummary.FinishedAt.IsZero())
+	assert.True(t, obj.IngestSummary.Retry)
 }
