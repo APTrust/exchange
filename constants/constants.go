@@ -79,7 +79,8 @@ const (
 var AccessRights []string = []string{
 	"consortia",
 	"institution",
-	"restricted"}
+	"restricted",
+}
 
 // List of valid Premis Event types.
 var EventTypes []string = []string{

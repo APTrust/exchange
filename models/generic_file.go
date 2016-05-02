@@ -44,7 +44,7 @@ type GenericFile struct {
 	// We don't send this data to Pharos.
 	IngestLocalPath              string         `json:"ingest_local_path"`
 	IngestMd5                    string         `json:"ingest_md5"`
-	IngestMd5Verified            time.Time      `json:"ingest_md5_verified"`
+	IngestMd5VerifiedAt          time.Time      `json:"ingest_md5_verified"`
 	IngestSha256                 string         `json:"ingest_sha_256"`
 	IngestSha256GeneratedAt      time.Time      `json:"ingest_sha_256_generated_at"`
 	IngestUUID                   string         `json:"ingest_uuid"`

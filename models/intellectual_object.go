@@ -39,11 +39,11 @@ type IntellectualObject struct {
 	IngestUntarredPath   string         `json:"ingest_untarred_path"`
 	IngestRemoteMd5      string         `json:"ingest_remote_md5"`
 	IngestLocalMd5       string         `json:"ingest_local_md5"`
-	IngestMd5Verified    string         `json:"ingest_md5_verified"`
-	IngestMd5Verifiable  string         `json:"ingest_md5_verifiable"`
+	IngestMd5Verified    bool           `json:"ingest_md5_verified"`
+	IngestMd5Verifiable  bool           `json:"ingest_md5_verifiable"`
 	IngestFilesIgnored   []string       `json:"ingest_files_ignored"`
-	IngestTags           []Tag          `json:"ingest_tags"`
-	IngestSummary        WorkSummary    `json:"ingest_summary"`
+	IngestTags           []*Tag         `json:"ingest_tags"`
+	IngestSummary        *WorkSummary   `json:"ingest_summary"`
 	IngestErrorMessage   string         `json:"ingest_error_message"`
 }
 

@@ -6,15 +6,6 @@ import (
 	"encoding/json"
 )
 
-
-// Our test fixture describes a bag that includes the following file paths
-var ExpectedPaths [4]string = [4]string{
-	"data/metadata.xml",
-	"data/object.properties",
-	"data/ORIGINAL/1",
-	"data/ORIGINAL/1-metadata.xml",
-}
-
 // Loads an IntellectualObject fixture (a JSON file) from
 // the testdata directory for testing.
 func LoadIntelObjFixture(filename string) (*models.IntellectualObject, error) {
