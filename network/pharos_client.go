@@ -146,8 +146,10 @@ func (client *PharosClient) IntellectualObjectList(params map[string]string) (*P
 		return resp
 	}
 
-	// Parse the JSON from the response body
-	resp.Error = json.Unmarshal(resp.data, resp.objects)
+
+	// Parse the JSON from the response body.
+	// If there's an error, it will be recorded in resp.Error
+	resp.UnmarshalJsonList()
 	return resp
 }
 
@@ -236,8 +238,9 @@ func (client *PharosClient) GenericFileList(params map[string]string) (*PharosRe
 		return resp
 	}
 
-	// Parse the JSON from the response body
-	resp.Error = json.Unmarshal(resp.data, resp.files)
+	// Parse the JSON from the response body.
+	// If there's an error, it will be recorded in resp.Error
+	resp.UnmarshalJsonList()
 	return resp
 }
 
@@ -334,8 +337,9 @@ func (client *PharosClient) PremisEventList(params map[string]string) (*PharosRe
 		return resp
 	}
 
-	// Parse the JSON from the response body
-	resp.Error = json.Unmarshal(resp.data, resp.events)
+	// Parse the JSON from the response body.
+	// If there's an error, it will be recorded in resp.Error
+	resp.UnmarshalJsonList()
 	return resp
 }
 
@@ -409,8 +413,9 @@ func (client *PharosClient) WorkItemList(params map[string]string) (*PharosRespo
 		return resp
 	}
 
-	// Parse the JSON from the response body
-	resp.Error = json.Unmarshal(resp.data, resp.workItems)
+	// Parse the JSON from the response body.
+	// If there's an error, it will be recorded in resp.Error
+	resp.UnmarshalJsonList()
 	return resp
 }
 

@@ -80,8 +80,10 @@ func TestInstitutionList(t *testing.T) {
 }
 
 
-// HTTP test server handler functions
-
+// Build a simple struct that mimics the structure of a Pharos
+// JSON list response. That includes keys count, next, previous,
+// and results. The caller will add ["results"] with a list of
+// objects of the appropriate type.
 func listResponseData() (map[string]interface{}) {
 	data := make(map[string]interface{})
 	data["count"] = 100
