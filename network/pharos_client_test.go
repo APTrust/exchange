@@ -82,13 +82,13 @@ func TestInstitutionList(t *testing.T) {
 
 // HTTP test server handler functions
 
-// func listResponseData() (map[string]interface{}) {
-// 	data := make(map[string]interface{})
-// 	data["count"] = 100
-// 	data["next"] = "http://example.com/?page=11"
-// 	data["previous"] = "http://example.com/?page=9"
-// 	return data
-// }
+func listResponseData() (map[string]interface{}) {
+	data := make(map[string]interface{})
+	data["count"] = 100
+	data["next"] = "http://example.com/?page=11"
+	data["previous"] = "http://example.com/?page=9"
+	return data
+}
 
 func institutionGetHander(w http.ResponseWriter, r *http.Request) {
 	inst := testdata.MakeInstitution()
@@ -102,7 +102,9 @@ func institutionListHander(w http.ResponseWriter, r *http.Request) {
 	for i := 0; i < 4; i++ {
 		instList[i] = testdata.MakeInstitution()
 	}
-	instJson, _ := json.Marshal(instList)
+	data := listResponseData()
+	data["results"] = instList
+	instJson, _ := json.Marshal(data)
 	w.Header().Set("Content-Type", "application/json")
 	fmt.Fprintln(w, string(instJson))
 }

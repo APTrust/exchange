@@ -1,30 +1,32 @@
 package network
 
 import (
+	"encoding/json"
+	"fmt"
 	"github.com/APTrust/exchange/models"
 	"io/ioutil"
 	"net/http"
 )
 
 type PharosResponse struct {
-	// ItemCount is the total number of items matching the
+	// Count is the total number of items matching the
 	// specified filters. This is useful for List requests.
 	// Note that the number of items returned in the response
 	// may be fewer than ItemCount. For example, the remote
 	// server may return only 10 of 10,000 matching records
 	// at a time.
-	ItemCount      int
+	Count             int
 
-	// The number of the next page of results in a List request.
-	// For example, if we just retrieved the third of twenty
-	// pages, NextPageNumber will be 4. When NextPageNumber is
-	// zero, the server has no more results.
-	NextPageNumber int
+	// The URL of the next page of results.
+	Next              *string
+
+	// The URL of the next page of results.
+	Previous          *string
 
 	// The HTTP request that was (or would have been) sent to
 	// the Pharos REST server. This is useful for logging and
 	// debugging.
-	Request       *http.Request
+	Request          *http.Request
 
 	// The HTTP Response from the server. You can get the
 	// HTTP status code, headers, etc. through this. See
@@ -33,44 +35,46 @@ type PharosResponse struct {
 	// Do not try to read Response.Body, since it's already been read
 	// and the stream has been closed. Use the RawResponseData()
 	// method instead.
-	Response       *http.Response
+	Response          *http.Response
 
 	// The error, if any, that occurred while processing this
 	// request. Errors may come from the server (4xx or 5xx
 	// responses) or from the client (e.g. if it could not
 	// parse the JSON response).
-	Error          error
+	Error             error
 
 	// The type of object(s) this response contains.
-	objectType     PharosObjectType
+	objectType        PharosObjectType
 
 	// A slice of IntellectualObject pointers. Will be nil if
 	// objectType is not IntellectualObject.
-	objects        []*models.IntellectualObject
+	objects           []*models.IntellectualObject
 
 	// A slice of GenericFile pointers. Will be nil if
 	// objectType is not GenericFile.
-	files          []*models.GenericFile
+	files             []*models.GenericFile
 
 	// A slice of PremisEvent pointers. Will be nil if
 	// objectType is not PremisEvent.
-	events         []*models.PremisEvent
+	events            []*models.PremisEvent
 
 	// A slice of Institution pointers. Will be nil if
 	// objectType is not Institution.
-	institutions   []*models.Institution
+	institutions      []*models.Institution
 
 	// A slice of WorkItem pointers. Will be nil if
 	// objectType is not WorkItem.
-	workItems      []*models.WorkItem
+	workItems         []*models.WorkItem
 
 	// Indicates whether the HTTP response body has been
 	// read (and closed).
-	hasBeenRead    bool
+	hasBeenRead       bool
+
+	listHasBeenParsed bool
 
 	// The raw data contained in the body of the HTTP
 	// respone.
-	data           []byte
+	data              []byte
 }
 
 type PharosObjectType string
@@ -86,10 +90,12 @@ const (
 // Creates a new PharosResponse and returns a pointer to it.
 func NewPharosResponse(objType PharosObjectType) (*PharosResponse) {
 	return &PharosResponse{
-		ItemCount: 0,
-		NextPageNumber: 0,
+		Count: 0,
+		Next: nil,
+		Previous: nil,
 		objectType: objType,
 		hasBeenRead: false,
+		listHasBeenParsed: false,
 	}
 }
 
@@ -198,4 +204,151 @@ func (resp *PharosResponse) WorkItems() ([]*models.WorkItem) {
 		return make([]*models.WorkItem, 0)
 	}
 	return resp.workItems
+}
+
+// UnmarshalJsonList converts JSON response from the Pharos server
+// into a list of usable objects. The Pharos list response has this
+// structure:
+//
+// {
+//   "count": 500
+//   "next": "https://example.com/objects/per_page=20&page=11"
+//   "previous": "https://example.com/objects/per_page=20&page=9"
+//   "results": [... array of arbitrary objects ...]
+// }
+func(resp *PharosResponse) UnmarshalJsonList() (error) {
+	switch resp.objectType {
+	case PharosIntellectualObject:
+		return resp.decodeAsObjectList()
+	case PharosInstitution:
+		return resp.decodeAsInstitutionList()
+	case PharosGenericFile:
+		return resp.decodeAsGenericFileList()
+	case PharosPremisEvent:
+		return resp.decodeAsPremisEventList()
+	case PharosWorkItem:
+		return resp.decodeAsWorkItemList()
+	default:
+		return fmt.Errorf("PharosObjectType %v not supported", resp.objectType)
+	}
+}
+
+func(resp *PharosResponse) decodeAsObjectList() (error) {
+	if resp.listHasBeenParsed {
+		return nil
+	}
+	temp := struct{
+		Count    int      `json:"count"`
+		Next     *string  `json:"next"`
+		Previous *string  `json:"previous"`
+		Results  []*models.IntellectualObject `json:"results"`
+	}{ 0, nil, nil, nil }
+	data, err := resp.RawResponseData()
+	if err != nil {
+		resp.Error = err
+		return err
+	}
+	resp.Error = json.Unmarshal(data, &temp)
+	resp.Count = temp.Count
+	resp.Next = temp.Next
+	resp.Previous = temp.Previous
+	resp.objects = temp.Results
+	resp.listHasBeenParsed = true
+	return resp.Error
+}
+
+func(resp *PharosResponse) decodeAsInstitutionList() (error) {
+	if resp.listHasBeenParsed {
+		return nil
+	}
+	temp := struct{
+		Count    int      `json:"count"`
+		Next     *string  `json:"next"`
+		Previous *string  `json:"previous"`
+		Results  []*models.Institution `json:"results"`
+	}{ 0, nil, nil, nil }
+	data, err := resp.RawResponseData()
+	if err != nil {
+		resp.Error = err
+		return err
+	}
+	resp.Error = json.Unmarshal(data, &temp)
+	resp.Count = temp.Count
+	resp.Next = temp.Next
+	resp.Previous = temp.Previous
+	resp.institutions = temp.Results
+	resp.listHasBeenParsed = true
+	return resp.Error
+}
+
+func(resp *PharosResponse) decodeAsGenericFileList() (error) {
+	if resp.listHasBeenParsed {
+		return nil
+	}
+	temp := struct{
+		Count    int      `json:"count"`
+		Next     *string  `json:"next"`
+		Previous *string  `json:"previous"`
+		Results  []*models.GenericFile `json:"results"`
+	}{ 0, nil, nil, nil }
+	data, err := resp.RawResponseData()
+	if err != nil {
+		resp.Error = err
+		return err
+	}
+	resp.Error = json.Unmarshal(data, &temp)
+	resp.Count = temp.Count
+	resp.Next = temp.Next
+	resp.Previous = temp.Previous
+	resp.files = temp.Results
+	resp.listHasBeenParsed = true
+	return resp.Error
+}
+
+func(resp *PharosResponse) decodeAsPremisEventList() (error) {
+	if resp.listHasBeenParsed {
+		return nil
+	}
+	temp := struct{
+		Count    int      `json:"count"`
+		Next     *string  `json:"next"`
+		Previous *string  `json:"previous"`
+		Results  []*models.PremisEvent `json:"results"`
+	}{ 0, nil, nil, nil }
+	data, err := resp.RawResponseData()
+	if err != nil {
+		resp.Error = err
+		return err
+	}
+	resp.Error = json.Unmarshal(data, &temp)
+	resp.Count = temp.Count
+	resp.Next = temp.Next
+	resp.Previous = temp.Previous
+	resp.events = temp.Results
+	resp.listHasBeenParsed = true
+	return resp.Error
+}
+
+func(resp *PharosResponse) decodeAsWorkItemList() (error) {
+	if resp.listHasBeenParsed {
+		return nil
+	}
+	temp := struct{
+		Count    int     `json:"count"`
+		Next     *string  `json:"next"`
+		Previous *string  `json:"previous"`
+		Results  []*models.WorkItem `json:"results"`
+	}{ 0, nil, nil, nil }
+	data, err := resp.RawResponseData()
+	if err != nil {
+		resp.Error = err
+		return err
+	}
+	resp.Error = json.Unmarshal(data, &temp)
+	resp.Count = temp.Count
+	resp.Next = temp.Next
+	resp.Previous = temp.Previous
+	resp.workItems = temp.Results
+	resp.listHasBeenParsed = true
+	return resp.Error
 }

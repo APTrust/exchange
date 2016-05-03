@@ -89,10 +89,9 @@ func (client *PharosClient) InstitutionList() (*PharosResponse) {
 		return resp
 	}
 
-	// Parse the JSON from the response body
-	var institutions []*models.Institution
-	resp.Error = json.Unmarshal(resp.data, &institutions)
-	resp.institutions = institutions
+	// Parse the JSON from the response body.
+	// If there's an error, it will be recorded in resp.Error
+	resp.UnmarshalJsonList()
 	return resp
 }
 
