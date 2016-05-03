@@ -210,7 +210,41 @@ func TestIntellectualObjectSave(t *testing.T) {
 	assert.NotEqual(t, origModTime, obj.UpdatedAt)
 }
 
+func TestGenericFileGet(t *testing.T) {
+	testServer := httptest.NewServer(http.HandlerFunc(genericFileGetHander))
+	defer testServer.Close()
 
+	client, err := network.NewPharosClient(testServer.URL, "v1", "user", "key")
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	response := client.GenericFileGet("college.edu/object/file.xml")
+
+	// Check the request URL and method
+	assert.Equal(t, "GET", response.Response.Request.Method)
+	assert.Equal(t, "/api/v1/files/college.edu%2Fobject%2Ffile.xml", response.Request.URL.Opaque)
+
+	// Basic sanity check on response values
+	assert.Nil(t, response.Error)
+
+	obj := response.GenericFile()
+	assert.EqualValues(t, "GenericFile", response.ObjectType())
+	if obj == nil {
+		t.Errorf("GenericFile should not be nil")
+	}
+	assert.True(t, strings.HasPrefix(obj.Identifier, "kollege.kom/objekt"))
+
+	// Check that child objects were parsed correctly
+	assert.Equal(t, 2, len(obj.PremisEvents))
+	assert.Equal(t, 3, len(obj.Checksums))
+}
+
+
+
+// -------------------------------------------------------------------------
+// -------------------------------------------------------------------------
 // -------------------------------------------------------------------------
 
 // Build a simple struct that mimics the structure of a Pharos
@@ -277,6 +311,13 @@ func intellectualObjectSaveHander(w http.ResponseWriter, r *http.Request) {
 	data["created_at"] = time.Now().UTC()
 	data["updated_at"] = time.Now().UTC()
 	objJson, _ := json.Marshal(data)
+	w.Header().Set("Content-Type", "application/json")
+	fmt.Fprintln(w, string(objJson))
+}
+
+func genericFileGetHander(w http.ResponseWriter, r *http.Request) {
+	obj := testdata.MakeGenericFile(2,3, "kollege.kom/objekt")
+	objJson, _ := json.Marshal(obj)
 	w.Header().Set("Content-Type", "application/json")
 	fmt.Fprintln(w, string(objJson))
 }
