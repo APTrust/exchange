@@ -605,6 +605,9 @@ func (client *PharosClient) DoRequest(resp *PharosResponse, method, absoluteUrl 
 
 // Converts a set map of query params into a URL-encoded string.
 func BuildQueryString(params map[string]string) (string) {
+	if params == nil {
+		return ""
+	}
 	values := url.Values{}
 	for key, value := range params {
 		values.Add(key, value)

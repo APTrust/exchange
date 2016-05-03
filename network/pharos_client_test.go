@@ -104,11 +104,48 @@ func TestIntellectualObjectGet(t *testing.T) {
 		t.Errorf("IntellectualObject should not be nil")
 	}
 	assert.NotEqual(t, "", obj.Identifier)
+
+	// Check that child objects were parsed correctly
 	assert.Equal(t, 2, len(obj.GenericFiles))
 	assert.Equal(t, 3, len(obj.PremisEvents))
 	assert.Equal(t, 4, len(obj.GenericFiles[0].Checksums))
 	assert.Equal(t, 5, len(obj.IngestTags))
 }
+
+func TestIntellectualObjectList(t *testing.T) {
+	testServer := httptest.NewServer(http.HandlerFunc(intellectualObjectListHander))
+	defer testServer.Close()
+
+	client, err := network.NewPharosClient(testServer.URL, "v1", "user", "key")
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	response := client.IntellectualObjectList(nil)
+
+	// Check the request URL and method
+	assert.Equal(t, "GET", response.Response.Request.Method)
+	assert.Equal(t, "/api/v1/objects/?", response.Request.URL.Opaque)
+
+	// Basic sanity check on response values
+	assert.Nil(t, response.Error)
+	assert.EqualValues(t, "IntellectualObject", response.ObjectType())
+
+	instList := response.IntellectualObjects()
+	if instList == nil {
+		t.Errorf("IntellectualObject list should not be nil")
+		return
+	}
+	if len(instList) != 4 {
+		t.Errorf("IntellectualObjects list should have four items. Found %d.", len(instList))
+		return
+	}
+	for _, inst := range instList {
+		assert.NotEqual(t, "", len(inst.Identifier))
+	}
+}
+
 
 
 // -------------------------------------------------------------------------
@@ -126,22 +163,22 @@ func listResponseData() (map[string]interface{}) {
 }
 
 func institutionGetHander(w http.ResponseWriter, r *http.Request) {
-	inst := testdata.MakeInstitution()
-	instJson, _ := json.Marshal(inst)
+	obj := testdata.MakeInstitution()
+	objJson, _ := json.Marshal(obj)
 	w.Header().Set("Content-Type", "application/json")
-	fmt.Fprintln(w, string(instJson))
+	fmt.Fprintln(w, string(objJson))
 }
 
 func institutionListHander(w http.ResponseWriter, r *http.Request) {
-	instList := make([]*models.Institution, 4)
+	list := make([]*models.Institution, 4)
 	for i := 0; i < 4; i++ {
-		instList[i] = testdata.MakeInstitution()
+		list[i] = testdata.MakeInstitution()
 	}
 	data := listResponseData()
-	data["results"] = instList
-	instJson, _ := json.Marshal(data)
+	data["results"] = list
+	listJson, _ := json.Marshal(data)
 	w.Header().Set("Content-Type", "application/json")
-	fmt.Fprintln(w, string(instJson))
+	fmt.Fprintln(w, string(listJson))
 }
 
 func intellectualObjectGetHander(w http.ResponseWriter, r *http.Request) {
@@ -149,4 +186,16 @@ func intellectualObjectGetHander(w http.ResponseWriter, r *http.Request) {
 	objJson, _ := json.Marshal(obj)
 	w.Header().Set("Content-Type", "application/json")
 	fmt.Fprintln(w, string(objJson))
+}
+
+func intellectualObjectListHander(w http.ResponseWriter, r *http.Request) {
+	list := make([]*models.IntellectualObject, 4)
+	for i := 0; i < 4; i++ {
+		list[i] = testdata.MakeIntellectualObject(2,3,4,5)
+	}
+	data := listResponseData()
+	data["results"] = list
+	listJson, _ := json.Marshal(data)
+	w.Header().Set("Content-Type", "application/json")
+	fmt.Fprintln(w, string(listJson))
 }
