@@ -77,8 +77,8 @@ func TestInstitutionList(t *testing.T) {
 		t.Errorf("Institutions list should have four items. Found %d.", len(list))
 		return
 	}
-	for _, inst := range list {
-		assert.NotEqual(t, "", len(inst.Identifier))
+	for _, obj := range list {
+		assert.NotEqual(t, "", len(obj.Identifier))
 	}
 }
 
@@ -144,8 +144,8 @@ func TestIntellectualObjectList(t *testing.T) {
 		t.Errorf("IntellectualObjects list should have four items. Found %d.", len(list))
 		return
 	}
-	for _, inst := range list {
-		assert.NotEqual(t, "", len(inst.Identifier))
+	for _, obj := range list {
+		assert.NotEqual(t, "", len(obj.Identifier))
 	}
 }
 
@@ -241,6 +241,101 @@ func TestGenericFileGet(t *testing.T) {
 	assert.Equal(t, 3, len(obj.Checksums))
 }
 
+func TestGenericFileList(t *testing.T) {
+	testServer := httptest.NewServer(http.HandlerFunc(genericFileListHander))
+	defer testServer.Close()
+
+	client, err := network.NewPharosClient(testServer.URL, "v1", "user", "key")
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	response := client.GenericFileList(nil)
+
+	// Check the request URL and method
+	assert.Equal(t, "GET", response.Response.Request.Method)
+	assert.Equal(t, "/api/v1/files/?", response.Request.URL.Opaque)
+
+	// Basic sanity check on response values
+	assert.Nil(t, response.Error)
+	assert.EqualValues(t, "GenericFile", response.ObjectType())
+
+	list := response.GenericFiles()
+	if list == nil {
+		t.Errorf("GenericFile list should not be nil")
+		return
+	}
+	if len(list) != 4 {
+		t.Errorf("GenericFiles list should have four items. Found %d.", len(list))
+		return
+	}
+	for _, obj := range list {
+		assert.NotEqual(t, "", len(obj.Identifier))
+	}
+}
+
+func TestGenericFileSave(t *testing.T) {
+	testServer := httptest.NewServer(http.HandlerFunc(genericFileSaveHander))
+	defer testServer.Close()
+
+	client, err := network.NewPharosClient(testServer.URL, "v1", "user", "key")
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	// ---------------------------------------------
+	// First, test create...
+	// ---------------------------------------------
+	obj := testdata.MakeGenericFile(0,0,"kollege.kom/objekt/file.xml")
+	obj.Id = 0
+	response := client.GenericFileSave(obj)
+
+	// Check the request URL and method
+	assert.Equal(t, "POST", response.Response.Request.Method)
+	assert.Equal(t, "/api/v1/files/", response.Request.URL.Opaque)
+
+	// Basic sanity check on response values
+	assert.Nil(t, response.Error)
+
+	obj = response.GenericFile()
+	assert.EqualValues(t, "GenericFile", response.ObjectType())
+	if obj == nil {
+		t.Errorf("GenericFile should not be nil")
+	}
+	assert.NotEqual(t, "", obj.Identifier)
+
+	// Make sure the client returns the SAVED object,
+	// not the unsaved one we sent.
+	assert.NotEqual(t, 0, obj.Id)
+
+
+	// ---------------------------------------------
+	// Now test with an update...
+	// ---------------------------------------------
+	obj = testdata.MakeGenericFile(0,0,"kollege.kom/objekt/file.xml")
+	origModTime := obj.UpdatedAt
+	response = client.GenericFileSave(obj)
+
+	// Check the request URL and method
+	objIdEncoded := strings.Replace(obj.Identifier, " ", "%20", -1)
+	expectedUrl := fmt.Sprintf("/api/v1/files/%s", strings.Replace(objIdEncoded, "/", "%2F", -1))
+	assert.Equal(t, "PUT", response.Response.Request.Method)
+	assert.Equal(t, expectedUrl, response.Request.URL.Opaque)
+
+	// Basic sanity check on response values
+	assert.Nil(t, response.Error)
+
+	obj = response.GenericFile()
+	assert.EqualValues(t, "GenericFile", response.ObjectType())
+	if obj == nil {
+		t.Errorf("GenericFile should not be nil")
+	}
+	assert.NotEqual(t, "", obj.Identifier)
+	assert.Equal(t, 1000, obj.Id)
+	assert.NotEqual(t, origModTime, obj.UpdatedAt)
+}
 
 
 // -------------------------------------------------------------------------
@@ -258,6 +353,10 @@ func listResponseData() (map[string]interface{}) {
 	data["previous"] = "http://example.com/?page=9"
 	return data
 }
+
+// -------------------------------------------------------------------------
+// Institution handlers
+// -------------------------------------------------------------------------
 
 func institutionGetHander(w http.ResponseWriter, r *http.Request) {
 	obj := testdata.MakeInstitution()
@@ -277,6 +376,11 @@ func institutionListHander(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	fmt.Fprintln(w, string(listJson))
 }
+
+
+// -------------------------------------------------------------------------
+// IntellectualObject handlers
+// -------------------------------------------------------------------------
 
 func intellectualObjectGetHander(w http.ResponseWriter, r *http.Request) {
 	obj := testdata.MakeIntellectualObject(2,3,4,5)
@@ -315,9 +419,45 @@ func intellectualObjectSaveHander(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintln(w, string(objJson))
 }
 
+// -------------------------------------------------------------------------
+// GenericFile handlers
+// -------------------------------------------------------------------------
+
 func genericFileGetHander(w http.ResponseWriter, r *http.Request) {
 	obj := testdata.MakeGenericFile(2,3, "kollege.kom/objekt")
 	objJson, _ := json.Marshal(obj)
+	w.Header().Set("Content-Type", "application/json")
+	fmt.Fprintln(w, string(objJson))
+}
+
+func genericFileListHander(w http.ResponseWriter, r *http.Request) {
+	list := make([]*models.GenericFile, 4)
+	for i := 0; i < 4; i++ {
+		list[i] = testdata.MakeGenericFile(2,3,"kollege.kom/objekt")
+	}
+	data := listResponseData()
+	data["results"] = list
+	listJson, _ := json.Marshal(data)
+	w.Header().Set("Content-Type", "application/json")
+	fmt.Fprintln(w, string(listJson))
+}
+
+func genericFileSaveHander(w http.ResponseWriter, r *http.Request) {
+	decoder := json.NewDecoder(r.Body)
+	decoder.UseNumber()
+    data := make(map[string]interface{})
+    err := decoder.Decode(&data)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error decoding JSON data: %v", err)
+		fmt.Fprintln(w, "")
+		return
+	}
+
+	// Assign ID and timestamps, as if the object has been saved.
+	data["id"] = 1000
+	data["created_at"] = time.Now().UTC()
+	data["updated_at"] = time.Now().UTC()
+	objJson, _ := json.Marshal(data)
 	w.Header().Set("Content-Type", "application/json")
 	fmt.Fprintln(w, string(objJson))
 }
