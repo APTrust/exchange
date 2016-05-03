@@ -42,7 +42,7 @@ func TestInstitutionGet(t *testing.T) {
 	if response.Institution() == nil {
 		t.Errorf("Institution should not be nil")
 	}
-	assert.NotEqual(t, "", len(response.Institution().Identifier))
+	assert.NotEqual(t, "", response.Institution().Identifier)
 }
 
 func TestInstitutionList(t *testing.T) {
@@ -79,6 +79,39 @@ func TestInstitutionList(t *testing.T) {
 	}
 }
 
+func TestIntellectualObjectGet(t *testing.T) {
+	testServer := httptest.NewServer(http.HandlerFunc(intellectualObjectGetHander))
+	defer testServer.Close()
+
+	client, err := network.NewPharosClient(testServer.URL, "v1", "user", "key")
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	response := client.IntellectualObjectGet("college.edu/object")
+
+	// Check the request URL and method
+	assert.Equal(t, "GET", response.Response.Request.Method)
+	assert.Equal(t, "/api/v1/objects/college.edu%2Fobject", response.Request.URL.Opaque)
+
+	// Basic sanity check on response values
+	assert.Nil(t, response.Error)
+
+	obj := response.IntellectualObject()
+	assert.EqualValues(t, "IntellectualObject", response.ObjectType())
+	if obj == nil {
+		t.Errorf("IntellectualObject should not be nil")
+	}
+	assert.NotEqual(t, "", obj.Identifier)
+	assert.Equal(t, 2, len(obj.GenericFiles))
+	assert.Equal(t, 3, len(obj.PremisEvents))
+	assert.Equal(t, 4, len(obj.GenericFiles[0].Checksums))
+	assert.Equal(t, 5, len(obj.IngestTags))
+}
+
+
+// -------------------------------------------------------------------------
 
 // Build a simple struct that mimics the structure of a Pharos
 // JSON list response. That includes keys count, next, previous,
@@ -109,4 +142,11 @@ func institutionListHander(w http.ResponseWriter, r *http.Request) {
 	instJson, _ := json.Marshal(data)
 	w.Header().Set("Content-Type", "application/json")
 	fmt.Fprintln(w, string(instJson))
+}
+
+func intellectualObjectGetHander(w http.ResponseWriter, r *http.Request) {
+	obj := testdata.MakeIntellectualObject(2,3,4,5)
+	objJson, _ := json.Marshal(obj)
+	w.Header().Set("Content-Type", "application/json")
+	fmt.Fprintln(w, string(objJson))
 }
