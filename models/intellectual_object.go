@@ -30,7 +30,7 @@ type IntellectualObject struct {
 	Access               string         `json:"access"`
 	AltIdentifier        string         `json:"alt_identifier"`
 	GenericFiles         []*GenericFile `json:"generic_files"`
-	Events               []*PremisEvent `json:"events"`
+	PremisEvents         []*PremisEvent `json:"events"`
 
 	// Exchange fields. These do not go to Pharos.
 	IngestS3Bucket       string         `json:"ingest_s3_bucket"`

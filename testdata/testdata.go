@@ -104,7 +104,7 @@ func MakeIntellectualObject(fileCount, eventCount, checksumCount, tagCount int) 
 		Access: RandomAccess(),
 		AltIdentifier: fake.Word(),
 		GenericFiles: files,
-		Events: events,
+		PremisEvents: events,
 		IngestS3Bucket: fmt.Sprintf("%s.%s", constants.ReceiveTestBucketPrefix, inst),
 		IngestS3Key: fmt.Sprintf("%s.tar", objName),
 		IngestTarFilePath: fmt.Sprintf("/mnt/aptrust/data/%s/%s.tar", inst, objName),

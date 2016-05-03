@@ -98,8 +98,8 @@ func TestMakeIntellectualObject(t *testing.T) {
 		}
 	}
 
-	assert.Equal(t, 4, len(obj.Events))
-	for _, event := range obj.Events {
+	assert.Equal(t, 4, len(obj.PremisEvents))
+	for _, event := range obj.PremisEvents {
 		assert.NotNil(t, event)
 	}
 
