@@ -22,7 +22,6 @@ type PharosClient struct {
 	apiKey       string
 	httpClient   *http.Client
 	transport    *http.Transport
-	institutions map[string]string
 }
 
 // Creates a new pharos client. Param hostUrl should come from
@@ -39,7 +38,13 @@ func NewPharosClient(hostUrl, apiVersion, apiUser, apiKey string) (*PharosClient
 		DisableKeepAlives:   false,
 	}
 	httpClient := &http.Client{Jar: cookieJar, Transport: transport}
-	return &PharosClient{hostUrl, apiVersion, apiUser, apiKey, httpClient, transport, nil}, nil
+	return &PharosClient{
+		hostUrl: hostUrl,
+		apiVersion: apiVersion,
+		apiUser: apiUser,
+		apiKey: apiKey,
+		httpClient: httpClient,
+		transport: transport}, nil
 }
 
 // Returns a list of depositing member institutions.
@@ -49,7 +54,7 @@ func (client *PharosClient) InstitutionGet(identifier string) (*PharosResponse) 
 	resp.institutions = make([]*models.Institution, 1)
 
 	// Build the url and the request object
-	relativeUrl := fmt.Sprintf("/api/%s/objects/%s", client.apiVersion, escapeSlashes(identifier))
+	relativeUrl := fmt.Sprintf("/api/%s/institutions/%s", client.apiVersion, escapeSlashes(identifier))
 	absoluteUrl := client.BuildUrl(relativeUrl)
 
 	// Run the request
@@ -85,7 +90,9 @@ func (client *PharosClient) InstitutionList() (*PharosResponse) {
 	}
 
 	// Parse the JSON from the response body
-	resp.Error = json.Unmarshal(resp.data, resp.institutions)
+	var institutions []*models.Institution
+	resp.Error = json.Unmarshal(resp.data, &institutions)
+	resp.institutions = institutions
 	return resp
 }
 
