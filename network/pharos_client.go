@@ -164,10 +164,11 @@ func (client *PharosClient) IntellectualObjectSave(obj *models.IntellectualObjec
 	resp.objects = make([]*models.IntellectualObject, 1)
 
 	// URL and method
-	relativeUrl := fmt.Sprintf("/api/%s/objects", client.apiVersion)
+	relativeUrl := fmt.Sprintf("/api/%s/objects/", client.apiVersion)
 	httpMethod := "POST"
 	if obj.Id > 0 {
-		relativeUrl = fmt.Sprintf("%s/%s", relativeUrl, escapeSlashes(obj.Identifier))
+		// PUT URL looks like /api/v1/objects/college.edu%2Fobject_name
+		relativeUrl = fmt.Sprintf("%s%s", relativeUrl, escapeSlashes(obj.Identifier))
 		httpMethod = "PUT"
 	}
 	absoluteUrl := client.BuildUrl(relativeUrl)
@@ -581,7 +582,7 @@ func (client *PharosClient) NewJsonRequest(method, absoluteUrl string, requestDa
 // If an error occurs, it will be recorded in resp.Error.
 func (client *PharosClient) DoRequest(resp *PharosResponse, method, absoluteUrl string, requestData io.Reader) {
 	// Build the request
-	request, err := client.NewJsonRequest("GET", absoluteUrl, nil)
+	request, err := client.NewJsonRequest(method, absoluteUrl, requestData)
 	resp.Request = request
 	resp.Error = err
 	if resp.Error != nil {

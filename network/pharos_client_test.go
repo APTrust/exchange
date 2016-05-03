@@ -9,7 +9,10 @@ import (
 	"github.com/stretchr/testify/assert"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"strings"
 	"testing"
+	"time"
 )
 
 
@@ -65,16 +68,16 @@ func TestInstitutionList(t *testing.T) {
 	assert.Nil(t, response.Error)
 	assert.EqualValues(t, "Institution", response.ObjectType())
 
-	instList := response.Institutions()
-	if instList == nil {
+	list := response.Institutions()
+	if list == nil {
 		t.Errorf("Institution list should not be nil")
 		return
 	}
-	if len(instList) != 4 {
-		t.Errorf("Institutions list should have four items. Found %d.", len(instList))
+	if len(list) != 4 {
+		t.Errorf("Institutions list should have four items. Found %d.", len(list))
 		return
 	}
-	for _, inst := range instList {
+	for _, inst := range list {
 		assert.NotEqual(t, "", len(inst.Identifier))
 	}
 }
@@ -132,20 +135,80 @@ func TestIntellectualObjectList(t *testing.T) {
 	assert.Nil(t, response.Error)
 	assert.EqualValues(t, "IntellectualObject", response.ObjectType())
 
-	instList := response.IntellectualObjects()
-	if instList == nil {
+	list := response.IntellectualObjects()
+	if list == nil {
 		t.Errorf("IntellectualObject list should not be nil")
 		return
 	}
-	if len(instList) != 4 {
-		t.Errorf("IntellectualObjects list should have four items. Found %d.", len(instList))
+	if len(list) != 4 {
+		t.Errorf("IntellectualObjects list should have four items. Found %d.", len(list))
 		return
 	}
-	for _, inst := range instList {
+	for _, inst := range list {
 		assert.NotEqual(t, "", len(inst.Identifier))
 	}
 }
 
+func TestIntellectualObjectSave(t *testing.T) {
+	testServer := httptest.NewServer(http.HandlerFunc(intellectualObjectSaveHander))
+	defer testServer.Close()
+
+	client, err := network.NewPharosClient(testServer.URL, "v1", "user", "key")
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	// ---------------------------------------------
+	// First, test create...
+	// ---------------------------------------------
+	obj := testdata.MakeIntellectualObject(0,0,0,0)
+	obj.Id = 0
+	response := client.IntellectualObjectSave(obj)
+
+	// Check the request URL and method
+	assert.Equal(t, "POST", response.Response.Request.Method)
+	assert.Equal(t, "/api/v1/objects/", response.Request.URL.Opaque)
+
+	// Basic sanity check on response values
+	assert.Nil(t, response.Error)
+
+	obj = response.IntellectualObject()
+	assert.EqualValues(t, "IntellectualObject", response.ObjectType())
+	if obj == nil {
+		t.Errorf("IntellectualObject should not be nil")
+	}
+	assert.NotEqual(t, "", obj.Identifier)
+
+	// Make sure the client returns the SAVED object,
+	// not the unsaved one we sent.
+	assert.NotEqual(t, 0, obj.Id)
+
+
+	// ---------------------------------------------
+	// Now test with an update...
+	// ---------------------------------------------
+	obj = testdata.MakeIntellectualObject(0,0,0,0)
+	origModTime := obj.UpdatedAt
+	response = client.IntellectualObjectSave(obj)
+
+	// Check the request URL and method
+	expectedUrl := fmt.Sprintf("/api/v1/objects/%s", strings.Replace(obj.Identifier, "/", "%2F", -1))
+	assert.Equal(t, "PUT", response.Response.Request.Method)
+	assert.Equal(t, expectedUrl, response.Request.URL.Opaque)
+
+	// Basic sanity check on response values
+	assert.Nil(t, response.Error)
+
+	obj = response.IntellectualObject()
+	assert.EqualValues(t, "IntellectualObject", response.ObjectType())
+	if obj == nil {
+		t.Errorf("IntellectualObject should not be nil")
+	}
+	assert.NotEqual(t, "", obj.Identifier)
+	assert.Equal(t, 1000, obj.Id)
+	assert.NotEqual(t, origModTime, obj.UpdatedAt)
+}
 
 
 // -------------------------------------------------------------------------
@@ -198,4 +261,22 @@ func intellectualObjectListHander(w http.ResponseWriter, r *http.Request) {
 	listJson, _ := json.Marshal(data)
 	w.Header().Set("Content-Type", "application/json")
 	fmt.Fprintln(w, string(listJson))
+}
+
+func intellectualObjectSaveHander(w http.ResponseWriter, r *http.Request) {
+	decoder := json.NewDecoder(r.Body)
+    data := make(map[string]interface{})
+    err := decoder.Decode(&data)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error decoding JSON data: %v", err)
+		fmt.Fprintln(w, "")
+		return
+	}
+	// Assign ID and timestamps, as if the object has been saved.
+	data["id"] = 1000
+	data["created_at"] = time.Now().UTC()
+	data["updated_at"] = time.Now().UTC()
+	objJson, _ := json.Marshal(data)
+	w.Header().Set("Content-Type", "application/json")
+	fmt.Fprintln(w, string(objJson))
 }
