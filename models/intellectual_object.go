@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"github.com/APTrust/exchange/constants"
 	"strings"
+	"time"
 )
 
 /*
@@ -31,6 +32,8 @@ type IntellectualObject struct {
 	AltIdentifier        string         `json:"alt_identifier"`
 	GenericFiles         []*GenericFile `json:"generic_files"`
 	PremisEvents         []*PremisEvent `json:"events"`
+	CreatedAt            time.Time      `json:"created_at"`
+	UpdatedAt            time.Time      `json:"updated_at"`
 
 	// Exchange fields. These do not go to Pharos.
 	IngestS3Bucket       string         `json:"ingest_s3_bucket"`

@@ -86,6 +86,8 @@ func TestMakeIntellectualObject(t *testing.T) {
 	assert.NotEqual(t, "", obj.Description)
 	assert.NotEqual(t, "", obj.Access)
 	assert.NotEqual(t, "", obj.AltIdentifier)
+	assert.False(t, obj.CreatedAt.IsZero())
+	assert.False(t, obj.UpdatedAt.IsZero())
 
 	assert.Equal(t, 2, len(obj.GenericFiles))
 	for _, gf := range obj.GenericFiles {
