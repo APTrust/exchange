@@ -131,10 +131,10 @@ func TestSerializeFileForPharos(t *testing.T) {
 	}
 
 	// Convert int and int64 to float64, because that's what JSON uses
-	assert.Equal(t, "2014-04-25T18:05:51-05:00", hash["modified"])
+	assert.Equal(t, "2014-04-25T18:05:51-05:00", hash["file_modified"])
 	assert.EqualValues(t, 606, hash["size"])
 	assert.Equal(t, "https://s3.amazonaws.com/aptrust.test.fixtures/restore_test/data/metadata.xml", hash["uri"])
-	assert.Equal(t, "2014-04-25T18:05:51-05:00", hash["created"])
+	assert.Equal(t, "2014-04-25T18:05:51-05:00", hash["file_created"])
 	assert.Equal(t, "uc.edu/cin.675812", hash["intellectual_object_identifier"])
 	assert.EqualValues(t, 741, hash["intellectual_object_id"])
 	assert.Equal(t, "application/xml", hash["file_format"])

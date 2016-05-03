@@ -11,16 +11,26 @@ import (
 /*
 GenericFile contains information about a file that makes up
 part (or all) of an IntellectualObject.
+
 IntellectualObject is the object to which the file belongs.
+
 Format is typically a mime-type, such as "application/xml",
 that describes the file format.
+
 URI describes the location of the object (in APTrust?).
+
 Size is the size of the object, in bytes.
-Created is the date and time at which the object was created
-(in APTrust, or at the institution that owns it?).
-Modified is the data and time at which the object was last
+
+FileCreated is the date and time at which the file was created
+by the depositor.
+
+FileModified is the data and time at which the object was last
 modified (in APTrust, or at the institution that owns it?).
-Created and Modified should be ISO8601 DateTime strings,
+
+CreatedAt and UpdatedAt are Rails timestamps describing when
+this GenericFile records was created and last updated.
+
+FileCreated and FileModified should be ISO8601 DateTime strings,
 such as:
 1994-11-05T08:15:30-05:00     (Local Time)
 1994-11-05T08:15:30Z          (UTC)
@@ -35,8 +45,10 @@ type GenericFile struct {
 	FileFormat                   string         `json:"file_format"`
 	URI                          string         `json:"uri"`
 	Size                         int64          `json:"size"`
-	Created                      time.Time      `json:"created"`
-	Modified                     time.Time      `json:"modified"`
+	FileCreated                  time.Time      `json:"file_created"`
+	FileModified                 time.Time      `json:"file_modified"`
+	CreatedAt                    time.Time      `json:"created_at"`
+	UpdatedAt                    time.Time      `json:"updated_at"`
 	Checksums                    []*Checksum    `json:"checksums"`
 	PremisEvents                 []*PremisEvent `json:"premis_events"`
 
@@ -67,17 +79,34 @@ func NewGenericFile() (*GenericFile) {
 // Serializes a version of GenericFile that Fluctus will accept as post/put input.
 // Note that we don't serialize the id or any of our internal housekeeping info.
 func (gf *GenericFile) SerializeForPharos() ([]byte, error) {
-	return json.Marshal(map[string]interface{}{
-		"identifier":                     gf.Identifier,
-		"intellectual_object_id":         gf.IntellectualObjectId,
-		"intellectual_object_identifier": gf.IntellectualObjectIdentifier,
-		"file_format":                    gf.FileFormat,
-		"uri":                            gf.URI,
-		"size":                           gf.Size,
-		"created":                        gf.Created,
-		"modified":                       gf.Modified,
-		"checksums":                      gf.Checksums,
-	})
+	// We have to create a temporary structure to prevent json.Marshal
+	// from serializing Size (int64) with scientific notation.
+	// Without this step, Size will be serialized as something like
+	// 2.706525e+06, which is not valid JSON.
+	temp := struct{
+		Identifier                   string         `json:"identifier"`
+		IntellectualObjectId         int            `json:"intellectual_object_id"`
+		IntellectualObjectIdentifier string         `json:"intellectual_object_identifier"`
+		FileFormat                   string         `json:"file_format"`
+		URI                          string         `json:"uri"`
+		Size                         int64          `json:"size"`
+		FileCreated                  time.Time      `json:"file_created"`
+		FileModified                 time.Time      `json:"file_modified"`
+		CreatedAt                    time.Time      `json:"created_at"`
+		UpdatedAt                    time.Time      `json:"updated_at"`
+		Checksums                    []*Checksum    `json:"checksums"`
+	} {
+		Identifier:                     gf.Identifier,
+		IntellectualObjectId:           gf.IntellectualObjectId,
+		IntellectualObjectIdentifier:   gf.IntellectualObjectIdentifier,
+		FileFormat:                     gf.FileFormat,
+		URI:                            gf.URI,
+		Size:                           gf.Size,
+		FileCreated:                    gf.FileCreated,
+		FileModified:                   gf.FileModified,
+		Checksums:                      gf.Checksums,
+	}
+	return json.Marshal(temp)
 }
 
 // Returns the original path of the file within the original bag.

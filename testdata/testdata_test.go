@@ -35,8 +35,10 @@ func TestMakeGenericFile(t *testing.T) {
 	assert.NotEqual(t, "", gf.FileFormat)
 	assert.True(t, strings.HasPrefix(gf.URI, constants.S3UriPrefix))
 	assert.NotEqual(t, 0, gf.Size)
-	assert.False(t, gf.Created.IsZero())
-	assert.False(t, gf.Modified.IsZero())
+	assert.False(t, gf.FileCreated.IsZero())
+	assert.False(t, gf.FileModified.IsZero())
+	assert.False(t, gf.CreatedAt.IsZero())
+	assert.False(t, gf.UpdatedAt.IsZero())
 	assert.Equal(t, 3, len(gf.Checksums))
 	for _, cs := range(gf.Checksums) {
 		assert.NotNil(t, cs)
