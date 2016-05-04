@@ -142,7 +142,7 @@ func NewEventGenericFileIngest(storedAt time.Time, md5Digest string) (*PremisEve
 
 // We checked fixity against the manifest.
 // If fixity didn't match, we wouldn't be ingesting this.
-func NewEventGenericFileFixityCheck(checksumVerifiedAt time.Time, fixityAlg constants.FixityAlgorithmType, digest string, fixityMatched bool) (*PremisEvent, error) {
+func NewEventGenericFileFixityCheck(checksumVerifiedAt time.Time, fixityAlg, digest string, fixityMatched bool) (*PremisEvent, error) {
 	eventId, err := uuid.NewV4()
 	if err != nil {
 		return nil, fmt.Errorf("Error generating UUID for generic file fixity check: %v", err)
@@ -173,7 +173,7 @@ func NewEventGenericFileFixityCheck(checksumVerifiedAt time.Time, fixityAlg cons
 }
 
 // We generated a sha256 checksum.
-func NewEventGenericFileFixityGeneration(checksumGeneratedAt time.Time, fixityAlg constants.FixityAlgorithmType, digest string) (*PremisEvent, error) {
+func NewEventGenericFileFixityGeneration(checksumGeneratedAt time.Time, fixityAlg, digest string) (*PremisEvent, error) {
 	eventId, err := uuid.NewV4()
 	if err != nil {
 		return nil, fmt.Errorf("Error generating UUID for generic file ingest event: %v", err)
@@ -199,7 +199,7 @@ func NewEventGenericFileFixityGeneration(checksumGeneratedAt time.Time, fixityAl
 
 // We assigned an identifier: either a generic file identifier
 // or a new storage URL.
-func NewEventGenericFileIdentifierAssignment(identifierGeneratedAt time.Time, identifierType constants.IdentifierType, identifier string) (*PremisEvent, error) {
+func NewEventGenericFileIdentifierAssignment(identifierGeneratedAt time.Time, identifierType, identifier string) (*PremisEvent, error) {
 	eventId, err := uuid.NewV4()
 	if err != nil {
 		return nil, fmt.Errorf("Error generating UUID for generic file ingest event: %v", err)

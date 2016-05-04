@@ -145,7 +145,7 @@ func TestWorkItemShouldTryIngest(t *testing.T) {
 	assert.False(t, workItem.ShouldTryIngest())
 }
 
-func getWorkItems(action constants.ActionType) ([]*models.WorkItem) {
+func getWorkItems(action string) ([]*models.WorkItem) {
 	workItems := make([]*models.WorkItem, 3)
 	workItems[0] = &models.WorkItem{
 		Action: action,

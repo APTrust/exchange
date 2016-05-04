@@ -41,9 +41,9 @@ type WorkItem struct {
 	User                   string               `json:"user"`
 	Date                   time.Time            `json:"date"`
 	Note                   string               `json:"note"`
-	Action                 constants.ActionType `json:"action"`
-	Stage                  constants.StageType  `json:"stage"`
-	Status                 constants.StatusType `json:"status"`
+	Action                 string               `json:"action"`
+	Stage                  string               `json:"stage"`
+	Status                 string               `json:"status"`
 	Outcome                string               `json:"outcome"`
 	Retry                  bool                 `json:"retry"`
 	Reviewed               bool                 `json:"reviewed"`

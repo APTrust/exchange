@@ -24,22 +24,26 @@ const (
 
 // Status enumerations match values defined in
 // https://github.com/APTrust/fluctus/blob/develop/config/application.rb
-type StatusType string
-
 const (
-	StatusStarted   StatusType = "Started"
+	StatusStarted              = "Started"
 	StatusPending              = "Pending"
 	StatusSuccess              = "Success"
 	StatusFailed               = "Failed"
 	StatusCancelled            = "Cancelled"
 )
 
+var StatusTypes []string = []string{
+	StatusStarted,
+	StatusPending,
+	StatusSuccess,
+	StatusFailed,
+	StatusCancelled,
+}
+
 // Stage enumerations match values defined in
 // https://github.com/APTrust/fluctus/blob/develop/config/application.rb
-type StageType string
-
 const (
-	StageRequested StageType = "Requested"
+	StageRequested           = "Requested"
 	StageReceive             = "Receive"
 	StageFetch               = "Fetch"
 	StageUnpack              = "Unpack"
@@ -50,28 +54,44 @@ const (
 	StageResolve             = "Resolve"
 )
 
+var StageTypes []string = []string{
+	StageRequested,
+	StageReceive,
+	StageFetch,
+	StageUnpack,
+	StageValidate,
+	StageStore,
+	StageRecord,
+	StageCleanup,
+	StageResolve,
+}
+
 // Action enumerations match values defined in
 // https://github.com/APTrust/fluctus/blob/develop/config/application.rb
-type ActionType string
 
 const (
-	ActionIngest      ActionType = "Ingest"
+	ActionIngest                 = "Ingest"
 	ActionFixityCheck            = "Fixity Check"
 	ActionRestore                = "Restore"
 	ActionDelete                 = "Delete"
 )
 
-type FixityAlgorithmType string
+var ActionTypes []string = []string{
+	ActionIngest,
+	ActionFixityCheck,
+	ActionRestore,
+	ActionDelete,
+}
+
 
 const (
-	AlgMd5  FixityAlgorithmType = "md5"
+	AlgMd5                      = "md5"
 	AlgSha256                   = "sha256"
 )
 
-type IdentifierType string
 
 const (
-	IdTypeStorageURL  IdentifierType = "url"
+	IdTypeStorageURL                 = "url"
 	IdTypeBagAndPath                 = "uuid"
 )
 
