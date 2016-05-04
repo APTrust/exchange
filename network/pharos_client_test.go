@@ -9,12 +9,12 @@ import (
 	"github.com/stretchr/testify/assert"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"os"
 	"strings"
 	"testing"
 	"time"
 )
-
 
 func TestNewPharosClient(t *testing.T) {
 	_, err := network.NewPharosClient("http://example.com", "v1", "user", "key")
@@ -37,7 +37,7 @@ func TestInstitutionGet(t *testing.T) {
 
 	// Check the request URL and method
 	assert.Equal(t, "GET", response.Request.Method)
-	assert.Equal(t, "/api/v1/institutions/college.edu", response.Request.URL.Opaque)
+	assert.Equal(t, "/api/v1/institutions/college.edu/", response.Request.URL.Opaque)
 
 	// Basic sanity check on response values
 	assert.Nil(t, response.Error)
@@ -58,11 +58,11 @@ func TestInstitutionList(t *testing.T) {
 		return
 	}
 
-	response := client.InstitutionList()
+	response := client.InstitutionList(nil)
 
 	// Check the request URL and method
 	assert.Equal(t, "GET", response.Request.Method)
-	assert.Equal(t, "/api/v1/institutions/", response.Request.URL.Opaque)
+	assert.Equal(t, "/api/v1/institutions/?", response.Request.URL.Opaque)
 
 	// Basic sanity check on response values
 	assert.Nil(t, response.Error)
@@ -80,6 +80,12 @@ func TestInstitutionList(t *testing.T) {
 	for _, obj := range list {
 		assert.NotEqual(t, "", obj.Identifier)
 	}
+
+	// Make sure params are added to URL
+	params := sampleParams()
+	response = client.InstitutionList(params)
+	expectedUrl := fmt.Sprintf("/api/v1/institutions/?%s", params.Encode())
+	assert.Equal(t, expectedUrl, response.Request.URL.Opaque)
 }
 
 func TestIntellectualObjectGet(t *testing.T) {
@@ -147,6 +153,12 @@ func TestIntellectualObjectList(t *testing.T) {
 	for _, obj := range list {
 		assert.NotEqual(t, "", obj.Identifier)
 	}
+
+	// Make sure params are added to URL
+	params := sampleParams()
+	response = client.IntellectualObjectList(params)
+	expectedUrl := fmt.Sprintf("/api/v1/objects/?%s", params.Encode())
+	assert.Equal(t, expectedUrl, response.Request.URL.Opaque)
 }
 
 func TestIntellectualObjectSave(t *testing.T) {
@@ -273,6 +285,12 @@ func TestGenericFileList(t *testing.T) {
 	for _, obj := range list {
 		assert.NotEqual(t, "", obj.Identifier)
 	}
+
+	// Make sure params are added to URL
+	params := sampleParams()
+	response = client.GenericFileList(params)
+	expectedUrl := fmt.Sprintf("/api/v1/files/?%s", params.Encode())
+	assert.Equal(t, expectedUrl, response.Request.URL.Opaque)
 }
 
 func TestGenericFileSave(t *testing.T) {
@@ -397,6 +415,12 @@ func TestPremisEventList(t *testing.T) {
 	for _, obj := range list {
 		assert.NotEqual(t, "", obj.Identifier)
 	}
+
+	// Make sure params are added to URL
+	params := sampleParams()
+	response = client.PremisEventList(params)
+	expectedUrl := fmt.Sprintf("/api/v1/events/?%s", params.Encode())
+	assert.Equal(t, expectedUrl, response.Request.URL.Opaque)
 }
 
 func TestPremisEventSave(t *testing.T) {
@@ -499,6 +523,12 @@ func TestWorkItemList(t *testing.T) {
 		assert.NotEqual(t, "", obj.Status)
 		assert.NotEqual(t, "", obj.State)
 	}
+
+	// Make sure params are added to URL
+	params := sampleParams()
+	response = client.WorkItemList(params)
+	expectedUrl := fmt.Sprintf("/api/v1/work_items/?%s", params.Encode())
+	assert.Equal(t, expectedUrl, response.Request.URL.Opaque)
 }
 
 func TestWorkItemSave(t *testing.T) {
@@ -580,6 +610,16 @@ func listResponseData() (map[string]interface{}) {
 	data["next"] = "http://example.com/?page=11"
 	data["previous"] = "http://example.com/?page=9"
 	return data
+}
+
+// Returns some sample URL parameters.
+func sampleParams() (url.Values) {
+	v := url.Values{}
+	v.Add("institution", "aptrust.org")
+	v.Add("page", "1")
+	v.Add("per_page", "20")
+	v.Add("action", "ingest")
+	return v
 }
 
 // -------------------------------------------------------------------------

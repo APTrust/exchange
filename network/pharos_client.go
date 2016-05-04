@@ -53,7 +53,7 @@ func (client *PharosClient) InstitutionGet(identifier string) (*PharosResponse) 
 	resp.institutions = make([]*models.Institution, 1)
 
 	// Build the url and the request object
-	relativeUrl := fmt.Sprintf("/api/%s/institutions/%s", client.apiVersion, escapeSlashes(identifier))
+	relativeUrl := fmt.Sprintf("/api/%s/institutions/%s/", client.apiVersion, escapeSlashes(identifier))
 	absoluteUrl := client.BuildUrl(relativeUrl)
 
 	// Run the request
@@ -73,13 +73,13 @@ func (client *PharosClient) InstitutionGet(identifier string) (*PharosResponse) 
 
 
 // Returns a list of APTrust depositor institutions.
-func (client *PharosClient) InstitutionList() (*PharosResponse) {
+func (client *PharosClient) InstitutionList(params url.Values) (*PharosResponse) {
 	// Set up the response object
 	resp := NewPharosResponse(PharosInstitution)
 	resp.institutions = make([]*models.Institution, 0)
 
 	// Build the url and the request object
-	relativeUrl := fmt.Sprintf("/api/%s/institutions/", client.apiVersion)
+	relativeUrl := fmt.Sprintf("/api/%s/institutions/?%s", client.apiVersion, encodeParams(params))
 	absoluteUrl := client.BuildUrl(relativeUrl)
 
 	// Run the request
@@ -136,7 +136,7 @@ func (client *PharosClient) IntellectualObjectList(params url.Values) (*PharosRe
 	resp.objects = make([]*models.IntellectualObject, 0)
 
 	// Build the url and the request object
-	relativeUrl := fmt.Sprintf("/api/%s/objects/?%s", client.apiVersion, params.Encode())
+	relativeUrl := fmt.Sprintf("/api/%s/objects/?%s", client.apiVersion, encodeParams(params))
 	absoluteUrl := client.BuildUrl(relativeUrl)
 
 	// Run the request
@@ -229,7 +229,7 @@ func (client *PharosClient) GenericFileList(params url.Values) (*PharosResponse)
 	resp.files = make([]*models.GenericFile, 0)
 
 	// Build the url and the request object
-	relativeUrl := fmt.Sprintf("/api/%s/files/?%s", client.apiVersion, params.Encode())
+	relativeUrl := fmt.Sprintf("/api/%s/files/?%s", client.apiVersion, encodeParams(params))
 	absoluteUrl := client.BuildUrl(relativeUrl)
 
 	// Run the request
@@ -329,7 +329,7 @@ func (client *PharosClient) PremisEventList(params url.Values) (*PharosResponse)
 	resp.events = make([]*models.PremisEvent, 0)
 
 	// Build the url and the request object
-	relativeUrl := fmt.Sprintf("/api/%s/events/?%s", client.apiVersion, params.Encode())
+	relativeUrl := fmt.Sprintf("/api/%s/events/?%s", client.apiVersion, encodeParams(params))
 	absoluteUrl := client.BuildUrl(relativeUrl)
 
 	// Run the request
@@ -405,7 +405,7 @@ func (client *PharosClient) WorkItemList(params url.Values) (*PharosResponse) {
 	resp.workItems = make([]*models.WorkItem, 0)
 
 	// Build the url and the request object
-	relativeUrl := fmt.Sprintf("/api/%s/work_items/?%s", client.apiVersion, params.Encode())
+	relativeUrl := fmt.Sprintf("/api/%s/work_items/?%s", client.apiVersion, encodeParams(params))
 	absoluteUrl := client.BuildUrl(relativeUrl)
 
 	// Run the request
@@ -583,4 +583,12 @@ func (client *PharosClient) DoRequest(resp *PharosResponse, method, absoluteUrl 
 // Replaces "/" with "%2F", which golang's url.QueryEscape does not do.
 func escapeSlashes(s string) string {
 	return strings.Replace(s, "/", "%2F", -1)
+}
+
+func encodeParams(params url.Values) (string) {
+	if params == nil {
+		return ""
+	} else {
+		return params.Encode()
+	}
 }
