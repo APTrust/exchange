@@ -51,11 +51,13 @@ type WorkItem struct {
 	Node                   string               `json:"node"`
 	Pid                    int                  `json:"pid"`
 	NeedsAdminReview       bool                 `json:"needs_admin_review"`
+	CreatedAt              time.Time            `json:"created_at"`
+	UpdatedAt              time.Time            `json:"updated_at"`
 }
 
 // Convert WorkItem to JSON, omitting id, which Rails won't permit.
 // For internal use, json.Marshal() works fine.
-func (item *WorkItem) SerializeForFluctus() ([]byte, error) {
+func (item *WorkItem) SerializeForPharos() ([]byte, error) {
 	return json.Marshal(map[string]interface{}{
 		"name":                    item.Name,
 		"bucket":                  item.Bucket,
@@ -76,6 +78,8 @@ func (item *WorkItem) SerializeForFluctus() ([]byte, error) {
 		"node":                    item.Node,
 		"pid":                     item.Pid,
 		"needs_admin_review":      item.NeedsAdminReview,
+		"created_at":              item.CreatedAt,
+		"updated_at":              item.UpdatedAt,
 	})
 }
 
