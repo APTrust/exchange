@@ -130,13 +130,13 @@ func (client *PharosClient) IntellectualObjectGet(identifier string) (*PharosRes
 // * name_contains - Return objects whose name contains the specified string.
 // * name_exact - Return only object with the exact name specified.
 // * state = 'A' for active records, 'D' for deleted. Default is 'A'
-func (client *PharosClient) IntellectualObjectList(params map[string]string) (*PharosResponse) {
+func (client *PharosClient) IntellectualObjectList(params url.Values) (*PharosResponse) {
 	// Set up the response object
 	resp := NewPharosResponse(PharosIntellectualObject)
 	resp.objects = make([]*models.IntellectualObject, 0)
 
 	// Build the url and the request object
-	relativeUrl := fmt.Sprintf("/api/%s/objects/?%s", client.apiVersion, BuildQueryString(params))
+	relativeUrl := fmt.Sprintf("/api/%s/objects/?%s", client.apiVersion, params.Encode())
 	absoluteUrl := client.BuildUrl(relativeUrl)
 
 	// Run the request
@@ -223,13 +223,13 @@ func (client *PharosClient) GenericFileGet(identifier string) (*PharosResponse) 
 //
 // * intellectual_object_identifier - The identifier of the object to which
 //   the files belong.
-func (client *PharosClient) GenericFileList(params map[string]string) (*PharosResponse) {
+func (client *PharosClient) GenericFileList(params url.Values) (*PharosResponse) {
 	// Set up the response object
 	resp := NewPharosResponse(PharosGenericFile)
 	resp.files = make([]*models.GenericFile, 0)
 
 	// Build the url and the request object
-	relativeUrl := fmt.Sprintf("/api/%s/files/?%s", client.apiVersion, BuildQueryString(params))
+	relativeUrl := fmt.Sprintf("/api/%s/files/?%s", client.apiVersion, params.Encode())
 	absoluteUrl := client.BuildUrl(relativeUrl)
 
 	// Run the request
@@ -323,13 +323,13 @@ func (client *PharosClient) PremisEventGet(identifier string) (*PharosResponse) 
 //   event types listed in contants/constants.go
 // * created_since - (iso 8601 datetime string) Return events created
 //   on or after the specified datetime.
-func (client *PharosClient) PremisEventList(params map[string]string) (*PharosResponse) {
+func (client *PharosClient) PremisEventList(params url.Values) (*PharosResponse) {
 	// Set up the response object
 	resp := NewPharosResponse(PharosPremisEvent)
 	resp.events = make([]*models.PremisEvent, 0)
 
 	// Build the url and the request object
-	relativeUrl := fmt.Sprintf("/api/%s/events/?%s", client.apiVersion, BuildQueryString(params))
+	relativeUrl := fmt.Sprintf("/api/%s/events/?%s", client.apiVersion, params.Encode())
 	absoluteUrl := client.BuildUrl(relativeUrl)
 
 	// Run the request
@@ -399,13 +399,13 @@ func (client *PharosClient) PremisEventSave(obj *models.PremisEvent) (*PharosRes
 // * node
 // * needs_admin_review
 // * process_after
-func (client *PharosClient) WorkItemList(params map[string]string) (*PharosResponse) {
+func (client *PharosClient) WorkItemList(params url.Values) (*PharosResponse) {
 	// Set up the response object
 	resp := NewPharosResponse(PharosWorkItem)
 	resp.workItems = make([]*models.WorkItem, 0)
 
 	// Build the url and the request object
-	relativeUrl := fmt.Sprintf("/api/%s/work_items/?%s", client.apiVersion, BuildQueryString(params))
+	relativeUrl := fmt.Sprintf("/api/%s/work_items/?%s", client.apiVersion, params.Encode())
 	absoluteUrl := client.BuildUrl(relativeUrl)
 
 	// Run the request
@@ -578,18 +578,6 @@ func (client *PharosClient) DoRequest(resp *PharosResponse, method, absoluteUrl 
 	// If there's an error reading the response body, it will
 	// be recorded in resp.Error.
 	resp.readResponse()
-}
-
-// Converts a set map of query params into a URL-encoded string.
-func BuildQueryString(params map[string]string) (string) {
-	if params == nil {
-		return ""
-	}
-	values := url.Values{}
-	for key, value := range params {
-		values.Add(key, value)
-	}
-	return values.Encode()
 }
 
 // Replaces "/" with "%2F", which golang's url.QueryEscape does not do.

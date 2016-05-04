@@ -6,6 +6,7 @@ import (
 	"github.com/APTrust/exchange/models"
 	"io/ioutil"
 	"net/http"
+	"net/url"
 )
 
 type PharosResponse struct {
@@ -122,6 +123,42 @@ func (resp *PharosResponse) readResponse () {
 // Returns the type of object(s) contained in this response.
 func (resp *PharosResponse) ObjectType () (PharosObjectType) {
 	return resp.objectType
+}
+
+// Returns true if the response includes a link to the next page
+// of results.
+func (resp *PharosResponse) HasNextPage() (bool) {
+	return resp.Next != nil && *resp.Next != ""
+}
+
+// Returns true if the response includes a link to the previous page
+// of results.
+func (resp *PharosResponse) HasPreviousPage() (bool) {
+	return resp.Previous != nil && *resp.Previous != ""
+}
+
+// Returns the URL parameters to request the next page of results,
+// or nil if there is no next page.
+func (resp *PharosResponse) ParamsForNextPage() (url.Values) {
+	if resp.HasNextPage() {
+		nextUrl, _ := url.Parse(*resp.Next)
+		if nextUrl != nil {
+			return nextUrl.Query()
+		}
+	}
+	return nil
+}
+
+// Returns the URL parameters to request the previous page of results,
+// or nil if there is no previous page.
+func (resp *PharosResponse) ParamsForPreviousPage() (url.Values) {
+	if resp.HasPreviousPage() {
+		previousUrl, _ := url.Parse(*resp.Previous)
+		if previousUrl != nil {
+			return previousUrl.Query()
+		}
+	}
+	return nil
 }
 
 // Returns the Institution parsed from the HTTP response body, or nil.
