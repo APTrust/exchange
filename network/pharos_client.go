@@ -295,7 +295,7 @@ func (client *PharosClient) PremisEventGet(identifier string) (*PharosResponse) 
 	resp.events = make([]*models.PremisEvent, 1)
 
 	// Build the url and the request object
-	relativeUrl := fmt.Sprintf("/api/%s/events/%s", client.apiVersion, escapeSlashes(identifier))
+	relativeUrl := fmt.Sprintf("/api/%s/events/%s/", client.apiVersion, escapeSlashes(identifier))
 	absoluteUrl := client.BuildUrl(relativeUrl)
 
 	// Run the request
@@ -355,7 +355,7 @@ func (client *PharosClient) PremisEventSave(obj *models.PremisEvent) (*PharosRes
 	resp.events = make([]*models.PremisEvent, 1)
 
 	// URL and method
-	relativeUrl := fmt.Sprintf("/api/%s/events", client.apiVersion)
+	relativeUrl := fmt.Sprintf("/api/%s/events/", client.apiVersion)
 	httpMethod := "POST"
 	if obj.Id > 0 {
 		relativeUrl = fmt.Sprintf("%s/%s", relativeUrl, escapeSlashes(obj.Identifier))
