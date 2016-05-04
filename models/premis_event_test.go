@@ -3,6 +3,7 @@ package models_test
 import (
 	"github.com/APTrust/exchange/constants"
 	"github.com/APTrust/exchange/models"
+	"github.com/APTrust/exchange/testdata"
 	"github.com/stretchr/testify/assert"
 	"testing"
 )
@@ -76,14 +77,14 @@ func TestNewEventObjectRights(t *testing.T) {
 }
 
 func TestNewEventGenericFileIngest(t *testing.T) {
-	event, err := models.NewEventGenericFileIngest(TEST_TIMESTAMP, "123456789")
+	event, err := models.NewEventGenericFileIngest(testdata.TEST_TIMESTAMP, "123456789")
 	if err != nil {
 		t.Errorf("Error creating PremisEvent: %v", err)
 		return
 	}
 	assert.Len(t, event.Identifier, 36)
 	assert.Equal(t, "ingest", event.EventType)
-	assert.Equal(t, TEST_TIMESTAMP, event.DateTime)
+	assert.Equal(t, testdata.TEST_TIMESTAMP, event.DateTime)
 	assert.Equal(t, "Completed copy to S3", event.Detail)
 	assert.Equal(t, "Success", event.Outcome)
 	assert.Equal(t, "md5:123456789", event.OutcomeDetail)
@@ -93,14 +94,14 @@ func TestNewEventGenericFileIngest(t *testing.T) {
 }
 
 func TestNewEventGenericFileFixityCheck(t *testing.T) {
-	event, err := models.NewEventGenericFileFixityCheck(TEST_TIMESTAMP, constants.AlgMd5, "123456789", true)
+	event, err := models.NewEventGenericFileFixityCheck(testdata.TEST_TIMESTAMP, constants.AlgMd5, "123456789", true)
 	if err != nil {
 		t.Errorf("Error creating PremisEvent: %v", err)
 		return
 	}
 	assert.Len(t, event.Identifier, 36)
 	assert.Equal(t, "fixity_check", event.EventType)
-	assert.Equal(t, TEST_TIMESTAMP, event.DateTime)
+	assert.Equal(t, testdata.TEST_TIMESTAMP, event.DateTime)
 	assert.Equal(t, "Fixity check against registered hash", event.Detail)
 	assert.Equal(t, "Success", event.Outcome)
 	assert.Equal(t, "md5:123456789", event.OutcomeDetail)
@@ -108,14 +109,14 @@ func TestNewEventGenericFileFixityCheck(t *testing.T) {
 	assert.Equal(t, "http://golang.org/pkg/crypto/md5/", event.Agent)
 	assert.Equal(t, "Fixity matches", event.OutcomeInformation)
 
-	event, err = models.NewEventGenericFileFixityCheck(TEST_TIMESTAMP, constants.AlgSha256, "123456789", false)
+	event, err = models.NewEventGenericFileFixityCheck(testdata.TEST_TIMESTAMP, constants.AlgSha256, "123456789", false)
 	if err != nil {
 		t.Errorf("Error creating PremisEvent: %v", err)
 		return
 	}
 	assert.Len(t, event.Identifier, 36)
 	assert.Equal(t, "fixity_check", event.EventType)
-	assert.Equal(t, TEST_TIMESTAMP, event.DateTime)
+	assert.Equal(t, testdata.TEST_TIMESTAMP, event.DateTime)
 	assert.Equal(t, "Fixity check against registered hash", event.Detail)
 	assert.Equal(t, "Failed", event.Outcome)
 	assert.Equal(t, "sha256:123456789", event.OutcomeDetail)
@@ -125,14 +126,14 @@ func TestNewEventGenericFileFixityCheck(t *testing.T) {
 }
 
 func TestNewEventGenericFileFixityGeneration(t *testing.T) {
-	event, err := models.NewEventGenericFileFixityGeneration(TEST_TIMESTAMP, constants.AlgMd5, "123456789")
+	event, err := models.NewEventGenericFileFixityGeneration(testdata.TEST_TIMESTAMP, constants.AlgMd5, "123456789")
 	if err != nil {
 		t.Errorf("Error creating PremisEvent: %v", err)
 		return
 	}
 	assert.Len(t, event.Identifier, 36)
 	assert.Equal(t, "fixity_generation", event.EventType)
-	assert.Equal(t, TEST_TIMESTAMP, event.DateTime)
+	assert.Equal(t, testdata.TEST_TIMESTAMP, event.DateTime)
 	assert.Equal(t, "Calculated new fixity value", event.Detail)
 	assert.Equal(t, "Success", event.Outcome)
 	assert.Equal(t, "md5:123456789", event.OutcomeDetail)
@@ -140,14 +141,14 @@ func TestNewEventGenericFileFixityGeneration(t *testing.T) {
 	assert.Equal(t, "http://golang.org/pkg/crypto/md5/", event.Agent)
 	assert.Equal(t, "", event.OutcomeInformation)
 
-	event, err = models.NewEventGenericFileFixityGeneration(TEST_TIMESTAMP, constants.AlgSha256, "123456789")
+	event, err = models.NewEventGenericFileFixityGeneration(testdata.TEST_TIMESTAMP, constants.AlgSha256, "123456789")
 	if err != nil {
 		t.Errorf("Error creating PremisEvent: %v", err)
 		return
 	}
 	assert.Len(t, event.Identifier, 36)
 	assert.Equal(t, "fixity_generation", event.EventType)
-	assert.Equal(t, TEST_TIMESTAMP, event.DateTime)
+	assert.Equal(t, testdata.TEST_TIMESTAMP, event.DateTime)
 	assert.Equal(t, "Calculated new fixity value", event.Detail)
 	assert.Equal(t, "Success", event.Outcome)
 	assert.Equal(t, "sha256:123456789", event.OutcomeDetail)
@@ -157,14 +158,14 @@ func TestNewEventGenericFileFixityGeneration(t *testing.T) {
 }
 
 func TestNewEventGenericFileIdentifierAssignment(t *testing.T) {
-	event, err := models.NewEventGenericFileIdentifierAssignment(TEST_TIMESTAMP, constants.IdTypeBagAndPath, "blah.edu/blah/blah.txt")
+	event, err := models.NewEventGenericFileIdentifierAssignment(testdata.TEST_TIMESTAMP, constants.IdTypeBagAndPath, "blah.edu/blah/blah.txt")
 	if err != nil {
 		t.Errorf("Error creating PremisEvent: %v", err)
 		return
 	}
 	assert.Len(t, event.Identifier, 36)
 	assert.Equal(t, "identifier_assignment", event.EventType)
-	assert.Equal(t, TEST_TIMESTAMP, event.DateTime)
+	assert.Equal(t, testdata.TEST_TIMESTAMP, event.DateTime)
 	assert.Equal(t, "Assigned new institution.bag/path identifier", event.Detail)
 	assert.Equal(t, "Success", event.Outcome)
 	assert.Equal(t, "blah.edu/blah/blah.txt", event.OutcomeDetail)
@@ -172,14 +173,14 @@ func TestNewEventGenericFileIdentifierAssignment(t *testing.T) {
 	assert.Equal(t, "https://github.com/APTrust/exchange", event.Agent)
 	assert.Equal(t, "", event.OutcomeInformation)
 
-	event, err = models.NewEventGenericFileIdentifierAssignment(TEST_TIMESTAMP, constants.IdTypeStorageURL, "https://example.com/000-000-999")
+	event, err = models.NewEventGenericFileIdentifierAssignment(testdata.TEST_TIMESTAMP, constants.IdTypeStorageURL, "https://example.com/000-000-999")
 	if err != nil {
 		t.Errorf("Error creating PremisEvent: %v", err)
 		return
 	}
 	assert.Len(t, event.Identifier, 36)
 	assert.Equal(t, "identifier_assignment", event.EventType)
-	assert.Equal(t, TEST_TIMESTAMP, event.DateTime)
+	assert.Equal(t, testdata.TEST_TIMESTAMP, event.DateTime)
 	assert.Equal(t, "Assigned new storage URL identifier", event.Detail)
 	assert.Equal(t, "Success", event.Outcome)
 	assert.Equal(t, "https://example.com/000-000-999", event.OutcomeDetail)
@@ -190,14 +191,14 @@ func TestNewEventGenericFileIdentifierAssignment(t *testing.T) {
 }
 
 func TestNewEventGenericFileReplication(t *testing.T) {
-	event, err := models.NewEventGenericFileReplication(TEST_TIMESTAMP, "https://example.com/123456789")
+	event, err := models.NewEventGenericFileReplication(testdata.TEST_TIMESTAMP, "https://example.com/123456789")
 	if err != nil {
 		t.Errorf("Error creating PremisEvent: %v", err)
 		return
 	}
 	assert.Len(t, event.Identifier, 36)
 	assert.Equal(t, "replication", event.EventType)
-	assert.Equal(t, TEST_TIMESTAMP, event.DateTime)
+	assert.Equal(t, testdata.TEST_TIMESTAMP, event.DateTime)
 	assert.Equal(t, "Copied to replication storage and assigned replication URL identifier", event.Detail)
 	assert.Equal(t, "Success", event.Outcome)
 	assert.Equal(t, "https://example.com/123456789", event.OutcomeDetail)

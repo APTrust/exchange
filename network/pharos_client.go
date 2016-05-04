@@ -10,7 +10,6 @@ import (
 	"net/http/cookiejar"
 	"net/url"
 	"strings"
-	"time"
 )
 
 // PharosClient supports basic calls to the Pharos Admin REST API.
@@ -425,16 +424,17 @@ func (client *PharosClient) WorkItemList(params map[string]string) (*PharosRespo
 // this performs a POST to create a new record. For non-zero IDs, this
 // performs a PUT to update the existing record. The response object
 // will include a new copy of the WorkItem if it was saved successfully.
-func (client *PharosClient) WorkItemSave(obj *models.GenericFile) (*PharosResponse) {
+func (client *PharosClient) WorkItemSave(obj *models.WorkItem) (*PharosResponse) {
 	// Set up the response object
 	resp := NewPharosResponse(PharosWorkItem)
 	resp.workItems = make([]*models.WorkItem, 1)
 
 	// URL and method
-	relativeUrl := fmt.Sprintf("/api/%s/work_items", client.apiVersion)
+	relativeUrl := fmt.Sprintf("/api/%s/work_items/", client.apiVersion)
 	httpMethod := "POST"
 	if obj.Id > 0 {
-		relativeUrl = fmt.Sprintf("%s/%d", relativeUrl, obj.Id)
+		// URL should look like /api/v1/work_items/46956/
+		relativeUrl = fmt.Sprintf("%s%d/", relativeUrl, obj.Id)
 		httpMethod = "PUT"
 	}
 	absoluteUrl := client.BuildUrl(relativeUrl)
@@ -468,31 +468,6 @@ func (client *PharosClient) WorkItemGet(id int) (*PharosResponse) {
 
 	// Build the url and the request object
 	relativeUrl := fmt.Sprintf("/api/%s/work_items/%d/", client.apiVersion, id)
-	absoluteUrl := client.BuildUrl(relativeUrl)
-
-	// Run the request
-	client.DoRequest(resp, "GET", absoluteUrl, nil)
-	if resp.Error != nil {
-		return resp
-	}
-
-	// Parse the JSON from the response body
-	workItem := &models.WorkItem{}
-	resp.Error = json.Unmarshal(resp.data, workItem)
-	if resp.Error == nil {
-		resp.workItems[0] = workItem
-	}
-	return resp
-}
-
-// Returns the WorkItem with the specified etag, name and bag_date.
-func (client *PharosClient) WorkItemGetByEtagNameBagDate(etag, name string, bagDate time.Time) (*PharosResponse) {
-	// Set up the response object
-	resp := NewPharosResponse(PharosWorkItem)
-	resp.workItems = make([]*models.WorkItem, 1)
-
-	// Build the url and the request object
-	relativeUrl := fmt.Sprintf("/api/%s/work_items/%s/%s/%s", client.apiVersion, etag, name, bagDate)
 	absoluteUrl := client.BuildUrl(relativeUrl)
 
 	// Run the request

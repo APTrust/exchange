@@ -435,6 +435,136 @@ func TestPremisEventSave(t *testing.T) {
 	assert.NotEqual(t, 0, obj.Id)
 }
 
+func TestWorkItemGet(t *testing.T) {
+	testServer := httptest.NewServer(http.HandlerFunc(workItemGetHander))
+	defer testServer.Close()
+
+	client, err := network.NewPharosClient(testServer.URL, "v1", "user", "key")
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	response := client.WorkItemGet(999)
+
+	// Check the request URL and method
+	assert.Equal(t, "GET", response.Request.Method)
+	assert.Equal(t, "/api/v1/work_items/999/", response.Request.URL.Opaque)
+
+	// Basic sanity check on response values
+	assert.Nil(t, response.Error)
+
+	obj := response.WorkItem()
+	assert.EqualValues(t, "WorkItem", response.ObjectType())
+	if obj == nil {
+		t.Errorf("WorkItem should not be nil")
+	}
+	assert.NotEqual(t, "", obj.Action)
+	assert.NotEqual(t, "", obj.Status)
+	assert.NotEqual(t, "", obj.State)
+	assert.True(t, obj.Retry)
+}
+
+func TestWorkItemList(t *testing.T) {
+	testServer := httptest.NewServer(http.HandlerFunc(workItemListHander))
+	defer testServer.Close()
+
+	client, err := network.NewPharosClient(testServer.URL, "v1", "user", "key")
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	response := client.WorkItemList(nil)
+
+	// Check the request URL and method
+	assert.Equal(t, "GET", response.Request.Method)
+	assert.Equal(t, "/api/v1/work_items/?", response.Request.URL.Opaque)
+
+	// Basic sanity check on response values
+	assert.Nil(t, response.Error)
+	assert.EqualValues(t, "WorkItem", response.ObjectType())
+
+	list := response.WorkItems()
+	if list == nil {
+		t.Errorf("WorkItem list should not be nil")
+		return
+	}
+	if len(list) != 4 {
+		t.Errorf("WorkItems list should have four items. Found %d.", len(list))
+		return
+	}
+	for _, obj := range list {
+		assert.NotEqual(t, "", obj.Action)
+		assert.NotEqual(t, "", obj.Status)
+		assert.NotEqual(t, "", obj.State)
+	}
+}
+
+func TestWorkItemSave(t *testing.T) {
+	testServer := httptest.NewServer(http.HandlerFunc(workItemSaveHander))
+	defer testServer.Close()
+
+	client, err := network.NewPharosClient(testServer.URL, "v1", "user", "key")
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	// ---------------------------------------------
+	// First, test create...
+	// ---------------------------------------------
+	obj := testdata.MakeWorkItem()
+	obj.Id = 0
+	response := client.WorkItemSave(obj)
+
+	// Check the request URL and method
+	assert.Equal(t, "POST", response.Request.Method)
+	assert.Equal(t, "/api/v1/work_items/", response.Request.URL.Opaque)
+
+	// Basic sanity check on response values
+	assert.Nil(t, response.Error)
+
+	obj = response.WorkItem()
+	assert.EqualValues(t, "WorkItem", response.ObjectType())
+	if obj == nil {
+		t.Errorf("WorkItem should not be nil")
+	}
+	assert.NotEqual(t, "", obj.Name)
+	assert.NotEqual(t, "", obj.Bucket)
+	assert.NotEqual(t, "", obj.ETag)
+	assert.NotEqual(t, "", obj.Action)
+	assert.NotEqual(t, "", obj.Stage)
+
+	// Make sure the client returns the SAVED object,
+	// not the unsaved one we sent.
+	assert.NotEqual(t, 0, obj.Id)
+
+
+	// ---------------------------------------------
+	// Now test with an update...
+	// ---------------------------------------------
+	obj = testdata.MakeWorkItem()
+	origModTime := obj.UpdatedAt
+	response = client.WorkItemSave(obj)
+
+	// Check the request URL and method
+	expectedUrl := fmt.Sprintf("/api/v1/work_items/%d/", obj.Id)
+	assert.Equal(t, "PUT", response.Request.Method)
+	assert.Equal(t, expectedUrl, response.Request.URL.Opaque)
+
+	// Basic sanity check on response values
+	assert.Nil(t, response.Error)
+
+	obj = response.WorkItem()
+	assert.EqualValues(t, "WorkItem", response.ObjectType())
+	if obj == nil {
+		t.Errorf("WorkItem should not be nil")
+	}
+	assert.Equal(t, 1000, obj.Id)
+	assert.NotEqual(t, origModTime, obj.UpdatedAt)
+}
+
 
 // -------------------------------------------------------------------------
 // -------------------------------------------------------------------------
@@ -585,6 +715,49 @@ func premisEventListHander(w http.ResponseWriter, r *http.Request) {
 }
 
 func premisEventSaveHander(w http.ResponseWriter, r *http.Request) {
+	decoder := json.NewDecoder(r.Body)
+	decoder.UseNumber()
+    data := make(map[string]interface{})
+    err := decoder.Decode(&data)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error decoding JSON data: %v", err)
+		fmt.Fprintln(w, "")
+		return
+	}
+
+	// Assign ID and timestamps, as if the object has been saved.
+	data["id"] = 1000
+	data["created_at"] = time.Now().UTC()
+	data["updated_at"] = time.Now().UTC()
+	objJson, _ := json.Marshal(data)
+	w.Header().Set("Content-Type", "application/json")
+	fmt.Fprintln(w, string(objJson))
+}
+
+// -------------------------------------------------------------------------
+// WorkItem handlers
+// -------------------------------------------------------------------------
+
+func workItemGetHander(w http.ResponseWriter, r *http.Request) {
+	obj := testdata.MakeWorkItem()
+	objJson, _ := json.Marshal(obj)
+	w.Header().Set("Content-Type", "application/json")
+	fmt.Fprintln(w, string(objJson))
+}
+
+func workItemListHander(w http.ResponseWriter, r *http.Request) {
+	list := make([]*models.WorkItem, 4)
+	for i := 0; i < 4; i++ {
+		list[i] = testdata.MakeWorkItem()
+	}
+	data := listResponseData()
+	data["results"] = list
+	listJson, _ := json.Marshal(data)
+	w.Header().Set("Content-Type", "application/json")
+	fmt.Fprintln(w, string(listJson))
+}
+
+func workItemSaveHander(w http.ResponseWriter, r *http.Request) {
 	decoder := json.NewDecoder(r.Body)
 	decoder.UseNumber()
     data := make(map[string]interface{})

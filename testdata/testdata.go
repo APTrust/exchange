@@ -13,6 +13,9 @@ import (
 	"time"
 )
 
+// Bloomsday
+var TEST_TIMESTAMP time.Time = time.Date(2016, 6, 16, 10, 24, 16, 0, time.UTC)
+
 func MakeChecksum() (*models.Checksum) {
 	return &models.Checksum{
 		Id: rand.Intn(50000) + 1,
