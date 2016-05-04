@@ -165,6 +165,32 @@ func MakeTag() (*models.Tag) {
 	}
 }
 
+func MakeWorkItem() (*models.WorkItem) {
+	return &models.WorkItem{
+	Id: rand.Intn(50000) + 1,
+		ObjectIdentifier: RandomObjectIdentifier(),
+		GenericFileIdentifier: "",
+		Name: fake.Word(),
+		Bucket: "aptrust.receiving.virginia.edu",
+		ETag: fake.Word(),
+		BagDate: RandomDateTime(),
+		Institution: fake.DomainName(),
+		User: fake.EmailAddress(),
+		Date: RandomDateTime(),
+		Note: fake.Sentence(),
+		Action: RandomAction(),
+		Stage: RandomStage(),
+		Status: RandomStatus(),
+		Outcome: fake.Sentence(),
+		Retry: true,
+		Reviewed: false,
+		State: `{"key1": "value1", "key2", "value2"}`,
+		Node: fake.Word(),
+		Pid: rand.Intn(50000) + 1,
+		NeedsAdminReview: false,
+	}
+}
+
 func MakeWorkSummary() (*models.WorkSummary) {
 	return &models.WorkSummary{
 		Attempted: true,
@@ -213,6 +239,18 @@ func RandomFileFormat() (string) {
 
 func RandomEventType() (string) {
 	return RandomFromList(constants.EventTypes)
+}
+
+func RandomAction() (string) {
+	return RandomFromList(constants.ActionTypes)
+}
+
+func RandomStage() (string) {
+	return RandomFromList(constants.StageTypes)
+}
+
+func RandomStatus() (string) {
+	return RandomFromList(constants.StatusTypes)
 }
 
 func RandomFromList(items []string) (string) {

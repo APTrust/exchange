@@ -185,6 +185,35 @@ func TestMakeTag(t *testing.T) {
 	assert.NotEqual(t, "", tag.Value)
 }
 
+func TestMakeWorkItem(t *testing.T) {
+	item := testdata.MakeWorkItem()
+	if item == nil {
+		t.Errorf("MakeWorkSummary() returned nil")
+		return
+	}
+	assert.NotEqual(t, "", item.ObjectIdentifier)
+	assert.Equal(t, "", item.GenericFileIdentifier)
+
+	assert.NotEqual(t, "", item.Name)
+	assert.Equal(t, "aptrust.receiving.virginia.edu", item.Bucket)
+	assert.NotEqual(t, "", item.ETag)
+	assert.False(t, item.BagDate.IsZero())
+	assert.NotEqual(t, "", item.Institution)
+	assert.NotEqual(t, "", item.User)
+	assert.False(t, item.Date.IsZero())
+	assert.NotEqual(t, "", item.Note)
+	assert.NotEqual(t, "", item.Action)
+	assert.NotEqual(t, "", item.Stage)
+	assert.NotEqual(t, "", item.Status)
+	assert.NotEqual(t, "", item.Outcome)
+	assert.True(t, item.Retry)
+	assert.False(t, item.Reviewed)
+	assert.NotEqual(t, "", item.State)
+	assert.NotEqual(t, "", item.Node)
+	assert.NotEqual(t, 0, item.Pid)
+	assert.False(t, item.NeedsAdminReview)
+}
+
 func TestMakeWorkSummary(t *testing.T) {
 	ws := testdata.MakeWorkSummary()
 	if ws == nil {
