@@ -1,19 +1,11 @@
 package network_test
 
 import (
-//	"encoding/json"
-//	"fmt"
-//	"github.com/APTrust/exchange/models"
 	"github.com/APTrust/exchange/network"
-//	"github.com/APTrust/exchange/testdata"
 	"github.com/stretchr/testify/assert"
 	"net/http"
 	"net/http/httptest"
-//	"net/url"
-//	"os"
-//	"strings"
 	"testing"
-//	"time"
 )
 
 var objectTypes = []network.PharosObjectType{
