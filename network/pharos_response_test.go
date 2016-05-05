@@ -102,45 +102,121 @@ func TestParamsForPreviousPage(t *testing.T) {
 }
 
 func TestInstitution(t *testing.T) {
-
+	testServer := httptest.NewServer(http.HandlerFunc(institutionGetHander))
+	defer testServer.Close()
+	client, err := network.NewPharosClient(testServer.URL, "v1", "user", "key")
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	resp := client.InstitutionGet("college.edu")
+	assert.NotNil(t, resp.Institution())
 }
 
 func TestInstitutions(t *testing.T) {
-
+	testServer := httptest.NewServer(http.HandlerFunc(institutionListHander))
+	defer testServer.Close()
+	client, err := network.NewPharosClient(testServer.URL, "v1", "user", "key")
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	resp := client.InstitutionList(nil)
+	assert.NotEmpty(t, resp.Institutions())
 }
 
 func TestIntellectualObject(t *testing.T) {
-
+	testServer := httptest.NewServer(http.HandlerFunc(intellectualObjectGetHander))
+	defer testServer.Close()
+	client, err := network.NewPharosClient(testServer.URL, "v1", "user", "key")
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	resp := client.IntellectualObjectGet("college.edu/object")
+	assert.NotNil(t, resp.IntellectualObject())
 }
 
 func TestIntellectualObjects(t *testing.T) {
-
+	testServer := httptest.NewServer(http.HandlerFunc(intellectualObjectListHander))
+	defer testServer.Close()
+	client, err := network.NewPharosClient(testServer.URL, "v1", "user", "key")
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	resp := client.IntellectualObjectList(nil)
+	assert.NotEmpty(t, resp.IntellectualObjects())
 }
 
 func TestGenericFile(t *testing.T) {
-
+	testServer := httptest.NewServer(http.HandlerFunc(genericFileGetHander))
+	defer testServer.Close()
+	client, err := network.NewPharosClient(testServer.URL, "v1", "user", "key")
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	resp := client.GenericFileGet("college.edu/object/file.xml")
+	assert.NotNil(t, resp.GenericFile())
 }
 
 func TestGenericFiles(t *testing.T) {
-
+	testServer := httptest.NewServer(http.HandlerFunc(genericFileListHander))
+	defer testServer.Close()
+	client, err := network.NewPharosClient(testServer.URL, "v1", "user", "key")
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	resp := client.GenericFileList(nil)
+	assert.NotEmpty(t, resp.GenericFiles())
 }
 
 func TestPremisEvent(t *testing.T) {
-
+	testServer := httptest.NewServer(http.HandlerFunc(premisEventGetHander))
+	defer testServer.Close()
+	client, err := network.NewPharosClient(testServer.URL, "v1", "user", "key")
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	resp := client.PremisEventGet("000000000000-0000-0000-0000-00000000")
+	assert.NotNil(t, resp.PremisEvent())
 }
 
 func TestPremisEvents(t *testing.T) {
-
+	testServer := httptest.NewServer(http.HandlerFunc(premisEventListHander))
+	defer testServer.Close()
+	client, err := network.NewPharosClient(testServer.URL, "v1", "user", "key")
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	resp := client.PremisEventList(nil)
+	assert.NotEmpty(t, resp.PremisEvents())
 }
 
 func TestWorkItem(t *testing.T) {
-
+	testServer := httptest.NewServer(http.HandlerFunc(workItemGetHander))
+	defer testServer.Close()
+	client, err := network.NewPharosClient(testServer.URL, "v1", "user", "key")
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	resp := client.WorkItemGet(1000)
+	assert.NotNil(t, resp.WorkItem())
 }
 
 func TestWorkItems(t *testing.T) {
-
-}
-
-func TestUnmarshalJsonList(t *testing.T) {
-
+	testServer := httptest.NewServer(http.HandlerFunc(workItemListHander))
+	defer testServer.Close()
+	client, err := network.NewPharosClient(testServer.URL, "v1", "user", "key")
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	resp := client.WorkItemList(nil)
+	assert.NotEmpty(t, resp.WorkItems())
 }
