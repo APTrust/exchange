@@ -113,3 +113,8 @@ var EventTypes []string = []string{
 	"delete_action",
 	"replication",
 }
+
+const (
+	AWSVirginia = "us-east-1"
+	AWSOregon = "us-west-2"
+)
