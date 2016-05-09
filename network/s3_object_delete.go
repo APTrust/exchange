@@ -3,10 +3,8 @@ package network
 import (
 	"fmt"
     "github.com/aws/aws-sdk-go/aws"
-    "github.com/aws/aws-sdk-go/aws/credentials"
     "github.com/aws/aws-sdk-go/service/s3"
     "github.com/aws/aws-sdk-go/aws/session"
-	"os"
 )
 
 type S3ObjectDelete struct {
@@ -38,19 +36,14 @@ func NewS3ObjectDelete(region, bucket string, keys []string) (*S3ObjectDelete) {
 	}
 }
 
-// Returns an S3 session for this objectList.
+// Returns an S3 session for this object.
 func (client *S3ObjectDelete)GetSession() (*session.Session) {
 	if client.session == nil {
-		if os.Getenv("AWS_ACCESS_KEY_ID") == "" || os.Getenv("AWS_SECRET_ACCESS_KEY") == "" {
-			client.ErrorMessage = "AWS_ACCESS_KEY_ID and/or " +
-				"AWS_SECRET_ACCESS_KEY not set in environment"
-			return nil
+		var err error
+		if err != nil {
+			client.ErrorMessage = err.Error()
 		}
-		creds := credentials.NewEnvCredentials()
-		client.session = session.New(&aws.Config{
-			Region:      aws.String(client.AWSRegion),
-			Credentials: creds,
-		})
+		client.session, err = GetS3Session(client.AWSRegion)
 	}
 	return client.session
 }
