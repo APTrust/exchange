@@ -41,8 +41,8 @@ type S3Download struct {
 // region     - The name of the AWS region to download from.
 //              E.g. us-east-1 (VA), us-west-2 (Oregon), or use
 //              constants.AWSVirginia, constants.AWSOregon
-// bucketName - The name of the bucket to download from.
-// keyName    - The name of the file to download.
+// bucket     - The name of the bucket to download from.
+// key        - The name of the file to download.
 // localPath  - Path to which to save the downloaded file.
 //              This may be /dev/null in cases where we're
 //              just running a fixity check.
