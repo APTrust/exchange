@@ -80,7 +80,11 @@ func (s3download *S3Download)GetSession() (*session.Session) {
 
 // Fetch the file from S3.
 func (s3download *S3Download) Fetch() {
-	client := s3.New(s3download.GetSession())
+	s3Session := s3download.GetSession()
+	if s3Session == nil {
+		return
+	}
+	client := s3.New(s3Session)
 	if client == nil {
 		return
 	}

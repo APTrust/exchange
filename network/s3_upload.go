@@ -96,8 +96,12 @@ func (s3upload *S3Upload) Send() {
 		return
     }
 	defer file.Close()
+	s3Session := s3upload.GetSession()
+	if s3Session == nil {
+		return
+	}
 	s3upload.UploadInput.Body = file
-    uploader := s3manager.NewUploader(s3upload.GetSession())
+    uploader := s3manager.NewUploader(s3Session)
 	uploader.LeavePartsOnError = false // we have to pay for abandoned parts
     s3upload.Response, err = uploader.Upload(s3upload.UploadInput)
     if err != nil {
