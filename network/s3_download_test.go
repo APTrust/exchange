@@ -1,7 +1,7 @@
 package network_test
 
 import (
-	//"fmt"
+	"fmt"
 	"github.com/APTrust/exchange/constants"
 	"github.com/APTrust/exchange/network"
 	"github.com/stretchr/testify/assert"
@@ -22,9 +22,17 @@ const testFileETag string = "\"da04d76f9dca11455297827426db35f2\""
 const testFileMd5 string = "da04d76f9dca11455297827426db35f2"
 const testFileSha256 string = "b917f05da9d9d513160a1aeb51a66065a64b8a51a741ef249060d562926a2365"
 
-// ---------------------------------------------
-// TODO: Allow for offline testing!
-// ---------------------------------------------
+var s3TestMessagePrinted = false
+
+func canTestS3() (bool) {
+	if os.Getenv("AWS_ACCESS_KEY_ID") == "" || os.Getenv("AWS_SECRET_ACCESS_KEY") == "" {
+		if !s3TestMessagePrinted {
+			fmt.Println("Skipping S3 tests because ENV vars are not set")
+		}
+		return false
+	}
+	return true
+}
 
 func getS3DownloadObject(t *testing.T) (*network.S3Download) {
 	tmpDir, err := ioutil.TempDir("", "s3_download_test")
@@ -44,6 +52,9 @@ func getS3DownloadObject(t *testing.T) (*network.S3Download) {
 }
 
 func TestGetSession(t *testing.T) {
+	if !canTestS3() {
+		return
+	}
 	download := getS3DownloadObject(t)
 	if download == nil {
 		return
@@ -54,6 +65,9 @@ func TestGetSession(t *testing.T) {
 }
 
 func TestFetchWithoutChecksums(t *testing.T) {
+	if !canTestS3() {
+		return
+	}
 	download := getS3DownloadObject(t)
 	if download == nil {
 		return
@@ -83,6 +97,9 @@ func TestFetchWithoutChecksums(t *testing.T) {
 }
 
 func TestFetchWithChecksums(t *testing.T) {
+	if !canTestS3() {
+		return
+	}
 	download := getS3DownloadObject(t)
 	if download == nil {
 		return
