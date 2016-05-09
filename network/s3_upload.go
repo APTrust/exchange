@@ -60,20 +60,20 @@ func NewS3Upload(region, bucket, key, localPath, contentType string) (*S3Upload)
 }
 
 // Returns an S3 session for this upload.
-func (s3upload *S3Upload)GetSession() (*session.Session) {
-	if s3upload.session == nil {
+func (client *S3Upload)GetSession() (*session.Session) {
+	if client.session == nil {
 		if os.Getenv("AWS_ACCESS_KEY_ID") == "" || os.Getenv("AWS_SECRET_ACCESS_KEY") == "" {
-			s3upload.ErrorMessage = "AWS_ACCESS_KEY_ID and/or " +
+			client.ErrorMessage = "AWS_ACCESS_KEY_ID and/or " +
 				"AWS_SECRET_ACCESS_KEY not set in environment"
 			return nil
 		}
 		creds := credentials.NewEnvCredentials()
-		s3upload.session = session.New(&aws.Config{
-			Region:      aws.String(s3upload.AWSRegion),
+		client.session = session.New(&aws.Config{
+			Region:      aws.String(client.AWSRegion),
 			Credentials: creds,
 		})
 	}
-	return s3upload.session
+	return client.session
 }
 
 // Adds metadata to the upload. We should be adding the following:
@@ -83,28 +83,28 @@ func (s3upload *S3Upload)GetSession() (*session.Session) {
 // x-amz-meta-bagpath
 // x-amz-meta-md5
 // x-amz-meta-sha256
-func (s3upload *S3Upload) AddMetadata(key, value string) {
-	s3upload.UploadInput.Metadata[key] = &value
+func (client *S3Upload) AddMetadata(key, value string) {
+	client.UploadInput.Metadata[key] = &value
 }
 
 // Upload a file to S3. If ErrorMessage == "", the upload succeeded.
 // Check S3Upload.Response.Localtion for the item's S3 URL.
-func (s3upload *S3Upload) Send() {
-	file, err := os.Open(s3upload.LocalPath)
+func (client *S3Upload) Send() {
+	file, err := os.Open(client.LocalPath)
     if err != nil {
-        s3upload.ErrorMessage = err.Error()
+        client.ErrorMessage = err.Error()
 		return
     }
 	defer file.Close()
-	s3Session := s3upload.GetSession()
-	if s3Session == nil {
+	_session := client.GetSession()
+	if _session == nil {
 		return
 	}
-	s3upload.UploadInput.Body = file
-    uploader := s3manager.NewUploader(s3Session)
+	client.UploadInput.Body = file
+    uploader := s3manager.NewUploader(_session)
 	uploader.LeavePartsOnError = false // we have to pay for abandoned parts
-    s3upload.Response, err = uploader.Upload(s3upload.UploadInput)
+    client.Response, err = uploader.Upload(client.UploadInput)
     if err != nil {
-        s3upload.ErrorMessage = err.Error()
+        client.ErrorMessage = err.Error()
     }
 }

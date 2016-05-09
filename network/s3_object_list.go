@@ -30,33 +30,33 @@ func NewS3ObjectList(region, bucket string, maxKeys int64) (*S3ObjectList) {
 }
 
 // Returns an S3 session for this objectList.
-func (s3objectList *S3ObjectList)GetSession() (*session.Session) {
-	if s3objectList.session == nil {
+func (client *S3ObjectList)GetSession() (*session.Session) {
+	if client.session == nil {
 		if os.Getenv("AWS_ACCESS_KEY_ID") == "" || os.Getenv("AWS_SECRET_ACCESS_KEY") == "" {
-			s3objectList.ErrorMessage = "AWS_ACCESS_KEY_ID and/or " +
+			client.ErrorMessage = "AWS_ACCESS_KEY_ID and/or " +
 				"AWS_SECRET_ACCESS_KEY not set in environment"
 			return nil
 		}
 		creds := credentials.NewEnvCredentials()
-		s3objectList.session = session.New(&aws.Config{
-			Region:      aws.String(s3objectList.AWSRegion),
+		client.session = session.New(&aws.Config{
+			Region:      aws.String(client.AWSRegion),
 			Credentials: creds,
 		})
 	}
-	return s3objectList.session
+	return client.session
 }
 
 // ObjectList a file to S3. If ErrorMessage == "", the objectList succeeded.
 // Check S3ObjectList.Response.Localtion for the item's S3 URL.
-func (s3objectList *S3ObjectList) GetList() {
-	s3Session := s3objectList.GetSession()
-	if s3Session == nil {
+func (client *S3ObjectList) GetList() {
+	_session := client.GetSession()
+	if _session == nil {
 		return
 	}
 	var err error = nil
-	service := s3.New(s3Session)
-	s3objectList.Response, err = service.ListObjects(s3objectList.ListObjectsInput)
+	service := s3.New(_session)
+	client.Response, err = service.ListObjects(client.ListObjectsInput)
 	if err != nil {
-		s3objectList.ErrorMessage = err.Error()
+		client.ErrorMessage = err.Error()
 	}
 }

@@ -62,35 +62,35 @@ func NewS3Download(region, bucket, key, localPath string, calculateMd5, calculat
 }
 
 // Returns an S3 session for this download.
-func (s3download *S3Download)GetSession() (*session.Session) {
-	if s3download.session == nil {
+func (client *S3Download)GetSession() (*session.Session) {
+	if client.session == nil {
 		if os.Getenv("AWS_ACCESS_KEY_ID") == "" || os.Getenv("AWS_SECRET_ACCESS_KEY") == "" {
-			s3download.ErrorMessage = "AWS_ACCESS_KEY_ID and/or " +
+			client.ErrorMessage = "AWS_ACCESS_KEY_ID and/or " +
 				"AWS_SECRET_ACCESS_KEY not set in environment"
 			return nil
 		}
 		creds := credentials.NewEnvCredentials()
-		s3download.session = session.New(&aws.Config{
-			Region:      aws.String(s3download.AWSRegion),
+		client.session = session.New(&aws.Config{
+			Region:      aws.String(client.AWSRegion),
 			Credentials: creds,
 		})
 	}
-	return s3download.session
+	return client.session
 }
 
 // Fetch the file from S3.
-func (s3download *S3Download) Fetch() {
-	s3Session := s3download.GetSession()
-	if s3Session == nil {
+func (client *S3Download) Fetch() {
+	_session := client.GetSession()
+	if _session == nil {
 		return
 	}
-	client := s3.New(s3Session)
-	if client == nil {
+	service := s3.New(_session)
+	if service == nil {
 		return
 	}
 	params := &s3.GetObjectInput{
-		Bucket: aws.String(s3download.BucketName),
-		Key: aws.String(s3download.KeyName),
+		Bucket: aws.String(client.BucketName),
+		Key: aws.String(client.KeyName),
 	}
 
 	// Try the download several times. On larger files,
@@ -99,10 +99,10 @@ func (s3download *S3Download) Fetch() {
 	// requeue the whole job.
 	var err error = nil
 	for i := 0; i < 5; i++ {
-		err = s3download.tryDownload(client, params)
+		err = client.tryDownload(service, params)
 	}
 	if err != nil {
-		s3download.ErrorMessage = err.Error()
+		client.ErrorMessage = err.Error()
 	}
 }
 
@@ -116,24 +116,24 @@ func (s3download *S3Download) Fetch() {
 // hashing algorithms don't provide. When we're working with
 // multi-gigabyte files, we really don't want to have to read them
 // again to produce the checksums.
-func (s3download *S3Download) tryDownload(client *s3.S3, params *s3.GetObjectInput) (error) {
-	resp, err := client.GetObject(params)
+func (client *S3Download) tryDownload(service *s3.S3, params *s3.GetObjectInput) (error) {
+	resp, err := service.GetObject(params)
 	if err != nil {
 		return err
 	}
 	defer resp.Body.Close()
-	s3download.Response = resp
+	client.Response = resp
 
 	// Create the download directory and open a file for writing.
 	writers := make([]io.Writer, 0)
-	if s3download.LocalPath == os.DevNull {
+	if client.LocalPath == os.DevNull {
 		writers = append(writers, ioutil.Discard)
 	} else {
-		err = os.MkdirAll(filepath.Dir(s3download.LocalPath), 0755)
+		err = os.MkdirAll(filepath.Dir(client.LocalPath), 0755)
 		if err != nil {
 			return err
 		}
-		outputFile, err := os.Create(s3download.LocalPath)
+		outputFile, err := os.Create(client.LocalPath)
 		if err != nil {
 			return err
 		}
@@ -147,11 +147,11 @@ func (s3download *S3Download) tryDownload(client *s3.S3, params *s3.GetObjectInp
 	var multiWriter io.Writer
 	var md5Hash hash.Hash
 	var sha256Hash hash.Hash
-	if s3download.CalculateMd5 {
+	if client.CalculateMd5 {
 		md5Hash = md5.New()
 		writers = append(writers, md5Hash)
 	}
-	if s3download.CalculateSha256 {
+	if client.CalculateSha256 {
 		sha256Hash = sha256.New()
 		writers = append(writers, sha256Hash)
 	}
@@ -162,7 +162,7 @@ func (s3download *S3Download) tryDownload(client *s3.S3, params *s3.GetObjectInp
 	// Better to retry a few times now than throw this
 	// back into the work queue.
 	for attemptNumber := 0; attemptNumber < 5; attemptNumber++ {
-		s3download.BytesCopied, err = io.Copy(multiWriter, resp.Body)
+		client.BytesCopied, err = io.Copy(multiWriter, resp.Body)
 		if err == nil {
 			break
 		}
@@ -172,11 +172,11 @@ func (s3download *S3Download) tryDownload(client *s3.S3, params *s3.GetObjectInp
 	}
 
 	// Set the checksums, if needed...
-	if s3download.CalculateMd5 {
-		s3download.Md5Digest = fmt.Sprintf("%x", md5Hash.Sum(nil))
+	if client.CalculateMd5 {
+		client.Md5Digest = fmt.Sprintf("%x", md5Hash.Sum(nil))
 	}
-	if s3download.CalculateSha256 {
-		s3download.Sha256Digest = fmt.Sprintf("%x", sha256Hash.Sum(nil))
+	if client.CalculateSha256 {
+		client.Sha256Digest = fmt.Sprintf("%x", sha256Hash.Sum(nil))
 	}
 
 	// No errors.
