@@ -46,8 +46,10 @@ func (client *S3ObjectList)GetSession() (*session.Session) {
 	return client.session
 }
 
-// ObjectList a file to S3. If ErrorMessage == "", the objectList succeeded.
-// Check S3ObjectList.Response.Localtion for the item's S3 URL.
+// Returns a list of objects from this S3 bucket.
+// Check *s3ObjectList.Response.IsTruncated to see if
+// you got the complete list. If not, keep calling
+// GetList until IsTruncated == false.
 func (client *S3ObjectList) GetList() {
 	_session := client.GetSession()
 	if _session == nil {
@@ -55,6 +57,11 @@ func (client *S3ObjectList) GetList() {
 	}
 	var err error = nil
 	service := s3.New(_session)
+
+	if client.Response != nil && *client.Response.IsTruncated {
+		client.ListObjectsInput.Marker = client.Response.NextMarker
+	}
+
 	client.Response, err = service.ListObjects(client.ListObjectsInput)
 	if err != nil {
 		client.ErrorMessage = err.Error()
