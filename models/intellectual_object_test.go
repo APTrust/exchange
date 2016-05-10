@@ -2,11 +2,20 @@ package models_test
 
 import (
 	"encoding/json"
+	"github.com/APTrust/exchange/models"
 	"github.com/APTrust/exchange/util/testutil"
 	"github.com/stretchr/testify/assert"
 	"path/filepath"
 	"testing"
 )
+
+func TestNewIntellectualObject(t *testing.T) {
+	obj := models.NewIntellectualObject()
+	assert.NotNil(t, obj.GenericFiles)
+	assert.NotNil(t, obj.PremisEvents)
+	assert.NotNil(t, obj.IngestFilesIgnored)
+	assert.NotNil(t, obj.IngestTags)
+}
 
 func TestTotalFileSize(t *testing.T) {
 	filepath := filepath.Join("testdata", "intel_obj.json")

@@ -4,6 +4,10 @@ import (
 	"time"
 )
 
+// ----------------------------------------------------------
+// TODO: Deprecate this?
+// ----------------------------------------------------------
+
 // CleanupResult describes one or more files to be
 // deleted from S3, and the result of the attempts
 // to delete those files. The combination of BagName +

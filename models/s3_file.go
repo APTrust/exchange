@@ -8,6 +8,9 @@ import (
 	"time"
 )
 
+// ----------------------------------------------------------
+// TODO: Deprecate this?
+// ----------------------------------------------------------
 
 // S3File contains information about the S3 file we're
 // trying to process from an intake bucket. BucketName

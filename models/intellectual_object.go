@@ -46,8 +46,16 @@ type IntellectualObject struct {
 	IngestMd5Verifiable  bool           `json:"ingest_md5_verifiable"`
 	IngestFilesIgnored   []string       `json:"ingest_files_ignored"`
 	IngestTags           []*Tag         `json:"ingest_tags"`
-	IngestSummary        *WorkSummary   `json:"ingest_summary"`
 	IngestErrorMessage   string         `json:"ingest_error_message"`
+}
+
+func NewIntellectualObject() (*IntellectualObject) {
+	return &IntellectualObject{
+		GenericFiles: make([]*GenericFile, 0),
+		PremisEvents: make([]*PremisEvent, 0),
+		IngestFilesIgnored: make([]string, 0),
+		IngestTags: make([]*Tag, 0),
+	}
 }
 
 // This Tag struct is essentially the same as the bagins

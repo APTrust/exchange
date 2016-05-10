@@ -70,6 +70,8 @@ type GenericFile struct {
 
 func NewGenericFile() (*GenericFile) {
 	return &GenericFile{
+		Checksums: make([]*Checksum, 0),
+		PremisEvents: make([]*PremisEvent, 0),
 		IngestPreviousVersionExists: false,
 		IngestNeedsSave: true,
 	}

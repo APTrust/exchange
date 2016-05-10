@@ -9,6 +9,14 @@ import (
 	"testing"
 )
 
+func TestNewGenericFile(t *testing.T) {
+	gf := models.NewGenericFile()
+	assert.NotNil(t, gf.Checksums)
+	assert.NotNil(t, gf.PremisEvents)
+	assert.False(t, gf.IngestPreviousVersionExists)
+	assert.True(t, gf.IngestNeedsSave)
+}
+
 func TestInstitutionIdentifier(t *testing.T) {
 	genericFile := models.GenericFile{}
 	genericFile.Identifier = "uc.edu/cin.675812/data/object.properties"

@@ -126,17 +126,6 @@ func TestMakeIntellectualObject(t *testing.T) {
 	assert.False(t, obj.IngestMd5Verified)
 	assert.False(t, obj.IngestMd5Verifiable)
 	assert.Equal(t, "", obj.IngestErrorMessage)
-
-	if obj.IngestSummary == nil {
-		t.Errorf("IngestSummary should not be nil")
-		return
-	}
-	assert.True(t, obj.IngestSummary.Attempted)
-	assert.Equal(t, 1, obj.IngestSummary.AttemptNumber)
-	assert.Equal(t, 0, len(obj.IngestSummary.Errors))
-	assert.False(t, obj.IngestSummary.StartedAt.IsZero())
-	assert.False(t, obj.IngestSummary.FinishedAt.IsZero())
-	assert.True(t, obj.IngestSummary.Retry)
 }
 
 func TestMakePremisEvent(t *testing.T) {

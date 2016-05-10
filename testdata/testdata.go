@@ -122,7 +122,6 @@ func MakeIntellectualObject(fileCount, eventCount, checksumCount, tagCount int) 
 		IngestMd5Verifiable: false,
 		IngestFilesIgnored: make([]string, 0),
 		IngestTags: tags,
-		IngestSummary: MakeWorkSummary(),
 		IngestErrorMessage: "",
 	}
 }
