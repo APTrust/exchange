@@ -156,3 +156,22 @@ func TestGetInstitutionFromBagName(t *testing.T) {
 		t.Error("GetInstitutionFromBagName should have accepted bag name 'miami.edu.chc0390_metadata.tar'")
 	}
 }
+
+func TestSavableName(t *testing.T) {
+	assert.False(t, util.HasSavableName("."))
+	assert.False(t, util.HasSavableName(".."))
+	assert.False(t, util.HasSavableName("._junk.txt"))
+	assert.False(t, util.HasSavableName("data/subdir/._junk.txt"))
+	assert.False(t, util.HasSavableName("bagit.txt"))
+	assert.False(t, util.HasSavableName("manifest-md5.txt"))
+	assert.False(t, util.HasSavableName("manifest-sha256.txt"))
+	assert.False(t, util.HasSavableName("tagmanifest-md5.txt"))
+	assert.False(t, util.HasSavableName("tagmanifest-sha256.txt"))
+
+	assert.True(t, util.HasSavableName("data/stuff/bagit.txt"))
+	assert.True(t, util.HasSavableName("custom_tags/manifest-md5.txt"))
+	assert.True(t, util.HasSavableName("custom_tags/manifest-sha256.txt"))
+	assert.True(t, util.HasSavableName("useless_tags/tagmanifest-md5.txt"))
+	assert.True(t, util.HasSavableName("my_tags/tagmanifest-sha256.txt"))
+	assert.True(t, util.HasSavableName("polly/wolly/doodle/all/day"))
+}

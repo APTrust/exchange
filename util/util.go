@@ -10,6 +10,10 @@ import (
 	"strings"
 )
 
+var reManifest *regexp.Regexp = regexp.MustCompile("^manifest-[A-Za-z0-9]+\\.txt$")
+var reTagManifest *regexp.Regexp = regexp.MustCompile("^tagmanifest-[A-Za-z0-9]+\\.txt$")
+var reLegal *regexp.Regexp = regexp.MustCompile("^[A-Za-z0-9\\-_\\.]+$")
+
 // Returns the domain name of the institution that owns the specified bucket.
 // For example, if bucketName is 'aptrust.receiving.unc.edu' the return value
 // will be 'unc.edu'.
@@ -128,4 +132,35 @@ func GetInstitutionFromBagName(bagName string) (string, error) {
 		return fmt.Sprintf("%s.%s", parts[0], parts[1]), nil
 	}
 	return parts[0], nil
+}
+
+// Returns true if the file name indicates this is something we should
+// save to long-term storage. As of late March, 2016, we save everything
+// in the bag except bagit.txt, manifest-<algo>.txt and
+// tagmanifest-<algo>.txt. Those files we don't save will be reconstructed
+// when the bag is restored.
+//
+// Param filename should be the relative path of the file within the bag.
+// For example, "tagmanifest-sha256.txt" or "data/images/photo_01.jpg".
+// This is important, because a file called "manifest-md5.txt" will return
+// false (indicating it should not be saved), while a file called
+// "data/manifest-md5.txt" will return true, because its file path indicates
+// it's part of the payload.
+//
+// We reconstruct bagit.txt because we may have moved to a newer version
+// by the time the file is restored. We reconstruct manifests and tag
+// manifests because payload files and tag files may be deleted or
+// overwritten by the depositor between initial ingest and restoration.
+//
+// And did you know both savable and saveable are correct? I chose the
+// former to reduce the size of our compiled binary by one byte. That
+// could save us pennies over the next 10,000 years.
+func HasSavableName(filename string) (bool) {
+	return !(filename == "." ||
+		filename == ".." ||
+		filename == "bagit.txt" ||
+		strings.HasPrefix(filename, "._") ||  // mac junk files
+		strings.Contains(filename, "/._") || // mac junk files
+		reTagManifest.MatchString(filename) ||
+		reManifest.MatchString(filename))
 }
