@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"github.com/APTrust/exchange/constants"
+	"path"
 	"regexp"
 	"strings"
 )
@@ -27,6 +28,11 @@ func OwnerOf(bucketName string) (institution string) {
 // E.g. institution 'unc.edu' returns bucketName 'aptrust.restore.unc.edu'
 func RestorationBucketFor(institution string) (bucketName string) {
 	return constants.RestoreBucketPrefix + institution
+}
+
+func BagNameFromTarFileName(pathToTarFile string) (string, error) {
+	fileName := path.Base(pathToTarFile)
+	return CleanBagName(fileName)
 }
 
 // Given the name of a tar file, returns the clean bag name. That's

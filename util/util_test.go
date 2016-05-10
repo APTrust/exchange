@@ -2,6 +2,7 @@ package util_test
 
 import (
 	"github.com/APTrust/exchange/util"
+	"github.com/stretchr/testify/assert"
 	"testing"
 )
 
@@ -21,6 +22,20 @@ func TestRestorationBucketFor(t *testing.T) {
 	if util.RestorationBucketFor("unc.edu") != "aptrust.restore.unc.edu" {
 		t.Error("RestorationBucketFor returned incorrect restoration bucket name")
 	}
+}
+
+func TestBagNameFromTarFileName(t *testing.T) {
+	name, err := util.BagNameFromTarFileName("/mnt/apt/data/uc.edu/photos.bag22.tar")
+	assert.Nil(t, err)
+	assert.Equal(t, "photos.bag22", name)
+
+	name, err = util.BagNameFromTarFileName("/mnt/apt/data/uc.edu/photos.bag22.b001.of200.tar")
+	assert.Nil(t, err)
+	assert.Equal(t, "photos.bag22", name)
+
+	name, err = util.BagNameFromTarFileName("/mnt/apt/data/uc.edu/photos.bag22.b1.of12.tar")
+	assert.Nil(t, err)
+	assert.Equal(t, "photos.bag22", name)
 }
 
 func TestCleanBagName(t *testing.T) {
