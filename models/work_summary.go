@@ -87,6 +87,11 @@ func (summary *WorkSummary) AddError(format string, a ...interface{}) {
 	summary.Errors = append(summary.Errors, fmt.Sprintf(format, a...))
 }
 
+func (summary *WorkSummary) ClearErrors() {
+	summary.Errors = nil
+	summary.Errors = make([]string, 0)
+}
+
 func (summary *WorkSummary) HasErrors() bool {
 	return len(summary.Errors) > 0
 }
