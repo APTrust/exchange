@@ -66,6 +66,12 @@ type GenericFile struct {
 	IngestPreviousVersionExists  bool           `json:"ingest_previous_version_exists"`
 	IngestNeedsSave              bool           `json:"ingest_needs_save"`
 	IngestErrorMessage           string         `json:"ingesterror_message"`
+
+	IngestFileUid                int            `json:"ingest_file_uid"`
+	IngestFileGid                int            `json:"ingest_file_gid"`
+	IngestFileUname              string         `json:"ingest_file_uname"`
+	IngestFileGname              string         `json:"ingest_file_gname"`
+	IngestFileMode               int64          `json:"ingest_file_mode"`
 }
 
 func NewGenericFile() (*GenericFile) {
