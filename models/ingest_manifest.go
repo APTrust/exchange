@@ -1,6 +1,12 @@
 package models
 
 type IngestManifest struct {
+	WorkItemId         int
+	S3Bucket           string
+	S3Key              string
+	ETag               string
+	TarPath            string
+	UntarredPath       string
 	Fetch              *WorkSummary
 	Untar              *WorkSummary
 	Validate           *WorkSummary
