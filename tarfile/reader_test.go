@@ -47,7 +47,6 @@ func TestNewReader(t *testing.T) {
 }
 
 func TestRecordStartOfWork(t *testing.T) {
-	//r := getReader("virginia.edu.uva-lib_2278801.tar")
 	r := getReader("example.edu.tagsample_good.tar")
 	outputPath := strings.Replace(r.Manifest.Object.IngestTarFilePath, ".tar", "", -1)
 	if len(outputPath) > 40 && strings.Contains(outputPath, "testdata") {
@@ -61,7 +60,35 @@ func TestRecordStartOfWork(t *testing.T) {
 }
 
 func TestManifestInfoIsValid(t *testing.T) {
+	// Should flag all missing items
+	r := getReader("virginia.edu.uva-lib_2278801.tar")
+	r.Manifest.Object.Identifier = ""
+	r.Manifest.Object.BagName = ""
+	r.Manifest.Object.Institution = ""
+	r.Manifest.Object.IngestTarFilePath = ""
+	r.Untar()
+	assert.Equal(t, 5, len(r.Manifest.Untar.Errors))
 
+	// Should be specific about bad file path
+	r = getReader("virginia.edu.uva-lib_2278801.tar")
+	r.Manifest.Object.IngestTarFilePath = "/mUje9Dke0776adBx4Gq/file/does/not/exist.tar"
+	r.Untar()
+	if r.Manifest.Untar.HasErrors() == false {
+		assert.Fail(t, "Untar WorkSummary should have errors")
+	} else {
+		assert.True(t, strings.Contains(r.Manifest.Untar.Errors[0], "does not exist"))
+	}
+
+	// If IntellectualObject is nil, we should get an
+	// error message and not a panic.
+	r = getReader("virginia.edu.uva-lib_2278801.tar")
+	r.Manifest.Object = nil
+	r.Untar()
+	if r.Manifest.Untar.HasErrors() == false {
+		assert.Fail(t, "Untar WorkSummary should have errors")
+	} else {
+		assert.Equal(t, "IntellectualObject is missing from manifest.", r.Manifest.Untar.Errors[0])
+	}
 }
 
 func TestCreateAndSaveGenericFile(t *testing.T) {
