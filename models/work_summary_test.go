@@ -10,7 +10,7 @@ import (
 func TestNewResult(t *testing.T) {
 	s := models.NewWorkSummary()
 	assert.False(t, s.Attempted)
-	assert.Equal(t, 1, s.AttemptNumber)
+	assert.Equal(t, 0, s.AttemptNumber)
 	assert.NotNil(t, s.Errors)
 	assert.Equal(t, 0, len(s.Errors))
 	assert.True(t, s.StartedAt.IsZero())

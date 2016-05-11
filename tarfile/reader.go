@@ -11,9 +11,9 @@ import (
 	"github.com/satori/go.uuid"
 	"io"
 	"os"
-	"path"
+//	"path"
 	"path/filepath"
-	"runtime"
+//	"runtime"
 	"strings"
 	"time"
 )
@@ -38,7 +38,7 @@ func (reader *Reader) Untar() {
 	}
 
 	// Note the tar file's parent directory
-	tarFileDir := filepath.Dir(reader.Manifest.Object.IngestUntarredPath)
+	tarFileDir := filepath.Dir(reader.Manifest.Object.IngestTarFilePath)
 
 	// Open the tar file for reading.
 	file, err := os.Open(reader.Manifest.Object.IngestTarFilePath)
@@ -71,7 +71,7 @@ func (reader *Reader) Untar() {
 		}
 
 		// Top-level dir will be the first header entry.
-		if header.Typeflag == tar.TypeDir && reader.Manifest.Object.IngestUntarredPath == "" {
+		if reader.Manifest.Object.IngestUntarredPath == "" {
 			topLevelDir, err := reader.getTopLevelDir(header.Name)
 			if err != nil {
 				reader.Manifest.Untar.AddError(err.Error())
@@ -167,7 +167,7 @@ func (reader *Reader) manifestInfoIsValid() (bool) {
 	} else if fileStat.Mode().IsDir() {
 		reader.Manifest.Untar.AddError("IngestTarFilePath '%s' is a directory.", tarFilePath)
 	}
-	return reader.Manifest.Untar.HasErrors()
+	return !reader.Manifest.Untar.HasErrors()
 }
 
 // Saves the file to disk and returns a GenericFile object.
@@ -220,23 +220,12 @@ func (reader *Reader) saveFile(destination string) error {
 // the tar file name, minus the .tar extension). This isn't always the
 // case with bags we get from depositors. So this figures out what that
 // top-level directory actually is, and lets us know if there's an error.
-func (reader *Reader)getTopLevelDir(headerName string) (topLevelDir string, err error) {
-	topLevelDir = strings.Replace(headerName, "/", "", 1)
-	// Fix for Windows
-	systemNormalizedPath := topLevelDir
-	if runtime.GOOS == "windows" && strings.Contains(topLevelDir, "\\") {
-		systemNormalizedPath = strings.Replace(topLevelDir, "\\", "/", -1)
+func (reader *Reader) getTopLevelDir(headerName string) (topLevelDir string, err error) {
+	parts := strings.Split(headerName, "/")
+	if len(parts) < 1 {
+		return "", fmt.Errorf("Top level dir is empty")
 	}
-	expectedDir := path.Base(systemNormalizedPath)
-	if strings.HasSuffix(expectedDir, ".tar") {
-		expectedDir = expectedDir[0 : len(expectedDir)-4]
-	}
-	if topLevelDir != expectedDir {
-		err = fmt.Errorf("Bag '%s' should untar to a folder named '%s', but "+
-			"it untars to '%s'. Please repackage this bag and try again.",
-			path.Base(reader.Manifest.Object.IngestTarFilePath), expectedDir, topLevelDir)
-	}
-	return topLevelDir, err
+	return parts[0], err
 }
 
 func getFileName(headerName string) (string, error) {
@@ -255,12 +244,17 @@ func (reader *Reader)saveWithChecksums(gf *models.GenericFile) {
 	// Set up a MultiWriter to stream data ONCE to file,
 	// md5 and sha256. We don't want to process the stream
 	// three separate times.
+	err := os.MkdirAll(filepath.Dir(gf.IngestLocalPath), 0755)
+	if err != nil {
+		gf.IngestErrorMessage = err.Error()
+		return
+	}
 	outputWriter, err := os.OpenFile(gf.IngestLocalPath, os.O_CREATE|os.O_WRONLY, 0644)
 	if outputWriter != nil {
 		defer outputWriter.Close()
 	}
 	if err != nil {
-		gf.IngestErrorMessage = fmt.Sprintf("Error opening writing to %s: %v", gf.IngestLocalPath, err)
+		gf.IngestErrorMessage = fmt.Sprintf("Error opening %s for writing: %v", gf.IngestLocalPath, err)
 		return
 	}
 	md5Hash := md5.New()

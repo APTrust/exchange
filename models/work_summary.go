@@ -43,7 +43,7 @@ type WorkSummary struct {
 func NewWorkSummary() *WorkSummary {
 	return &WorkSummary{
 		Attempted: false,
-		AttemptNumber: 1,
+		AttemptNumber: 0,
 		Errors: make([]string, 0),
 		StartedAt: time.Time{},
 		FinishedAt: time.Time{},
