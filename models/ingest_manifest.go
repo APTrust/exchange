@@ -5,8 +5,6 @@ type IngestManifest struct {
 	S3Bucket           string
 	S3Key              string
 	ETag               string
-	TarPath            string
-	UntarredPath       string
 	Fetch              *WorkSummary
 	Untar              *WorkSummary
 	Validate           *WorkSummary
@@ -29,3 +27,5 @@ func NewIngestManifest() (*IngestManifest) {
 		Object: NewIntellectualObject(),
 	}
 }
+
+// TODO: Write method to get first error, all errors.
