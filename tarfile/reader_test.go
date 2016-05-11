@@ -62,6 +62,9 @@ func TestRecordStartOfWork(t *testing.T) {
 func TestManifestInfoIsValid(t *testing.T) {
 	// Should flag all missing items
 	r := getReader("virginia.edu.uva-lib_2278801.tar")
+	if len(outputPath) > 40 && strings.Contains(outputPath, "testdata") {
+		defer os.RemoveAll(outputPath)
+	}
 	r.Manifest.Object.Identifier = ""
 	r.Manifest.Object.BagName = ""
 	r.Manifest.Object.Institution = ""
