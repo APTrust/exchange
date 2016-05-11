@@ -29,11 +29,10 @@ func NewReader(manifest *models.IngestManifest) (*Reader) {
 	}
 }
 
-// absInputFile -> reader.Manifest.Object.IngestTarFilePath
-// bagName -> reader.Manifest.Object.BagName
+// This is the only method you should be calling.
 func (reader *Reader) Untar() {
-	reader.RecordStartOfWork()
-	if !reader.ManifestInfoIsValid() {
+	reader.recordStartOfWork()
+	if !reader.manifestInfoIsValid() {
 		reader.Manifest.Untar.Finish()
 		return
 	}
@@ -47,7 +46,9 @@ func (reader *Reader) Untar() {
 		defer file.Close()
 	}
 	if err != nil {
-		reader.Manifest.Untar.AddError("Could not open file %s for untarring: %v", reader.Manifest.Object.IngestTarFilePath, err)
+		reader.Manifest.Untar.AddError(
+			"Could not open file %s for untarring: %v",
+			reader.Manifest.Object.IngestTarFilePath, err)
 		reader.Manifest.Untar.Finish()
 		return
 	}
@@ -61,15 +62,17 @@ func (reader *Reader) Untar() {
 			break // end of archive
 		}
 		if err != nil {
-			reader.Manifest.Untar.AddError("Error reading tar file header: %v. " +
-				"Either this is not a tar file, or the file is corrupt.", err)
+			reader.Manifest.Untar.AddError(
+				"Error reading tar file header: %v. " +
+				"Either this is not a tar file, or the file is corrupt.",
+				err)
 			reader.Manifest.Untar.Finish()
 			return
 		}
 
 		// Top-level dir will be the first header entry.
 		if header.Typeflag == tar.TypeDir && reader.Manifest.Object.IngestUntarredPath == "" {
-			topLevelDir, err := reader.GetTopLevelDir(header.Name)
+			topLevelDir, err := reader.getTopLevelDir(header.Name)
 			if err != nil {
 				reader.Manifest.Untar.AddError(err.Error())
 				reader.Manifest.Untar.Finish()
@@ -92,14 +95,14 @@ func (reader *Reader) Untar() {
 		// Copy the file, if it's an actual file. Otherwise, ignore it and record
 		// a warning. The bag library does not deal with items like symlinks.
 		if header.Typeflag == tar.TypeReg || header.Typeflag == tar.TypeRegA {
-			fileName, err := GetFileName(header.Name)
+			fileName, err := getFileName(header.Name)
 			if err != nil {
 				reader.Manifest.Untar.AddError(err.Error())
 				reader.Manifest.Untar.Finish()
 				return
 			}
 			if util.HasSavableName(fileName) {
-				gf := reader.CreateAndSaveGenericFile(fileName, header)
+				gf := reader.createAndSaveGenericFile(fileName, header)
 				if gf.IngestErrorMessage != "" {
 					reader.Manifest.Untar.AddError(gf.IngestErrorMessage)
 					reader.Manifest.Untar.Finish()
@@ -109,7 +112,7 @@ func (reader *Reader) Untar() {
 				// This is probably something like bagit.txt or a manifest,
 				// which we must save to disk but won't need to preserve in
 				// long-term storage
-				err = reader.SaveFile(outputPath)
+				err = reader.saveFile(outputPath)
 				if err != nil {
 					reader.Manifest.Untar.AddError(
 						"Error copying file from tar archive to '%s': %v",
@@ -130,7 +133,7 @@ func (reader *Reader) Untar() {
 }
 
 // Record that we're starting on this.
-func (reader *Reader) RecordStartOfWork() {
+func (reader *Reader) recordStartOfWork() {
 	reader.Manifest.Untar.Attempted = true
 	reader.Manifest.Untar.AttemptNumber += 1
 	reader.Manifest.Untar.FinishedAt = time.Time{}
@@ -139,7 +142,7 @@ func (reader *Reader) RecordStartOfWork() {
 
 // Make sure the manifest has enough information
 // for us to get started.
-func (reader *Reader) ManifestInfoIsValid() (bool) {
+func (reader *Reader) manifestInfoIsValid() (bool) {
 	if reader.Manifest.Object == nil {
 		reader.Manifest.Untar.AddError("IntellectualObject is missing from manifest.")
 		return false
@@ -168,7 +171,7 @@ func (reader *Reader) ManifestInfoIsValid() (bool) {
 }
 
 // Saves the file to disk and returns a GenericFile object.
-func (reader *Reader) CreateAndSaveGenericFile(fileName string, header *tar.Header) (*models.GenericFile) {
+func (reader *Reader) createAndSaveGenericFile(fileName string, header *tar.Header) (*models.GenericFile) {
 	fileDir := filepath.Dir(reader.Manifest.Object.IngestUntarredPath)
 	gf := models.NewGenericFile()
 	reader.Manifest.Object.GenericFiles = append(reader.Manifest.Object.GenericFiles, gf)
@@ -189,13 +192,13 @@ func (reader *Reader) CreateAndSaveGenericFile(fileName string, header *tar.Head
 	gf.IngestFileGname = header.Gname
 	gf.IngestUUID = uuid.NewV4().String()
 	gf.IngestUUIDGeneratedAt = time.Now().UTC()
-	reader.SaveWithChecksums(gf)
+	reader.saveWithChecksums(gf)
 	return gf
 }
 
 // Saves a file from the tar archive to local disk. This function
 // used to save non-data files (manifests, tag files, etc.)
-func (reader *Reader) SaveFile(destination string) error {
+func (reader *Reader) saveFile(destination string) error {
 	// TODO: Save with same permissions as file in tar archive
 	outputWriter, err := os.OpenFile(destination, os.O_CREATE|os.O_WRONLY, 0644)
 	if outputWriter != nil {
@@ -217,7 +220,7 @@ func (reader *Reader) SaveFile(destination string) error {
 // the tar file name, minus the .tar extension). This isn't always the
 // case with bags we get from depositors. So this figures out what that
 // top-level directory actually is, and lets us know if there's an error.
-func (reader *Reader)GetTopLevelDir(headerName string) (topLevelDir string, err error) {
+func (reader *Reader)getTopLevelDir(headerName string) (topLevelDir string, err error) {
 	topLevelDir = strings.Replace(headerName, "/", "", 1)
 	// Fix for Windows
 	systemNormalizedPath := topLevelDir
@@ -236,7 +239,7 @@ func (reader *Reader)GetTopLevelDir(headerName string) (topLevelDir string, err 
 	return topLevelDir, err
 }
 
-func GetFileName(headerName string) (string, error) {
+func getFileName(headerName string) (string, error) {
 	pathParts := strings.SplitN(headerName, "/", 2)
 	if len(pathParts) < 2 {
 		err := fmt.Errorf("File %s in tar archive should be in format dir/filename", headerName)
@@ -248,7 +251,7 @@ func GetFileName(headerName string) (string, error) {
 // buildFile saves a data file from the tar archive to disk,
 // then returns a struct with data we'll need to construct the
 // GenericFile object in Fedora later.
-func (reader *Reader)SaveWithChecksums(gf *models.GenericFile) {
+func (reader *Reader)saveWithChecksums(gf *models.GenericFile) {
 	// Set up a MultiWriter to stream data ONCE to file,
 	// md5 and sha256. We don't want to process the stream
 	// three separate times.
