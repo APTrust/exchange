@@ -106,6 +106,7 @@ func TestCreateAndSaveGenericFile(t *testing.T) {
 	for _, gf := range r.Manifest.Object.GenericFiles {
 		assert.NotEmpty(t, gf.IntellectualObjectIdentifier)
 		assert.NotEmpty(t, gf.Identifier)
+		assert.True(t, strings.HasPrefix(gf.Identifier, gf.IntellectualObjectIdentifier))
 		assert.NotEmpty(t, gf.FileModified)
 		assert.NotEmpty(t, gf.Size)
 		assert.NotEmpty(t, gf.IngestFileUid)
@@ -145,20 +146,74 @@ func TestGetTopLevelDir(t *testing.T) {
 	}
 	r.Untar()
 
-	_, filename, _, _ := runtime.Caller(0)
-	testDataPath, _ := filepath.Abs(path.Join(filepath.Dir(filename), "..", "testdata"))
-	expectedPath := path.Join(testDataPath, "example.edu.tagsample_good")
+	expectedPath := untarredPath("example.edu.tagsample_good")
 	assert.Equal(t, expectedPath, r.Manifest.Object.IngestUntarredPath)
 }
 
 func TestGetFileName(t *testing.T) {
+	r := getReader("example.edu.tagsample_good.tar")
+	outputPath := strings.Replace(r.Manifest.Object.IngestTarFilePath, ".tar", "", -1)
+	if len(outputPath) > 40 && strings.Contains(outputPath, "testdata") {
+		defer os.RemoveAll(outputPath)
+	}
+	r.Untar()
 
+	untarredPath := untarredPath("example.edu.tagsample_good")
+	for _, gf := range r.Manifest.Object.GenericFiles {
+		assert.True(t, strings.HasPrefix(gf.IngestLocalPath, untarredPath))
+		suffix := strings.Replace(gf.IngestLocalPath, untarredPath, "", 1)
+		assert.True(t, strings.HasPrefix(suffix, "/"))
+		assert.True(t, len(suffix) > 1)
+	}
+	for _, f := range r.Manifest.Object.IngestFilesIgnored {
+		assert.True(t, strings.HasPrefix(f, untarredPath))
+		suffix := strings.Replace(f, untarredPath, "", 1)
+		assert.True(t, strings.HasPrefix(suffix, "/"))
+		assert.True(t, len(suffix) > 1)
+	}
 }
 
 func TestSaveWithChecksums(t *testing.T) {
-
+	r := getReader("example.edu.tagsample_good.tar")
+	outputPath := strings.Replace(r.Manifest.Object.IngestTarFilePath, ".tar", "", -1)
+	if len(outputPath) > 40 && strings.Contains(outputPath, "testdata") {
+		defer os.RemoveAll(outputPath)
+	}
+	r.Untar()
+	assert.Equal(t, 11, len(r.Manifest.Object.GenericFiles))
+	for _, gf := range r.Manifest.Object.GenericFiles {
+		assert.NotEmpty(t, gf.IngestMd5)
+		assert.NotEmpty(t, gf.IngestSha256)
+		assert.NotEmpty(t, gf.IngestSha256GeneratedAt)
+		assert.Empty(t, gf.IngestErrorMessage)
+	}
 }
 
-func TestUntar(t *testing.T) {
+func TestUntarGoodFile(t *testing.T) {
+	r := getReader("example.edu.tagsample_good.tar")
+	outputPath := strings.Replace(r.Manifest.Object.IngestTarFilePath, ".tar", "", -1)
+	if len(outputPath) > 40 && strings.Contains(outputPath, "testdata") {
+		defer os.RemoveAll(outputPath)
+	}
+	r.Untar()
+	assert.False(t, r.Manifest.Untar.HasErrors())
+}
 
+func TestUntarNonExistentFile(t *testing.T) {
+	r := getReader("example.edu.tagsample_good.tar")
+	outputPath := strings.Replace(r.Manifest.Object.IngestTarFilePath, ".tar", "", -1)
+	if len(outputPath) > 40 && strings.Contains(outputPath, "testdata") {
+		defer os.RemoveAll(outputPath)
+	}
+	r.Manifest.Object.IngestTarFilePath = "path_does_not_exist.tar"
+	r.Untar()
+	assert.True(t, r.Manifest.Untar.HasErrors())
+	assert.True(t, strings.Contains(r.Manifest.Untar.Errors[0], "does not exist"))
+}
+
+// Returns what SHOULD be the path to the untarred files.
+func untarredPath(bagname string) (string) {
+	_, filename, _, _ := runtime.Caller(0)
+	testDataPath, _ := filepath.Abs(path.Join(filepath.Dir(filename), "..", "testdata"))
+	return path.Join(testDataPath, bagname)
 }

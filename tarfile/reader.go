@@ -162,7 +162,7 @@ func (reader *Reader) manifestInfoIsValid() (bool) {
 	if tarFilePath == "" {
 		reader.Manifest.Untar.AddError("IntellectualObject is missing IngestTarFilePath.")
 	} else if absPath, _ := filepath.Abs(tarFilePath); absPath != tarFilePath {
-		reader.Manifest.Untar.AddError("IntellectualObject has a relative or incorrect IngestTarFilePath.")
+		reader.Manifest.Untar.AddError("IntellectualObject IngestTarFilePath '%s' does not exist.", tarFilePath)
 	}
 	if fileStat, err := os.Stat(tarFilePath); os.IsNotExist(err) {
 		reader.Manifest.Untar.AddError("IngestTarFilePath '%s' does not exist.", tarFilePath)
