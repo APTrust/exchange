@@ -112,6 +112,8 @@ func (reader *Reader) Untar() {
 				// This is probably something like bagit.txt or a manifest,
 				// which we must save to disk but won't need to preserve in
 				// long-term storage
+				reader.Manifest.Object.IngestFilesIgnored = append(
+					reader.Manifest.Object.IngestFilesIgnored, outputPath)
 				err = reader.saveFile(outputPath)
 				if err != nil {
 					reader.Manifest.Untar.AddError(

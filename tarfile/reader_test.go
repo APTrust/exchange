@@ -15,7 +15,7 @@ import (
 
 // Return a manifest pointing to our test tar file.
 func getReader(tarFileName string) (*tarfile.Reader) {
-	_, filename, _, _ := runtime.Caller(1)
+	_, filename, _, _ := runtime.Caller(0)
 	tarFilePath, _ := filepath.Abs(path.Join(filepath.Dir(filename), "..", "testdata", tarFileName))
 	objIdentifier := strings.Replace(tarFileName, ".tar", "", 1)
 	parts := strings.Split(objIdentifier, ".")
@@ -62,6 +62,7 @@ func TestRecordStartOfWork(t *testing.T) {
 func TestManifestInfoIsValid(t *testing.T) {
 	// Should flag all missing items
 	r := getReader("virginia.edu.uva-lib_2278801.tar")
+	outputPath := strings.Replace(r.Manifest.Object.IngestTarFilePath, ".tar", "", -1)
 	if len(outputPath) > 40 && strings.Contains(outputPath, "testdata") {
 		defer os.RemoveAll(outputPath)
 	}
@@ -95,15 +96,59 @@ func TestManifestInfoIsValid(t *testing.T) {
 }
 
 func TestCreateAndSaveGenericFile(t *testing.T) {
-
+	r := getReader("example.edu.tagsample_good.tar")
+	outputPath := strings.Replace(r.Manifest.Object.IngestTarFilePath, ".tar", "", -1)
+	if len(outputPath) > 40 && strings.Contains(outputPath, "testdata") {
+		defer os.RemoveAll(outputPath)
+	}
+	r.Untar()
+	assert.Equal(t, 11, len(r.Manifest.Object.GenericFiles))
+	for _, gf := range r.Manifest.Object.GenericFiles {
+		assert.NotEmpty(t, gf.IntellectualObjectIdentifier)
+		assert.NotEmpty(t, gf.Identifier)
+		assert.NotEmpty(t, gf.FileModified)
+		assert.NotEmpty(t, gf.Size)
+		assert.NotEmpty(t, gf.IngestFileUid)
+		assert.NotEmpty(t, gf.IngestFileGid)
+		assert.NotEmpty(t, gf.IngestFileUname)
+		assert.NotEmpty(t, gf.IngestFileGname)
+		assert.NotEmpty(t, gf.IngestUUID)
+		assert.NotEmpty(t, gf.IngestUUIDGeneratedAt)
+		assert.NotEmpty(t, gf.IngestMd5)
+		assert.NotEmpty(t, gf.IngestSha256)
+		assert.NotEmpty(t, gf.IngestSha256GeneratedAt)
+		assert.NotEmpty(t, gf.FileFormat)
+		assert.Empty(t, gf.IngestErrorMessage)
+	}
 }
 
 func TestSaveFile(t *testing.T) {
-
+	r := getReader("example.edu.tagsample_good.tar")
+	outputPath := strings.Replace(r.Manifest.Object.IngestTarFilePath, ".tar", "", -1)
+	if len(outputPath) > 40 && strings.Contains(outputPath, "testdata") {
+		defer os.RemoveAll(outputPath)
+	}
+	r.Untar()
+	assert.Equal(t, 5, len(r.Manifest.Object.IngestFilesIgnored))
+	for _, f := range r.Manifest.Object.IngestFilesIgnored {
+		if _, err := os.Stat(f); os.IsNotExist(err) {
+			t.Errorf("File '%s' was not saved to disk", f)
+		}
+	}
 }
 
-func GetTopLevelDir(t *testing.T) {
+func TestGetTopLevelDir(t *testing.T) {
+	r := getReader("example.edu.tagsample_good.tar")
+	outputPath := strings.Replace(r.Manifest.Object.IngestTarFilePath, ".tar", "", -1)
+	if len(outputPath) > 40 && strings.Contains(outputPath, "testdata") {
+		defer os.RemoveAll(outputPath)
+	}
+	r.Untar()
 
+	_, filename, _, _ := runtime.Caller(0)
+	testDataPath, _ := filepath.Abs(path.Join(filepath.Dir(filename), "..", "testdata"))
+	expectedPath := path.Join(testDataPath, "example.edu.tagsample_good")
+	assert.Equal(t, expectedPath, r.Manifest.Object.IngestUntarredPath)
 }
 
 func TestGetFileName(t *testing.T) {
