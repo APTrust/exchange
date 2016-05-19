@@ -59,6 +59,7 @@ func (writer *Writer) AddToArchive(filePath, pathWithinArchive string) (error) {
 
 	// Write the header entry
 	if err := writer.tarWriter.WriteHeader(header); err != nil {
+		// Most likely error is archive/tar: write after close
 		return err
 	}
 
