@@ -1,13 +1,8 @@
 package fileutil
 
 import (
-	"archive/tar"
-	"crypto/md5"
-	"crypto/sha256"
 	"encoding/json"
-	"github.com/APTrust/exchange/platform"
 	"fmt"
-	"io"
 	"io/ioutil"
 	"os"
 	"os/user"
@@ -114,54 +109,4 @@ func RecursiveFileList(dir string) ([]string, error) {
         return nil
     })
 	return files, err
-}
-
-type FileDigest struct {
-	PathToFile     string
-	Md5Digest      string
-	Sha256Digest   string
-	Size           int64
-}
-
-// Returns a FileDigest structure with the md5 and sha256 digests
-// of the specified file as hex-enconded strings, along with the
-// file's size.
-//
-// TODO: Rename?
-func CalculateDigests(pathToFile string) (*FileDigest, error) {
-	md5Hash := md5.New()
-	shaHash := sha256.New()
-	multiWriter := io.MultiWriter(md5Hash, shaHash)
-	reader, err := os.Open(pathToFile)
-	defer reader.Close()
-
-	if err != nil {
-		detailedError := fmt.Errorf("Error opening file '%s': %v", pathToFile, err)
-		return nil, detailedError
-	}
-	fileInfo, err := reader.Stat()
-	if err != nil {
-		detailedError := fmt.Errorf("Cannot stat file '%s': %v", pathToFile, err)
-		return nil, detailedError
-	}
-	// Calculate md5 and sha256 checksums in one read
-	bytesWritten, err := io.Copy(multiWriter, reader)
-	if err != nil {
-		detailedError := fmt.Errorf("Error running md5 checksum on file '%s': %v",
-			pathToFile, err)
-		return nil, detailedError
-	}
-	if bytesWritten != fileInfo.Size() {
-		detailedError := fmt.Errorf("Error running md5 checksum on file '%s': " +
-			"read only %d of %d bytes.",
-			pathToFile, bytesWritten, fileInfo.Size())
-		return nil, detailedError
-	}
-	fileDigest := &FileDigest{
-		PathToFile: pathToFile,
-		Md5Digest: fmt.Sprintf("%x", md5Hash.Sum(nil)),
-		Sha256Digest: fmt.Sprintf("%x", shaHash.Sum(nil)),
-		Size: fileInfo.Size(),
-	}
-	return fileDigest, nil
 }
