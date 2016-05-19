@@ -103,52 +103,6 @@ func ExpandTilde(filePath string) (string, error) {
 	return expandedDir, nil
 }
 
-// Adds a file to a tar archive.
-// TODO: Move this into a tar-related util file!
-func AddToArchive(tarWriter *tar.Writer, filePath, pathWithinArchive string) (error) {
-	finfo, err := os.Stat(filePath)
-	if err != nil {
-		return fmt.Errorf("Cannot add '%s' to archive: %v", filePath, err)
-	}
-	header := &tar.Header{
-		Name: pathWithinArchive,
-		Size: finfo.Size(),
-		Mode: int64(finfo.Mode().Perm()),
-		ModTime: finfo.ModTime(),
-	}
-
-	// This call adds the owner and group info to the tar file header.
-	// When running on *nix systems that support this call, we use
-	// the definition in nix.go. On Windows, which does not support
-	// the call, we use the no-op definition in windows.go.
-	platform.GetOwnerAndGroup(finfo, header)
-
-	// Write the header entry
-	if err := tarWriter.WriteHeader(header); err != nil {
-		return err
-	}
-
-	// Open the file whose data we're going to add.
-	file, err := os.Open(filePath)
-	defer file.Close()
-	if err != nil {
-		return err
-	}
-
-	// Copy the contents of the file into the tarWriter.
-	bytesWritten, err := io.Copy(tarWriter, file)
-	if bytesWritten != header.Size {
-		return fmt.Errorf("addToArchive() copied only %d of %d bytes for file %s",
-			bytesWritten, header.Size, filePath)
-	}
-	if err != nil {
-		return fmt.Errorf("Error copying %s into tar archive: %v",
-			filePath, err)
-	}
-
-	return nil
-}
-
 // RecursiveFileList returns a list of all files in path dir
 // and its subfolders. It does not return directories.
 func RecursiveFileList(dir string) ([]string, error) {

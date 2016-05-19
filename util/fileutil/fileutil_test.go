@@ -108,25 +108,6 @@ func TestExpandTilde(t *testing.T) {
 	}
 }
 
-func TestAddToArchive(t *testing.T) {
-	tarFile, err := ioutil.TempFile("", "util_test.tar")
-	if err != nil {
-		t.Errorf("Error creating temp file for tar archive: %v", err)
-	}
-	defer os.Remove(tarFile.Name())
-	tarWriter := tar.NewWriter(tarFile)
-	exchangeHome, _ := fileutil.ExchangeHome()
-	testfilePath := filepath.Join(exchangeHome, "testdata")
-	files, _ := filepath.Glob(filepath.Join(testfilePath, "*.json"))
-	for _, filePath := range files {
-		pathWithinArchive := fmt.Sprintf("data/%s", filePath)
-		err = fileutil.AddToArchive(tarWriter, filePath, pathWithinArchive)
-		if err != nil {
-			t.Errorf("Error adding %s to tar file: %v", filePath, err)
-		}
-	}
-}
-
 func getPath(filename string) (string) {
 	exchangeHome, _ := fileutil.ExchangeHome()
 	return filepath.Join(exchangeHome, filename)
