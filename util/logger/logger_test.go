@@ -1,7 +1,7 @@
 package logger_test
 
 import (
-	"testing"
+	"fmt"
 	"github.com/APTrust/exchange/config"
 	"github.com/APTrust/exchange/util/fileutil"
 	"github.com/APTrust/exchange/util/logger"
@@ -11,6 +11,7 @@ import (
 	"path"
 	"path/filepath"
 	"strings"
+	"testing"
 )
 
 
@@ -22,7 +23,10 @@ func getLoggingTestConfig(t *testing.T) (*config.Config) {
 		t.Errorf("Can't create temp dir to test logging: %v", err)
 	}
 	return &config.Config{
+		TarDirectory: logDir,
 		LogDirectory: logDir,
+		RestoreDirectory: logDir,
+		ReplicationDirectory: logDir,
 		LogLevel: logging.ERROR,
 		LogToStderr: false,
 	}
@@ -30,7 +34,15 @@ func getLoggingTestConfig(t *testing.T) (*config.Config) {
 
 // Delete temp log dir after tests.
 func teardownLoggerTest(config *config.Config) {
-	os.RemoveAll(config.AbsLogDirectory())
+	absLogDir := config.AbsLogDirectory()
+	slashCount := (len(absLogDir) - len(strings.Replace(absLogDir, "/", "", -1)))
+	if len(absLogDir) > 12 || slashCount < 3 {
+		// Don't call remove all on "/" or "/usr" or anything like that.
+		os.RemoveAll(absLogDir)
+	} else {
+		fmt.Printf("Not deleting log dir '%s' because it looks dangerous.\n" +
+			"Delete that manually, if you thing it's safe.\n", absLogDir)
+	}
 }
 
 func TestInitLogger(t *testing.T) {

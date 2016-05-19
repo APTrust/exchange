@@ -268,13 +268,17 @@ func (config *Config) EnsureLogDirectory() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	absPath, err := filepath.Abs(config.LogDirectory)
+	return config.AbsLogDirectory(), nil
+}
+
+func (config *Config) AbsLogDirectory() (string) {
+	absLogDir, err := filepath.Abs(config.LogDirectory)
 	if err != nil {
 		msg := fmt.Sprintf("Cannot get absolute path to log directory. "+
 			"config.LogDirectory is set to '%s'", config.LogDirectory)
 		panic(msg)
 	}
-	return absPath, err
+	return absLogDir
 }
 
 // This returns the configuration that the user requested.

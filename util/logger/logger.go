@@ -19,7 +19,7 @@ func InitLogger(config *config.Config) *logging.Logger {
 	processName := path.Base(os.Args[0])
 	logDir, err := config.EnsureLogDirectory()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Cannot create log director '%s': %v\n", logDir, err)
+		fmt.Fprintf(os.Stderr, "Cannot create log directory '%s': %v\n", logDir, err)
 		os.Exit(1)
 	}
 	filename := fmt.Sprintf("%s.log", processName)

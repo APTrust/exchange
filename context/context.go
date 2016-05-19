@@ -8,7 +8,6 @@ import (
 	"github.com/APTrust/exchange/util/logger"
 	"github.com/APTrust/exchange/util/fileutil"
 	"github.com/nsqio/go-nsq"
-	"github.com/crowdmob/goamz/aws"
 	"github.com/op/go-logging"
 	"log"
 	"os"
@@ -27,9 +26,8 @@ type Context struct {
 	Config          config.Config
 	JsonLog         *log.Logger
 	MessageLog      *logging.Logger
-	S3Client        *network.S3Client
 	PharosClient    *network.PharosClient
-//	Volume          *util.Volume
+//	Volume          *util.Volume            // *** TODO *** Re-add Volume!
 	syncMap         *models.SynchronizedMap
 	succeeded       int64
 	failed          int64
@@ -53,7 +51,6 @@ func NewContext(appConfig config.Config) (context *Context) {
 	}
 	context.Config = appConfig
 	context.initLogging()
-	context.initS3Client()
 	context.initPharosClient()
 	context.syncMap = models.NewSynchronizedMap()
 	return context
@@ -75,17 +72,6 @@ func (context *Context) initLogging() {
 // 	}
 // 	context.Volume = volume
 // }
-
-// Initializes a reusable S3 client.
-func (context *Context) initS3Client() {
-	s3Client, err := network.NewS3Client(aws.USEast)
-	if err != nil {
-		message := fmt.Sprintf("Exiting. Cannot init S3 client: %v", err)
-		fmt.Fprintln(os.Stderr, message)
-		context.MessageLog.Fatal(message)
-	}
-	context.S3Client = s3Client
-}
 
 // Initializes a reusable Pharos client.
 func (context *Context) initPharosClient() {
