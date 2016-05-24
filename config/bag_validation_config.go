@@ -3,6 +3,7 @@ package config
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/APTrust/exchange/util"
 	"github.com/APTrust/exchange/util/fileutil"
 )
 
@@ -12,11 +13,18 @@ const (
 	FORBIDDEN = "forbidden"
 )
 
+var presenceValues = []string { REQUIRED, OPTIONAL, FORBIDDEN }
+
 // FileSpec defines whether files at a specified path within
 // the bag are required, optional, or forbidden.
 type FileSpec struct {
 	// Presence can be REQUIRED, OPTIONAL, or FORBIDDEN.
 	Presence        string
+}
+
+// Valid tells you whether this FileSpec is valid.
+func (filespec *FileSpec) Valid() (bool) {
+	return ValidPresenceValue(filespec.Presence)
 }
 
 // TagSpec describes rules for tags in colon-delimited BagIt-parsable
@@ -31,6 +39,17 @@ type TagSpec struct {
 	// to be empty.
 	EmptyOK         bool
 }
+
+// Valid tells you whether this TagSpec is valid.
+func (tagspec *TagSpec) Valid() (bool) {
+	return ValidPresenceValue(tagspec.Presence) && tagspec.FilePath != ""
+}
+
+// Returns true if value is a valid presence value.
+func ValidPresenceValue(value string) (bool) {
+	return util.StringListContains(presenceValues, value)
+}
+
 
 // BagValidationConfig lets us specify what constitutes a valid bag.
 // While our validator will do standard validations, such as verifying

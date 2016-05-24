@@ -175,3 +175,9 @@ func TestSavableName(t *testing.T) {
 	assert.True(t, util.HasSavableName("my_tags/tagmanifest-sha256.txt"))
 	assert.True(t, util.HasSavableName("polly/wolly/doodle/all/day"))
 }
+
+func TestStringListContains(t *testing.T) {
+	list := []string{ "apple", "orange", "banana" }
+	assert.True(t, util.StringListContains(list, "orange"))
+	assert.False(t, util.StringListContains(list, "wedgie"))
+}
