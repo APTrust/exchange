@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"github.com/APTrust/exchange/models"
 	"github.com/APTrust/exchange/network"
-	"github.com/APTrust/exchange/testdata"
+	"github.com/APTrust/exchange/util/testutil"
 	"github.com/stretchr/testify/assert"
 	"net/http"
 	"net/http/httptest"
@@ -174,7 +174,7 @@ func TestIntellectualObjectSave(t *testing.T) {
 	// ---------------------------------------------
 	// First, test create...
 	// ---------------------------------------------
-	obj := testdata.MakeIntellectualObject(0,0,0,0)
+	obj := testutil.MakeIntellectualObject(0,0,0,0)
 	obj.Id = 0
 	response := client.IntellectualObjectSave(obj)
 
@@ -200,7 +200,7 @@ func TestIntellectualObjectSave(t *testing.T) {
 	// ---------------------------------------------
 	// Now test with an update...
 	// ---------------------------------------------
-	obj = testdata.MakeIntellectualObject(0,0,0,0)
+	obj = testutil.MakeIntellectualObject(0,0,0,0)
 	origModTime := obj.UpdatedAt
 	response = client.IntellectualObjectSave(obj)
 
@@ -306,7 +306,7 @@ func TestGenericFileSave(t *testing.T) {
 	// ---------------------------------------------
 	// First, test create...
 	// ---------------------------------------------
-	obj := testdata.MakeGenericFile(0,0,"kollege.kom/objekt/file.xml")
+	obj := testutil.MakeGenericFile(0,0,"kollege.kom/objekt/file.xml")
 	obj.Id = 0
 	response := client.GenericFileSave(obj)
 
@@ -332,7 +332,7 @@ func TestGenericFileSave(t *testing.T) {
 	// ---------------------------------------------
 	// Now test with an update...
 	// ---------------------------------------------
-	obj = testdata.MakeGenericFile(0,0,"kollege.kom/objekt/file.xml")
+	obj = testutil.MakeGenericFile(0,0,"kollege.kom/objekt/file.xml")
 	origModTime := obj.UpdatedAt
 	response = client.GenericFileSave(obj)
 
@@ -436,7 +436,7 @@ func TestPremisEventSave(t *testing.T) {
 	// ---------------------------------------------
 	// Test create only. PremisEvents cannot be updaed
 	// ---------------------------------------------
-	obj := testdata.MakePremisEvent()
+	obj := testutil.MakePremisEvent()
 	obj.Id = 0
 	response := client.PremisEventSave(obj)
 
@@ -544,7 +544,7 @@ func TestWorkItemSave(t *testing.T) {
 	// ---------------------------------------------
 	// First, test create...
 	// ---------------------------------------------
-	obj := testdata.MakeWorkItem()
+	obj := testutil.MakeWorkItem()
 	obj.Id = 0
 	response := client.WorkItemSave(obj)
 
@@ -574,7 +574,7 @@ func TestWorkItemSave(t *testing.T) {
 	// ---------------------------------------------
 	// Now test with an update...
 	// ---------------------------------------------
-	obj = testdata.MakeWorkItem()
+	obj = testutil.MakeWorkItem()
 	origModTime := obj.UpdatedAt
 	response = client.WorkItemSave(obj)
 
@@ -627,7 +627,7 @@ func sampleParams() (url.Values) {
 // -------------------------------------------------------------------------
 
 func institutionGetHander(w http.ResponseWriter, r *http.Request) {
-	obj := testdata.MakeInstitution()
+	obj := testutil.MakeInstitution()
 	objJson, _ := json.Marshal(obj)
 	w.Header().Set("Content-Type", "application/json")
 	fmt.Fprintln(w, string(objJson))
@@ -636,7 +636,7 @@ func institutionGetHander(w http.ResponseWriter, r *http.Request) {
 func institutionListHander(w http.ResponseWriter, r *http.Request) {
 	list := make([]*models.Institution, 4)
 	for i := 0; i < 4; i++ {
-		list[i] = testdata.MakeInstitution()
+		list[i] = testutil.MakeInstitution()
 	}
 	data := listResponseData()
 	data["results"] = list
@@ -651,7 +651,7 @@ func institutionListHander(w http.ResponseWriter, r *http.Request) {
 // -------------------------------------------------------------------------
 
 func intellectualObjectGetHander(w http.ResponseWriter, r *http.Request) {
-	obj := testdata.MakeIntellectualObject(2,3,4,5)
+	obj := testutil.MakeIntellectualObject(2,3,4,5)
 	objJson, _ := json.Marshal(obj)
 	w.Header().Set("Content-Type", "application/json")
 	fmt.Fprintln(w, string(objJson))
@@ -660,7 +660,7 @@ func intellectualObjectGetHander(w http.ResponseWriter, r *http.Request) {
 func intellectualObjectListHander(w http.ResponseWriter, r *http.Request) {
 	list := make([]*models.IntellectualObject, 4)
 	for i := 0; i < 4; i++ {
-		list[i] = testdata.MakeIntellectualObject(2,3,4,5)
+		list[i] = testutil.MakeIntellectualObject(2,3,4,5)
 	}
 	data := listResponseData()
 	data["results"] = list
@@ -692,7 +692,7 @@ func intellectualObjectSaveHander(w http.ResponseWriter, r *http.Request) {
 // -------------------------------------------------------------------------
 
 func genericFileGetHander(w http.ResponseWriter, r *http.Request) {
-	obj := testdata.MakeGenericFile(2,3, "kollege.kom/objekt")
+	obj := testutil.MakeGenericFile(2,3, "kollege.kom/objekt")
 	objJson, _ := json.Marshal(obj)
 	w.Header().Set("Content-Type", "application/json")
 	fmt.Fprintln(w, string(objJson))
@@ -701,7 +701,7 @@ func genericFileGetHander(w http.ResponseWriter, r *http.Request) {
 func genericFileListHander(w http.ResponseWriter, r *http.Request) {
 	list := make([]*models.GenericFile, 4)
 	for i := 0; i < 4; i++ {
-		list[i] = testdata.MakeGenericFile(2,3,"kollege.kom/objekt")
+		list[i] = testutil.MakeGenericFile(2,3,"kollege.kom/objekt")
 	}
 	data := listResponseData()
 	data["results"] = list
@@ -735,7 +735,7 @@ func genericFileSaveHander(w http.ResponseWriter, r *http.Request) {
 // -------------------------------------------------------------------------
 
 func premisEventGetHander(w http.ResponseWriter, r *http.Request) {
-	obj := testdata.MakePremisEvent()
+	obj := testutil.MakePremisEvent()
 	obj.Identifier = "000000000000-0000-0000-0000-00000000"
 	objJson, _ := json.Marshal(obj)
 	w.Header().Set("Content-Type", "application/json")
@@ -745,7 +745,7 @@ func premisEventGetHander(w http.ResponseWriter, r *http.Request) {
 func premisEventListHander(w http.ResponseWriter, r *http.Request) {
 	list := make([]*models.PremisEvent, 4)
 	for i := 0; i < 4; i++ {
-		list[i] = testdata.MakePremisEvent()
+		list[i] = testutil.MakePremisEvent()
 	}
 	data := listResponseData()
 	data["results"] = list
@@ -779,7 +779,7 @@ func premisEventSaveHander(w http.ResponseWriter, r *http.Request) {
 // -------------------------------------------------------------------------
 
 func workItemGetHander(w http.ResponseWriter, r *http.Request) {
-	obj := testdata.MakeWorkItem()
+	obj := testutil.MakeWorkItem()
 	objJson, _ := json.Marshal(obj)
 	w.Header().Set("Content-Type", "application/json")
 	fmt.Fprintln(w, string(objJson))
@@ -788,7 +788,7 @@ func workItemGetHander(w http.ResponseWriter, r *http.Request) {
 func workItemListHander(w http.ResponseWriter, r *http.Request) {
 	list := make([]*models.WorkItem, 4)
 	for i := 0; i < 4; i++ {
-		list[i] = testdata.MakeWorkItem()
+		list[i] = testutil.MakeWorkItem()
 	}
 	data := listResponseData()
 	data["results"] = list
