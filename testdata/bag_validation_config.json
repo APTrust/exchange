@@ -1,0 +1,18 @@
+{
+    "AllowMiscTopLevelFiles": true,
+    "AllowMiscDirectories": true,
+    "TopLevelDirMustMatchBagName": true,
+    "FileSpecs": {
+        "manifest-md5.txt": { "Presence": "required" },
+        "manifest-sha256.txt": { "Presence": "optional" },
+        "manifest-sha1.txt": { "Presence": "forbidden" },
+        "tagmanifest-md5.txt": { "Presence": "required" },
+        "bagit.txt": { "Presence": "required" },
+        "bag-info.txt": { "Presence": "required" }
+    },
+    "TagSpecs": {
+        "Title": {"FilePath": "aptrust-info.txt", "Presence": "required", "EmptyOK": false },
+        "Access": {"FilePath": "aptrust-info.txt", "Presence": "required", "EmptyOK": false },
+        "Description": {"FilePath": "aptrust-info.txt", "Presence": "optional", "EmptyOK": true }
+    }
+}
