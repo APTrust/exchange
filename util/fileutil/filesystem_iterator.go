@@ -40,8 +40,11 @@ func NewFileSystemIterator(pathToDir string) (*FileSystemIterator, error) {
 // Returns an open reader for the next file, along with a FileSummary.
 // Returns io.EOF when it reaches the last file.
 // The caller is responsible for closing the reader.
-func (iter *FileSystemIterator) Next() (io.Reader, *FileSummary, error) {
+func (iter *FileSystemIterator) Next() (io.ReadCloser, *FileSummary, error) {
 	iter.index += 1
+	if iter.index > len(iter.files) {
+		return nil, nil, io.EOF
+	}
 	filepath := iter.files[iter.index]
 	var stat os.FileInfo
 	var err error

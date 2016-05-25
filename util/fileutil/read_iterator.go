@@ -5,5 +5,5 @@ import (
 )
 
 type ReadIterator interface {
-	Next() (io.Reader, *FileSummary, error)
+	Next() (io.ReadCloser, *FileSummary, error)
 }
