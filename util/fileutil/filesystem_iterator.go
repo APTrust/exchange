@@ -51,13 +51,15 @@ func (iter *FileSystemIterator) Next() (io.ReadCloser, *FileSummary, error) {
 	if stat, err = os.Stat(iter.rootPath); os.IsNotExist(err) {
 		return nil, nil, fmt.Errorf("File '%s' does not exist.", iter.rootPath)
 	}
+	fileMode := stat.Mode()
 	fs := &FileSummary{
 		Name: stat.Name(),
 		AbsPath: filepath,
-		Mode: stat.Mode(),
+		Mode: fileMode,
 		Size: stat.Size(),
 		ModTime: stat.ModTime(),
 		IsDir: stat.IsDir(),
+		IsRegularFile: fileMode.IsRegular(),
 	}
 	systat := stat.Sys().(*syscall.Stat_t)
 	if systat != nil {
