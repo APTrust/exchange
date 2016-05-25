@@ -118,3 +118,11 @@ const (
 	AWSVirginia = "us-east-1"
 	AWSOregon = "us-west-2"
 )
+
+// GenericFile types. GenericFile.IngestFileType
+const (
+	PAYLOAD_FILE     = "payload_file"
+	PAYLOAD_MANIFEST = "payload_manifest"
+	TAG_MANIFEST     = "tag_manifest"
+	TAG_FILE         = "tag_file"
+)

@@ -7,7 +7,6 @@ import (
 	"time"
 )
 
-
 /*
 GenericFile contains information about a file that makes up
 part (or all) of an IntellectualObject.
@@ -54,11 +53,14 @@ type GenericFile struct {
 
 	// Exchange fields. These are for internal housekeeping.
 	// We don't send this data to Pharos.
+	IngestFileType               string         `json:"ingest_file_type"`
 	IngestLocalPath              string         `json:"ingest_local_path"`
 	IngestMd5                    string         `json:"ingest_md5"`
-	IngestMd5VerifiedAt          time.Time      `json:"ingest_md5_verified"`
+	IngestMd5GeneratedAt         time.Time      `json:"ingest_md5_generated_at"`
+	IngestMd5VerifiedAt          time.Time      `json:"ingest_md5_verified_at"`
 	IngestSha256                 string         `json:"ingest_sha_256"`
 	IngestSha256GeneratedAt      time.Time      `json:"ingest_sha_256_generated_at"`
+	IngestSha256VerifiedAt       time.Time      `json:"ingest_sha_256_verified_at"`
 	IngestUUID                   string         `json:"ingest_uuid"`
 	IngestUUIDGeneratedAt        time.Time      `json:"ingest_uuid_generated_at"`
 	IngestStorageURL             string         `json:"ingest_storage_url"`
