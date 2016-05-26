@@ -14,3 +14,7 @@ var IsPartnerBuild = true
 func GuessMimeType(absPath string) (mimeType string, err error) {
 	return "mime type disabled", nil
 }
+
+func GuessMimeTypeByBuffer(buf []byte) (mimeType string, err error) {
+	return "mime type disabled", nil
+}

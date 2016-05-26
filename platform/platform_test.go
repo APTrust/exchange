@@ -47,6 +47,29 @@ func TestGuessMimeType(t *testing.T) {
 	}
 }
 
+func TestGuessMimeTypeByBuffer(t *testing.T) {
+	pathToTempFile := setupMimeTest(t)
+	defer teardownMimeTest(pathToTempFile)
+	file, err := os.Open(pathToTempFile)
+	if err != nil {
+		t.Errorf("Cannot read '%s': %v", err)
+		return
+	}
+	defer file.Close()
+	buf := make([]byte, 256)
+	_, _ = file.Read(buf)
+	mimetype, err := platform.GuessMimeTypeByBuffer(buf)
+	if err != nil {
+		t.Error(err)
+	}
+	if !platform.IsPartnerBuild {
+		if mimetype != "text/plain" {
+			t.Errorf("Got mime type %s for file %s. Expected text/plain",
+				mimetype, pathToTempFile)
+		}
+	}
+}
+
 // GetOwnerAndGroup should fill in the Uid and Gid fields of
 // the tar header on Posix systems. On windows, it won't fill in
 // anything, but it should not cause any errors.
