@@ -89,6 +89,7 @@ const (
 	AlgSha256                   = "sha256"
 )
 
+var ChecksumAlgorithms = []string{ AlgMd5, AlgSha256 }
 
 const (
 	IdTypeStorageURL                 = "url"
