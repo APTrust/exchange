@@ -1,10 +1,14 @@
 package models
 
 import (
+	"crypto/md5"
+	"crypto/sha256"
 	"fmt"
+	"github.com/APTrust/exchange/platform"
 	"github.com/APTrust/exchange/util"
 	"github.com/APTrust/exchange/util/fileutil"
 	"github.com/nu7hatch/gouuid"
+	"hash"
 	"io"
 	//"os"
 	"strings"
@@ -12,16 +16,18 @@ import (
 )
 
 type VirtualBag struct {
-	pathToBag    string
-	checksumAlgs []string
-	obj          *IntellectualObject
-	summary      *WorkSummary
-	readIterator fileutil.ReadIterator
+	pathToBag        string
+	calculateMd5     bool
+	calculateSha256  bool
+	obj              *IntellectualObject
+	summary          *WorkSummary
+	readIterator     fileutil.ReadIterator
 }
 
-func NewVirtualBag(pathToBag string, checksumAlgs []string) (*VirtualBag) {
+func NewVirtualBag(pathToBag string, calculateMd5, calculateSha256 bool) (*VirtualBag) {
 	return &VirtualBag{
-		checksumAlgs: checksumAlgs,
+		calculateMd5: calculateMd5,
+		calculateSha256: calculateSha256,
 		pathToBag: pathToBag,
 	}
 }
@@ -75,7 +81,7 @@ func (vbag *VirtualBag) addGenericFile() (error) {
 		panic("Can't read from /dev/urandom!")
 	}
 	gf := NewGenericFile()
-	gf.Identifier = fmt.Sprintf("%s/%s", vbag.obj.Identifier, fileSummary.Name)
+	gf.Identifier = fmt.Sprintf("%s/%s", vbag.obj.Identifier, fileSummary.RelPath)
 	gf.IntellectualObjectIdentifier = vbag.obj.Identifier
 	gf.Size = fileSummary.Size
 	gf.FileModified = fileSummary.ModTime
@@ -84,10 +90,45 @@ func (vbag *VirtualBag) addGenericFile() (error) {
 	gf.IngestUUIDGeneratedAt = time.Now().UTC()
 	gf.IngestFileUid = fileSummary.Uid
 	gf.IngestFileGid = fileSummary.Gid
+	vbag.setIngestFileType(gf, fileSummary)
 	return vbag.calculateChecksums(reader, gf)
 }
 
-func (vbag *VirtualBag) calculateChecksums(reader io.Reader, gf *GenericFile) (error) {
+func (vbag *VirtualBag) setIngestFileType(gf *GenericFile, fileSummary *fileutil.FileSummary) {
+	// manifest-
+	// tagmanifest-
+	// data/
+	// else is tag file
+}
 
+func (vbag *VirtualBag) calculateChecksums(reader io.Reader, gf *GenericFile) (error) {
+	hashes := make([]io.Writer, 0)
+	var md5Hash hash.Hash
+	var sha256Hash hash.Hash
+	if vbag.calculateMd5 {
+		md5Hash = md5.New()
+		hashes = append(hashes, md5Hash)
+	}
+	if vbag.calculateSha256 {
+		sha256Hash = sha256.New()
+		hashes = append(hashes, sha256Hash)
+	}
+	if len(hashes) > 0 {
+		multiWriter := io.MultiWriter(hashes...)
+		io.Copy(multiWriter, reader)
+		utcNow := time.Now().UTC()
+		if md5Hash != nil {
+			gf.IngestMd5 = fmt.Sprintf("%x", md5Hash.Sum(nil))
+			gf.IngestMd5GeneratedAt = utcNow
+		}
+		if sha256Hash != nil {
+			gf.IngestSha256 = fmt.Sprintf("%x", sha256Hash.Sum(nil))
+			gf.IngestSha256GeneratedAt = utcNow
+		}
+	}
+	// on err, defaults to application/binary
+	buf := make([]byte, 256)
+	_, _ = reader.Read(buf)
+	gf.FileFormat, _ = platform.GuessMimeTypeByBuffer(buf)
 	return nil
 }

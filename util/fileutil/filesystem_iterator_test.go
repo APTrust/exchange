@@ -4,6 +4,7 @@ import (
 	"github.com/APTrust/exchange/util/fileutil"
 	"github.com/stretchr/testify/assert"
 	"io"
+	"os"
 	"path"
 	"path/filepath"
 	"runtime"
@@ -36,7 +37,7 @@ func TestNewFileSystemIterator(t *testing.T) {
 	assert.True(t, strings.Contains(err.Error(), "is not a directory"))
 }
 
-func TextNext(t *testing.T) {
+func TestFSINext(t *testing.T) {
 	_, filename, _, _ := runtime.Caller(0)
 	testDataPath, _ := filepath.Abs(path.Join(filepath.Dir(filename), "..", "..", "testdata"))
 	fsi, _ := fileutil.NewFileSystemIterator(testDataPath)
@@ -51,7 +52,8 @@ func TextNext(t *testing.T) {
 		if err == io.EOF {
 			break
 		}
-		assert.NotEmpty(t, fileSummary.Name)
+		assert.NotEmpty(t, fileSummary.RelPath)
+		assert.False(t, strings.HasPrefix(fileSummary.RelPath, string(os.PathSeparator)))
 		assert.NotEmpty(t, fileSummary.AbsPath)
 		assert.NotNil(t, fileSummary.Mode)
 		assert.True(t, fileSummary.Size > int64(0))

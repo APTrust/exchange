@@ -35,7 +35,7 @@ func (iter *TarFileIterator) Next() (io.ReadCloser, *FileSummary, error) {
 	}
 	finfo := header.FileInfo()
 	fs := &FileSummary{
-		Name: header.Name,
+		RelPath: header.Name,
 		AbsPath: "",
 		Mode: finfo.Mode(),
 		Size: header.Size,

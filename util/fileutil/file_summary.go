@@ -8,7 +8,7 @@ import (
 // FileSummary includes the intersection of the set of
 // file attributes available from os.FileInfo and tar.Header.
 type FileSummary struct {
-	Name            string
+	RelPath         string
 	AbsPath         string
 	Mode            os.FileMode
 	Size            int64

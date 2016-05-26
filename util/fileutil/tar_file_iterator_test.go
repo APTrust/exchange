@@ -4,9 +4,11 @@ import (
 	"github.com/APTrust/exchange/util/fileutil"
 	"github.com/stretchr/testify/assert"
 	"io"
+	"os"
 	"path"
 	"path/filepath"
 	"runtime"
+	"strings"
 	"testing"
 )
 
@@ -19,7 +21,7 @@ func TestNewTarFileIterator(t *testing.T) {
 	assert.Nil(t, err)
 }
 
-func TestNext(t *testing.T) {
+func TestTFINext(t *testing.T) {
 	_, filename, _, _ := runtime.Caller(0)
 	tarFilePath, _ := filepath.Abs(path.Join(filepath.Dir(filename),
 		"..", "..", "testdata", "example.edu.tagsample_good.tar"))
@@ -42,7 +44,10 @@ func TestNext(t *testing.T) {
 			assert.Fail(t, "FileSummary is nil")
 		}
 
-		assert.NotEmpty(t, fileSummary.Name)
+		assert.NotEmpty(t, fileSummary.RelPath)
+		assert.False(t, strings.HasPrefix(fileSummary.RelPath, string(os.PathSeparator)))
+		// On Windows, where separator is '\', tar files may still use '/'
+		assert.False(t, strings.HasPrefix(fileSummary.RelPath, "/"))
 		assert.Empty(t, fileSummary.AbsPath)
 		assert.NotNil(t, fileSummary.Mode)
 		if fileSummary.IsRegularFile {

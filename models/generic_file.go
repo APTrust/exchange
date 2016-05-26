@@ -53,6 +53,9 @@ type GenericFile struct {
 
 	// Exchange fields. These are for internal housekeeping.
 	// We don't send this data to Pharos.
+
+	// IngestFileType can be one of the types defined in constants.
+	// PAYLOAD_FILE, PAYLOAD_MANIFEST, TAG_MANIFEST, TAG_FILE
 	IngestFileType               string         `json:"ingest_file_type"`
 	IngestLocalPath              string         `json:"ingest_local_path"`
 	IngestMd5                    string         `json:"ingest_md5"`

@@ -5,6 +5,7 @@ import (
 	"io"
 	"os"
 	"path"
+	"strings"
 	"syscall"
 )
 
@@ -42,19 +43,19 @@ func NewFileSystemIterator(pathToDir string) (*FileSystemIterator, error) {
 // The caller is responsible for closing the reader.
 func (iter *FileSystemIterator) Next() (io.ReadCloser, *FileSummary, error) {
 	iter.index += 1
-	if iter.index > len(iter.files) {
+	if iter.index >= len(iter.files) {
 		return nil, nil, io.EOF
 	}
-	filepath := iter.files[iter.index]
+	filePath := iter.files[iter.index]
 	var stat os.FileInfo
 	var err error
-	if stat, err = os.Stat(iter.rootPath); os.IsNotExist(err) {
-		return nil, nil, fmt.Errorf("File '%s' does not exist.", iter.rootPath)
+	if stat, err = os.Stat(filePath); os.IsNotExist(err) {
+		return nil, nil, fmt.Errorf("File '%s' does not exist.", filePath)
 	}
 	fileMode := stat.Mode()
 	fs := &FileSummary{
-		Name: stat.Name(),
-		AbsPath: filepath,
+		RelPath: strings.Replace(filePath, iter.rootPath + string(os.PathSeparator), "", 1),
+		AbsPath: filePath,
 		Mode: fileMode,
 		Size: stat.Size(),
 		ModTime: stat.ModTime(),
@@ -66,7 +67,7 @@ func (iter *FileSystemIterator) Next() (io.ReadCloser, *FileSummary, error) {
 		fs.Uid = int(systat.Uid)
 		fs.Gid = int(systat.Gid)
 	}
-	file, err := os.Open(filepath)
+	file, err := os.Open(filePath)
 	if err != nil {
 		return nil, fs, fmt.Errorf("Cannot read file '%s': %v", err)
 	}
