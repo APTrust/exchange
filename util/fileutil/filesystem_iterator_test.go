@@ -1,11 +1,9 @@
 package fileutil_test
 
 import (
-//	"fmt"
 	"github.com/APTrust/exchange/util/fileutil"
 	"github.com/stretchr/testify/assert"
 	"io"
-//	"os"
 	"path"
 	"path/filepath"
 	"runtime"
