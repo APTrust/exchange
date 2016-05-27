@@ -2,6 +2,7 @@ package models
 
 import (
 	"bufio"
+//	"bytes"
 	"crypto/md5"
 	"crypto/sha256"
 	"fmt"
@@ -113,6 +114,21 @@ func (vbag *VirtualBag) addGenericFile() (error) {
 	gf.IngestFileUid = fileSummary.Uid
 	gf.IngestFileGid = fileSummary.Gid
 	vbag.setIngestFileType(gf, fileSummary)
+
+	// START HERE
+	// If file should be parsed as tag file, or if file
+	// is manifest, copy to buffer, so it can be read
+	// multiple times. Do this ONLY for parsable tag files
+	// and manifests, which tend to be only a few KB. Other
+	// files may be many GB. There's no need to parse them,
+	// and they'll eat up all our RAM.
+	// ------------------------------------------------------
+	//buffer := bytes.NewBuffer(make([]byte, 0))
+	//_, err = io.Copy(buffer, reader)
+
+	if vbag.tagFilesToParse != nil && util.StringListContains(vbag.tagFilesToParse, fileSummary.RelPath) {
+		vbag.parseTags(reader, fileSummary.RelPath)
+	}
 	return vbag.calculateChecksums(reader, gf)
 }
 
@@ -163,7 +179,7 @@ func (vbag *VirtualBag) calculateChecksums(reader io.Reader, gf *GenericFile) (e
 }
 
 // Parse the tag fields in a file.
-func (vbag *VirtualBag) parseTagFields(reader io.Reader, fileSummary *fileutil.FileSummary) () {
+func (vbag *VirtualBag) parseTags(reader io.Reader, relFilePath string) () {
 	re := regexp.MustCompile(`^(\S*\:)?(\s.*)?$`)
 	scanner := bufio.NewScanner(reader)
 	var tag *Tag
@@ -176,7 +192,7 @@ func (vbag *VirtualBag) parseTagFields(reader io.Reader, fileSummary *fileutil.F
 				if tag.Label != "" {
 					vbag.obj.IngestTags = append(vbag.obj.IngestTags, tag)
 				}
-				tag = NewTag(fileSummary.RelPath, data[1], strings.Trim(data[2], " "))
+				tag = NewTag(relFilePath, data[1], strings.Trim(data[2], " "))
 				continue
 			}
 			value := strings.Trim(data[2], " ")
@@ -190,6 +206,7 @@ func (vbag *VirtualBag) parseTagFields(reader io.Reader, fileSummary *fileutil.F
 		vbag.obj.IngestTags = append(vbag.obj.IngestTags, tag)
 	}
 	if scanner.Err() != nil {
-		vbag.summary.AddError("Error reading tag file '%s': %v", fileSummary.RelPath, scanner.Err().Error())
+		vbag.summary.AddError("Error reading tag file '%s': %v",
+			relFilePath, scanner.Err().Error())
 	}
 }
