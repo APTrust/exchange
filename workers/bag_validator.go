@@ -40,17 +40,17 @@ func (validator *BagValidator) Validate() (*models.WorkSummary) {
 	validator.verifyTagSpecs()
 	validator.verifyChecksums()
 	validator.workSummary.Finish()
-	return validator.workSummary()
+	return validator.workSummary
 }
 
-func (validator *BagValidator) verifyFileSpecs() (*models.WorkSummary) {
-
-}
-
-func (validator *BagValidator) verifyTagSpecs() (*models.WorkSummary) {
+func (validator *BagValidator) verifyFileSpecs() {
 
 }
 
-func (validator *BagValidator) verifyChecksums() (*models.WorkSummary) {
+func (validator *BagValidator) verifyTagSpecs() {
+
+}
+
+func (validator *BagValidator) verifyChecksums() {
 
 }
