@@ -20,6 +20,9 @@ var presenceValues = []string { REQUIRED, OPTIONAL, FORBIDDEN }
 type FileSpec struct {
 	// Presence can be REQUIRED, OPTIONAL, or FORBIDDEN.
 	Presence        string
+	// If this is true, the file must be parsed as a BagIt
+	// tag file, using the label:value format.
+	ParseAsTagFile  bool
 }
 
 // Valid tells you whether this FileSpec is valid.

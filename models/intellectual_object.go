@@ -62,10 +62,18 @@ func NewIntellectualObject() (*IntellectualObject) {
 // TagField struct, but its properties are public and can
 // be easily serialized to / deserialized from JSON.
 type Tag struct {
-	Label string
-	Value string
+	SourceFile string
+	Label      string
+	Value      string
 }
 
+func NewTag(sourceFile, label, value string) (*Tag) {
+	return &Tag{
+		SourceFile: sourceFile,
+		Label: label,
+		Value: value,
+	}
+}
 
 // Returns the total number of bytes of all of the generic
 // files in this object. The object's bag size will be slightly
