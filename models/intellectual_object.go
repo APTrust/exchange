@@ -44,9 +44,13 @@ type IntellectualObject struct {
 	IngestLocalMd5       string         `json:"ingest_local_md5"`
 	IngestMd5Verified    bool           `json:"ingest_md5_verified"`
 	IngestMd5Verifiable  bool           `json:"ingest_md5_verifiable"`
+	IngestManifests      []string       `json:"ingest_manifests"`
+	IngestTagManifests   []string       `json:"ingest_tag_manifests"`
 	IngestFilesIgnored   []string       `json:"ingest_files_ignored"`
 	IngestTags           []*Tag         `json:"ingest_tags"`
 	IngestErrorMessage   string         `json:"ingest_error_message"`
+
+	genericFileMap       map[string]*GenericFile
 }
 
 func NewIntellectualObject() (*IntellectualObject) {
@@ -97,6 +101,21 @@ func (obj *IntellectualObject) AccessValid() bool {
 		}
 	}
 	return false
+}
+
+// Returns the GenericFile record for the specified path, or nil.
+// Param filePath should be the relative path of the file within
+// the bag. E.g. "data/images/myphoto.jpg"
+func (obj *IntellectualObject) FindGenericFileByPath(filePath string) (*GenericFile) {
+	if obj.genericFileMap == nil || len(obj.genericFileMap) != len(obj.GenericFiles) {
+		obj.genericFileMap = make(map[string]*GenericFile, len(obj.GenericFiles))
+		for i := range obj.GenericFiles {
+			gf := obj.GenericFiles[i]
+			origPath, _ := gf.OriginalPath()
+			obj.genericFileMap[origPath] = gf
+		}
+	}
+	return obj.genericFileMap[filePath]
 }
 
 // Serialize the subset of IntellectualObject data that Pharos

@@ -53,3 +53,24 @@ func TestSerializeObjectForPharos(t *testing.T) {
 	assert.Equal(t, "Photo Collection", hash["alt_identifier"])
 	assert.Equal(t, "institution", hash["access"])
 }
+
+func TestFindGenericFileByPath(t *testing.T) {
+	filepath := filepath.Join("testdata", "intel_obj.json")
+	obj, err := testutil.LoadIntelObjFixture(filepath)
+	if err != nil {
+		t.Errorf("Error loading test data file '%s': %v", filepath, err)
+	}
+
+	gf1 := obj.FindGenericFileByPath("data/object.properties")
+	assert.NotNil(t, gf1)
+	assert.Equal(t, "uc.edu/cin.675812/data/object.properties", gf1.Identifier)
+
+	gf2 := obj.FindGenericFileByPath("data/metadata.xml")
+	assert.NotNil(t, gf2)
+	assert.Equal(t, "uc.edu/cin.675812/data/metadata.xml", gf2.Identifier)
+
+	// Make sure we don't get an error here
+	assert.NotPanics(t, func() { obj.FindGenericFileByPath("file/does/not/exist") })
+	gf3 := obj.FindGenericFileByPath("file/does/not/exist")
+	assert.Nil(t, gf3)
+}
