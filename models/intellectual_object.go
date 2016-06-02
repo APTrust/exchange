@@ -113,8 +113,7 @@ func (obj *IntellectualObject) FindGenericFileByPath(filePath string) (*GenericF
 		obj.genericFileMap = make(map[string]*GenericFile, len(obj.GenericFiles))
 		for i := range obj.GenericFiles {
 			gf := obj.GenericFiles[i]
-			origPath, _ := gf.OriginalPath()
-			obj.genericFileMap[origPath] = gf
+			obj.genericFileMap[gf.OriginalPath()] = gf
 		}
 	}
 	return obj.genericFileMap[filePath]

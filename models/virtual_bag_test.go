@@ -26,7 +26,8 @@ func TestVirtualBagRead_FromDirectory(t *testing.T) {
 
 func TestVirtualBagRead_FromTarFile(t *testing.T) {
 	tarFilePath := vbagGetPath("example.edu.tagsample_good.tar")
-	vbag := models.NewVirtualBag(tarFilePath, nil, false, false)
+	files := []string {"bagit.txt", "bag-info.txt", "aptrust-info.txt"}
+	vbag := models.NewVirtualBag(tarFilePath, files, true, true)
 	assert.NotNil(t, vbag)
 	obj, summary := vbag.Read()
 	objJson, _ := json.Marshal(obj)

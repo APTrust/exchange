@@ -189,19 +189,26 @@ func (vbag *VirtualBag) calculateChecksums(reader io.Reader, gf *GenericFile) (e
 	return nil
 }
 
-func (vbag *VirtualBag) parseManifestsAndTagFiles() (error) {
-	reader, fileSummary, err := vbag.readIterator.Next()
-	if err != nil {
-		return err
+func (vbag *VirtualBag) parseManifestsAndTagFiles() {
+	for {
+		reader, fileSummary, err := vbag.readIterator.Next()
+		if reader != nil {
+			defer reader.Close()
+		}
+		if err == io.EOF {
+			return
+		}
+		if err != nil {
+			vbag.summary.AddError(err.Error())
+			continue
+		}
+		if util.StringListContains(vbag.tagFilesToParse, fileSummary.RelPath) {
+			vbag.parseTags(reader, fileSummary.RelPath)
+		} else if util.StringListContains(vbag.obj.IngestManifests, fileSummary.RelPath) ||
+			util.StringListContains(vbag.obj.IngestTagManifests, fileSummary.RelPath) {
+			vbag.parseManifest(reader, fileSummary.RelPath)
+		}
 	}
-	if util.StringListContains(vbag.tagFilesToParse, fileSummary.RelPath) {
-		vbag.parseTags(reader, fileSummary.RelPath)
-	} else if util.StringListContains(vbag.obj.IngestManifests, fileSummary.RelPath) ||
-		util.StringListContains(vbag.obj.IngestTagManifests, fileSummary.RelPath) {
-		vbag.parseManifest(reader, fileSummary.RelPath)
-	}
-	reader.Close()
-	return nil
 }
 
 // Parse the checksums in a manifest.
@@ -212,7 +219,6 @@ func (vbag *VirtualBag) parseManifest(reader io.Reader, relFilePath string) () {
 	}
 	re := regexp.MustCompile(`^(\S*)\s*(.*)`)
 	scanner := bufio.NewScanner(reader)
-
 	lineNum := 1
 	for scanner.Scan() {
 		line := scanner.Text()
@@ -221,6 +227,12 @@ func (vbag *VirtualBag) parseManifest(reader io.Reader, relFilePath string) () {
 			digest := data[1]
 			filePath := data[2]
 			genericFile := vbag.obj.FindGenericFileByPath(filePath)
+			if genericFile == nil {
+				vbag.summary.AddError(
+					"Manifest '%s' includes checksum for file '%s', which was not found in bag",
+					relFilePath, filePath)
+				continue
+			}
 			if alg == constants.AlgMd5 {
 				genericFile.IngestManifestMd5 = digest
 			} else if alg == constants.AlgSha256 {
@@ -246,7 +258,7 @@ func (vbag *VirtualBag) parseTags(reader io.Reader, relFilePath string) () {
 			data := re.FindStringSubmatch(line)
 			data[1] = strings.Replace(data[1], ":", "", 1)
 			if data[1] != "" {
-				if tag.Label != "" {
+				if tag != nil && tag.Label != "" {
 					vbag.obj.IngestTags = append(vbag.obj.IngestTags, tag)
 				}
 				tag = NewTag(relFilePath, data[1], strings.Trim(data[2], " "))
