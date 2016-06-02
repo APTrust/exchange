@@ -43,6 +43,9 @@ func TestTFINext(t *testing.T) {
 		if fileSummary == nil {
 			assert.Fail(t, "FileSummary is nil")
 		}
+		if fileSummary.IsDir {
+			continue
+		}
 
 		assert.NotEmpty(t, fileSummary.RelPath)
 		assert.False(t, strings.HasPrefix(fileSummary.RelPath, string(os.PathSeparator)))

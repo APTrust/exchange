@@ -4,6 +4,7 @@ import (
 	"archive/tar"
 	"io"
 	"os"
+	"strings"
 )
 
 // TarFileIterator lets us read tarred bags (or any other tarred files)
@@ -34,8 +35,11 @@ func (iter *TarFileIterator) Next() (io.ReadCloser, *FileSummary, error) {
 		return nil, nil, err
 	}
 	finfo := header.FileInfo()
+	// Path to file, minus the top-level directory name,
+	// which is the name of the bag.
+	relPathInArchive := (strings.Join(strings.Split(header.Name, "/")[1:], "/"))
 	fs := &FileSummary{
-		RelPath: header.Name,
+		RelPath: relPathInArchive,
 		AbsPath: "",
 		Mode: finfo.Mode(),
 		Size: header.Size,
