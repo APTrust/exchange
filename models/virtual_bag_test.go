@@ -1,6 +1,8 @@
 package models_test
 
 import (
+	"encoding/json"
+	"fmt"
 	// "github.com/APTrust/exchange/constants"
 	"github.com/APTrust/exchange/models"
 	"github.com/stretchr/testify/assert"
@@ -23,7 +25,14 @@ func TestVirtualBagRead_FromDirectory(t *testing.T) {
 }
 
 func TestVirtualBagRead_FromTarFile(t *testing.T) {
-
+	tarFilePath := vbagGetPath("example.edu.tagsample_good.tar")
+	vbag := models.NewVirtualBag(tarFilePath, nil, false, false)
+	assert.NotNil(t, vbag)
+	obj, summary := vbag.Read()
+	objJson, _ := json.Marshal(obj)
+	summaryJson, _ := json.Marshal(summary)
+	fmt.Println(string(objJson))
+	fmt.Println(string(summaryJson))
 }
 
 func TestVirtualBagRead_ChecksumOptions(t *testing.T) {

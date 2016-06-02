@@ -12,6 +12,7 @@ import (
 	"github.com/nu7hatch/gouuid"
 	"hash"
 	"io"
+	"path"
 	"regexp"
 	"strings"
 	"time"
@@ -60,7 +61,7 @@ func (vbag *VirtualBag) Read() (*IntellectualObject, *WorkSummary) {
 	vbag.summary = NewWorkSummary()
 	vbag.summary.Start()
 	vbag.obj = NewIntellectualObject()
-	vbag.obj.Identifier, _ = util.CleanBagName(vbag.pathToBag)
+	vbag.obj.Identifier, _ = util.CleanBagName(path.Base(vbag.pathToBag))
 	if strings.HasSuffix(vbag.pathToBag, ".tar") {
 		vbag.obj.IngestTarFilePath = vbag.pathToBag
 	} else {
@@ -106,7 +107,7 @@ func (vbag *VirtualBag) addGenericFiles() () {
 		err := vbag.addGenericFile()
 		if err == io.EOF {
 			break
-		} else {
+		} else if err != nil {
 			vbag.summary.AddError(err.Error())
 		}
 	}
@@ -135,6 +136,7 @@ func (vbag *VirtualBag) addGenericFile() (error) {
 	gf.IngestUUIDGeneratedAt = time.Now().UTC()
 	gf.IngestFileUid = fileSummary.Uid
 	gf.IngestFileGid = fileSummary.Gid
+	vbag.obj.GenericFiles = append(vbag.obj.GenericFiles, gf)
 	vbag.setIngestFileType(gf, fileSummary)
 	return vbag.calculateChecksums(reader, gf)
 }

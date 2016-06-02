@@ -57,6 +57,8 @@ func NewIntellectualObject() (*IntellectualObject) {
 	return &IntellectualObject{
 		GenericFiles: make([]*GenericFile, 0),
 		PremisEvents: make([]*PremisEvent, 0),
+		IngestManifests: make([]string, 0),
+		IngestTagManifests: make([]string, 0),
 		IngestFilesIgnored: make([]string, 0),
 		IngestTags: make([]*Tag, 0),
 	}
