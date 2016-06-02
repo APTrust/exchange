@@ -262,11 +262,12 @@ func (vbag *VirtualBag) parseTags(reader io.Reader, relFilePath string) () {
 					vbag.obj.IngestTags = append(vbag.obj.IngestTags, tag)
 				}
 				tag = NewTag(relFilePath, data[1], strings.Trim(data[2], " "))
+				vbag.setIntelObjTagValue(tag)
 				continue
 			}
 			value := strings.Trim(data[2], " ")
 			tag.Value = strings.Join([]string{tag.Value, value}, " ")
-
+			vbag.setIntelObjTagValue(tag)
 		} else {
 			vbag.summary.AddError("Unable to parse tag data from line: %s", line)
 		}
@@ -277,5 +278,19 @@ func (vbag *VirtualBag) parseTags(reader io.Reader, relFilePath string) () {
 	if scanner.Err() != nil {
 		vbag.summary.AddError("Error reading tag file '%s': %v",
 			relFilePath, scanner.Err().Error())
+	}
+}
+
+// Copy certain values from the aptrust-info.txt file into
+// properties of the IntellectualObject.
+func (vbag *VirtualBag) setIntelObjTagValue(tag *Tag) () {
+	if tag.SourceFile == "aptrust-info.txt" {
+		label := strings.ToLower(tag.Label)
+		switch label {
+		case "title": vbag.obj.Title = tag.Value
+		case "description": vbag.obj.Description = tag.Value
+		case "access": vbag.obj.Access = tag.Value
+		case "internal-sender-identifier": vbag.obj.AltIdentifier = tag.Value
+		}
 	}
 }
