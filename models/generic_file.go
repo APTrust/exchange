@@ -36,46 +36,139 @@ such as:
 */
 type GenericFile struct {
 	// Pharos fields.
+
+	// The Rails/Database id for this generic file.
 	// If the Id is non-zero, it's been recorded in Pharos.
 	Id                           int            `json:"id"`
+
+	// The human-readable identifier for this file. It consists of
+	// the object name, followed by a slash, followed by the path
+	// of the file within the bag. E.g. "virginia.edu/bag001/data/file1.pdf"
 	Identifier                   string         `json:"identifier"`
+
+	// The id of the IntellectualObject to which this file belongs.
 	IntellectualObjectId         int            `json:"intellectual_object_id"`
+
+	// The identifier of the intellectual object to which this file belongs.
 	IntellectualObjectIdentifier string         `json:"intellectual_object_identifier"`
+
+	// The file's mime type. E.g. "application/xml"
 	FileFormat                   string         `json:"file_format"`
+
+	// The location of this file in our primary s3 long-term storage bucket.
 	URI                          string         `json:"uri"`
+
+	// The size of the file, in bytes.
 	Size                         int64          `json:"size"`
+
+	// The date this file was created by the depositor. This date comes from
+	// the file record in the tarred bag.
 	FileCreated                  time.Time      `json:"file_created"`
+
+	// The date this file was last modified by the depository. This date comes
+	// from the file record in the tarred bag.
 	FileModified                 time.Time      `json:"file_modified"`
+
+	// A timestamp indicating when this GenericFile record was created in
+	// our repository.
 	CreatedAt                    time.Time      `json:"created_at"`
+
+	// A timestamp indicating when this GenericFile record was last updated in
+	// our repository.
 	UpdatedAt                    time.Time      `json:"updated_at"`
+
+	// A list of checksums for this file.
 	Checksums                    []*Checksum    `json:"checksums"`
+
+	// A list of PREMIS events for this file.
 	PremisEvents                 []*PremisEvent `json:"premis_events"`
 
-	// Exchange fields. These are for internal housekeeping.
+
+	// ----------------------------------------------------
+	// The fields below are for internal housekeeping.
 	// We don't send this data to Pharos.
+	// ----------------------------------------------------
+
 
 	// IngestFileType can be one of the types defined in constants.
 	// PAYLOAD_FILE, PAYLOAD_MANIFEST, TAG_MANIFEST, TAG_FILE
 	IngestFileType               string         `json:"ingest_file_type"`
+
+	// IngestLocalPath is the absolute path to this file on local disk.
+	// It may be empty if we're working with a tar file.
 	IngestLocalPath              string         `json:"ingest_local_path"`
+
+	// IngestManifestMd5 is the md5 checksum of this file, as reported
+	// in the bag's manifest-md5.txt file. This may be empty if there
+	// was no md5 checksum file, or if this generic file wasn't listed
+	// in the md5 manifest.
+	IngestManifestMd5            string         `json:"ingest_manifest_md5"`
+
+	// The md5 checksum we calculated at ingest from the actual file.
 	IngestMd5                    string         `json:"ingest_md5"`
+
+	// DateTime we calculated the md5 digest from local file.
 	IngestMd5GeneratedAt         time.Time      `json:"ingest_md5_generated_at"`
+
+	// DateTime we verified that our md5 checksum matches what's in the manifest.
 	IngestMd5VerifiedAt          time.Time      `json:"ingest_md5_verified_at"`
+
+	// The sha256 checksum for this file, as reported in the payload manifest.
+	// This may be empty if the bag had no sha256 manifest, or if this file
+	// was not listed in the manifest.
+	IngestManifestSha256         string         `json:"ingest_manifest_sha256"`
+
+	// The sha256 checksum we calculated when we read the actual file.
 	IngestSha256                 string         `json:"ingest_sha_256"`
+
+	// Timestamp of when we calculated the sha256 checksum.
 	IngestSha256GeneratedAt      time.Time      `json:"ingest_sha_256_generated_at"`
+
+	// Timestamp of when we verified that the sha256 checksum we calculated
+	// matches what's in the manifest.
 	IngestSha256VerifiedAt       time.Time      `json:"ingest_sha_256_verified_at"`
+
+	// The UUID assigned to this file. This will be its S3 key when we store it.
 	IngestUUID                   string         `json:"ingest_uuid"`
+
+	// Timestamp of when we generated the UUID for this file. Needed to create
+	// the identifier assignment PREMIS event.
 	IngestUUIDGeneratedAt        time.Time      `json:"ingest_uuid_generated_at"`
+
+	// Where this file is stored in S3.
 	IngestStorageURL             string         `json:"ingest_storage_url"`
+
+	// Timestamp indicating when this file was stored in S3.
 	IngestStoredAt               time.Time      `json:"ingest_stored_at"`
+
+	// Where this file is stored in Glacier.
+	IngestReplicationURL         string         `json:"ingest_replication_url"`
+
+	// Timestamp indicating when this file was stored in Glacier.
+	IngestReplicatedAt           time.Time      `json:"ingest_replicated_at"`
+
+	// If true, a previous version of this same file exists in S3/Glacier.
 	IngestPreviousVersionExists  bool           `json:"ingest_previous_version_exists"`
+
+	// If true, this file needs to be saved to S3.
 	IngestNeedsSave              bool           `json:"ingest_needs_save"`
+
+	// Error that occurred during ingest. If empty, there was no error.
 	IngestErrorMessage           string         `json:"ingesterror_message"`
 
+	// File User Id (unreliable)
 	IngestFileUid                int            `json:"ingest_file_uid"`
+
+	// File Group Id (unreliable)
 	IngestFileGid                int            `json:"ingest_file_gid"`
+
+	// File User Name (unreliable)
 	IngestFileUname              string         `json:"ingest_file_uname"`
+
+	// File Group Name (unreliable)
 	IngestFileGname              string         `json:"ingest_file_gname"`
+
+	// File Mode/Permissions (unreliable)
 	IngestFileMode               int64          `json:"ingest_file_mode"`
 }
 
