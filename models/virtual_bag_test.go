@@ -24,6 +24,11 @@ func TestVirtualBagRead_FromDirectory(t *testing.T) {
 
 }
 
+// ----------------------------------------------------------------
+// TODO: Update example.edu.tagsample_good.tar or create a new
+// version of it to include 1) checksums for all tag files,
+// 2) Description tag, 3) Internal-Sender-Identifier tag.
+// ----------------------------------------------------------------
 func TestVirtualBagRead_FromTarFile(t *testing.T) {
 	tarFilePath := vbagGetPath("example.edu.tagsample_good.tar")
 	files := []string {"bagit.txt", "bag-info.txt", "aptrust-info.txt"}
