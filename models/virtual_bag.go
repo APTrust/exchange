@@ -2,7 +2,6 @@ package models
 
 import (
 	"bufio"
-//	"bytes"
 	"crypto/md5"
 	"crypto/sha256"
 	"fmt"
@@ -40,10 +39,14 @@ type VirtualBag struct {
 // indicate whether we should calculate md5 and/or sha256 checksums
 // on the files in the bag.
 func NewVirtualBag(pathToBag string, tagFilesToParse []string, calculateMd5, calculateSha256 bool) (*VirtualBag) {
+	if tagFilesToParse == nil {
+		tagFilesToParse = make([]string, 0)
+	}
 	return &VirtualBag{
 		calculateMd5: calculateMd5,
 		calculateSha256: calculateSha256,
 		pathToBag: pathToBag,
+		tagFilesToParse: tagFilesToParse,
 	}
 }
 
@@ -63,6 +66,9 @@ func (vbag *VirtualBag) Read() (*IntellectualObject, *WorkSummary) {
 	} else {
 		vbag.obj.IngestUntarredPath = vbag.pathToBag
 	}
+
+	// Compile a list of the bag's contents (GenericFiles),
+	// and calculate checksums for everything in the bag.
 	var err error
 	if vbag.obj.IngestTarFilePath != "" {
 		vbag.readIterator, err = fileutil.NewTarFileIterator(vbag.obj.IngestTarFilePath)
@@ -73,6 +79,22 @@ func (vbag *VirtualBag) Read() (*IntellectualObject, *WorkSummary) {
 		vbag.summary.AddError("Could not read bag: %v", err)
 	} else {
 		vbag.addGenericFiles()
+	}
+
+
+	// Golang's tar file reader is forward-only, so we need to
+	// open a new iterator to read through a handful of tag files,
+	// manifests and tag manifests.
+	vbag.readIterator = nil
+	if vbag.obj.IngestTarFilePath != "" {
+		vbag.readIterator, err = fileutil.NewTarFileIterator(vbag.obj.IngestTarFilePath)
+	} else {
+		vbag.readIterator, err = fileutil.NewFileSystemIterator(vbag.obj.IngestUntarredPath)
+	}
+	if err != nil {
+		vbag.summary.AddError("Could not read bag: %v", err)
+	} else {
+		vbag.parseManifestsAndTagFiles()
 	}
 	vbag.summary.Finish()
 	return vbag.obj, vbag.summary
@@ -114,21 +136,6 @@ func (vbag *VirtualBag) addGenericFile() (error) {
 	gf.IngestFileUid = fileSummary.Uid
 	gf.IngestFileGid = fileSummary.Gid
 	vbag.setIngestFileType(gf, fileSummary)
-
-	// START HERE
-	// If file should be parsed as tag file, or if file
-	// is manifest, copy to buffer, so it can be read
-	// multiple times. Do this ONLY for parsable tag files
-	// and manifests, which tend to be only a few KB. Other
-	// files may be many GB. There's no need to parse them,
-	// and they'll eat up all our RAM.
-	// ------------------------------------------------------
-	//buffer := bytes.NewBuffer(make([]byte, 0))
-	//_, err = io.Copy(buffer, reader)
-
-	if vbag.tagFilesToParse != nil && util.StringListContains(vbag.tagFilesToParse, fileSummary.RelPath) {
-		vbag.parseTags(reader, fileSummary.RelPath)
-	}
 	return vbag.calculateChecksums(reader, gf)
 }
 
@@ -136,8 +143,10 @@ func (vbag *VirtualBag) addGenericFile() (error) {
 func (vbag *VirtualBag) setIngestFileType(gf *GenericFile, fileSummary *fileutil.FileSummary) {
 	if strings.HasPrefix(fileSummary.RelPath, "tagmanifest-") {
 		gf.IngestFileType = constants.TAG_MANIFEST
+		vbag.obj.IngestTagManifests = append(vbag.obj.IngestTagManifests, fileSummary.RelPath)
 	} else if strings.HasPrefix(fileSummary.RelPath, "manifest-") {
 		gf.IngestFileType = constants.PAYLOAD_MANIFEST
+		vbag.obj.IngestManifests = append(vbag.obj.IngestManifests, fileSummary.RelPath)
 	} else if strings.HasPrefix(fileSummary.RelPath, "data/") {
 		gf.IngestFileType = constants.PAYLOAD_FILE
 	} else {
@@ -172,10 +181,56 @@ func (vbag *VirtualBag) calculateChecksums(reader io.Reader, gf *GenericFile) (e
 		}
 	}
 	// on err, defaults to application/binary
-	buf := make([]byte, 256)
+	buf := make([]byte, 1024)
 	_, _ = reader.Read(buf)
 	gf.FileFormat, _ = platform.GuessMimeTypeByBuffer(buf)
 	return nil
+}
+
+func (vbag *VirtualBag) parseManifestsAndTagFiles() (error) {
+	reader, fileSummary, err := vbag.readIterator.Next()
+	if err != nil {
+		return err
+	}
+	if util.StringListContains(vbag.tagFilesToParse, fileSummary.RelPath) {
+		vbag.parseTags(reader, fileSummary.RelPath)
+	} else if util.StringListContains(vbag.obj.IngestManifests, fileSummary.RelPath) ||
+		util.StringListContains(vbag.obj.IngestTagManifests, fileSummary.RelPath) {
+		vbag.parseManifest(reader, fileSummary.RelPath)
+	}
+	reader.Close()
+	return nil
+}
+
+// Parse the checksums in a manifest.
+func (vbag *VirtualBag) parseManifest(reader io.Reader, relFilePath string) () {
+	alg := constants.AlgMd5
+	if strings.Contains(relFilePath, constants.AlgSha256) {
+		alg = constants.AlgSha256
+	}
+	re := regexp.MustCompile(`^(\S*)\s*(.*)`)
+	scanner := bufio.NewScanner(reader)
+
+	lineNum := 1
+	for scanner.Scan() {
+		line := scanner.Text()
+		if re.MatchString(line) {
+			data := re.FindStringSubmatch(line)
+			digest := data[1]
+			filePath := data[2]
+			genericFile := vbag.obj.FindGenericFileByPath(filePath)
+			if alg == constants.AlgMd5 {
+				genericFile.IngestManifestMd5 = digest
+			} else if alg == constants.AlgSha256 {
+				genericFile.IngestManifestSha256 = digest
+			}
+		} else {
+			vbag.summary.AddError(fmt.Sprintf(
+				"Unable to parse data from line %d of manifest %s: %s",
+				lineNum, relFilePath, line))
+		}
+		lineNum += 1
+	}
 }
 
 // Parse the tag fields in a file.
