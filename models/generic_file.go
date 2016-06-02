@@ -219,12 +219,8 @@ func (gf *GenericFile) SerializeForPharos() ([]byte, error) {
 // This is just the identifier minus the institution id and bag name.
 // For example, if the identifier is "uc.edu/cin.675812/data/object.properties",
 // this returns "data/object.properties"
-func (gf *GenericFile) OriginalPath() (string, error) {
-	parts := strings.SplitN(gf.Identifier, "/", 3)
-	if len(parts) < 3 {
-		return "", fmt.Errorf("GenericFile identifier '%s' is not valid", gf.Identifier)
-	}
-	return parts[2], nil
+func (gf *GenericFile) OriginalPath() (string) {
+	return strings.Replace(gf.Identifier, gf.IntellectualObjectIdentifier + "/", "", 1)
 }
 
 // Returns the name of the institution that owns this file.

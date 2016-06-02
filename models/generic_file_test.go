@@ -30,31 +30,21 @@ func TestInstitutionIdentifier(t *testing.T) {
 
 func TestOriginalPath(t *testing.T) {
 	genericFile := models.GenericFile{}
+	genericFile.IntellectualObjectIdentifier = "uc.edu/cin.675812"
 
 	// Top-level custom tag file
 	genericFile.Identifier = "uc.edu/cin.675812/tagmanifest-sha256.txt"
-	origPath, err := genericFile.OriginalPath()
-	if err != nil {
-		t.Errorf(err.Error())
-		return
-	}
+	origPath := genericFile.OriginalPath()
 	assert.Equal(t, "tagmanifest-sha256.txt", origPath)
 
 	// Payload file
 	genericFile.Identifier = "uc.edu/cin.675812/data/object.properties"
-	origPath, err = genericFile.OriginalPath()
-	if err != nil {
-		t.Errorf(err.Error())
-		return
-	}
+	origPath = genericFile.OriginalPath()
 	assert.Equal(t, "data/object.properties", origPath)
 
 	// Nested custom tag file
 	genericFile.Identifier = "uc.edu/cin.675812/custom/tag/dir/special_info.xml"
-	origPath, err = genericFile.OriginalPath()
-	if err != nil {
-		t.Errorf(err.Error())
-	}
+	origPath = genericFile.OriginalPath()
 	assert.Equal(t, "custom/tag/dir/special_info.xml", origPath)
 }
 
