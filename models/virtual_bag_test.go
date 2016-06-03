@@ -2,8 +2,8 @@ package models_test
 
 import (
 	//"encoding/json"
-	//"fmt"
-	// "github.com/APTrust/exchange/constants"
+	// "fmt"
+	"github.com/APTrust/exchange/constants"
 	"github.com/APTrust/exchange/models"
 	"github.com/stretchr/testify/assert"
 	// "os"
@@ -36,9 +36,33 @@ func TestVirtualBagRead_FromTarFile(t *testing.T) {
 	assert.NotNil(t, vbag)
 	obj, summary := vbag.Read()
 
+	// WorkSummary
 	assert.False(t, summary.StartedAt.IsZero())
 	assert.False(t, summary.FinishedAt.IsZero())
 	assert.Empty(t, summary.Errors)
+
+	// IntelObj properties
+	assert.Equal(t, 0, obj.Id)
+	assert.Equal(t, "example.edu.tagsample_good", obj.Identifier)
+
+	// TODO: Is BagName necessary? It should be the same as obj.Identifier
+	assert.Equal(t, "", obj.BagName)
+
+	assert.Equal(t, "virginia.edu", obj.Institution)
+	assert.Equal(t, 0, obj.InstitutionId)
+	assert.Equal(t, "Thirteen Ways of Looking at a Blackbird", obj.Title)
+	assert.Equal(t, "so much depends upon a red wheel barrow glazed with rain water beside the white chickens", obj.Description)
+	assert.Equal(t, "Institution", obj.Access)
+	assert.Equal(t, "uva-internal-id-0001", obj.AltIdentifier)
+	assert.Empty(t, obj.IngestErrorMessage)
+
+	// Tags
+
+	// Generic Files
+	tagFileCount := 0
+	payloadFileCount := 0
+	manifestCount := 0
+	tagManifestCount := 0
 	assert.Equal(t, 33, len(obj.GenericFiles))
 	for _, gf := range obj.GenericFiles {
 		assert.NotEmpty(t, gf.Identifier)
@@ -51,7 +75,20 @@ func TestVirtualBagRead_FromTarFile(t *testing.T) {
 		assert.Empty(t, gf.IngestStorageURL)
 		assert.Empty(t, gf.IngestReplicationURL)
 		assert.True(t, gf.Size > 0)
+		switch gf.IngestFileType {
+		case constants.PAYLOAD_FILE: payloadFileCount++
+		case constants.PAYLOAD_MANIFEST: manifestCount++
+		case constants.TAG_MANIFEST: tagManifestCount++
+		case constants.TAG_FILE: tagFileCount++
+		}
 	}
+
+	// Make sure file types were all tagged correctly
+	assert.Equal(t, 8, payloadFileCount)
+	assert.Equal(t, 2, manifestCount)
+	assert.Equal(t, 2, tagManifestCount)
+	assert.Equal(t, 21, tagFileCount)
+
 	// Spot check generic file aptrust-info.txt
 	gf := obj.GenericFiles[1]
 	assert.Equal(t, "example.edu.tagsample_good/aptrust-info.txt", gf.Identifier)
@@ -61,7 +98,7 @@ func TestVirtualBagRead_FromTarFile(t *testing.T) {
 	assert.Empty(t, gf.URI)
 	assert.EqualValues(t, 67, gf.Size)
 	assert.False(t, gf.FileModified.IsZero())
-	assert.Equal(t, "tag_file", gf.IngestFileType)
+	assert.Equal(t, constants.TAG_FILE, gf.IngestFileType)
 	assert.Equal(t, "300e936e622605f9f7a846d261d53093", gf.IngestManifestMd5)
 	assert.Equal(t, "300e936e622605f9f7a846d261d53093", gf.IngestMd5)
 	assert.False(t, gf.IngestMd5GeneratedAt.IsZero())
@@ -79,6 +116,7 @@ func TestVirtualBagRead_FromTarFile(t *testing.T) {
 	assert.False(t, gf.IngestPreviousVersionExists)
 	assert.True(t, gf.IngestNeedsSave)
 	assert.Empty(t, gf.IngestErrorMessage)
+
 }
 
 func TestVirtualBagRead_ChecksumOptions(t *testing.T) {
