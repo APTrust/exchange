@@ -5,6 +5,7 @@ import (
 	// "fmt"
 	"github.com/APTrust/exchange/constants"
 	"github.com/APTrust/exchange/models"
+	"github.com/APTrust/exchange/util"
 	"github.com/stretchr/testify/assert"
 	// "os"
 	// "path"
@@ -55,8 +56,28 @@ func TestVirtualBagRead_FromTarFile(t *testing.T) {
 	assert.Equal(t, "Institution", obj.Access)
 	assert.Equal(t, "uva-internal-id-0001", obj.AltIdentifier)
 	assert.Empty(t, obj.IngestErrorMessage)
+	assert.NotEmpty(t, obj.IngestTarFilePath)
+	assert.Equal(t, 2, len(obj.IngestManifests))
+	assert.True(t, util.StringListContains(obj.IngestManifests, "manifest-md5.txt"))
+	assert.True(t, util.StringListContains(obj.IngestManifests, "manifest-sha256.txt"))
+	assert.Equal(t, 2, len(obj.IngestTagManifests))
+	assert.True(t, util.StringListContains(obj.IngestTagManifests, "tagmanifest-md5.txt"))
+	assert.True(t, util.StringListContains(obj.IngestTagManifests, "tagmanifest-sha256.txt"))
+	assert.Empty(t, obj.IngestFilesIgnored)
 
 	// Tags
+	assert.Equal(t, 10, len(obj.IngestTags))
+	for _, tag := range obj.IngestTags {
+		assert.NotEmpty(t, tag.SourceFile)
+		assert.NotEmpty(t, tag.Label)
+		assert.NotEmpty(t, tag.Value)
+	}
+
+	// Spot check one tag
+	tag := obj.IngestTags[4]
+	assert.Equal(t, "bag-info.txt", tag.SourceFile)
+	assert.Equal(t, "Bag-Count", tag.Label)
+	assert.Equal(t, "1 of 1", tag.Value)
 
 	// Generic Files
 	tagFileCount := 0
@@ -116,7 +137,6 @@ func TestVirtualBagRead_FromTarFile(t *testing.T) {
 	assert.False(t, gf.IngestPreviousVersionExists)
 	assert.True(t, gf.IngestNeedsSave)
 	assert.Empty(t, gf.IngestErrorMessage)
-
 }
 
 func TestVirtualBagRead_ChecksumOptions(t *testing.T) {
