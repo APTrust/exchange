@@ -288,9 +288,14 @@ func (vbag *VirtualBag) setIntelObjTagValue(tag *Tag) () {
 		label := strings.ToLower(tag.Label)
 		switch label {
 		case "title": vbag.obj.Title = tag.Value
-		case "description": vbag.obj.Description = tag.Value
 		case "access": vbag.obj.Access = tag.Value
+		}
+	} else if tag.SourceFile == "bag-info.txt" {
+		label := strings.ToLower(tag.Label)
+		switch label {
+		case "internal-sender-description": vbag.obj.Description = tag.Value
 		case "internal-sender-identifier": vbag.obj.AltIdentifier = tag.Value
 		}
 	}
+
 }
