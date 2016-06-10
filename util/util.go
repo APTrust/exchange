@@ -46,7 +46,10 @@ func CleanBagName(bagName string) (string, error) {
 		return "", fmt.Errorf("'%s' is not a valid tar file name", bagName)
 	}
 	// Strip the .tar suffix
-	nameWithoutTar := bagName[0:len(bagName)-4]
+	nameWithoutTar := bagName
+	if strings.HasSuffix(bagName, ".tar") {
+		nameWithoutTar = bagName[0:len(bagName)-4]
+	}
 	// Now get rid of the .b001.of200 suffix if this is a multi-part bag.
 	cleanName := constants.MultipartSuffix.ReplaceAll([]byte(nameWithoutTar), []byte(""))
 	return string(cleanName), nil
