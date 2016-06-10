@@ -1,8 +1,6 @@
 package models_test
 
 import (
-	// "encoding/json"
-	// "fmt"
 	"github.com/APTrust/exchange/constants"
 	"github.com/APTrust/exchange/models"
 	"github.com/APTrust/exchange/util"
@@ -10,11 +8,9 @@ import (
 	"io/ioutil"
 	"os"
 	"os/exec"
-	// "path"
 	"path/filepath"
 	"runtime"
 	"testing"
-	// "time"
 )
 
 func TestNewVirtualBag(t *testing.T) {
@@ -108,6 +104,36 @@ func TestVirtualBagRead_ManifestOptions(t *testing.T) {
 		}
 	}
 }
+
+// We should parse the tags in the specified files.
+// We should not parse other tag files
+func TestVirtualBagTagFileOptions(t *testing.T) {
+	tarFilePath := vbagGetPath("example.edu.tagsample_good.tar")
+	files := []string {}
+	vbag := models.NewVirtualBag(tarFilePath, files, true, true)
+	assert.NotNil(t, vbag)
+	obj, _ := vbag.Read()
+	assert.Equal(t, 0, len(obj.IngestTags))
+
+	files = []string {"bagit.txt"}
+	vbag = models.NewVirtualBag(tarFilePath, files, true, true)
+	assert.NotNil(t, vbag)
+	obj, _ = vbag.Read()
+	assert.Equal(t, 2, len(obj.IngestTags))
+
+	files = []string {"bagit.txt", "bag-info.txt"}
+	vbag = models.NewVirtualBag(tarFilePath, files, true, true)
+	assert.NotNil(t, vbag)
+	obj, _ = vbag.Read()
+	assert.Equal(t, 8, len(obj.IngestTags))
+
+	files = []string {"bagit.txt", "bag-info.txt", "aptrust-info.txt"}
+	vbag = models.NewVirtualBag(tarFilePath, files, true, true)
+	assert.NotNil(t, vbag)
+	obj, _ = vbag.Read()
+	assert.Equal(t, 10, len(obj.IngestTags))
+}
+
 
 func runAssertions(t *testing.T, obj *models.IntellectualObject, summary *models.WorkSummary, caller string) {
 	// WorkSummary
