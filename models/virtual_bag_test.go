@@ -114,7 +114,7 @@ func runAssertions(t *testing.T, obj *models.IntellectualObject, summary *models
 	payloadFileCount := 0
 	manifestCount := 0
 	tagManifestCount := 0
-	assert.Equal(t, 33, len(obj.GenericFiles), caller)
+	assert.Equal(t, 16, len(obj.GenericFiles), caller)
 	for _, gf := range obj.GenericFiles {
 		assert.NotEmpty(t, gf.Identifier, caller)
 		assert.NotEmpty(t, gf.IntellectualObjectIdentifier, caller)
@@ -141,10 +141,10 @@ func runAssertions(t *testing.T, obj *models.IntellectualObject, summary *models
 	}
 
 	// Make sure file types were all tagged correctly
-	assert.Equal(t, 8, payloadFileCount, caller)
+	assert.Equal(t, 4, payloadFileCount, caller)
 	assert.Equal(t, 2, manifestCount, caller)
 	assert.Equal(t, 2, tagManifestCount, caller)
-	assert.Equal(t, 21, tagFileCount, caller)
+	assert.Equal(t, 8, tagFileCount, caller)
 
 	// Spot check generic file aptrust-info.txt
 	//gf := obj.GenericFiles[1]
