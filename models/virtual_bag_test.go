@@ -70,7 +70,43 @@ func TestVirtualBagRead_ChecksumOptions(t *testing.T) {
 
 // With md5 manifest only, sha256 only, and both
 func TestVirtualBagRead_ManifestOptions(t *testing.T) {
+	tempDir, bagPath := untarTestBag(t)
+	defer os.RemoveAll(tempDir)
 
+	// Delete the md5 manifest
+	os.Remove(filepath.Join(bagPath, "manifest-md5.txt"))
+
+	files := []string {"bagit.txt", "bag-info.txt", "aptrust-info.txt"}
+	vbag := models.NewVirtualBag(bagPath, files, true, true)
+	assert.NotNil(t, vbag)
+	obj, _ := vbag.Read()
+
+	// Should have manifest values for sha256
+	for _, gf := range obj.GenericFiles {
+		if gf.IngestFileType == constants.PAYLOAD_FILE {
+			assert.Empty(t, gf.IngestManifestMd5)
+			assert.NotEmpty(t, gf.IngestManifestSha256)
+		}
+	}
+
+	tempDir, bagPath = untarTestBag(t)
+	defer os.RemoveAll(tempDir)
+
+	// Delete the sha256 manifest
+	os.Remove(filepath.Join(bagPath, "manifest-sha256.txt"))
+
+	files = []string {"bagit.txt", "bag-info.txt", "aptrust-info.txt"}
+	vbag = models.NewVirtualBag(bagPath, files, true, true)
+	assert.NotNil(t, vbag)
+	obj, _ = vbag.Read()
+
+	// Should have manifest values for sha256
+	for _, gf := range obj.GenericFiles {
+		if gf.IngestFileType == constants.PAYLOAD_FILE {
+			assert.NotEmpty(t, gf.IngestManifestMd5)
+			assert.Empty(t, gf.IngestManifestSha256)
+		}
+	}
 }
 
 func runAssertions(t *testing.T, obj *models.IntellectualObject, summary *models.WorkSummary, caller string) {
