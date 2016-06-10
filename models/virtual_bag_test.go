@@ -24,21 +24,10 @@ func TestNewVirtualBag(t *testing.T) {
 }
 
 func TestVirtualBagRead_FromDirectory(t *testing.T) {
-	tarFilePath := vbagGetPath("example.edu.tagsample_good.tar")
-	tempDir, err := ioutil.TempDir("", "test")
-	if err != nil {
-		assert.Fail(t, "Cannot create temp dir: %v", err)
-	}
+	tempDir, bagPath := untarTestBag(t)
 	defer os.RemoveAll(tempDir)
-	cmd := exec.Command("tar", "xf", tarFilePath, "--directory", tempDir)
-	err = cmd.Run()
-	if err != nil {
-		assert.Fail(t, "Cannot untar test bag into temp dir: %v", err)
-	}
-
-	pathToUntarredBag := filepath.Join(tempDir, "example.edu.tagsample_good")
 	files := []string {"bagit.txt", "bag-info.txt", "aptrust-info.txt"}
-	vbag := models.NewVirtualBag(pathToUntarredBag, files, true, true)
+	vbag := models.NewVirtualBag(bagPath, files, true, true)
 	assert.NotNil(t, vbag)
 	obj, summary := vbag.Read()
 	runAssertions(t, obj, summary, "TestVirtualBagRead_FromDirectory")
@@ -54,6 +43,28 @@ func TestVirtualBagRead_FromTarFile(t *testing.T) {
 }
 
 func TestVirtualBagRead_ChecksumOptions(t *testing.T) {
+	tempDir, bagPath := untarTestBag(t)
+	defer os.RemoveAll(tempDir)
+	files := []string {"bagit.txt", "bag-info.txt", "aptrust-info.txt"}
+	vbag := models.NewVirtualBag(bagPath, files, true, false)
+	assert.NotNil(t, vbag)
+	obj, _ := vbag.Read()
+
+	// Should calculate md5 only
+	for _, gf := range obj.GenericFiles {
+		assert.NotEmpty(t, gf.IngestMd5)
+		assert.Empty(t, gf.IngestSha256)
+	}
+
+	vbag = models.NewVirtualBag(bagPath, files, false, true)
+	assert.NotNil(t, vbag)
+	obj, _ = vbag.Read()
+
+	// Should calculate sha256 only
+	for _, gf := range obj.GenericFiles {
+		assert.Empty(t, gf.IngestMd5)
+		assert.NotEmpty(t, gf.IngestSha256)
+	}
 
 }
 
@@ -147,7 +158,6 @@ func runAssertions(t *testing.T, obj *models.IntellectualObject, summary *models
 	assert.Equal(t, 8, tagFileCount, caller)
 
 	// Spot check generic file aptrust-info.txt
-	//gf := obj.GenericFiles[1]
 	gf := obj.FindGenericFileByPath("aptrust-info.txt")
 	if gf == nil {
 		assert.Fail(t, "Could not find aptrust-info.txt", caller)
@@ -184,4 +194,19 @@ func vbagGetPath(fileName string) (string) {
 	dir, _ := filepath.Abs(filepath.Dir(filename))
 	testDataPath := filepath.Join(dir, "..", "testdata", fileName)
 	return testDataPath
+}
+
+func untarTestBag(t *testing.T) (tempDir string, bagPath string) {
+	tarFilePath := vbagGetPath("example.edu.tagsample_good.tar")
+	tempDir, err := ioutil.TempDir("", "test")
+	if err != nil {
+		assert.Fail(t, "Cannot create temp dir: %v", err)
+	}
+	cmd := exec.Command("tar", "xf", tarFilePath, "--directory", tempDir)
+	err = cmd.Run()
+	if err != nil {
+		assert.Fail(t, "Cannot untar test bag into temp dir: %v", err)
+	}
+	pathToUntarredBag := filepath.Join(tempDir, "example.edu.tagsample_good")
+	return tempDir, pathToUntarredBag
 }
