@@ -14,8 +14,9 @@ type BagValidator struct {
 	Context              *context.Context
 	PathToBag            string
 	BagValidationConfig  *config.BagValidationConfig
-	workSummary          *models.WorkSummary
 	virtualBag           *models.VirtualBag
+	validationSummary    *models.WorkSummary
+	intelObj             *models.IntellectualObject
 }
 
 // NewBagValidator creates a new BagValidator. Param pathToBag
@@ -50,16 +51,30 @@ func NewBagValidator(_context *context.Context, pathToBag string, bagValidationC
 	return bagValidator, nil
 }
 
-// Validate validates the bag and returns a WorkSummary.
-// Param files is an optional
+// Reads the bag, produces a list of generic files, parses tags,
+// and calculates checksums, producing an IntellectualObject.
+// Call Validator.Validate() after this if you want to validate
+// the bag. Returns a WorkSummary describing any issues with the
+// read operation, which may fail if the directory can't be read,
+// if the tar file is corrupt, etc.
+func (validator *BagValidator) ReadBag() (*models.WorkSummary) {
+	var vbagSummary *models.WorkSummary
+	validator.intelObj, vbagSummary = validator.virtualBag.Read()
+	return vbagSummary
+}
+
+// Validates the bag and returns a WorkSummary.
+// You must call Validator.Read() before calling this, since
+// the read operation reads the bag and sets up the IntellectualObject.
+// This returns a WorkSummary describing any validation problems.
 func (validator *BagValidator) Validate() (*models.WorkSummary) {
-	validator.workSummary = models.NewWorkSummary()
-	validator.workSummary.Start()
+	validator.validationSummary = models.NewWorkSummary()
+	validator.validationSummary.Start()
 	validator.verifyFileSpecs()
 	validator.verifyTagSpecs()
 	validator.verifyChecksums()
-	validator.workSummary.Finish()
-	return validator.workSummary
+	validator.validationSummary.Finish()
+	return validator.validationSummary
 }
 
 func (validator *BagValidator) verifyFileSpecs() {
