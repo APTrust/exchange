@@ -27,6 +27,7 @@ func TestLoadBagValidationConfig(t *testing.T) {
 	assert.True(t, conf.TopLevelDirMustMatchBagName)
 	assert.Equal(t, 6, len(conf.FileSpecs))
 	assert.Equal(t, 3, len(conf.TagSpecs))
+	assert.Equal(t, 2, len(conf.FixityAlgorithms))
 
 	// Spot checks
 	if _, ok := conf.FileSpecs["manifest-md5.txt"]; !ok {
@@ -37,6 +38,10 @@ func TestLoadBagValidationConfig(t *testing.T) {
 	}
 	if _, ok := conf.TagSpecs["Title"]; !ok {
 		assert.Fail(t, "TagSpec for Title is missing")
+	}
+	if len(conf.FixityAlgorithms) > 1 {
+		assert.Equal(t, "md5", conf.FixityAlgorithms[0])
+		assert.Equal(t, "sha256", conf.FixityAlgorithms[1])
 	}
 	assert.Equal(t, config.REQUIRED, conf.FileSpecs["manifest-md5.txt"].Presence)
 	assert.Equal(t, config.OPTIONAL, conf.FileSpecs["manifest-sha256.txt"].Presence)

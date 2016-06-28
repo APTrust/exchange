@@ -10,6 +10,7 @@
         "bagit.txt": { "Presence": "required" },
         "bag-info.txt": { "Presence": "required" }
     },
+    "FixityAlgorithms": ["md5", "sha256"],
     "TagSpecs": {
         "Title": {"FilePath": "aptrust-info.txt", "Presence": "required", "EmptyOK": false },
         "Access": {"FilePath": "aptrust-info.txt", "Presence": "required", "EmptyOK": false },

@@ -79,12 +79,16 @@ type BagValidationConfig struct {
 	// must untar to a directory whose name matches the tar file
 	// name. E.g. Must my_bag.tar untar to a directory called my_tar?
 	TopLevelDirMustMatchBagName bool
+	// Which fixity algorithms should we calculate on tag and
+	// payload files?
+	FixityAlgorithms            []string
 }
 
 func NewBagValidationConfig() (*BagValidationConfig) {
 	return &BagValidationConfig{
 		FileSpecs: make(map[string]FileSpec),
 		TagSpecs: make(map[string]TagSpec),
+		FixityAlgorithms: make([]string, 0),
 		AllowMiscTopLevelFiles: false,
 		AllowMiscDirectories: false,
 		TopLevelDirMustMatchBagName: false,
