@@ -3,16 +3,10 @@ package context
 import (
 	"fmt"
 	"github.com/APTrust/exchange/config"
-	"github.com/APTrust/exchange/models"
 	"github.com/APTrust/exchange/network"
 	"github.com/APTrust/exchange/util/logger"
-	"github.com/APTrust/exchange/util/fileutil"
-	"github.com/nsqio/go-nsq"
 	"github.com/op/go-logging"
-	"log"
 	"os"
-	"path/filepath"
-	"regexp"
 	"sync/atomic"
 )
 
@@ -24,11 +18,10 @@ those services.
 */
 type Context struct {
 	Config          config.Config
-	JsonLog         *log.Logger
 	MessageLog      *logging.Logger
 	PharosClient    *network.PharosClient
-//	Volume          *util.Volume            // *** TODO *** Re-add Volume!
-	syncMap         *models.SynchronizedMap
+//	Volume          *util.Volume            // *** TODO *** Re-add Volume as service!
+	pathToLogFile   string
 	succeeded       int64
 	failed          int64
 }
@@ -50,16 +43,9 @@ func NewContext(appConfig config.Config) (context *Context) {
 		failed: int64(0),
 	}
 	context.Config = appConfig
-	context.initLogging()
+	context.MessageLog, context.pathToLogFile = logger.InitLogger(&appConfig)
 	context.initPharosClient()
-	context.syncMap = models.NewSynchronizedMap()
 	return context
-}
-
-// Initializes the loggers.
-func (context *Context) initLogging() {
-	context.MessageLog = logger.InitLogger(&context.Config)
-	context.JsonLog = logger.InitJsonLogger(&context.Config)
 }
 
 // Sets up a new Volume object to track estimated disk usage.
@@ -110,93 +96,13 @@ func (context *Context) IncrementFailed() (int64) {
 	return context.succeeded
 }
 
-/*
-Registers an item currently being processed so we can keep track
-of duplicates. Many requests for ingest, restoration, etc. may be
-queued more than once. Register an item here to note that it is
-being processed under a specific message id. If they item comes in
-again before we're done processing, and you try to register it here,
-you'll get an error saying the item is already in process.
-
-The key should be a unique identifier. For intellectual objects,
-this can be the IntellectualObject.Identifier. For S3 files, it can
-be bucket_name/file_name.
-*/
-func (context *Context) RegisterItem(key string, messageId nsq.MessageID) (error) {
-	messageIdString := context.MessageIdString(messageId)
-	if context.syncMap.HasKey(key) {
-		otherId := context.syncMap.Get(key)
-		sameOrDifferent := "a different"
-		if otherId == messageIdString {
-			sameOrDifferent = "the same"
-		}
-		return fmt.Errorf("Item is already being processed under %s messageId (%s)",
-			sameOrDifferent, otherId)
-	}
-	// Make a note that we're processing this file.
-	context.syncMap.Add(key, messageIdString)
-	return nil
-}
-
-/*
-UnregisterItem removes the item with specified key from the list
-of items we are currently processing. Be sure to call this when you're
-done processing any item you've registered so we know we're finished
-with it and we can reprocess it later, under a different message id.
-*/
-func (context *Context) UnregisterItem(key string) {
-	context.syncMap.Delete(key)
-}
-
-/*
-Returns the NSQ MessageId under which the current item is being
-processed, or an empty string if no item with that key is currently
-being processed.
-*/
-func (context *Context) MessageIdFor(key string) (string) {
-	if context.syncMap.HasKey(key) {
-		return context.syncMap.Get(key)
-	}
-	return ""
-}
-
-// Converts an NSQ MessageID to a string.
-func (context *Context) MessageIdString(messageId nsq.MessageID) (string) {
-	messageIdBytes := make([]byte, nsq.MsgIDLength)
-	for i := range messageId {
-		messageIdBytes[i] = messageId[i]
-	}
-	return string(messageIdBytes)
+// Returns the path to this process' log file
+func (context *Context) PathToLogFile() (string) {
+	return context.pathToLogFile
 }
 
 // Logs info about the number of items that have succeeded and failed.
 func (context *Context) LogStats() {
 	context.MessageLog.Info("**STATS** Succeeded: %d, Failed: %d",
 		context.Succeeded(), context.Failed())
-}
-
-
-/*
-Returns true if the bag is currently being processed. This handles a
-special case where a very large bag is in process for a long time,
-the NSQ message times out, then NSQ re-sends the same message with
-the same ID to this worker. Without these checks, the worker will
-accept the message and will be processing it twice. This causes
-problems because the first working will be deleting files while the
-second working is trying to run checksums on them.
-*/
-func (context *Context) BagAlreadyInProgress(s3File *models.S3File, currentMessageId string) (bool) {
-	// Bag is in process if it's in the registry.
-	messageId := context.MessageIdFor(s3File.BagName())
-	if messageId != "" && messageId == currentMessageId {
-		return true
-	}
-
-	re := regexp.MustCompile("\\.tar$")
-	bagDir := re.ReplaceAllString(s3File.Key.Key, "")
-	tarFilePath := filepath.Join(context.Config.TarDirectory, s3File.Key.Key)
-	unpackDir := filepath.Join(context.Config.TarDirectory, bagDir)
-
-	// Bag is in process if we have its files on disk.
-	return fileutil.FileExists(unpackDir) || fileutil.FileExists(tarFilePath)
 }
