@@ -108,7 +108,7 @@ func (obj *IntellectualObject) AccessValid() bool {
 // Returns the GenericFile record for the specified path, or nil.
 // Param filePath should be the relative path of the file within
 // the bag. E.g. "data/images/myphoto.jpg"
-func (obj *IntellectualObject) FindGenericFileByPath(filePath string) (*GenericFile) {
+func (obj *IntellectualObject) FindGenericFile(filePath string) (*GenericFile) {
 	if obj.genericFileMap == nil || len(obj.genericFileMap) != len(obj.GenericFiles) {
 		obj.genericFileMap = make(map[string]*GenericFile, len(obj.GenericFiles))
 		for i := range obj.GenericFiles {

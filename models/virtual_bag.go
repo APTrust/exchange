@@ -226,7 +226,7 @@ func (vbag *VirtualBag) parseManifest(reader io.Reader, relFilePath string) () {
 			data := re.FindStringSubmatch(line)
 			digest := data[1]
 			filePath := data[2]
-			genericFile := vbag.obj.FindGenericFileByPath(filePath)
+			genericFile := vbag.obj.FindGenericFile(filePath)
 			if genericFile == nil {
 				vbag.summary.AddError(
 					"Manifest '%s' includes checksum for file '%s', which was not found in bag",

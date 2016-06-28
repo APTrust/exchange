@@ -220,7 +220,7 @@ func runAssertions(t *testing.T, obj *models.IntellectualObject, summary *models
 	assert.Equal(t, 8, tagFileCount, caller)
 
 	// Spot check generic file aptrust-info.txt
-	gf := obj.FindGenericFileByPath("aptrust-info.txt")
+	gf := obj.FindGenericFile("aptrust-info.txt")
 	if gf == nil {
 		assert.Fail(t, "Could not find aptrust-info.txt", caller)
 	}
