@@ -3,6 +3,7 @@ package workers
 import (
 	"fmt"
 	"github.com/APTrust/exchange/config"
+	"github.com/APTrust/exchange/context"
 	"github.com/APTrust/exchange/constants"
 	"github.com/APTrust/exchange/models"
 	"github.com/APTrust/exchange/util"
@@ -10,6 +11,7 @@ import (
 )
 
 type BagValidator struct {
+	Context              *context.Context
 	PathToBag            string
 	BagValidationConfig  *config.BagValidationConfig
 	workSummary          *models.WorkSummary
@@ -21,7 +23,10 @@ type BagValidator struct {
 // or to the untarred bag (a directory). Param bagValidationConfig
 // defines what we need to validate, in addition to the checksums in the
 // manifests.
-func NewBagValidator(pathToBag string, bagValidationConfig *config.BagValidationConfig) (*BagValidator, error) {
+func NewBagValidator(_context *context.Context, pathToBag string, bagValidationConfig *config.BagValidationConfig) (*BagValidator, error) {
+	if _context == nil {
+		return nil, fmt.Errorf("Context cannot be nil")
+	}
 	if !fileutil.FileExists(pathToBag) {
 		return nil, fmt.Errorf("Bag does not exist at %s", pathToBag)
 	}
@@ -37,6 +42,7 @@ func NewBagValidator(pathToBag string, bagValidationConfig *config.BagValidation
 		}
 	}
 	bagValidator := &BagValidator{
+		Context: _context,
 		PathToBag: pathToBag,
 		BagValidationConfig: bagValidationConfig,
 	    virtualBag: models.NewVirtualBag(pathToBag, tagFilesToParse, calculateMd5, calculateSha256),
