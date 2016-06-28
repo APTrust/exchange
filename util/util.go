@@ -170,9 +170,11 @@ func HasSavableName(filename string) (bool) {
 
 // Returns true if the list of strings contains item.
 func StringListContains(list []string, item string) (bool) {
-	for i := range list {
-		if list[i] == item {
-			return true
+	if list != nil {
+		for i := range list {
+			if list[i] == item {
+				return true
+			}
 		}
 	}
 	return false
