@@ -10,7 +10,7 @@ import (
 )
 
 type BagValidator struct {
-	PathToUntarredBag    string
+	PathToBag            string
 	BagValidationConfig  *config.BagValidationConfig
 	workSummary          *models.WorkSummary
 	virtualBag           *models.VirtualBag
@@ -37,7 +37,7 @@ func NewBagValidator(pathToBag string, bagValidationConfig *config.BagValidation
 		}
 	}
 	bagValidator := &BagValidator{
-		PathToUntarredBag: pathToBag,
+		PathToBag: pathToBag,
 		BagValidationConfig: bagValidationConfig,
 	    virtualBag: models.NewVirtualBag(pathToBag, tagFilesToParse, calculateMd5, calculateSha256),
 	}
