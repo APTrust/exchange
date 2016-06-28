@@ -13,9 +13,9 @@ import (
 
 /*
 InitLogger creates and returns a logger suitable for logging
-human-readable message.
+human-readable message. Also returns the path to the log file.
 */
-func InitLogger(config *config.Config) *logging.Logger {
+func InitLogger(config *config.Config) (*logging.Logger, string) {
 	processName := path.Base(os.Args[0])
 	logDir, err := config.EnsureLogDirectory()
 	if err != nil {
@@ -50,16 +50,19 @@ func InitLogger(config *config.Config) *logging.Logger {
 		logging.SetBackend(logBackend)
 	}
 
-	return log
+	return log, filename
 }
 
+// -----------------------------------------------------------------------
+// TODO - Delete this code if we decide not to use JSON logger in Context.
+// -----------------------------------------------------------------------
 /*
 InitLogger creates and returns a logger suitable for logging JSON
 data. Bagman JSON logs consist of a single JSON object per line,
 with no extraneous data. Because all of the data in the file is
 pure JSON, with one record per line, these files are easy to parse.
 */
-func InitJsonLogger(config *config.Config) *stdlog.Logger {
+func InitJsonLogger(config *config.Config) (*stdlog.Logger, string) {
 	processName := path.Base(os.Args[0])
 	logDir, err := config.EnsureLogDirectory()
 	if err != nil {
@@ -73,7 +76,7 @@ func InitJsonLogger(config *config.Config) *stdlog.Logger {
 		fmt.Fprintf(os.Stderr, "Cannot open log file '%s': %v", filename, err)
 		os.Exit(1)
 	}
-	return stdlog.New(writer, "", 0)
+	return stdlog.New(writer, "", 0), filename
 }
 
 /*

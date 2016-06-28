@@ -48,11 +48,14 @@ func teardownLoggerTest(config *config.Config) {
 func TestInitLogger(t *testing.T) {
 	config := getLoggingTestConfig(t)
 	defer teardownLoggerTest(config)
-	log := logger.InitLogger(config)
+	log, filename := logger.InitLogger(config)
 	log.Error("Test Message")
 	logFile := filepath.Join(config.AbsLogDirectory(), path.Base(os.Args[0])+".log")
 	if !fileutil.FileExists(logFile) {
 		t.Errorf("Log file does not exist at %s", logFile)
+	}
+	if filename != logFile {
+		t.Errorf("Expected log file path '%s', got '%s'", logFile, filename)
 	}
 	data, err := ioutil.ReadFile(logFile)
 	if err != nil {
@@ -66,11 +69,14 @@ func TestInitLogger(t *testing.T) {
 func TestInitJsonLogger(t *testing.T) {
 	config := getLoggingTestConfig(t)
 	defer teardownLoggerTest(config)
-	log := logger.InitJsonLogger(config)
+	log, filename := logger.InitJsonLogger(config)
 	log.Println("{a:100}")
 	logFile := filepath.Join(config.AbsLogDirectory(), path.Base(os.Args[0])+".json")
 	if !fileutil.FileExists(logFile) {
 		t.Errorf("Log file does not exist at %s", logFile)
+	}
+	if filename != logFile {
+		t.Errorf("Expected log file path '%s', got '%s'", logFile, filename)
 	}
 	data, err := ioutil.ReadFile(logFile)
 	if err != nil {
