@@ -1,34 +1,47 @@
 package workers
 
 import (
+	"fmt"
 	"github.com/APTrust/exchange/config"
+	"github.com/APTrust/exchange/constants"
 	"github.com/APTrust/exchange/models"
+	"github.com/APTrust/exchange/util"
+	"github.com/APTrust/exchange/util/fileutil"
 )
 
 type BagValidator struct {
 	PathToUntarredBag    string
 	BagValidationConfig  *config.BagValidationConfig
 	workSummary          *models.WorkSummary
-	intelObj             *models.IntellectualObject
+	virtualBag           *models.VirtualBag
 }
 
-// NewBagValidator creates a new BagValidator. Param pathToUntarredBag
-// should be an absolute path the untarred bag. Param bagValidationConfig
+// NewBagValidator creates a new BagValidator. Param pathToBag
+// should be an absolute path to either the tarred bag (.tar file)
+// or to the untarred bag (a directory). Param bagValidationConfig
 // defines what we need to validate, in addition to the checksums in the
 // manifests.
-//
-// Param intelObj should be either an IntellectualObject, complete with
-// a list of GenericFiles, checksums, and tags, or nil. When tarfile.Reader
-// unpacks a tarred bag, it produces an IntellectualObject suitable for
-// use here. If the IntellectualObject is nil, this validator will
-// calculate the checksums necessary to validate the bag, and will parse
-// tag files as necessary.
-func NewBagValidator(pathToUntarredBag string, bagValidationConfig *config.BagValidationConfig, intelObj *models.IntellectualObject) (*BagValidator) {
-	return &BagValidator{
-		PathToUntarredBag: pathToUntarredBag,
-		BagValidationConfig: bagValidationConfig,
-		intelObj: intelObj,
+func NewBagValidator(pathToBag string, bagValidationConfig *config.BagValidationConfig) (*BagValidator, error) {
+	if !fileutil.FileExists(pathToBag) {
+		return nil, fmt.Errorf("Bag does not exist at %s", pathToBag)
 	}
+	if bagValidationConfig == nil {
+		return nil, fmt.Errorf("Param bagValidationConfig cannot be nil")
+	}
+	calculateMd5 := util.StringListContains(bagValidationConfig.FixityAlgorithms, constants.AlgMd5)
+	calculateSha256 := util.StringListContains(bagValidationConfig.FixityAlgorithms, constants.AlgSha256)
+	tagFilesToParse := make([]string, 0)
+	for pathToFile, filespec := range bagValidationConfig.FileSpecs {
+		if filespec.ParseAsTagFile {
+			tagFilesToParse = append(tagFilesToParse, pathToFile)
+		}
+	}
+	bagValidator := &BagValidator{
+		PathToUntarredBag: pathToBag,
+		BagValidationConfig: bagValidationConfig,
+	    virtualBag: models.NewVirtualBag(pathToBag, tagFilesToParse, calculateMd5, calculateSha256),
+	}
+	return bagValidator, nil
 }
 
 // Validate validates the bag and returns a WorkSummary.
