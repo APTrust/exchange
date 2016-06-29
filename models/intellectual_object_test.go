@@ -5,6 +5,7 @@ import (
 	"github.com/APTrust/exchange/models"
 	"github.com/APTrust/exchange/util/testutil"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"path/filepath"
 	"testing"
 )
@@ -73,4 +74,30 @@ func TestFindGenericFile(t *testing.T) {
 	assert.NotPanics(t, func() { obj.FindGenericFile("file/does/not/exist") })
 	gf3 := obj.FindGenericFile("file/does/not/exist")
 	assert.Nil(t, gf3)
+}
+
+func TestFindTag(t *testing.T) {
+	obj := models.NewIntellectualObject()
+	obj.IngestTags = append(obj.IngestTags, models.NewTag("file1", "label1", "value1"))
+	obj.IngestTags = append(obj.IngestTags, models.NewTag("file2", "label2", "value2"))
+	obj.IngestTags = append(obj.IngestTags, models.NewTag("file3", "label3", "value3.0"))
+	obj.IngestTags = append(obj.IngestTags, models.NewTag("file3", "label3", "value3.1"))
+	obj.IngestTags = append(obj.IngestTags, models.NewTag("file4", "label3", "value3.2"))
+
+
+	tags1 := obj.FindTag("label1")
+	tags2 := obj.FindTag("label2")
+	tags3 := obj.FindTag("label3")
+	tagsx := obj.FindTag("Elmer Fudd")
+
+	require.NotNil(t, tags1)
+	assert.Equal(t, "value1", tags1[0].Value)
+	require.NotNil(t, tags2)
+	assert.Equal(t, "value2", tags2[0].Value)
+	require.NotNil(t, tags3)
+	assert.Equal(t, 3, len(tags3))
+	assert.Equal(t, "value3.0", tags3[0].Value)
+	assert.Equal(t, "value3.1", tags3[1].Value)
+	assert.Equal(t, "value3.2", tags3[2].Value)
+	assert.Nil(t, tagsx)
 }

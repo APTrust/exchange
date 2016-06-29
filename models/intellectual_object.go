@@ -51,6 +51,7 @@ type IntellectualObject struct {
 	IngestErrorMessage   string         `json:"ingest_error_message"`
 
 	genericFileMap       map[string]*GenericFile
+	tagMap               map[string][]*Tag
 }
 
 func NewIntellectualObject() (*IntellectualObject) {
@@ -118,6 +119,26 @@ func (obj *IntellectualObject) FindGenericFile(filePath string) (*GenericFile) {
 	}
 	return obj.genericFileMap[filePath]
 }
+
+// Returns the tag with the specified name, or nil. The bag spec at
+// https://tools.ietf.org/html/draft-kunze-bagit-13#section-2.2.2
+// says tags may be repeated, and their order must be preserved,
+// so this returns a slice of tags if the tag is found. In most
+// cases, the slice will contain one element.
+func (obj *IntellectualObject) FindTag(tagName string) ([]*Tag) {
+	if obj.tagMap == nil {
+		obj.tagMap = make(map[string][]*Tag)
+		for i := range obj.IngestTags {
+			tag := obj.IngestTags[i]
+			if obj.tagMap[tag.Label] == nil {
+				obj.tagMap[tag.Label] = make([]*Tag, 0)
+			}
+			obj.tagMap[tag.Label] = append(obj.tagMap[tag.Label], tag)
+		}
+	}
+	return obj.tagMap[tagName]
+}
+
 
 // Serialize the subset of IntellectualObject data that Pharos
 // will accept. This is for post/put, where essential info, such
