@@ -89,5 +89,44 @@ func TestNewBagValidatorWithBadParams(t *testing.T) {
 	if err == nil {
 		assert.Fail(t, "NewBagValidator should have complained about nil Context.")
 	}
+}
+
+// Read a valid bag from a tar file.
+func TestReadBag_FromTarFile_BagValid(t *testing.T) {
+
+}
+
+// Read an invalid bag from a tar file.
+func TestReadBag_FromTarFile_BagInvalid(t *testing.T) {
+
+}
+
+// Read a valid bag from a directory
+func TestReadBag_FromDirectory_BagValid(t *testing.T) {
+
+}
+
+// Read an invalid bag from a directory
+func TestReadBag_FromDirectory_BagInvalid(t *testing.T) {
+
+}
+
+// Read from a file that does not exist.
+func TestBagReadBag_FileDoesNotExist(t *testing.T) {
+
+}
+
+// Read from a file that is not a directory or a valid tar file.
+func TestBagReadBag_BadFileFormat(t *testing.T) {
+
+}
+
+// A valid bag should have no errors.
+func TestBagValidator_ValidBag(t *testing.T) {
+
+}
+
+// Make sure we catch all errors in an invalid bag.
+func TestBagValidator_InvalidBag(t *testing.T) {
 
 }

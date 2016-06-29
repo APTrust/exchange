@@ -70,21 +70,76 @@ func (validator *BagValidator) ReadBag() (*models.WorkSummary) {
 func (validator *BagValidator) Validate() (*models.WorkSummary) {
 	validator.validationSummary = models.NewWorkSummary()
 	validator.validationSummary.Start()
-	validator.verifyFileSpecs()
-	validator.verifyTagSpecs()
-	validator.verifyChecksums()
+	if validator.intelObj == nil {
+		validator.validationSummary.AddError("IntellectualObject is nil; cannot validate.")
+	} else {
+		validator.verifyFileSpecs()
+		validator.verifyTagSpecs()
+		validator.verifyChecksums()
+	}
 	validator.validationSummary.Finish()
 	return validator.validationSummary
 }
 
 func (validator *BagValidator) verifyFileSpecs() {
-
+	for gfPath, fileSpec := range validator.BagValidationConfig.FileSpecs {
+		gf := validator.intelObj.FindGenericFile(gfPath)
+		if gf == nil && fileSpec.Presence == config.REQUIRED {
+			validator.validationSummary.AddError("Required file '%s' is missing.", gfPath)
+		} else if gf != nil && fileSpec.Presence == config.FORBIDDEN {
+			validator.validationSummary.AddError("Bag contains forbidden file '%s'.", gfPath)
+		}
+	}
 }
 
 func (validator *BagValidator) verifyTagSpecs() {
+	for tagName, tagSpec := range validator.BagValidationConfig.TagSpecs {
+		tags := obj.FindTag(tagName)
+		if tagSpec.Presence == config.FORBIDDEN {
+			validator.validationSummary.AddError("Forbidden tag '%s' found in file '%s'.", tagName, tag.FilePath)
+			continue
+		}
+		if tagSpec.Presence == config.REQUIRED {
+			validator.checkRequiredTag(tagName, tags, tagSpec)
+		}
+		if tag != nil && tagSpec.AllowedValues != nil && len(tagSpec.AllowedValues) > 0 {
+			validator.checkAllowedValue(tagName, tags, tagSpec)
+		}
+	}
+}
 
+func (validator *BagValidator) checkRequiredTag(tagName string, tags []*models.Tag, tagSpec *models.TagSpec) {
+	if tags == nil {
+		validator.validationSummary.AddError("Required tag '%s' is missing.", tagName)
+		continue
+	}
+	if !tagSpec.EmptyOK {
+		tagHasValue := false
+		for _, tag := range tags {
+			if tag.Value != "" {
+				tagHasValue = true
+				break
+			}
+		}
+		if !tagHasValue {
+			validator.validationSummary.AddError("Value for tag '%s' is missing.", tagName)
+		}
+	}
+}
+
+func (validator *BagValidator) checkAllowedTagValue(tagName string, tags []*models.Tag, tagSpec *models.TagSpec) {
+	for _, value := range tagSpec.AllowedValues {
+		for _, tag := range tags {
+			lcValue := strings.TrimSpace(strings.ToLower(value))
+			tagValue := strings.TrimSpace(strings.ToLower(tag.Value))
+			if lcValue != tagValue {
+				validator.validationSummary.AddError("Tag '%s' has illegal value '%s'.",
+					tagName, tag.Value)
+			}
+		}
+	}
 }
 
 func (validator *BagValidator) verifyChecksums() {
-
+	// TODO: START HERE
 }
