@@ -231,6 +231,8 @@ func (vbag *VirtualBag) parseManifest(reader io.Reader, relFilePath string) () {
 				vbag.summary.AddError(
 					"Manifest '%s' includes checksum for file '%s', which was not found in bag",
 					relFilePath, filePath)
+				vbag.obj.IngestMissingFiles = append(vbag.obj.IngestMissingFiles,
+					NewMissingFile(relFilePath, lineNum, filePath, digest))
 				continue
 			}
 			if alg == constants.AlgMd5 {

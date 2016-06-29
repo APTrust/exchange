@@ -48,6 +48,7 @@ type IntellectualObject struct {
 	IngestTagManifests   []string       `json:"ingest_tag_manifests"`
 	IngestFilesIgnored   []string       `json:"ingest_files_ignored"`
 	IngestTags           []*Tag         `json:"ingest_tags"`
+	IngestMissingFiles   []*MissingFile `json:"missing_files"`
 	IngestErrorMessage   string         `json:"ingest_error_message"`
 
 	genericFileMap       map[string]*GenericFile
@@ -62,6 +63,24 @@ func NewIntellectualObject() (*IntellectualObject) {
 		IngestTagManifests: make([]string, 0),
 		IngestFilesIgnored: make([]string, 0),
 		IngestTags: make([]*Tag, 0),
+	}
+}
+
+// MissingFile defines a file that is not in the bag, despite the
+// fact that its checksum was found in a manifest.
+type MissingFile struct {
+	Manifest    string
+	LineNumber  int
+	FilePath    string
+	Digest      string
+}
+
+func NewMissingFile(manifest string, lineNumber int, filePath, digest string) (*MissingFile) {
+	return &MissingFile{
+		Manifest: manifest,
+		LineNumber: lineNumber,
+		FilePath: filePath,
+		Digest: digest,
 	}
 }
 

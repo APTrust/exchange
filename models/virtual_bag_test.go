@@ -5,6 +5,7 @@ import (
 	"github.com/APTrust/exchange/models"
 	"github.com/APTrust/exchange/util"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"io/ioutil"
 	"os"
 	"os/exec"
@@ -132,6 +133,24 @@ func TestVirtualBagTagFileOptions(t *testing.T) {
 	assert.NotNil(t, vbag)
 	obj, _ = vbag.Read()
 	assert.Equal(t, 10, len(obj.IngestTags))
+}
+
+func TestVirtualBagReadReportsMissingFiles(t *testing.T) {
+	// This bad bag has a number of problems.
+	// Here, we're specifically testing to see if a missing file is reported.
+	tarFilePath := vbagGetPath("example.edu.tagsample_bad.tar")
+	files := []string {"bagit.txt", "bag-info.txt", "aptrust-info.txt"}
+	vbag := models.NewVirtualBag(tarFilePath, files, true, true)
+	assert.NotNil(t, vbag)
+	obj, summary := vbag.Read()
+
+	// custom_tags/tag_file_xyz.pdf appears twice in missing files
+	// list because it's mentioned in manifest-md5 and manifest-sha256
+	assert.True(t, summary.HasErrors())
+	require.Equal(t, 3, len(obj.IngestMissingFiles))
+	assert.Equal(t, "data/file-not-in-bag", obj.IngestMissingFiles[0].FilePath)
+	assert.Equal(t, "custom_tags/tag_file_xyz.pdf", obj.IngestMissingFiles[1].FilePath)
+	assert.Equal(t, "custom_tags/tag_file_xyz.pdf", obj.IngestMissingFiles[2].FilePath)
 }
 
 
