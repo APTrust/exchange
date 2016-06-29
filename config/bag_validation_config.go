@@ -41,6 +41,8 @@ type TagSpec struct {
 	// EmptyOK indicates whether its OK for the tag value
 	// to be empty.
 	EmptyOK         bool
+	// Describes which values are allowed (case-insensitive).
+	AllowedValues   []string
 }
 
 // Valid tells you whether this TagSpec is valid.

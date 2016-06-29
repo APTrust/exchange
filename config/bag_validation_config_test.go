@@ -48,6 +48,7 @@ func TestLoadBagValidationConfig(t *testing.T) {
 	assert.Equal(t, "aptrust-info.txt", conf.TagSpecs["Title"].FilePath)
 	assert.Equal(t, config.REQUIRED, conf.TagSpecs["Title"].Presence)
 	assert.False(t, conf.TagSpecs["Title"].EmptyOK)
+	assert.Equal(t, 3, len(conf.TagSpecs["Access"].AllowedValues))
 }
 
 // Make sure we get an error and not a panic.

@@ -13,7 +13,8 @@
     "FixityAlgorithms": ["md5", "sha256"],
     "TagSpecs": {
         "Title": {"FilePath": "aptrust-info.txt", "Presence": "required", "EmptyOK": false },
-        "Access": {"FilePath": "aptrust-info.txt", "Presence": "required", "EmptyOK": false },
+        "Access": {"FilePath": "aptrust-info.txt", "Presence": "required", "EmptyOK": false,
+                  "AllowedValues": ["Consortia", "Institution", "Restricted"]},
         "Description": {"FilePath": "aptrust-info.txt", "Presence": "optional", "EmptyOK": true }
     }
 }
