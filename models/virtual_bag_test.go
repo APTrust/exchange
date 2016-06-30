@@ -19,7 +19,7 @@ func TestNewVirtualBag(t *testing.T) {
 }
 
 func TestVirtualBagRead_FromDirectory(t *testing.T) {
-	tempDir, bagPath, err := testhelper.UntarTestBag()
+	tempDir, bagPath, err := testhelper.UntarTestBag("example.edu.tagsample_good.tar")
 	if err != nil {
 		assert.Fail(t, err.Error())
 	}
@@ -43,7 +43,7 @@ func TestVirtualBagRead_FromTarFile(t *testing.T) {
 }
 
 func TestVirtualBagRead_ChecksumOptions(t *testing.T) {
-	tempDir, bagPath, err := testhelper.UntarTestBag()
+	tempDir, bagPath, err := testhelper.UntarTestBag("example.edu.tagsample_good.tar")
 	if err != nil {
 		assert.Fail(t, err.Error())
 	}
@@ -75,7 +75,7 @@ func TestVirtualBagRead_ChecksumOptions(t *testing.T) {
 
 // With md5 manifest only, sha256 only, and both
 func TestVirtualBagRead_ManifestOptions(t *testing.T) {
-	tempDir, bagPath, err := testhelper.UntarTestBag()
+	tempDir, bagPath, err := testhelper.UntarTestBag("example.edu.tagsample_good.tar")
 	if err != nil {
 		assert.Fail(t, err.Error())
 	}
@@ -99,7 +99,7 @@ func TestVirtualBagRead_ManifestOptions(t *testing.T) {
 		}
 	}
 
-	tempDir, bagPath, err = testhelper.UntarTestBag()
+	tempDir, bagPath, err = testhelper.UntarTestBag("example.edu.tagsample_good.tar")
 	if err != nil {
 		assert.Fail(t, err.Error())
 	}

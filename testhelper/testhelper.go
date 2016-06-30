@@ -15,8 +15,8 @@ func VbagGetPath(fileName string) (string) {
 	return testDataPath
 }
 
-func UntarTestBag() (tempDir string, bagPath string, err error) {
-	tarFilePath := VbagGetPath("example.edu.tagsample_good.tar")
+func UntarTestBag(nameOfTarFile string) (tempDir string, bagPath string, err error) {
+	tarFilePath := VbagGetPath(nameOfTarFile)
 	tempDir, err = ioutil.TempDir("", "test")
 	if err != nil {
 		return "", "", fmt.Errorf("Cannot create temp dir: %v", err)

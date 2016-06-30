@@ -109,7 +109,7 @@ func TestReadBag_FromTarFile_BagInvalid(t *testing.T) {
 
 // Read a valid bag from a directory
 func TestReadBag_FromDirectory_BagValid(t *testing.T) {
-	tempDir, bagPath, err := testhelper.UntarTestBag()
+	tempDir, bagPath, err := testhelper.UntarTestBag("example.edu.tagsample_good.tar")
 	if err != nil {
 		assert.Fail(t, err.Error())
 	}
