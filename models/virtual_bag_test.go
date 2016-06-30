@@ -3,26 +3,29 @@ package models_test
 import (
 	"github.com/APTrust/exchange/constants"
 	"github.com/APTrust/exchange/models"
+	"github.com/APTrust/exchange/testhelper"
 	"github.com/APTrust/exchange/util"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"io/ioutil"
 	"os"
-	"os/exec"
 	"path/filepath"
-	"runtime"
 	"testing"
 )
 
 func TestNewVirtualBag(t *testing.T) {
-	tarFilePath := vbagGetPath("example.edu.tagsample_good.tar")
+	tarFilePath := testhelper.VbagGetPath("example.edu.tagsample_good.tar")
 	vbag := models.NewVirtualBag(tarFilePath, nil, false, false)
 	assert.NotNil(t, vbag)
 }
 
 func TestVirtualBagRead_FromDirectory(t *testing.T) {
-	tempDir, bagPath := untarTestBag(t)
-	defer os.RemoveAll(tempDir)
+	tempDir, bagPath, err := testhelper.UntarTestBag()
+	if err != nil {
+		assert.Fail(t, err.Error())
+	}
+	if tempDir != "" {
+		defer os.RemoveAll(tempDir)
+	}
 	files := []string {"bagit.txt", "bag-info.txt", "aptrust-info.txt"}
 	vbag := models.NewVirtualBag(bagPath, files, true, true)
 	assert.NotNil(t, vbag)
@@ -31,7 +34,7 @@ func TestVirtualBagRead_FromDirectory(t *testing.T) {
 }
 
 func TestVirtualBagRead_FromTarFile(t *testing.T) {
-	tarFilePath := vbagGetPath("example.edu.tagsample_good.tar")
+	tarFilePath := testhelper.VbagGetPath("example.edu.tagsample_good.tar")
 	files := []string {"bagit.txt", "bag-info.txt", "aptrust-info.txt"}
 	vbag := models.NewVirtualBag(tarFilePath, files, true, true)
 	assert.NotNil(t, vbag)
@@ -40,8 +43,13 @@ func TestVirtualBagRead_FromTarFile(t *testing.T) {
 }
 
 func TestVirtualBagRead_ChecksumOptions(t *testing.T) {
-	tempDir, bagPath := untarTestBag(t)
-	defer os.RemoveAll(tempDir)
+	tempDir, bagPath, err := testhelper.UntarTestBag()
+	if err != nil {
+		assert.Fail(t, err.Error())
+	}
+	if tempDir != "" {
+		defer os.RemoveAll(tempDir)
+	}
 	files := []string {"bagit.txt", "bag-info.txt", "aptrust-info.txt"}
 	vbag := models.NewVirtualBag(bagPath, files, true, false)
 	assert.NotNil(t, vbag)
@@ -67,8 +75,13 @@ func TestVirtualBagRead_ChecksumOptions(t *testing.T) {
 
 // With md5 manifest only, sha256 only, and both
 func TestVirtualBagRead_ManifestOptions(t *testing.T) {
-	tempDir, bagPath := untarTestBag(t)
-	defer os.RemoveAll(tempDir)
+	tempDir, bagPath, err := testhelper.UntarTestBag()
+	if err != nil {
+		assert.Fail(t, err.Error())
+	}
+	if tempDir != "" {
+		defer os.RemoveAll(tempDir)
+	}
 
 	// Delete the md5 manifest
 	os.Remove(filepath.Join(bagPath, "manifest-md5.txt"))
@@ -86,8 +99,13 @@ func TestVirtualBagRead_ManifestOptions(t *testing.T) {
 		}
 	}
 
-	tempDir, bagPath = untarTestBag(t)
-	defer os.RemoveAll(tempDir)
+	tempDir, bagPath, err = testhelper.UntarTestBag()
+	if err != nil {
+		assert.Fail(t, err.Error())
+	}
+	if tempDir != "" {
+		defer os.RemoveAll(tempDir)
+	}
 
 	// Delete the sha256 manifest
 	os.Remove(filepath.Join(bagPath, "manifest-sha256.txt"))
@@ -109,7 +127,7 @@ func TestVirtualBagRead_ManifestOptions(t *testing.T) {
 // We should parse the tags in the specified files.
 // We should not parse other tag files
 func TestVirtualBagTagFileOptions(t *testing.T) {
-	tarFilePath := vbagGetPath("example.edu.tagsample_good.tar")
+	tarFilePath := testhelper.VbagGetPath("example.edu.tagsample_good.tar")
 	files := []string {}
 	vbag := models.NewVirtualBag(tarFilePath, files, true, true)
 	assert.NotNil(t, vbag)
@@ -138,7 +156,7 @@ func TestVirtualBagTagFileOptions(t *testing.T) {
 func TestVirtualBagReadReportsMissingFiles(t *testing.T) {
 	// This bad bag has a number of problems.
 	// Here, we're specifically testing to see if a missing file is reported.
-	tarFilePath := vbagGetPath("example.edu.tagsample_bad.tar")
+	tarFilePath := testhelper.VbagGetPath("example.edu.tagsample_bad.tar")
 	files := []string {"bagit.txt", "bag-info.txt", "aptrust-info.txt"}
 	vbag := models.NewVirtualBag(tarFilePath, files, true, true)
 	assert.NotNil(t, vbag)
@@ -268,26 +286,4 @@ func runAssertions(t *testing.T, obj *models.IntellectualObject, summary *models
 	assert.False(t, gf.IngestPreviousVersionExists, caller)
 	assert.True(t, gf.IngestNeedsSave, caller)
 	assert.Empty(t, gf.IngestErrorMessage, caller)
-}
-
-func vbagGetPath(fileName string) (string) {
-	_, filename, _, _ := runtime.Caller(0)
-	dir, _ := filepath.Abs(filepath.Dir(filename))
-	testDataPath := filepath.Join(dir, "..", "testdata", fileName)
-	return testDataPath
-}
-
-func untarTestBag(t *testing.T) (tempDir string, bagPath string) {
-	tarFilePath := vbagGetPath("example.edu.tagsample_good.tar")
-	tempDir, err := ioutil.TempDir("", "test")
-	if err != nil {
-		assert.Fail(t, "Cannot create temp dir: %v", err)
-	}
-	cmd := exec.Command("tar", "xf", tarFilePath, "--directory", tempDir)
-	err = cmd.Run()
-	if err != nil {
-		assert.Fail(t, "Cannot untar test bag into temp dir: %v", err)
-	}
-	pathToUntarredBag := filepath.Join(tempDir, "example.edu.tagsample_good")
-	return tempDir, pathToUntarredBag
 }
