@@ -14,6 +14,7 @@ type BagValidator struct {
 	PathToBag            string
 	BagValidationConfig  *config.BagValidationConfig
 	virtualBag           *models.VirtualBag
+	vbagSummary          *models.WorkSummary
 	validationSummary    *models.WorkSummary
 	intelObj             *models.IntellectualObject
 }
@@ -53,12 +54,14 @@ func NewBagValidator(pathToBag string, bagValidationConfig *config.BagValidation
 // read operation, which may fail if the directory can't be read,
 // if the tar file is corrupt, etc.
 func (validator *BagValidator) ReadBag() (*models.IntellectualObject, *models.WorkSummary) {
-	var vbagSummary *models.WorkSummary
-	validator.intelObj, vbagSummary = validator.virtualBag.Read()
-	if vbagSummary.HasErrors() {
-		validator.intelObj.IngestErrorMessage = vbagSummary.AllErrorsAsString()
+	// ---------------------------------
+	// TODO: Don't return intelObj here?
+	// ---------------------------------
+	validator.intelObj, validator.vbagSummary = validator.virtualBag.Read()
+	if validator.vbagSummary.HasErrors() {
+		validator.intelObj.IngestErrorMessage = validator.vbagSummary.AllErrorsAsString()
 	}
-	return validator.intelObj, vbagSummary
+	return validator.intelObj, validator.vbagSummary
 }
 
 // Validates the bag and returns a WorkSummary.
@@ -72,9 +75,20 @@ func (validator *BagValidator) Validate() (*models.WorkSummary) {
 		validator.validationSummary.AddError(
 			"IntellectualObject is nil; cannot validate. Did you call Read() first?")
 	} else {
+		// Hmmmm.... What am I thinking???
+		// for _, errMsg := range validator.vbagSummary.Errors {
+		// 	validator.validationSummary.AddError(errMsg)
+		// }
 		validator.verifyFileSpecs()
 		validator.verifyTagSpecs()
 		validator.verifyChecksums()
+	}
+	if validator.validationSummary.HasErrors() {
+		if validator.intelObj.IngestErrorMessage != "" {
+			// Golang portable newline??
+			validator.intelObj.IngestErrorMessage += "\n"
+		}
+		validator.intelObj.IngestErrorMessage += validator.validationSummary.AllErrorsAsString()
 	}
 	validator.validationSummary.Finish()
 	return validator.validationSummary
@@ -128,18 +142,25 @@ func (validator *BagValidator) checkRequiredTag(tagName string, tags []*models.T
 }
 
 func (validator *BagValidator) checkAllowedTagValue(tagName string, tags []*models.Tag, tagSpec config.TagSpec) {
+	valueOk := false
+	lastValue := ""
 	for _, value := range tagSpec.AllowedValues {
 		for _, tag := range tags {
 			lcValue := strings.TrimSpace(strings.ToLower(value))
 			tagValue := strings.TrimSpace(strings.ToLower(tag.Value))
-			if lcValue != tagValue {
-				validator.validationSummary.AddError("Tag '%s' has illegal value '%s'.",
-					tagName, tag.Value)
+			lastValue = tagValue
+			if lcValue == tagValue {
+				valueOk = true
 			}
 		}
+	}
+	if !valueOk {
+		validator.validationSummary.AddError("Tag '%s' has illegal value '%s'.", tagName, lastValue)
 	}
 }
 
 func (validator *BagValidator) verifyChecksums() {
+	// ---------------------------------
 	// TODO: START HERE
+	// ---------------------------------
 }
