@@ -55,6 +55,9 @@ func NewBagValidator(pathToBag string, bagValidationConfig *config.BagValidation
 func (validator *BagValidator) ReadBag() (*models.IntellectualObject, *models.WorkSummary) {
 	var vbagSummary *models.WorkSummary
 	validator.intelObj, vbagSummary = validator.virtualBag.Read()
+	if vbagSummary.HasErrors() {
+		validator.intelObj.IngestErrorMessage = vbagSummary.AllErrorsAsString()
+	}
 	return validator.intelObj, vbagSummary
 }
 

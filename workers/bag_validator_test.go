@@ -67,12 +67,42 @@ func TestNewBagValidatorWithBadParams(t *testing.T) {
 
 // Read a valid bag from a tar file.
 func TestReadBag_FromTarFile_BagValid(t *testing.T) {
-
+	bagValidationConfig, err := getValidationConfig()
+	if err != nil {
+		assert.Fail(t, "Could not load BagValidationConfig: %v", err)
+	}
+	_, filename, _, _ := runtime.Caller(0)
+	dir := filepath.Dir(filename)
+	pathToBag, err := filepath.Abs(path.Join(dir, "..", "testdata", "example.edu.tagsample_good.tar"))
+	validator, err := workers.NewBagValidator(pathToBag, bagValidationConfig)
+	if err != nil {
+		assert.Fail(t, "NewBagValidator returned unexpected error: %v", err)
+	}
+	intelObj, readSummary := validator.ReadBag()
+	assert.NotNil(t, intelObj)
+	assert.Equal(t, 16, len(intelObj.GenericFiles))
+	assert.Empty(t, intelObj.IngestErrorMessage)
+	assert.False(t, readSummary.HasErrors())
 }
 
 // Read an invalid bag from a tar file.
 func TestReadBag_FromTarFile_BagInvalid(t *testing.T) {
-
+	bagValidationConfig, err := getValidationConfig()
+	if err != nil {
+		assert.Fail(t, "Could not load BagValidationConfig: %v", err)
+	}
+	_, filename, _, _ := runtime.Caller(0)
+	dir := filepath.Dir(filename)
+	pathToBag, err := filepath.Abs(path.Join(dir, "..", "testdata", "example.edu.tagsample_bad.tar"))
+	validator, err := workers.NewBagValidator(pathToBag, bagValidationConfig)
+	if err != nil {
+		assert.Fail(t, "NewBagValidator returned unexpected error: %v", err)
+	}
+	intelObj, readSummary := validator.ReadBag()
+	assert.NotNil(t, intelObj)
+	assert.Equal(t, 16, len(intelObj.GenericFiles))
+	assert.NotEmpty(t, intelObj.IngestErrorMessage)
+	assert.True(t, readSummary.HasErrors())
 }
 
 // Read a valid bag from a directory
