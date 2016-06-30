@@ -133,7 +133,25 @@ func TestReadBag_FromDirectory_BagValid(t *testing.T) {
 
 // Read an invalid bag from a directory
 func TestReadBag_FromDirectory_BagInvalid(t *testing.T) {
-
+	tempDir, bagPath, err := testhelper.UntarTestBag("example.edu.tagsample_bad.tar")
+	if err != nil {
+		assert.Fail(t, err.Error())
+	}
+	if tempDir != "" {
+		defer os.RemoveAll(tempDir)
+	}
+	bagValidationConfig, err := getValidationConfig()
+	if err != nil {
+		assert.Fail(t, "Could not load BagValidationConfig: %v", err)
+	}
+	validator, err := workers.NewBagValidator(bagPath, bagValidationConfig)
+	if err != nil {
+		assert.Fail(t, "NewBagValidator returned unexpected error: %v", err)
+	}
+	intelObj, readSummary := validator.ReadBag()
+	assert.NotNil(t, intelObj)
+	assert.NotEmpty(t, intelObj.IngestErrorMessage)
+	assert.True(t, readSummary.HasErrors())
 }
 
 // Read from a file that does not exist.
