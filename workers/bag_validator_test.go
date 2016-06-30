@@ -2,8 +2,10 @@ package workers_test
 
 import (
 	"github.com/APTrust/exchange/config"
+	"github.com/APTrust/exchange/testhelper"
 	"github.com/APTrust/exchange/workers"
 	"github.com/stretchr/testify/assert"
+	"os"
 	"path"
 	"path/filepath"
 	"runtime"
@@ -107,7 +109,26 @@ func TestReadBag_FromTarFile_BagInvalid(t *testing.T) {
 
 // Read a valid bag from a directory
 func TestReadBag_FromDirectory_BagValid(t *testing.T) {
-
+	tempDir, bagPath, err := testhelper.UntarTestBag()
+	if err != nil {
+		assert.Fail(t, err.Error())
+	}
+	if tempDir != "" {
+		defer os.RemoveAll(tempDir)
+	}
+	bagValidationConfig, err := getValidationConfig()
+	if err != nil {
+		assert.Fail(t, "Could not load BagValidationConfig: %v", err)
+	}
+	validator, err := workers.NewBagValidator(bagPath, bagValidationConfig)
+	if err != nil {
+		assert.Fail(t, "NewBagValidator returned unexpected error: %v", err)
+	}
+	intelObj, readSummary := validator.ReadBag()
+	assert.NotNil(t, intelObj)
+	assert.Equal(t, 16, len(intelObj.GenericFiles))
+	assert.Empty(t, intelObj.IngestErrorMessage)
+	assert.False(t, readSummary.HasErrors())
 }
 
 // Read an invalid bag from a directory
