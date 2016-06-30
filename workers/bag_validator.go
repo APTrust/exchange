@@ -8,6 +8,7 @@ import (
 	"github.com/APTrust/exchange/models"
 	"github.com/APTrust/exchange/util"
 	"github.com/APTrust/exchange/util/fileutil"
+	"strings"
 )
 
 type BagValidator struct {
@@ -57,10 +58,10 @@ func NewBagValidator(_context *context.Context, pathToBag string, bagValidationC
 // the bag. Returns a WorkSummary describing any issues with the
 // read operation, which may fail if the directory can't be read,
 // if the tar file is corrupt, etc.
-func (validator *BagValidator) ReadBag() (*models.WorkSummary) {
+func (validator *BagValidator) ReadBag() (*models.IntellectualObject, *models.WorkSummary) {
 	var vbagSummary *models.WorkSummary
 	validator.intelObj, vbagSummary = validator.virtualBag.Read()
-	return vbagSummary
+	return validator.intelObj, vbagSummary
 }
 
 // Validates the bag and returns a WorkSummary.
@@ -71,7 +72,8 @@ func (validator *BagValidator) Validate() (*models.WorkSummary) {
 	validator.validationSummary = models.NewWorkSummary()
 	validator.validationSummary.Start()
 	if validator.intelObj == nil {
-		validator.validationSummary.AddError("IntellectualObject is nil; cannot validate.")
+		validator.validationSummary.AddError(
+			"IntellectualObject is nil; cannot validate. Did you call Read() first?")
 	} else {
 		validator.verifyFileSpecs()
 		validator.verifyTagSpecs()
@@ -94,24 +96,25 @@ func (validator *BagValidator) verifyFileSpecs() {
 
 func (validator *BagValidator) verifyTagSpecs() {
 	for tagName, tagSpec := range validator.BagValidationConfig.TagSpecs {
-		tags := obj.FindTag(tagName)
+		tags := validator.intelObj.FindTag(tagName)
 		if tagSpec.Presence == config.FORBIDDEN {
-			validator.validationSummary.AddError("Forbidden tag '%s' found in file '%s'.", tagName, tag.FilePath)
+			validator.validationSummary.AddError(
+				"Forbidden tag '%s' found in file '%s'.", tagName, tags[0].SourceFile)
 			continue
 		}
 		if tagSpec.Presence == config.REQUIRED {
 			validator.checkRequiredTag(tagName, tags, tagSpec)
 		}
-		if tag != nil && tagSpec.AllowedValues != nil && len(tagSpec.AllowedValues) > 0 {
-			validator.checkAllowedValue(tagName, tags, tagSpec)
+		if tags != nil && tagSpec.AllowedValues != nil && len(tagSpec.AllowedValues) > 0 {
+			validator.checkAllowedTagValue(tagName, tags, tagSpec)
 		}
 	}
 }
 
-func (validator *BagValidator) checkRequiredTag(tagName string, tags []*models.Tag, tagSpec *models.TagSpec) {
+func (validator *BagValidator) checkRequiredTag(tagName string, tags []*models.Tag, tagSpec config.TagSpec) {
 	if tags == nil {
 		validator.validationSummary.AddError("Required tag '%s' is missing.", tagName)
-		continue
+		return
 	}
 	if !tagSpec.EmptyOK {
 		tagHasValue := false
@@ -127,7 +130,7 @@ func (validator *BagValidator) checkRequiredTag(tagName string, tags []*models.T
 	}
 }
 
-func (validator *BagValidator) checkAllowedTagValue(tagName string, tags []*models.Tag, tagSpec *models.TagSpec) {
+func (validator *BagValidator) checkAllowedTagValue(tagName string, tags []*models.Tag, tagSpec config.TagSpec) {
 	for _, value := range tagSpec.AllowedValues {
 		for _, tag := range tags {
 			lcValue := strings.TrimSpace(strings.ToLower(value))
