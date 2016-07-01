@@ -10,13 +10,22 @@ import (
 	"strings"
 )
 
+type ValidationResult struct {
+	ParseSummary         *models.WorkSummary
+	ValidationSummary    *models.WorkSummary
+	IntellectualObject    *models.IntellectualObject
+}
+
+func (result *ValidationResult) HasErrors() (bool) {
+	return result.ParseSummary.HasErrors() ||
+		result.ValidationSummary.HasErrors() ||
+		result.IntellectualObject.IngestErrorMessage != ""
+}
+
 type BagValidator struct {
 	PathToBag            string
 	BagValidationConfig  *config.BagValidationConfig
 	virtualBag           *models.VirtualBag
-	vbagSummary          *models.WorkSummary
-	validationSummary    *models.WorkSummary
-	intelObj             *models.IntellectualObject
 }
 
 // NewBagValidator creates a new BagValidator. Param pathToBag
@@ -47,84 +56,61 @@ func NewBagValidator(pathToBag string, bagValidationConfig *config.BagValidation
 	return bagValidator, nil
 }
 
-// Reads the bag, produces a list of generic files, parses tags,
-// and calculates checksums, producing an IntellectualObject.
-// Call Validator.Validate() after this if you want to validate
-// the bag. Returns a WorkSummary describing any issues with the
-// read operation, which may fail if the directory can't be read,
-// if the tar file is corrupt, etc.
-func (validator *BagValidator) ReadBag() (*models.IntellectualObject, *models.WorkSummary) {
-	// ---------------------------------
-	// TODO: Don't return intelObj here?
-	// ---------------------------------
-	validator.intelObj, validator.vbagSummary = validator.virtualBag.Read()
-	if validator.vbagSummary.HasErrors() {
-		validator.intelObj.IngestErrorMessage = validator.vbagSummary.AllErrorsAsString()
+// Reads and validates the bag.
+func (validator *BagValidator) Validate() (*ValidationResult){
+	result := &ValidationResult{
+		ValidationSummary:  models.NewWorkSummary(),
 	}
-	return validator.intelObj, validator.vbagSummary
+	result.IntellectualObject, result.ParseSummary = validator.virtualBag.Read()
+	if result.ParseSummary.HasErrors() {
+		result.IntellectualObject.IngestErrorMessage = result.ParseSummary.AllErrorsAsString()
+		return result
+	}
+	result.ValidationSummary.Start()
+	for _, errMsg := range result.ParseSummary.Errors {
+		result.ValidationSummary.AddError(errMsg)
+	}
+	validator.verifyFileSpecs(result)
+	validator.verifyTagSpecs(result)
+	validator.verifyChecksums(result)
+	if result.ValidationSummary.HasErrors() {
+		result.IntellectualObject.IngestErrorMessage += result.ValidationSummary.AllErrorsAsString()
+	}
+	result.ValidationSummary.Finish()
+	return result
 }
 
-// Validates the bag and returns a WorkSummary.
-// You must call Validator.Read() before calling this, since
-// the read operation reads the bag and sets up the IntellectualObject.
-// This returns a WorkSummary describing any validation problems.
-func (validator *BagValidator) Validate() (*models.WorkSummary) {
-	validator.validationSummary = models.NewWorkSummary()
-	validator.validationSummary.Start()
-	if validator.intelObj == nil {
-		validator.validationSummary.AddError(
-			"IntellectualObject is nil; cannot validate. Did you call Read() first?")
-	} else {
-		// Hmmmm.... What am I thinking???
-		// for _, errMsg := range validator.vbagSummary.Errors {
-		// 	validator.validationSummary.AddError(errMsg)
-		// }
-		validator.verifyFileSpecs()
-		validator.verifyTagSpecs()
-		validator.verifyChecksums()
-	}
-	if validator.validationSummary.HasErrors() {
-		if validator.intelObj.IngestErrorMessage != "" {
-			// Golang portable newline??
-			validator.intelObj.IngestErrorMessage += "\n"
-		}
-		validator.intelObj.IngestErrorMessage += validator.validationSummary.AllErrorsAsString()
-	}
-	validator.validationSummary.Finish()
-	return validator.validationSummary
-}
-
-func (validator *BagValidator) verifyFileSpecs() {
+func (validator *BagValidator) verifyFileSpecs(result *ValidationResult) {
 	for gfPath, fileSpec := range validator.BagValidationConfig.FileSpecs {
-		gf := validator.intelObj.FindGenericFile(gfPath)
+		gf := result.IntellectualObject.FindGenericFile(gfPath)
 		if gf == nil && fileSpec.Presence == config.REQUIRED {
-			validator.validationSummary.AddError("Required file '%s' is missing.", gfPath)
+			result.ValidationSummary.AddError("Required file '%s' is missing.", gfPath)
 		} else if gf != nil && fileSpec.Presence == config.FORBIDDEN {
-			validator.validationSummary.AddError("Bag contains forbidden file '%s'.", gfPath)
+			result.ValidationSummary.AddError("Bag contains forbidden file '%s'.", gfPath)
 		}
 	}
 }
 
-func (validator *BagValidator) verifyTagSpecs() {
+func (validator *BagValidator) verifyTagSpecs(result *ValidationResult) {
 	for tagName, tagSpec := range validator.BagValidationConfig.TagSpecs {
-		tags := validator.intelObj.FindTag(tagName)
+		tags := result.IntellectualObject.FindTag(tagName)
 		if tagSpec.Presence == config.FORBIDDEN {
-			validator.validationSummary.AddError(
+			result.ValidationSummary.AddError(
 				"Forbidden tag '%s' found in file '%s'.", tagName, tags[0].SourceFile)
 			continue
 		}
 		if tagSpec.Presence == config.REQUIRED {
-			validator.checkRequiredTag(tagName, tags, tagSpec)
+			validator.checkRequiredTag(result, tagName, tags, tagSpec)
 		}
 		if tags != nil && tagSpec.AllowedValues != nil && len(tagSpec.AllowedValues) > 0 {
-			validator.checkAllowedTagValue(tagName, tags, tagSpec)
+			validator.checkAllowedTagValue(result, tagName, tags, tagSpec)
 		}
 	}
 }
 
-func (validator *BagValidator) checkRequiredTag(tagName string, tags []*models.Tag, tagSpec config.TagSpec) {
+func (validator *BagValidator) checkRequiredTag(result *ValidationResult, tagName string, tags []*models.Tag, tagSpec config.TagSpec) {
 	if tags == nil {
-		validator.validationSummary.AddError("Required tag '%s' is missing.", tagName)
+		result.ValidationSummary.AddError("Required tag '%s' is missing.", tagName)
 		return
 	}
 	if !tagSpec.EmptyOK {
@@ -136,12 +122,12 @@ func (validator *BagValidator) checkRequiredTag(tagName string, tags []*models.T
 			}
 		}
 		if !tagHasValue {
-			validator.validationSummary.AddError("Value for tag '%s' is missing.", tagName)
+			result.ValidationSummary.AddError("Value for tag '%s' is missing.", tagName)
 		}
 	}
 }
 
-func (validator *BagValidator) checkAllowedTagValue(tagName string, tags []*models.Tag, tagSpec config.TagSpec) {
+func (validator *BagValidator) checkAllowedTagValue(result *ValidationResult, tagName string, tags []*models.Tag, tagSpec config.TagSpec) {
 	valueOk := false
 	lastValue := ""
 	for _, value := range tagSpec.AllowedValues {
@@ -155,11 +141,11 @@ func (validator *BagValidator) checkAllowedTagValue(tagName string, tags []*mode
 		}
 	}
 	if !valueOk {
-		validator.validationSummary.AddError("Tag '%s' has illegal value '%s'.", tagName, lastValue)
+		result.ValidationSummary.AddError("Tag '%s' has illegal value '%s'.", tagName, lastValue)
 	}
 }
 
-func (validator *BagValidator) verifyChecksums() {
+func (validator *BagValidator) verifyChecksums(result *ValidationResult) {
 	// ---------------------------------
 	// TODO: START HERE
 	// ---------------------------------
