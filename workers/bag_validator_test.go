@@ -227,6 +227,8 @@ func TestValidate_InvalidBag(t *testing.T) {
 	assert.NotEmpty(t, result.IntellectualObject.IngestErrorMessage)
 	assert.True(t, result.ParseSummary.HasErrors())
 
+	// Check that VerifiedAt is set (or not) for Md5 and Sha256
+
 	// ---------------------------------
 	// TODO: Assert all specific errors were caught, and get rid of print statement.
 	// ---------------------------------

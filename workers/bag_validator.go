@@ -8,6 +8,7 @@ import (
 	"github.com/APTrust/exchange/util"
 	"github.com/APTrust/exchange/util/fileutil"
 	"strings"
+	"time"
 )
 
 type ValidationResult struct {
@@ -108,6 +109,27 @@ func (validator *BagValidator) verifyTagSpecs(result *ValidationResult) {
 	}
 }
 
+func (validator *BagValidator) verifyChecksums(result *ValidationResult) {
+	for _, gf := range result.IntellectualObject.GenericFiles {
+		// Md5 digests
+		if gf.IngestManifestMd5 != "" && gf.IngestManifestMd5 != gf.IngestMd5 {
+			result.ValidationSummary.AddError(
+				"Md5 digest for '%s': manifest says '%s', file digest is '%s'",
+				gf.OriginalPath(), gf.IngestManifestMd5, gf.IngestMd5)
+		} else {
+			gf.IngestMd5VerifiedAt = time.Now().UTC()
+		}
+		// Sha256 digests
+		if gf.IngestManifestSha256 != "" && gf.IngestManifestSha256 != gf.IngestSha256 {
+			result.ValidationSummary.AddError(
+				"Sha256 digest for '%s': manifest says '%s', file digest is '%s'",
+				gf.OriginalPath(), gf.IngestManifestSha256, gf.IngestSha256)
+		} else {
+			gf.IngestSha256VerifiedAt = time.Now().UTC()
+		}
+	}
+}
+
 func (validator *BagValidator) checkRequiredTag(result *ValidationResult, tagName string, tags []*models.Tag, tagSpec config.TagSpec) {
 	if tags == nil {
 		result.ValidationSummary.AddError("Required tag '%s' is missing.", tagName)
@@ -143,10 +165,4 @@ func (validator *BagValidator) checkAllowedTagValue(result *ValidationResult, ta
 	if !valueOk {
 		result.ValidationSummary.AddError("Tag '%s' has illegal value '%s'.", tagName, lastValue)
 	}
-}
-
-func (validator *BagValidator) verifyChecksums(result *ValidationResult) {
-	// ---------------------------------
-	// TODO: START HERE
-	// ---------------------------------
 }
