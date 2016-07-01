@@ -226,6 +226,8 @@ func TestValidate_InvalidBag(t *testing.T) {
 	assert.Equal(t, 16, len(result.IntellectualObject.GenericFiles))
 	assert.NotEmpty(t, result.IntellectualObject.IngestErrorMessage)
 	assert.True(t, result.ParseSummary.HasErrors())
+	assert.True(t, result.ValidationSummary.HasErrors())
+	assert.True(t, result.HasErrors())
 
 	// Check that VerifiedAt is set (or not) for Md5 and Sha256
 

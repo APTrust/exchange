@@ -63,9 +63,11 @@ func (validator *BagValidator) Validate() (*ValidationResult){
 		ValidationSummary:  models.NewWorkSummary(),
 	}
 	result.IntellectualObject, result.ParseSummary = validator.virtualBag.Read()
+	if result.IntellectualObject == nil {
+		return result
+	}
 	if result.ParseSummary.HasErrors() {
 		result.IntellectualObject.IngestErrorMessage = result.ParseSummary.AllErrorsAsString()
-		return result
 	}
 	result.ValidationSummary.Start()
 	for _, errMsg := range result.ParseSummary.Errors {
@@ -111,6 +113,14 @@ func (validator *BagValidator) verifyTagSpecs(result *ValidationResult) {
 
 func (validator *BagValidator) verifyChecksums(result *ValidationResult) {
 	for _, gf := range result.IntellectualObject.GenericFiles {
+		// ============================================================
+		// fmt.Println(gf.OriginalPath())
+		// fmt.Println("    ", gf.IngestManifestMd5)
+		// fmt.Println("    ", gf.IngestMd5)
+		// fmt.Println("    ", gf.IngestManifestSha256)
+		// fmt.Println("    ", gf.IngestSha256)
+		// fmt.Println("............")
+		// ============================================================
 		// Md5 digests
 		if gf.IngestManifestMd5 != "" && gf.IngestManifestMd5 != gf.IngestMd5 {
 			result.ValidationSummary.AddError(
@@ -126,6 +136,13 @@ func (validator *BagValidator) verifyChecksums(result *ValidationResult) {
 				gf.OriginalPath(), gf.IngestManifestSha256, gf.IngestSha256)
 		} else {
 			gf.IngestSha256VerifiedAt = time.Now().UTC()
+		}
+		// No manifest entry?
+		if gf.IngestFileType == constants.PAYLOAD_FILE &&
+			gf.IngestManifestMd5 == "" && gf.IngestManifestSha256 == "" {
+			result.ValidationSummary.AddError(
+				"File '%s' does not appear in any payload manifest (md5 or sha256)",
+				gf.OriginalPath())
 		}
 	}
 }
