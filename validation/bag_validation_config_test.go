@@ -1,14 +1,14 @@
-package config_test
+package validation_test
 
 import (
-	"github.com/APTrust/exchange/config"
+	"github.com/APTrust/exchange/validation"
 	"github.com/stretchr/testify/assert"
 	"path"
 	"testing"
 )
 
 func TestNewBagValidationConfig(t *testing.T) {
-	conf := config.NewBagValidationConfig()
+	conf := validation.NewBagValidationConfig()
 	assert.NotNil(t, conf.FileSpecs)
 	assert.NotNil(t, conf.TagSpecs)
 	assert.False(t, conf.AllowMiscTopLevelFiles)
@@ -18,7 +18,7 @@ func TestNewBagValidationConfig(t *testing.T) {
 
 func TestLoadBagValidationConfig(t *testing.T) {
 	configFilePath := path.Join("testdata", "bag_validation_config.json")
-	conf, err := config.LoadBagValidationConfig(configFilePath)
+	conf, err := validation.LoadBagValidationConfig(configFilePath)
 	if err != nil {
 		assert.Fail(t, err.Error())
 	}
@@ -43,10 +43,10 @@ func TestLoadBagValidationConfig(t *testing.T) {
 		assert.Equal(t, "md5", conf.FixityAlgorithms[0])
 		assert.Equal(t, "sha256", conf.FixityAlgorithms[1])
 	}
-	assert.Equal(t, config.REQUIRED, conf.FileSpecs["manifest-md5.txt"].Presence)
-	assert.Equal(t, config.OPTIONAL, conf.FileSpecs["manifest-sha256.txt"].Presence)
+	assert.Equal(t, validation.REQUIRED, conf.FileSpecs["manifest-md5.txt"].Presence)
+	assert.Equal(t, validation.OPTIONAL, conf.FileSpecs["manifest-sha256.txt"].Presence)
 	assert.Equal(t, "aptrust-info.txt", conf.TagSpecs["Title"].FilePath)
-	assert.Equal(t, config.REQUIRED, conf.TagSpecs["Title"].Presence)
+	assert.Equal(t, validation.REQUIRED, conf.TagSpecs["Title"].Presence)
 	assert.False(t, conf.TagSpecs["Title"].EmptyOK)
 	assert.Equal(t, 3, len(conf.TagSpecs["Access"].AllowedValues))
 }
@@ -55,23 +55,23 @@ func TestLoadBagValidationConfig(t *testing.T) {
 func TestLoadBagValidationConfigBadFiles(t *testing.T) {
 	// Missing file
 	configFilePath := path.Join("testdata", "file_does_not_exist.json")
-	_, err := config.LoadBagValidationConfig(configFilePath)
+	_, err := validation.LoadBagValidationConfig(configFilePath)
 	assert.NotNil(t, err)
 	// Unparseable JSON
 	configFilePath = path.Join("testdata", "virginia.edu.uva-lib_2278801.tar")
-	_, err = config.LoadBagValidationConfig(configFilePath)
+	_, err = validation.LoadBagValidationConfig(configFilePath)
 	assert.NotNil(t, err)
 }
 
 func TestValidPresenceValue(t *testing.T) {
-	assert.True(t, config.ValidPresenceValue("required"))
-	assert.True(t, config.ValidPresenceValue("optional"))
-	assert.True(t, config.ValidPresenceValue("forbidden"))
-	assert.False(t, config.ValidPresenceValue("naugahyde"))
+	assert.True(t, validation.ValidPresenceValue("required"))
+	assert.True(t, validation.ValidPresenceValue("optional"))
+	assert.True(t, validation.ValidPresenceValue("forbidden"))
+	assert.False(t, validation.ValidPresenceValue("naugahyde"))
 }
 
 func TestFileSpecValid(t *testing.T) {
-	filespec := &config.FileSpec{
+	filespec := &validation.FileSpec{
 		Presence: "required",
 	}
 	assert.True(t, filespec.Valid())
@@ -80,7 +80,7 @@ func TestFileSpecValid(t *testing.T) {
 }
 
 func TestTagSpecValid(t *testing.T) {
-	tagspec := &config.TagSpec{
+	tagspec := &validation.TagSpec{
 		Presence: "verisimilitude",
 	}
 	assert.False(t, tagspec.Valid())

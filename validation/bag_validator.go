@@ -1,8 +1,7 @@
-package workers
+package validation
 
 import (
 	"fmt"
-	"github.com/APTrust/exchange/config"
 	"github.com/APTrust/exchange/constants"
 	"github.com/APTrust/exchange/models"
 	"github.com/APTrust/exchange/util"
@@ -25,7 +24,7 @@ func (result *ValidationResult) HasErrors() (bool) {
 
 type BagValidator struct {
 	PathToBag            string
-	BagValidationConfig  *config.BagValidationConfig
+	BagValidationConfig  *BagValidationConfig
 	virtualBag           *models.VirtualBag
 }
 
@@ -34,7 +33,7 @@ type BagValidator struct {
 // or to the untarred bag (a directory). Param bagValidationConfig
 // defines what we need to validate, in addition to the checksums in the
 // manifests.
-func NewBagValidator(pathToBag string, bagValidationConfig *config.BagValidationConfig) (*BagValidator, error) {
+func NewBagValidator(pathToBag string, bagValidationConfig *BagValidationConfig) (*BagValidator, error) {
 	if !fileutil.FileExists(pathToBag) {
 		return nil, fmt.Errorf("Bag does not exist at %s", pathToBag)
 	}
@@ -97,9 +96,9 @@ func (validator *BagValidator) verifyManifestPresent(result *ValidationResult) {
 func (validator *BagValidator) verifyFileSpecs(result *ValidationResult) {
 	for gfPath, fileSpec := range validator.BagValidationConfig.FileSpecs {
 		gf := result.IntellectualObject.FindGenericFile(gfPath)
-		if gf == nil && fileSpec.Presence == config.REQUIRED {
+		if gf == nil && fileSpec.Presence == REQUIRED {
 			result.ValidationSummary.AddError("Required file '%s' is missing.", gfPath)
-		} else if gf != nil && fileSpec.Presence == config.FORBIDDEN {
+		} else if gf != nil && fileSpec.Presence == FORBIDDEN {
 			result.ValidationSummary.AddError("Bag contains forbidden file '%s'.", gfPath)
 		}
 	}
@@ -108,12 +107,12 @@ func (validator *BagValidator) verifyFileSpecs(result *ValidationResult) {
 func (validator *BagValidator) verifyTagSpecs(result *ValidationResult) {
 	for tagName, tagSpec := range validator.BagValidationConfig.TagSpecs {
 		tags := result.IntellectualObject.FindTag(tagName)
-		if tagSpec.Presence == config.FORBIDDEN {
+		if tagSpec.Presence == FORBIDDEN {
 			result.ValidationSummary.AddError(
 				"Forbidden tag '%s' found in file '%s'.", tagName, tags[0].SourceFile)
 			continue
 		}
-		if tagSpec.Presence == config.REQUIRED {
+		if tagSpec.Presence == REQUIRED {
 			validator.checkRequiredTag(result, tagName, tags, tagSpec)
 		}
 		if tags != nil && tagSpec.AllowedValues != nil && len(tagSpec.AllowedValues) > 0 {
@@ -150,7 +149,7 @@ func (validator *BagValidator) verifyChecksums(result *ValidationResult) {
 	}
 }
 
-func (validator *BagValidator) checkRequiredTag(result *ValidationResult, tagName string, tags []*models.Tag, tagSpec config.TagSpec) {
+func (validator *BagValidator) checkRequiredTag(result *ValidationResult, tagName string, tags []*models.Tag, tagSpec TagSpec) {
 	if tags == nil {
 		result.ValidationSummary.AddError("Required tag '%s' is missing.", tagName)
 		return
@@ -169,7 +168,7 @@ func (validator *BagValidator) checkRequiredTag(result *ValidationResult, tagNam
 	}
 }
 
-func (validator *BagValidator) checkAllowedTagValue(result *ValidationResult, tagName string, tags []*models.Tag, tagSpec config.TagSpec) {
+func (validator *BagValidator) checkAllowedTagValue(result *ValidationResult, tagName string, tags []*models.Tag, tagSpec TagSpec) {
 	valueOk := false
 	lastValue := ""
 	for _, value := range tagSpec.AllowedValues {

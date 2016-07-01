@@ -1,11 +1,10 @@
-package workers_test
+package validation_test
 
 import (
-	"github.com/APTrust/exchange/config"
 	"github.com/APTrust/exchange/models"
 	"github.com/APTrust/exchange/testhelper"
 	"github.com/APTrust/exchange/util"
-	"github.com/APTrust/exchange/workers"
+	"github.com/APTrust/exchange/validation"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"os"
@@ -15,9 +14,9 @@ import (
 	"testing"
 )
 
-func getValidationConfig() (*config.BagValidationConfig, error) {
+func getValidationConfig() (*validation.BagValidationConfig, error) {
 	configFilePath := path.Join("testdata", "bag_validation_config.json")
-	conf, err := config.LoadBagValidationConfig(configFilePath)
+	conf, err := validation.LoadBagValidationConfig(configFilePath)
 	if err != nil {
 		return nil, err
 	}
@@ -35,7 +34,7 @@ func TestNewBagValidator(t *testing.T) {
 	if err != nil {
 		assert.Fail(t, "Could not load BagValidationConfig: %v", err)
 	}
-	validator, err := workers.NewBagValidator(pathToBag, bagValidationConfig)
+	validator, err := validation.NewBagValidator(pathToBag, bagValidationConfig)
 	if err != nil {
 		assert.Fail(t, "Error creating BagValidator: %s", err.Error())
 	}
@@ -50,7 +49,7 @@ func TestNewBagValidator_FileDoesNotExist(t *testing.T) {
 	if err != nil {
 		assert.Fail(t, "Could not load BagValidationConfig: %v", err)
 	}
-	_, err = workers.NewBagValidator("/blah/blah/blah", bagValidationConfig)
+	_, err = validation.NewBagValidator("/blah/blah/blah", bagValidationConfig)
 	if err == nil {
 		assert.Fail(t, "NewBagValidator should have raised error on non-existent file")
 	}
@@ -64,7 +63,7 @@ func TestNewBagValidatorWithBadParams(t *testing.T) {
 		assert.Fail(t, "Could not load BagValidationConfig: %s", err.Error())
 	}
 	pathToBag := "/path/does/not/exist.tar"
-	_, err = workers.NewBagValidator(pathToBag, bagValidationConfig)
+	_, err = validation.NewBagValidator(pathToBag, bagValidationConfig)
 	if err == nil {
 		assert.Fail(t, "NewBagValidator should have complained about bad bag path.")
 	}
@@ -76,7 +75,7 @@ func TestNewBagValidatorWithBadParams(t *testing.T) {
 	if err != nil {
 		assert.Fail(t, "Can't figure out Abs path: %s", err.Error())
 	}
-	_, err = workers.NewBagValidator(pathToBag, nil)
+	_, err = validation.NewBagValidator(pathToBag, nil)
 	if err == nil {
 		assert.Fail(t, "NewBagValidator should have complained about nil BagValidationConfig.")
 	}
@@ -91,7 +90,7 @@ func TestValidate_FromTarFile_BagValid(t *testing.T) {
 	_, filename, _, _ := runtime.Caller(0)
 	dir := filepath.Dir(filename)
 	pathToBag, err := filepath.Abs(path.Join(dir, "..", "testdata", "example.edu.tagsample_good.tar"))
-	validator, err := workers.NewBagValidator(pathToBag, bagValidationConfig)
+	validator, err := validation.NewBagValidator(pathToBag, bagValidationConfig)
 	if err != nil {
 		assert.Fail(t, "NewBagValidator returned unexpected error: %s", err.Error())
 	}
@@ -111,7 +110,7 @@ func TestValidate_FromTarFile_BagInvalid(t *testing.T) {
 	_, filename, _, _ := runtime.Caller(0)
 	dir := filepath.Dir(filename)
 	pathToBag, err := filepath.Abs(path.Join(dir, "..", "testdata", "example.edu.tagsample_bad.tar"))
-	validator, err := workers.NewBagValidator(pathToBag, bagValidationConfig)
+	validator, err := validation.NewBagValidator(pathToBag, bagValidationConfig)
 	if err != nil {
 		assert.Fail(t, "NewBagValidator returned unexpected error: %s", err.Error())
 	}
@@ -135,7 +134,7 @@ func TestValidate_FromDirectory_BagValid(t *testing.T) {
 	if err != nil {
 		assert.Fail(t, "Could not load BagValidationConfig: %s", err.Error())
 	}
-	validator, err := workers.NewBagValidator(bagPath, bagValidationConfig)
+	validator, err := validation.NewBagValidator(bagPath, bagValidationConfig)
 	if err != nil {
 		assert.Fail(t, "NewBagValidator returned unexpected error: %s", err.Error())
 	}
@@ -159,7 +158,7 @@ func TestValidate_FromDirectory_BagInvalid(t *testing.T) {
 	if err != nil {
 		assert.Fail(t, "Could not load BagValidationConfig: %s", err.Error())
 	}
-	validator, err := workers.NewBagValidator(bagPath, bagValidationConfig)
+	validator, err := validation.NewBagValidator(bagPath, bagValidationConfig)
 	if err != nil {
 		assert.Fail(t, "NewBagValidator returned unexpected error: %s", err.Error())
 	}
@@ -176,7 +175,7 @@ func TestValidate_BadFileFormat(t *testing.T) {
 	if err != nil {
 		assert.Fail(t, "Could not load BagValidationConfig: %v", err)
 	}
-	validator, err := workers.NewBagValidator(thisfile, bagValidationConfig)
+	validator, err := validation.NewBagValidator(thisfile, bagValidationConfig)
 	if err != nil {
 		assert.Fail(t, "NewBagValidator raised unexpected error: %s", err.Error())
 	}
@@ -194,7 +193,7 @@ func TestBagValidator_ValidBag(t *testing.T) {
 	_, filename, _, _ := runtime.Caller(0)
 	dir := filepath.Dir(filename)
 	pathToBag, err := filepath.Abs(path.Join(dir, "..", "testdata", "example.edu.tagsample_good.tar"))
-	validator, err := workers.NewBagValidator(pathToBag, bagValidationConfig)
+	validator, err := validation.NewBagValidator(pathToBag, bagValidationConfig)
 	if err != nil {
 		assert.Fail(t, "NewBagValidator returned unexpected error: %s", err.Error())
 	}
@@ -222,7 +221,7 @@ func TestValidate_InvalidBag(t *testing.T) {
 	_, filename, _, _ := runtime.Caller(0)
 	dir := filepath.Dir(filename)
 	pathToBag, err := filepath.Abs(path.Join(dir, "..", "testdata", "example.edu.tagsample_bad.tar"))
-	validator, err := workers.NewBagValidator(pathToBag, bagValidationConfig)
+	validator, err := validation.NewBagValidator(pathToBag, bagValidationConfig)
 	if err != nil {
 		assert.Fail(t, "NewBagValidator returned unexpected error: %s", err.Error())
 	}
@@ -256,8 +255,8 @@ func TestValidate_InvalidBag(t *testing.T) {
 	assert.True(t, util.StringListContains(result.ValidationSummary.Errors, err_7))
 }
 
-func getEmptyValidationResult() (*workers.ValidationResult) {
-	return &workers.ValidationResult{
+func getEmptyValidationResult() (*validation.ValidationResult) {
+	return &validation.ValidationResult{
 		ParseSummary: models.NewWorkSummary(),
 		ValidationSummary: models.NewWorkSummary(),
 		IntellectualObject: models.NewIntellectualObject(),
