@@ -73,6 +73,7 @@ func (validator *BagValidator) Validate() (*ValidationResult){
 	for _, errMsg := range result.ParseSummary.Errors {
 		result.ValidationSummary.AddError(errMsg)
 	}
+	validator.verifyManifestPresent(result)
 	validator.verifyFileSpecs(result)
 	validator.verifyTagSpecs(result)
 	validator.verifyChecksums(result)
@@ -81,6 +82,16 @@ func (validator *BagValidator) Validate() (*ValidationResult){
 	}
 	result.ValidationSummary.Finish()
 	return result
+}
+
+func (validator *BagValidator) verifyManifestPresent(result *ValidationResult) {
+	for _, gf := range result.IntellectualObject.GenericFiles {
+		if gf.IngestFileType == constants.PAYLOAD_MANIFEST {
+			// manifest is usually one of the first 5 files in the list.
+			return
+		}
+	}
+	result.ValidationSummary.AddError("Bag has no payload manifest (manifest-<alg>.txt)")
 }
 
 func (validator *BagValidator) verifyFileSpecs(result *ValidationResult) {

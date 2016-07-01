@@ -4,6 +4,7 @@ import (
 	"github.com/APTrust/exchange/config"
 	"github.com/APTrust/exchange/models"
 	"github.com/APTrust/exchange/testhelper"
+	"github.com/APTrust/exchange/util"
 	"github.com/APTrust/exchange/workers"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -244,14 +245,15 @@ func TestValidate_InvalidBag(t *testing.T) {
 	err_6 := "Bad md5 digest for 'custom_tags/tracked_tag_file.txt': manifest says '00000000000000000000000000000000', file digest is 'dafbffffc3ed28ef18363394935a2651'"
 	err_7 := "Bad sha256 digest for 'custom_tags/tracked_tag_file.txt': manifest says '0000000000000000000000000000000000000000000000000000000000000000', file digest is '3f2f50c5bde87b58d6132faee14d1a295d115338643c658df7fa147e2296ccdd'"
 	assert.Equal(t, 8, len(result.ValidationSummary.Errors))
-	assert.Equal(t, err_0, result.ValidationSummary.Errors[0])
-	assert.Equal(t, err_1, result.ValidationSummary.Errors[1])
-	assert.Equal(t, err_2, result.ValidationSummary.Errors[2])
-	assert.Equal(t, err_3, result.ValidationSummary.Errors[3])
-	assert.Equal(t, err_4, result.ValidationSummary.Errors[4])
-	assert.Equal(t, err_5, result.ValidationSummary.Errors[5])
-	assert.Equal(t, err_6, result.ValidationSummary.Errors[6])
-	assert.Equal(t, err_7, result.ValidationSummary.Errors[7])
+
+	assert.True(t, util.StringListContains(result.ValidationSummary.Errors, err_0))
+	assert.True(t, util.StringListContains(result.ValidationSummary.Errors, err_1))
+	assert.True(t, util.StringListContains(result.ValidationSummary.Errors, err_2))
+	assert.True(t, util.StringListContains(result.ValidationSummary.Errors, err_3))
+	assert.True(t, util.StringListContains(result.ValidationSummary.Errors, err_4))
+	assert.True(t, util.StringListContains(result.ValidationSummary.Errors, err_5))
+	assert.True(t, util.StringListContains(result.ValidationSummary.Errors, err_6))
+	assert.True(t, util.StringListContains(result.ValidationSummary.Errors, err_7))
 }
 
 func getEmptyValidationResult() (*workers.ValidationResult) {
