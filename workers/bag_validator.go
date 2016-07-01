@@ -14,7 +14,7 @@ import (
 type ValidationResult struct {
 	ParseSummary         *models.WorkSummary
 	ValidationSummary    *models.WorkSummary
-	IntellectualObject    *models.IntellectualObject
+	IntellectualObject   *models.IntellectualObject
 }
 
 func (result *ValidationResult) HasErrors() (bool) {

@@ -2,6 +2,7 @@ package workers_test
 
 import (
 	"github.com/APTrust/exchange/config"
+	"github.com/APTrust/exchange/models"
 	"github.com/APTrust/exchange/testhelper"
 	"github.com/APTrust/exchange/workers"
 	"github.com/stretchr/testify/assert"
@@ -253,6 +254,26 @@ func TestValidate_InvalidBag(t *testing.T) {
 	assert.Equal(t, err_7, result.ValidationSummary.Errors[7])
 }
 
-func TestValidationResultHasErrors(t *testing.T) {
+func getEmptyValidationResult() (*workers.ValidationResult) {
+	return &workers.ValidationResult{
+		ParseSummary: models.NewWorkSummary(),
+		ValidationSummary: models.NewWorkSummary(),
+		IntellectualObject: models.NewIntellectualObject(),
+	}
+}
 
+func TestValidationResultHasErrors(t *testing.T) {
+	result := getEmptyValidationResult()
+	assert.False(t, result.HasErrors())
+
+	result.ParseSummary.AddError("Oops!")
+	assert.True(t, result.HasErrors())
+
+	result = getEmptyValidationResult()
+	result.ValidationSummary.AddError("Error")
+	assert.True(t, result.HasErrors())
+
+	result = getEmptyValidationResult()
+	result.IntellectualObject.IngestErrorMessage = "My bad"
+	assert.True(t, result.HasErrors())
 }
