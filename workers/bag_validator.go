@@ -64,10 +64,10 @@ func (validator *BagValidator) Validate() (*ValidationResult){
 	}
 	result.IntellectualObject, result.ParseSummary = validator.virtualBag.Read()
 	if result.IntellectualObject == nil {
+		if result.ParseSummary.HasErrors() {
+			result.IntellectualObject.IngestErrorMessage = result.ParseSummary.AllErrorsAsString()
+		}
 		return result
-	}
-	if result.ParseSummary.HasErrors() {
-		result.IntellectualObject.IngestErrorMessage = result.ParseSummary.AllErrorsAsString()
 	}
 	result.ValidationSummary.Start()
 	for _, errMsg := range result.ParseSummary.Errors {
@@ -113,18 +113,10 @@ func (validator *BagValidator) verifyTagSpecs(result *ValidationResult) {
 
 func (validator *BagValidator) verifyChecksums(result *ValidationResult) {
 	for _, gf := range result.IntellectualObject.GenericFiles {
-		// ============================================================
-		// fmt.Println(gf.OriginalPath())
-		// fmt.Println("    ", gf.IngestManifestMd5)
-		// fmt.Println("    ", gf.IngestMd5)
-		// fmt.Println("    ", gf.IngestManifestSha256)
-		// fmt.Println("    ", gf.IngestSha256)
-		// fmt.Println("............")
-		// ============================================================
 		// Md5 digests
 		if gf.IngestManifestMd5 != "" && gf.IngestManifestMd5 != gf.IngestMd5 {
 			result.ValidationSummary.AddError(
-				"Md5 digest for '%s': manifest says '%s', file digest is '%s'",
+				"Bad md5 digest for '%s': manifest says '%s', file digest is '%s'",
 				gf.OriginalPath(), gf.IngestManifestMd5, gf.IngestMd5)
 		} else {
 			gf.IngestMd5VerifiedAt = time.Now().UTC()
@@ -132,7 +124,7 @@ func (validator *BagValidator) verifyChecksums(result *ValidationResult) {
 		// Sha256 digests
 		if gf.IngestManifestSha256 != "" && gf.IngestManifestSha256 != gf.IngestSha256 {
 			result.ValidationSummary.AddError(
-				"Sha256 digest for '%s': manifest says '%s', file digest is '%s'",
+				"Bad sha256 digest for '%s': manifest says '%s', file digest is '%s'",
 				gf.OriginalPath(), gf.IngestManifestSha256, gf.IngestSha256)
 		} else {
 			gf.IngestSha256VerifiedAt = time.Now().UTC()

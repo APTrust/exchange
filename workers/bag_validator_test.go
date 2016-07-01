@@ -1,7 +1,6 @@
 package workers_test
 
 import (
-	"fmt"
 	"github.com/APTrust/exchange/config"
 	"github.com/APTrust/exchange/testhelper"
 	"github.com/APTrust/exchange/workers"
@@ -204,6 +203,11 @@ func TestBagValidator_ValidBag(t *testing.T) {
 	assert.False(t, result.ParseSummary.HasErrors())
 	assert.NotNil(t, result.ValidationSummary)
 	require.False(t, result.ValidationSummary.HasErrors())
+
+	for _, gf := range result.IntellectualObject.GenericFiles {
+		assert.NotEmpty(t, gf.IngestSha256VerifiedAt)
+		assert.NotEmpty(t, gf.IngestMd5VerifiedAt)
+	}
 }
 
 // Make sure we catch all errors in an invalid bag.
@@ -229,14 +233,24 @@ func TestValidate_InvalidBag(t *testing.T) {
 	assert.True(t, result.ValidationSummary.HasErrors())
 	assert.True(t, result.HasErrors())
 
-	// Check that VerifiedAt is set (or not) for Md5 and Sha256
 
-	// ---------------------------------
-	// TODO: Assert all specific errors were caught, and get rid of print statement.
-	// ---------------------------------
-	fmt.Println(result.ValidationSummary.AllErrorsAsString())
-	fmt.Println("-------------------------------------")
-	fmt.Println(result.IntellectualObject.IngestErrorMessage)
+	err_0 := "File 'data/file-not-in-bag' in manifest 'manifest-sha256.txt' is missing from bag"
+	err_1 := "File 'custom_tags/tag_file_xyz.pdf' in manifest 'tagmanifest-md5.txt' is missing from bag"
+	err_2 := "File 'custom_tags/tag_file_xyz.pdf' in manifest 'tagmanifest-sha256.txt' is missing from bag"
+	err_3 := "Value for tag 'Title' is missing."
+	err_4 := "Tag 'Access' has illegal value 'acksess'."
+	err_5 := "Bad sha256 digest for 'data/datastream-descMetadata': manifest says 'This-checksum-is-bad-on-purpose.-The-validator-should-catch-it!!', file digest is 'cf9cbce80062932e10ee9cd70ec05ebc24019deddfea4e54b8788decd28b4bc7'"
+	err_6 := "Bad md5 digest for 'custom_tags/tracked_tag_file.txt': manifest says '00000000000000000000000000000000', file digest is 'dafbffffc3ed28ef18363394935a2651'"
+	err_7 := "Bad sha256 digest for 'custom_tags/tracked_tag_file.txt': manifest says '0000000000000000000000000000000000000000000000000000000000000000', file digest is '3f2f50c5bde87b58d6132faee14d1a295d115338643c658df7fa147e2296ccdd'"
+	assert.Equal(t, 8, len(result.ValidationSummary.Errors))
+	assert.Equal(t, err_0, result.ValidationSummary.Errors[0])
+	assert.Equal(t, err_1, result.ValidationSummary.Errors[1])
+	assert.Equal(t, err_2, result.ValidationSummary.Errors[2])
+	assert.Equal(t, err_3, result.ValidationSummary.Errors[3])
+	assert.Equal(t, err_4, result.ValidationSummary.Errors[4])
+	assert.Equal(t, err_5, result.ValidationSummary.Errors[5])
+	assert.Equal(t, err_6, result.ValidationSummary.Errors[6])
+	assert.Equal(t, err_7, result.ValidationSummary.Errors[7])
 }
 
 func TestValidationResultHasErrors(t *testing.T) {

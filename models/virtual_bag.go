@@ -229,8 +229,8 @@ func (vbag *VirtualBag) parseManifest(reader io.Reader, relFilePath string) () {
 			genericFile := vbag.obj.FindGenericFile(filePath)
 			if genericFile == nil {
 				vbag.summary.AddError(
-					"Manifest '%s' includes checksum for file '%s', which was not found in bag",
-					relFilePath, filePath)
+					"File '%s' in manifest '%s' is missing from bag",
+					filePath, relFilePath)
 				vbag.obj.IngestMissingFiles = append(vbag.obj.IngestMissingFiles,
 					NewMissingFile(relFilePath, lineNum, filePath, digest))
 				continue
