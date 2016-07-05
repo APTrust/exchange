@@ -40,6 +40,18 @@ func NewBagValidator(pathToBag string, bagValidationConfig *BagValidationConfig)
 	if bagValidationConfig == nil {
 		return nil, fmt.Errorf("Param bagValidationConfig cannot be nil")
 	}
+	configErrors := bagValidationConfig.ValidateConfig()
+	if len(configErrors) > 0 {
+		errString := "BagValidationConfig has the following errors:"
+		for _, e := range configErrors {
+			errString += fmt.Sprintf("\n%s", e.Error())
+		}
+		return nil, fmt.Errorf(errString)
+	}
+	err := bagValidationConfig.CompileFileNameRegex()
+	if err != nil {
+		return nil, fmt.Errorf("Error in BagValidationConfig: %v", err)
+	}
 	calculateMd5 := util.StringListContains(bagValidationConfig.FixityAlgorithms, constants.AlgMd5)
 	calculateSha256 := util.StringListContains(bagValidationConfig.FixityAlgorithms, constants.AlgSha256)
 	tagFilesToParse := make([]string, 0)
@@ -75,7 +87,7 @@ func (validator *BagValidator) Validate() (*ValidationResult){
 	validator.verifyManifestPresent(result)
 	validator.verifyFileSpecs(result)
 	validator.verifyTagSpecs(result)
-	validator.verifyChecksums(result)
+	validator.verifyGenericFiles(result)
 	if result.ValidationSummary.HasErrors() {
 		result.IntellectualObject.IngestErrorMessage += result.ValidationSummary.AllErrorsAsString()
 	}
@@ -121,7 +133,9 @@ func (validator *BagValidator) verifyTagSpecs(result *ValidationResult) {
 	}
 }
 
-func (validator *BagValidator) verifyChecksums(result *ValidationResult) {
+func (validator *BagValidator) verifyGenericFiles(result *ValidationResult) {
+	// TODO: Make sure regex is compiled in BagValidationConfig if
+	// pattern is present.
 	for _, gf := range result.IntellectualObject.GenericFiles {
 		// Md5 digests
 		if gf.IngestManifestMd5 != "" && gf.IngestManifestMd5 != gf.IngestMd5 {
@@ -146,6 +160,8 @@ func (validator *BagValidator) verifyChecksums(result *ValidationResult) {
 				"File '%s' does not appear in any payload manifest (md5 or sha256)",
 				gf.OriginalPath())
 		}
+		// Make sure name is valid
+		// TODO: Verify checksums against pattern in BagValidationConfig
 	}
 }
 

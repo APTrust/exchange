@@ -11,14 +11,39 @@ import (
 	"path"
 	"path/filepath"
 	"runtime"
+	"strings"
 	"testing"
 )
 
+func getEmptyValidationResult() (*validation.ValidationResult) {
+	return &validation.ValidationResult{
+		ParseSummary: models.NewWorkSummary(),
+		ValidationSummary: models.NewWorkSummary(),
+		IntellectualObject: models.NewIntellectualObject(),
+	}
+}
+
+func TestValidationResultHasErrors(t *testing.T) {
+	result := getEmptyValidationResult()
+	assert.False(t, result.HasErrors())
+
+	result.ParseSummary.AddError("Oops!")
+	assert.True(t, result.HasErrors())
+
+	result = getEmptyValidationResult()
+	result.ValidationSummary.AddError("Error")
+	assert.True(t, result.HasErrors())
+
+	result = getEmptyValidationResult()
+	result.IntellectualObject.IngestErrorMessage = "My bad"
+	assert.True(t, result.HasErrors())
+}
+
 func getValidationConfig() (*validation.BagValidationConfig, error) {
 	configFilePath := path.Join("testdata", "bag_validation_config.json")
-	conf, err := validation.LoadBagValidationConfig(configFilePath)
-	if err != nil {
-		return nil, err
+	conf, errors := validation.LoadBagValidationConfig(configFilePath)
+	if errors != nil && len(errors) > 0 {
+		return nil, errors[0]
 	}
 	return conf, nil
 }
@@ -41,6 +66,52 @@ func TestNewBagValidator(t *testing.T) {
 	assert.NotNil(t, validator)
 	assert.Equal(t, pathToBag, validator.PathToBag)
 	assert.NotNil(t, validator.BagValidationConfig)
+}
+
+func TestNewBagValidator_BadConfig(t *testing.T) {
+	_, filename, _, _ := runtime.Caller(0)
+	dir := filepath.Dir(filename)
+	pathToBag, err := filepath.Abs(path.Join(dir, "..", "testdata", "example.edu.tagsample_good.tar"))
+	if err != nil {
+		assert.Fail(t, "Can't figure out Abs path: %s", err.Error())
+	}
+	bagValidationConfig, err := getValidationConfig()
+	if err != nil {
+		assert.Fail(t, "Could not load BagValidationConfig: %v", err)
+	}
+	badPathSpec := validation.TagSpec{
+		FilePath: "",
+		Presence: "REQUIRED",
+		EmptyOK: true,
+	}
+	badPresenceSpec := validation.TagSpec{
+		FilePath: "orangina",
+		Presence: "orangina",
+		EmptyOK: true,
+	}
+	bagValidationConfig.TagSpecs["bad_path_spec"] = badPathSpec
+	bagValidationConfig.TagSpecs["bad_presence"] = badPresenceSpec
+	_, err = validation.NewBagValidator(pathToBag, bagValidationConfig)
+	require.NotNil(t, err)
+	assert.True(t, strings.Contains(err.Error(), "TagSpec for file ''"))
+	assert.True(t, strings.Contains(err.Error(), "TagSpec for file 'orangina'"))
+}
+
+func TestNewBagValidator_BadRegex(t *testing.T) {
+	_, filename, _, _ := runtime.Caller(0)
+	dir := filepath.Dir(filename)
+	pathToBag, err := filepath.Abs(path.Join(dir, "..", "testdata", "example.edu.tagsample_good.tar"))
+	if err != nil {
+		assert.Fail(t, "Can't figure out Abs path: %s", err.Error())
+	}
+	bagValidationConfig, err := getValidationConfig()
+	if err != nil {
+		assert.Fail(t, "Could not load BagValidationConfig: %v", err)
+	}
+	bagValidationConfig.FileNamePattern = "ThisPatternIsInvalid[-"
+	_, err = validation.NewBagValidator(pathToBag, bagValidationConfig)
+	require.NotNil(t, err)
+	assert.True(t, strings.Contains(err.Error(), "Cannot compile regex"))
 }
 
 // Validate a file that does not exist.
@@ -255,26 +326,10 @@ func TestValidate_InvalidBag(t *testing.T) {
 	assert.True(t, util.StringListContains(result.ValidationSummary.Errors, err_7))
 }
 
-func getEmptyValidationResult() (*validation.ValidationResult) {
-	return &validation.ValidationResult{
-		ParseSummary: models.NewWorkSummary(),
-		ValidationSummary: models.NewWorkSummary(),
-		IntellectualObject: models.NewIntellectualObject(),
-	}
-}
+// ------------------------------------------------------------
+// TODO: Test file name validation
+// ------------------------------------------------------------
 
-func TestValidationResultHasErrors(t *testing.T) {
-	result := getEmptyValidationResult()
-	assert.False(t, result.HasErrors())
-
-	result.ParseSummary.AddError("Oops!")
-	assert.True(t, result.HasErrors())
-
-	result = getEmptyValidationResult()
-	result.ValidationSummary.AddError("Error")
-	assert.True(t, result.HasErrors())
-
-	result = getEmptyValidationResult()
-	result.IntellectualObject.IngestErrorMessage = "My bad"
-	assert.True(t, result.HasErrors())
-}
+// ------------------------------------------------------------
+// TODO: Test bad bags in testadata for specific errors
+// ------------------------------------------------------------
