@@ -11,6 +11,13 @@ import (
 // the .tar suffix, you'll have a name like "my_bag.b04.of12"
 var MultipartSuffix = regexp.MustCompile("\\.b\\d+\\.of\\d+$")
 
+// Regex for a valid APTrust file name, according to the spec at
+// https://sites.google.com/a/aptrust.org/member-wiki/basic-operations/bagging
+var APTrustFileNamePattern = regexp.MustCompile("^[A-Za-z0-9\\._][A-Za-z0-9\\.\\-_%]+$")
+
+// Regex for valid POSIX filenames.
+var PosixFileNamePattern = regexp.MustCompile("^[A-Za-z0-9\\._\\-]+$")
+
 const (
 	APTrustNamespace        = "urn:mace:aptrust.org"
 	ReceiveBucketPrefix     = "aptrust.receiving."
