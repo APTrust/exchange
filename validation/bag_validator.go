@@ -164,7 +164,7 @@ func (validator *BagValidator) verifyGenericFiles(result *ValidationResult) {
 			for _, pathComponent := range strings.Split(gf.OriginalPath(), "/") {
 				if !validator.BagValidationConfig.FileNameRegex.MatchString(pathComponent) {
 					result.ValidationSummary.AddError(
-						"Filename '%s' contains is not valid according to %s",
+						"Filename '%s' is not valid according to %s",
 						gf.OriginalPath(), detail)
 				}
 			}

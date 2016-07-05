@@ -1,6 +1,7 @@
 package validation_test
 
 import (
+	"fmt"
 	"github.com/APTrust/exchange/models"
 	"github.com/APTrust/exchange/testhelper"
 	"github.com/APTrust/exchange/util"
@@ -334,6 +335,8 @@ func TestValidate_InvalidBag(t *testing.T) {
 // TODO: Test bad bags in testadata for specific errors
 // ------------------------------------------------------------
 
+// These good bags are from the old Bagman test suite. We have to make sure they
+// pass here, so we know validation is backwards-compatible.
 func TestValidate_GoodBags(t *testing.T) {
 	goodBags := []string {
 		"example.edu.multipart.b01.of02.tar",
@@ -361,4 +364,197 @@ func TestValidate_GoodBags(t *testing.T) {
 		assert.Empty(t, result.IntellectualObject.IngestErrorMessage, goodBag)
 		assert.False(t, result.ParseSummary.HasErrors(), goodBag)
 	}
+}
+
+// ------------------------------------------------------------
+// The bad bags below are from the old Bagman test suite.
+// We have to make sure they fail for the same reasons they
+// used to fail in Bagman, so we know validation is
+// backwards-compatible.
+// ------------------------------------------------------------
+
+func TestValidate_BadAccess(t *testing.T) {
+	bagValidationConfig, err := getValidationConfig()
+	if err != nil {
+		assert.Fail(t, "Could not load BagValidationConfig: %s", err.Error())
+	}
+	optionalFileSpec := validation.FileSpec{ Presence: "OPTIONAL" }
+	bagValidationConfig.FileSpecs["tagmanifest-md5.txt"] = optionalFileSpec
+	_, filename, _, _ := runtime.Caller(0)
+	dir := filepath.Dir(filename)
+	pathToBag, err := filepath.Abs(path.Join(dir, "..", "testdata", "example.edu.sample_bad_access.tar"))
+	validator, err := validation.NewBagValidator(pathToBag, bagValidationConfig)
+	if err != nil {
+		assert.Fail(t, "NewBagValidator returned unexpected error: %s", err.Error())
+	}
+	result := validator.Validate()
+	assert.NotNil(t, result.IntellectualObject)
+	assert.Equal(t, 9, len(result.IntellectualObject.GenericFiles))
+	assert.Equal(t, "Tag 'Access' has illegal value 'hands off!'.", result.IntellectualObject.IngestErrorMessage)
+	assert.False(t, result.ParseSummary.HasErrors())
+	assert.NotNil(t, result.ValidationSummary)
+	require.True(t, result.ValidationSummary.HasErrors())
+}
+
+func TestValidate_BadChecksums(t *testing.T) {
+	bagValidationConfig, err := getValidationConfig()
+	if err != nil {
+		assert.Fail(t, "Could not load BagValidationConfig: %s", err.Error())
+	}
+	optionalFileSpec := validation.FileSpec{ Presence: "OPTIONAL" }
+	bagValidationConfig.FileSpecs["tagmanifest-md5.txt"] = optionalFileSpec
+	_, filename, _, _ := runtime.Caller(0)
+	dir := filepath.Dir(filename)
+	pathToBag, err := filepath.Abs(path.Join(dir, "..", "testdata", "example.edu.sample_bad_checksums.tar"))
+	validator, err := validation.NewBagValidator(pathToBag, bagValidationConfig)
+	if err != nil {
+		assert.Fail(t, "NewBagValidator returned unexpected error: %s", err.Error())
+	}
+	result := validator.Validate()
+	assert.NotNil(t, result.IntellectualObject)
+	assert.Equal(t, 8, len(result.IntellectualObject.GenericFiles))
+	assert.True(t, strings.Contains(result.IntellectualObject.IngestErrorMessage,
+		"Bad md5 digest for 'data/datastream-DC'"))
+	assert.True(t, strings.Contains(result.IntellectualObject.IngestErrorMessage,
+		"Bad md5 digest for 'data/datastream-descMetadata'"))
+	assert.True(t, strings.Contains(result.IntellectualObject.IngestErrorMessage,
+		"Bad md5 digest for 'data/datastream-MARC'"))
+	assert.True(t, strings.Contains(result.IntellectualObject.IngestErrorMessage,
+		"Bad md5 digest for 'data/datastream-RELS-EXT'"))
+	assert.False(t, result.ParseSummary.HasErrors())
+	assert.NotNil(t, result.ValidationSummary)
+	require.True(t, result.ValidationSummary.HasErrors())
+}
+
+func TestValidate_BadFileNames(t *testing.T) {
+	bagValidationConfig, err := getValidationConfig()
+	if err != nil {
+		assert.Fail(t, "Could not load BagValidationConfig: %s", err.Error())
+	}
+	optionalFileSpec := validation.FileSpec{ Presence: "OPTIONAL" }
+	bagValidationConfig.FileSpecs["tagmanifest-md5.txt"] = optionalFileSpec
+	_, filename, _, _ := runtime.Caller(0)
+	dir := filepath.Dir(filename)
+	pathToBag, err := filepath.Abs(path.Join(dir, "..", "testdata", "example.edu.sample_bad_file_names.tar"))
+	validator, err := validation.NewBagValidator(pathToBag, bagValidationConfig)
+	if err != nil {
+		assert.Fail(t, "NewBagValidator returned unexpected error: %s", err.Error())
+	}
+	result := validator.Validate()
+	assert.NotNil(t, result.IntellectualObject)
+	assert.Equal(t, 9, len(result.IntellectualObject.GenericFiles))
+	assert.True(t, strings.Contains(result.IntellectualObject.IngestErrorMessage,
+		"Filename 'data/-starts-with-dash'"))
+	assert.True(t, strings.Contains(result.IntellectualObject.IngestErrorMessage,
+		"Filename 'data/contains#hash'"))
+	assert.True(t, strings.Contains(result.IntellectualObject.IngestErrorMessage,
+		"Filename 'data/contains*star'"))
+	assert.True(t, strings.Contains(result.IntellectualObject.IngestErrorMessage,
+		"Filename 'data/contains+plus'"))
+	assert.False(t, result.ParseSummary.HasErrors())
+	assert.NotNil(t, result.ValidationSummary)
+	require.True(t, result.ValidationSummary.HasErrors())
+}
+
+func TestValidate_MissingDataFile(t *testing.T) {
+	bagValidationConfig, err := getValidationConfig()
+	if err != nil {
+		assert.Fail(t, "Could not load BagValidationConfig: %s", err.Error())
+	}
+	optionalFileSpec := validation.FileSpec{ Presence: "OPTIONAL" }
+	bagValidationConfig.FileSpecs["tagmanifest-md5.txt"] = optionalFileSpec
+	_, filename, _, _ := runtime.Caller(0)
+	dir := filepath.Dir(filename)
+	pathToBag, err := filepath.Abs(path.Join(dir, "..", "testdata", "example.edu.sample_missing_data_file.tar"))
+	validator, err := validation.NewBagValidator(pathToBag, bagValidationConfig)
+	if err != nil {
+		assert.Fail(t, "NewBagValidator returned unexpected error: %s", err.Error())
+	}
+	result := validator.Validate()
+	assert.NotNil(t, result.IntellectualObject)
+	assert.Equal(t, 7, len(result.IntellectualObject.GenericFiles))
+	assert.True(t, strings.Contains(result.IntellectualObject.IngestErrorMessage,
+		"File 'data/datastream-DC' in manifest 'manifest-md5.txt' is missing from bag"))
+	assert.True(t, result.ParseSummary.HasErrors())
+	assert.NotNil(t, result.ValidationSummary)
+	require.True(t, result.ValidationSummary.HasErrors())
+}
+
+func TestValidate_NoAPTrustInfo(t *testing.T) {
+	bagValidationConfig, err := getValidationConfig()
+	if err != nil {
+		assert.Fail(t, "Could not load BagValidationConfig: %s", err.Error())
+	}
+	optionalFileSpec := validation.FileSpec{ Presence: "OPTIONAL" }
+	bagValidationConfig.FileSpecs["tagmanifest-md5.txt"] = optionalFileSpec
+	_, filename, _, _ := runtime.Caller(0)
+	dir := filepath.Dir(filename)
+	pathToBag, err := filepath.Abs(path.Join(dir, "..", "testdata", "example.edu.sample_no_aptrust_info.tar"))
+	validator, err := validation.NewBagValidator(pathToBag, bagValidationConfig)
+	if err != nil {
+		assert.Fail(t, "NewBagValidator returned unexpected error: %s", err.Error())
+	}
+	result := validator.Validate()
+	assert.NotNil(t, result.IntellectualObject)
+	assert.Equal(t, 8, len(result.IntellectualObject.GenericFiles))
+	assert.True(t, strings.Contains(result.IntellectualObject.IngestErrorMessage,
+		"Required file 'aptrust-info.txt' is missing."))
+	assert.False(t, result.ParseSummary.HasErrors())
+	assert.NotNil(t, result.ValidationSummary)
+	require.True(t, result.ValidationSummary.HasErrors())
+}
+
+func TestValidate_NoBagInfo(t *testing.T) {
+	bagValidationConfig, err := getValidationConfig()
+	if err != nil {
+		assert.Fail(t, "Could not load BagValidationConfig: %s", err.Error())
+	}
+	optionalFileSpec := validation.FileSpec{ Presence: "OPTIONAL" }
+	bagValidationConfig.FileSpecs["tagmanifest-md5.txt"] = optionalFileSpec
+	_, filename, _, _ := runtime.Caller(0)
+	dir := filepath.Dir(filename)
+	pathToBag, err := filepath.Abs(path.Join(dir, "..", "testdata", "example.edu.sample_no_bag_info.tar"))
+	validator, err := validation.NewBagValidator(pathToBag, bagValidationConfig)
+	if err != nil {
+		assert.Fail(t, "NewBagValidator returned unexpected error: %s", err.Error())
+	}
+	result := validator.Validate()
+	assert.NotNil(t, result.IntellectualObject)
+	assert.Equal(t, 7, len(result.IntellectualObject.GenericFiles))
+	assert.True(t, strings.Contains(result.IntellectualObject.IngestErrorMessage,
+		"Required file 'bag-info.txt' is missing."))
+	assert.False(t, result.ParseSummary.HasErrors())
+	assert.NotNil(t, result.ValidationSummary)
+	require.True(t, result.ValidationSummary.HasErrors())
+}
+
+func TestValidate_NoDataDir(t *testing.T) {
+	bagValidationConfig, err := getValidationConfig()
+	if err != nil {
+		assert.Fail(t, "Could not load BagValidationConfig: %s", err.Error())
+	}
+	optionalFileSpec := validation.FileSpec{ Presence: "OPTIONAL" }
+	bagValidationConfig.FileSpecs["tagmanifest-md5.txt"] = optionalFileSpec
+	_, filename, _, _ := runtime.Caller(0)
+	dir := filepath.Dir(filename)
+	pathToBag, err := filepath.Abs(path.Join(dir, "..", "testdata", "example.edu.sample_no_data_dir.tar"))
+	validator, err := validation.NewBagValidator(pathToBag, bagValidationConfig)
+	if err != nil {
+		assert.Fail(t, "NewBagValidator returned unexpected error: %s", err.Error())
+	}
+	result := validator.Validate()
+	assert.NotNil(t, result.IntellectualObject)
+	assert.Equal(t, 5, len(result.IntellectualObject.GenericFiles))
+	assert.True(t, strings.Contains(result.IntellectualObject.IngestErrorMessage,
+		"File 'data/datastream-DC' in manifest 'manifest-md5.txt' is missing"))
+	assert.True(t, strings.Contains(result.IntellectualObject.IngestErrorMessage,
+		"File 'data/datastream-descMetadata' in manifest 'manifest-md5.txt' is missing"))
+	assert.True(t, strings.Contains(result.IntellectualObject.IngestErrorMessage,
+		"File 'data/datastream-MARC' in manifest 'manifest-md5.txt' is missing"))
+	assert.True(t, strings.Contains(result.IntellectualObject.IngestErrorMessage,
+		"File 'data/datastream-RELS-EXT' in manifest 'manifest-md5.txt' is missing"))
+	assert.True(t, result.ParseSummary.HasErrors())
+	assert.NotNil(t, result.ValidationSummary)
+	require.True(t, result.ValidationSummary.HasErrors())
+	fmt.Println(result.IntellectualObject.IngestErrorMessage)
 }
