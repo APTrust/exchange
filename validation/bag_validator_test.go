@@ -333,3 +333,32 @@ func TestValidate_InvalidBag(t *testing.T) {
 // ------------------------------------------------------------
 // TODO: Test bad bags in testadata for specific errors
 // ------------------------------------------------------------
+
+func TestValidate_GoodBags(t *testing.T) {
+	goodBags := []string {
+		"example.edu.multipart.b01.of02.tar",
+		"example.edu.multipart.b02.of02.tar",
+		"example.edu.sample_good.tar",
+	}
+	bagValidationConfig, err := getValidationConfig()
+	if err != nil {
+		assert.Fail(t, "Could not load BagValidationConfig: %s", err.Error())
+	}
+	optionalFileSpec := validation.FileSpec{ Presence: "OPTIONAL" }
+	bagValidationConfig.FileSpecs["tagmanifest-md5.txt"] = optionalFileSpec
+	_, filename, _, _ := runtime.Caller(0)
+	dir := filepath.Dir(filename)
+
+	for _, goodBag := range goodBags {
+		pathToBag, err := filepath.Abs(path.Join(dir, "..", "testdata", goodBag))
+		validator, err := validation.NewBagValidator(pathToBag, bagValidationConfig)
+		if err != nil {
+			assert.Fail(t, "NewBagValidator returned unexpected error: %s", err.Error())
+		}
+		result := validator.Validate()
+		require.NotNil(t, result.IntellectualObject, goodBag)
+		assert.NotEmpty(t, result.IntellectualObject.GenericFiles, goodBag)
+		assert.Empty(t, result.IntellectualObject.IngestErrorMessage, goodBag)
+		assert.False(t, result.ParseSummary.HasErrors(), goodBag)
+	}
+}

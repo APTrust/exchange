@@ -134,8 +134,7 @@ func (validator *BagValidator) verifyTagSpecs(result *ValidationResult) {
 }
 
 func (validator *BagValidator) verifyGenericFiles(result *ValidationResult) {
-	// TODO: Make sure regex is compiled in BagValidationConfig if
-	// pattern is present.
+	detail := validator.fileValidationDetail()
 	for _, gf := range result.IntellectualObject.GenericFiles {
 		// Md5 digests
 		if gf.IngestManifestMd5 != "" && gf.IngestManifestMd5 != gf.IngestMd5 {
@@ -161,8 +160,27 @@ func (validator *BagValidator) verifyGenericFiles(result *ValidationResult) {
 				gf.OriginalPath())
 		}
 		// Make sure name is valid
-		// TODO: Verify checksums against pattern in BagValidationConfig
+		if validator.BagValidationConfig.FileNameRegex != nil {
+			for _, pathComponent := range strings.Split(gf.OriginalPath(), "/") {
+				if !validator.BagValidationConfig.FileNameRegex.MatchString(pathComponent) {
+					result.ValidationSummary.AddError(
+						"Filename '%s' contains is not valid according to %s",
+						gf.OriginalPath(), detail)
+				}
+			}
+		}
 	}
+}
+
+// Returns a specific description of the file name validation rules in effect.
+func (validator *BagValidator) fileValidationDetail() (string) {
+	detail := "validation pattern " + validator.BagValidationConfig.FileNamePattern
+	if strings.ToUpper(validator.BagValidationConfig.FileNamePattern) == "APTRUST" {
+		detail = "APTrust validation rules"
+	} else if strings.ToUpper(validator.BagValidationConfig.FileNamePattern) == "POSIX" {
+		detail = "POSIX validation rules"
+	}
+	return detail
 }
 
 func (validator *BagValidator) checkRequiredTag(result *ValidationResult, tagName string, tags []*models.Tag, tagSpec TagSpec) {
