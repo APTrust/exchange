@@ -3,8 +3,11 @@ package validation
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/APTrust/exchange/constants"
 	"github.com/APTrust/exchange/util"
 	"github.com/APTrust/exchange/util/fileutil"
+	"regexp"
+	"strings"
 )
 
 const (
@@ -84,6 +87,13 @@ type BagValidationConfig struct {
 	// Which fixity algorithms should we calculate on tag and
 	// payload files?
 	FixityAlgorithms            []string
+	// Regex to describe valid file and directory names.
+	// This can also be set to APTRUST to use the standard APTrust
+	// filename pattern defined in constants.APTrustFileNamePattern,
+	// or POSIX to use POSIX file name rules.
+	FileNamePattern             string
+	// Regex compiled internally from FileNamePattern.
+	FileNameRegex               *regexp.Regexp
 }
 
 func NewBagValidationConfig() (*BagValidationConfig) {
@@ -97,13 +107,48 @@ func NewBagValidationConfig() (*BagValidationConfig) {
 	}
 }
 
-func LoadBagValidationConfig(pathToConfigFile string) (*BagValidationConfig, error) {
+func (config *BagValidationConfig) ValidateConfig() ([]error) {
+	errors := make([]error, 0)
+	for _, tagSpec := range config.TagSpecs {
+		if !tagSpec.Valid() {
+			errors = append(errors, fmt.Errorf(
+				"TagSpec for file '%s' requires non-empty FilePath and valid presence value.",
+				tagSpec.FilePath))
+		}
+	}
+	return errors
+}
+
+// Call this before testing file names in the bag. This compiles the
+// filename validation regex, if the config includes a validation pattern.
+// Note the two built-in patterns: constants.APTrustFileNamePattern and
+// constants.PosixFileNamePattern. If you load your validation config
+// from a file, LoadBagValidationConfig calls this for you.
+func (config *BagValidationConfig) CompileFileNameRegex() (error) {
+	var err error
+	if strings.ToUpper(config.FileNamePattern) == "APTRUST" {
+		config.FileNameRegex = constants.APTrustFileNamePattern
+	} else if strings.ToUpper(config.FileNamePattern) == "POSIX" {
+		config.FileNameRegex = constants.PosixFileNamePattern
+	} else if config.FileNamePattern != "" {
+		config.FileNameRegex, err = regexp.Compile(config.FileNamePattern)
+		if err != nil {
+			err = fmt.Errorf("Cannot compile regex for FileNamePattern '%s': %v",
+				config.FileNamePattern, err)
+		}
+	}
+	return err
+}
+
+func LoadBagValidationConfig(pathToConfigFile string) (*BagValidationConfig, []error) {
+	errors := make([]error, 0)
 	file, err := fileutil.LoadRelativeFile(pathToConfigFile)
 	if err != nil {
 		detailedError := fmt.Errorf(
 			"Error reading bag validation config file '%s': %v\n",
 			pathToConfigFile, err)
-		return nil, detailedError
+		errors = append(errors, detailedError)
+		return nil, errors
 	}
 	bagValidationConfig := NewBagValidationConfig()
 	err = json.Unmarshal(file, bagValidationConfig)
@@ -111,7 +156,13 @@ func LoadBagValidationConfig(pathToConfigFile string) (*BagValidationConfig, err
 		detailedError := fmt.Errorf(
 			"Error parsing JSON from bag validation config file '%s':",
 			pathToConfigFile, err)
-		return nil, detailedError
+		errors = append(errors, detailedError)
+		return nil, errors
 	}
-	return bagValidationConfig, nil
+	configErrors := bagValidationConfig.ValidateConfig()
+	regexErr := bagValidationConfig.CompileFileNameRegex()
+	if regexErr != nil {
+		configErrors = append(configErrors, regexErr)
+	}
+	return bagValidationConfig, configErrors
 }

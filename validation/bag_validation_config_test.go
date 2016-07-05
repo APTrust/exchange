@@ -1,9 +1,12 @@
 package validation_test
 
 import (
+	"github.com/APTrust/exchange/constants"
 	"github.com/APTrust/exchange/validation"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"path"
+	"strings"
 	"testing"
 )
 
@@ -18,9 +21,9 @@ func TestNewBagValidationConfig(t *testing.T) {
 
 func TestLoadBagValidationConfig(t *testing.T) {
 	configFilePath := path.Join("testdata", "bag_validation_config.json")
-	conf, err := validation.LoadBagValidationConfig(configFilePath)
-	if err != nil {
-		assert.Fail(t, err.Error())
+	conf, errors := validation.LoadBagValidationConfig(configFilePath)
+	if errors != nil && len(errors) > 0 {
+		assert.Fail(t, errors[0].Error())
 	}
 	assert.True(t, conf.AllowMiscTopLevelFiles)
 	assert.True(t, conf.AllowMiscDirectories)
@@ -88,4 +91,65 @@ func TestTagSpecValid(t *testing.T) {
 	assert.False(t, tagspec.Valid())
 	tagspec.FilePath = "data/blah/blah/blah.txt"
 	assert.True(t, tagspec.Valid())
+}
+
+func TestValidateConfig(t *testing.T) {
+	configFilePath := path.Join("testdata", "bag_validation_config.json")
+	conf, errors := validation.LoadBagValidationConfig(configFilePath)
+	if errors != nil && len(errors) > 0 {
+		assert.Fail(t, errors[0].Error())
+	}
+	errors = conf.ValidateConfig()
+	assert.Empty(t, errors)
+
+	badPathSpec := validation.TagSpec{
+		FilePath: "",
+		Presence: "REQUIRED",
+		EmptyOK: true,
+	}
+	badPresenceSpec := validation.TagSpec{
+		FilePath: "orangina",
+		Presence: "orangina",
+		EmptyOK: true,
+	}
+	conf.TagSpecs["bad_path_spec"] = badPathSpec
+	conf.TagSpecs["bad_presence"] = badPresenceSpec
+	errors = conf.ValidateConfig()
+	assert.Equal(t, 2, len(errors))
+}
+
+func TestCompileFileNameRegex(t *testing.T) {
+	configFilePath := path.Join("testdata", "bag_validation_config.json")
+	conf, errors := validation.LoadBagValidationConfig(configFilePath)
+	if errors != nil && len(errors) > 0 {
+		assert.Fail(t, errors[0].Error())
+	}
+	err := conf.CompileFileNameRegex()
+	assert.Nil(t, err)
+
+	conf.FileNamePattern = "ThisPatternIsInvalid[-"
+	err = conf.CompileFileNameRegex()
+	require.NotNil(t, err)
+	assert.True(t, strings.HasPrefix(err.Error(), "Cannot compile regex"))
+
+	conf.FileNamePattern = "aptrust"
+	err = conf.CompileFileNameRegex()
+	assert.Nil(t, err)
+	assert.Equal(t, constants.APTrustFileNamePattern, conf.FileNameRegex)
+
+	conf.FileNamePattern = "APTRUST"
+	err = conf.CompileFileNameRegex()
+	assert.Nil(t, err)
+	assert.Equal(t, constants.APTrustFileNamePattern, conf.FileNameRegex)
+
+	conf.FileNamePattern = "posix"
+	err = conf.CompileFileNameRegex()
+	assert.Nil(t, err)
+	assert.Equal(t, constants.PosixFileNamePattern, conf.FileNameRegex)
+
+	conf.FileNamePattern = "POSIX"
+	err = conf.CompileFileNameRegex()
+	assert.Nil(t, err)
+	assert.Equal(t, constants.PosixFileNamePattern, conf.FileNameRegex)
+
 }

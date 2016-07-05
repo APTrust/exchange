@@ -3,7 +3,6 @@ package constants_test
 import (
 	"github.com/APTrust/exchange/constants"
 	"github.com/stretchr/testify/assert"
-//	"github.com/stretchr/testify/require"
 	"testing"
 )
 
