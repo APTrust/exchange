@@ -61,7 +61,7 @@ func (vbag *VirtualBag) Read() (*IntellectualObject, *WorkSummary) {
 	vbag.summary = NewWorkSummary()
 	vbag.summary.Start()
 	vbag.obj = NewIntellectualObject()
-	vbag.obj.Identifier, _ = util.CleanBagName(path.Base(vbag.pathToBag))
+	vbag.obj.Identifier = util.CleanBagName(path.Base(vbag.pathToBag))
 	if strings.HasSuffix(vbag.pathToBag, ".tar") {
 		vbag.obj.IngestTarFilePath = vbag.pathToBag
 	} else {

@@ -34,17 +34,14 @@ func RestorationBucketFor(institution string) (bucketName string) {
 	return constants.RestoreBucketPrefix + institution
 }
 
-func BagNameFromTarFileName(pathToTarFile string) (string, error) {
+func BagNameFromTarFileName(pathToTarFile string) (string) {
 	fileName := path.Base(pathToTarFile)
 	return CleanBagName(fileName)
 }
 
 // Given the name of a tar file, returns the clean bag name. That's
 // the tar file name minus the tar extension and any ".bagN.ofN" suffix.
-func CleanBagName(bagName string) (string, error) {
-	if len(bagName) < 5 {
-		return "", fmt.Errorf("'%s' is not a valid tar file name", bagName)
-	}
+func CleanBagName(bagName string) (string) {
 	// Strip the .tar suffix
 	nameWithoutTar := bagName
 	if strings.HasSuffix(bagName, ".tar") {
@@ -52,7 +49,7 @@ func CleanBagName(bagName string) (string, error) {
 	}
 	// Now get rid of the .b001.of200 suffix if this is a multi-part bag.
 	cleanName := constants.MultipartSuffix.ReplaceAll([]byte(nameWithoutTar), []byte(""))
-	return string(cleanName), nil
+	return string(cleanName)
 }
 
 

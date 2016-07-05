@@ -66,10 +66,7 @@ func NewS3FileWithName(bucketName, keyName string) (*S3File) {
 // this would return "unc.edu/nc_bag"
 func (s3File *S3File) ObjectName() (string, error) {
 	institution := util.OwnerOf(s3File.BucketName)
-	cleanBagName, err := util.CleanBagName(s3File.Key.Key)
-	if err != nil {
-		return "", err
-	}
+	cleanBagName := util.CleanBagName(s3File.Key.Key)
 	return fmt.Sprintf("%s/%s", institution, cleanBagName), nil
 }
 

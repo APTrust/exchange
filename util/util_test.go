@@ -25,16 +25,13 @@ func TestRestorationBucketFor(t *testing.T) {
 }
 
 func TestBagNameFromTarFileName(t *testing.T) {
-	name, err := util.BagNameFromTarFileName("/mnt/apt/data/uc.edu/photos.bag22.tar")
-	assert.Nil(t, err)
+	name := util.BagNameFromTarFileName("/mnt/apt/data/uc.edu/photos.bag22.tar")
 	assert.Equal(t, "photos.bag22", name)
 
-	name, err = util.BagNameFromTarFileName("/mnt/apt/data/uc.edu/photos.bag22.b001.of200.tar")
-	assert.Nil(t, err)
+	name = util.BagNameFromTarFileName("/mnt/apt/data/uc.edu/photos.bag22.b001.of200.tar")
 	assert.Equal(t, "photos.bag22", name)
 
-	name, err = util.BagNameFromTarFileName("/mnt/apt/data/uc.edu/photos.bag22.b1.of12.tar")
-	assert.Nil(t, err)
+	name = util.BagNameFromTarFileName("/mnt/apt/data/uc.edu/photos.bag22.b1.of12.tar")
 	assert.Equal(t, "photos.bag22", name)
 }
 
