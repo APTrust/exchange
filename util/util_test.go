@@ -37,12 +37,12 @@ func TestBagNameFromTarFileName(t *testing.T) {
 
 func TestCleanBagName(t *testing.T) {
 	expected := "some.file"
-	actual, _ := util.CleanBagName("some.file.b001.of200.tar")
+	actual := util.CleanBagName("some.file.b001.of200.tar")
 	if actual != expected {
 		t.Error("CleanBagName should have returned '%s', but returned '%s'",
 			expected, actual)
 	}
-	actual, _ = util.CleanBagName("some.file.b1.of2.tar")
+	actual = util.CleanBagName("some.file.b1.of2.tar")
 	if actual != expected {
 		t.Error("CleanBagName should have returned '%s', but returned '%s'",
 			expected, actual)
