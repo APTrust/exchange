@@ -205,6 +205,13 @@ func runAssertions(t *testing.T, obj *models.IntellectualObject, summary *models
 	assert.True(t, util.StringListContains(obj.IngestTagManifests, "tagmanifest-sha256.txt"), caller)
 	assert.Empty(t, obj.IngestFilesIgnored, caller)
 
+	assert.NotNil(t, obj.IngestTopLevelDirNames, caller)
+	if obj.IngestTopLevelDirNames != nil {
+		assert.Equal(t, 1, len(obj.IngestTopLevelDirNames), caller)
+		assert.NotEmpty(t, obj.IngestTopLevelDirNames[0], caller)
+	}
+
+
 	// Tags
 	assert.Equal(t, 10, len(obj.IngestTags))
 	for _, tag := range obj.IngestTags {

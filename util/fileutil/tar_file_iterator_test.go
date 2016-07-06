@@ -3,6 +3,7 @@ package fileutil_test
 import (
 	"github.com/APTrust/exchange/util/fileutil"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"io"
 	"os"
 	"path"
@@ -90,4 +91,26 @@ func TestTarReaderCloserClose(t *testing.T) {
 	assert.Nil(t, err)
 	err = trc.Close()
 	assert.Nil(t, err)
+}
+
+func TestTFIGetTopLevelDirNames(t *testing.T) {
+	_, filename, _, _ := runtime.Caller(0)
+	tarFilePath, _ := filepath.Abs(path.Join(filepath.Dir(filename),
+		"..", "..", "testdata", "example.edu.tagsample_good.tar"))
+	tfi, _ := fileutil.NewTarFileIterator(tarFilePath)
+	if tfi == nil {
+		assert.Fail(t, "Could not get TarFileIterator")
+	}
+	// Read the entire tar file, so we know the reader
+	// has looked at all directories.
+	for {
+		_, _, err := tfi.Next()
+		if err != nil {
+			break
+		}
+	}
+	topLevelDirs := tfi.GetTopLevelDirNames()
+	require.NotEmpty(t, topLevelDirs)
+	assert.Equal(t, 1, len(topLevelDirs))
+	assert.Equal(t, "example.edu.tagsample_good", topLevelDirs[0])
 }

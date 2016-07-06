@@ -73,3 +73,14 @@ func (iter *FileSystemIterator) Next() (io.ReadCloser, *FileSummary, error) {
 	}
 	return file, fs, nil
 }
+
+// Returns the last component of the path that this iterator is traversing.
+// That will be a slice of strings, with exactly one item. We return a slice
+// instead of a string to maintain API compatibility with the ReadIterator
+// interface.
+func (iter *FileSystemIterator) GetTopLevelDirNames() ([]string) {
+	pathParts := strings.Split(iter.rootPath, string(os.PathSeparator))
+	topLevelDirs := make([]string, 1)
+	topLevelDirs[0] = pathParts[len(pathParts) - 1]
+	return topLevelDirs
+}

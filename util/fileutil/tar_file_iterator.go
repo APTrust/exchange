@@ -10,8 +10,9 @@ import (
 // TarFileIterator lets us read tarred bags (or any other tarred files)
 // without having to untar them.
 type TarFileIterator struct {
-	tarReader  *tar.Reader
-	file       *os.File
+	tarReader        *tar.Reader
+	file             *os.File
+	topLevelDirNames []string
 }
 
 func NewTarFileIterator(pathToTarFile string) (*TarFileIterator, error) {
@@ -22,6 +23,7 @@ func NewTarFileIterator(pathToTarFile string) (*TarFileIterator, error) {
 	return &TarFileIterator{
 		tarReader: tar.NewReader(file),
 		file: file,
+		topLevelDirNames: make([]string, 0),
 	}, nil
 }
 
@@ -34,6 +36,7 @@ func (iter *TarFileIterator) Next() (io.ReadCloser, *FileSummary, error) {
 		// reached the end of the headers.
 		return nil, nil, err
 	}
+	iter.setTopLevelDirName(header.Name)
 	finfo := header.FileInfo()
 	// Path to file, minus the top-level directory name,
 	// which is the name of the bag.
@@ -57,6 +60,35 @@ func (iter *TarFileIterator) Next() (io.ReadCloser, *FileSummary, error) {
 		tarReader: iter.tarReader,
 	}
 	return tarReadCloser, fs, nil
+}
+
+// Keep track of any top-level directory names we encounter.
+// The BagIt spec says a tar file SHOULD untar to a directory with the
+// same name as the tar file, minus the .tar extension. The APTrust
+// spect says it MUST untar to a directory with that name. When we're
+// validating bags, we'll want to know the name of the top-level
+// directory, keeping in mind that the tar file may deserialize to
+// multiple top-level directories.
+func (iter *TarFileIterator) setTopLevelDirName(headerName string) {
+	topLevelDir := strings.Split(headerName, "/")[0]
+	for i := range iter.topLevelDirNames {
+		if iter.topLevelDirNames[i] == topLevelDir {
+			return
+		}
+	}
+	iter.topLevelDirNames = append(iter.topLevelDirNames, topLevelDir)
+}
+
+// Returns the names of the top level directories to which the tar
+// file expands. For APTrust purposes, the tar file should expand to
+// one directory whose name matches that of the tar file, minus the
+// .tar extension. In reality, tar files can expand to multiple
+// top-level directories with any names.
+//
+// Note that you should read the entire tar file before calling
+// this; otherwise, you may not get all the top-level dir names.
+func (iter *TarFileIterator) GetTopLevelDirNames() ([]string) {
+	return iter.topLevelDirNames
 }
 
 // Close the underlying tar file.

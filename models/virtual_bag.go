@@ -78,10 +78,12 @@ func (vbag *VirtualBag) Read() (*IntellectualObject, *WorkSummary) {
 	}
 	if err != nil {
 		vbag.summary.AddError("Could not read bag: %v", err)
+		vbag.summary.Finish()
+		return vbag.obj, vbag.summary
 	} else {
 		vbag.addGenericFiles()
 	}
-
+	vbag.obj.IngestTopLevelDirNames = vbag.readIterator.GetTopLevelDirNames()
 
 	// Golang's tar file reader is forward-only, so we need to
 	// open a new iterator to read through a handful of tag files,

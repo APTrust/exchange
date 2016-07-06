@@ -21,38 +21,39 @@ consortial, institution and restricted.
 */
 type IntellectualObject struct {
 	// If Id is non-zero, this has been recorded in Pharos.
-	Id                   int            `json:"id"`
-	Identifier           string         `json:"identifier"`
-	BagName              string         `json:"bag_name"`
-	Institution          string         `json:"institution"`
-	InstitutionId        int            `json:"institution_id"`
-	Title                string         `json:"title"`
-	Description          string         `json:"description"`
-	Access               string         `json:"access"`
-	AltIdentifier        string         `json:"alt_identifier"`
-	GenericFiles         []*GenericFile `json:"generic_files"`
-	PremisEvents         []*PremisEvent `json:"events"`
-	CreatedAt            time.Time      `json:"created_at"`
-	UpdatedAt            time.Time      `json:"updated_at"`
+	Id                     int            `json:"id"`
+	Identifier             string         `json:"identifier"`
+	BagName                string         `json:"bag_name"`
+	Institution            string         `json:"institution"`
+	InstitutionId          int            `json:"institution_id"`
+	Title                  string         `json:"title"`
+	Description            string         `json:"description"`
+	Access                 string         `json:"access"`
+	AltIdentifier          string         `json:"alt_identifier"`
+	GenericFiles           []*GenericFile `json:"generic_files"`
+	PremisEvents           []*PremisEvent `json:"events"`
+	CreatedAt              time.Time      `json:"created_at"`
+	UpdatedAt              time.Time      `json:"updated_at"`
 
 	// Exchange fields. These do not go to Pharos.
-	IngestS3Bucket       string         `json:"ingest_s3_bucket"`
-	IngestS3Key          string         `json:"ingest_s3_key"`
-	IngestTarFilePath    string         `json:"ingest_tar_file_path"`
-	IngestUntarredPath   string         `json:"ingest_untarred_path"`
-	IngestRemoteMd5      string         `json:"ingest_remote_md5"`
-	IngestLocalMd5       string         `json:"ingest_local_md5"`
-	IngestMd5Verified    bool           `json:"ingest_md5_verified"`
-	IngestMd5Verifiable  bool           `json:"ingest_md5_verifiable"`
-	IngestManifests      []string       `json:"ingest_manifests"`
-	IngestTagManifests   []string       `json:"ingest_tag_manifests"`
-	IngestFilesIgnored   []string       `json:"ingest_files_ignored"`
-	IngestTags           []*Tag         `json:"ingest_tags"`
-	IngestMissingFiles   []*MissingFile `json:"missing_files"`
-	IngestErrorMessage   string         `json:"ingest_error_message"`
+	IngestS3Bucket         string         `json:"ingest_s3_bucket"`
+	IngestS3Key            string         `json:"ingest_s3_key"`
+	IngestTarFilePath      string         `json:"ingest_tar_file_path"`
+	IngestUntarredPath     string         `json:"ingest_untarred_path"`
+	IngestRemoteMd5        string         `json:"ingest_remote_md5"`
+	IngestLocalMd5         string         `json:"ingest_local_md5"`
+	IngestMd5Verified      bool           `json:"ingest_md5_verified"`
+	IngestMd5Verifiable    bool           `json:"ingest_md5_verifiable"`
+	IngestManifests        []string       `json:"ingest_manifests"`
+	IngestTagManifests     []string       `json:"ingest_tag_manifests"`
+	IngestFilesIgnored     []string       `json:"ingest_files_ignored"`
+	IngestTags             []*Tag         `json:"ingest_tags"`
+	IngestMissingFiles     []*MissingFile `json:"ingest_missing_files"`
+	IngestTopLevelDirNames []string     `json:"ingest_top_level_dir_names"`
+	IngestErrorMessage     string         `json:"ingest_error_message"`
 
-	genericFileMap       map[string]*GenericFile
-	tagMap               map[string][]*Tag
+	genericFileMap         map[string]*GenericFile
+	tagMap                 map[string][]*Tag
 }
 
 func NewIntellectualObject() (*IntellectualObject) {
