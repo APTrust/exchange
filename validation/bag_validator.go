@@ -6,6 +6,8 @@ import (
 	"github.com/APTrust/exchange/models"
 	"github.com/APTrust/exchange/util"
 	"github.com/APTrust/exchange/util/fileutil"
+	"path"
+	"regexp"
 	"strings"
 	"time"
 )
@@ -85,6 +87,7 @@ func (validator *BagValidator) Validate() (*ValidationResult){
 		result.ValidationSummary.AddError(errMsg)
 	}
 	validator.verifyManifestPresent(result)
+	validator.verifyTopLevelFolder(result)
 	validator.verifyFileSpecs(result)
 	validator.verifyTagSpecs(result)
 	validator.verifyGenericFiles(result)
@@ -103,6 +106,37 @@ func (validator *BagValidator) verifyManifestPresent(result *ValidationResult) {
 		}
 	}
 	result.ValidationSummary.AddError("Bag has no payload manifest (manifest-<alg>.txt)")
+}
+
+// BagIt spec at https://tools.ietf.org/html/draft-kunze-bagit-13, section 4.1, says:
+// The serialization SHOULD have the same name as the bag's base directory.
+//
+// APTrust bagging spec at https://sites.google.com/a/aptrust.org/member-wiki/basic-operations/bagging
+// says a tarred bag MUST untar to a directory whose name matches the bag name,
+// minus the .tar extension. So virginia.edu.photos.tar must untar to virginia.edu.photos.
+//
+// There should be just one top-level directory name, but tar files can untar
+// to multiple directories, so we look out for that.
+//
+// If user is validating an untarred bag on their own system, we may skip this check,
+// because we're not even working with a tar file in that case.
+func (validator *BagValidator) verifyTopLevelFolder(result *ValidationResult) {
+	if result.IntellectualObject.IngestTarFilePath == "" {
+		return
+	}
+	re := regexp.MustCompile("\\.tar$")
+	baseName := path.Base(result.IntellectualObject.IngestTarFilePath)
+	expectedDirName := re.ReplaceAllString(baseName, "")
+	dirNames := result.IntellectualObject.IngestTopLevelDirNames
+	if dirNames != nil {
+		for _, dirName := range dirNames {
+			if dirName != expectedDirName {
+				result.ValidationSummary.AddError(
+					"Tarred bag should untar to directory '%s', not '%s'",
+					expectedDirName, dirName)
+			}
+		}
+	}
 }
 
 func (validator *BagValidator) verifyFileSpecs(result *ValidationResult) {

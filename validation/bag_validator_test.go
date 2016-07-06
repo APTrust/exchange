@@ -1,7 +1,6 @@
 package validation_test
 
 import (
-	"fmt"
 	"github.com/APTrust/exchange/models"
 	"github.com/APTrust/exchange/testhelper"
 	"github.com/APTrust/exchange/util"
@@ -327,14 +326,6 @@ func TestValidate_InvalidBag(t *testing.T) {
 	assert.True(t, util.StringListContains(result.ValidationSummary.Errors, err_7))
 }
 
-// ------------------------------------------------------------
-// TODO: Test file name validation
-// ------------------------------------------------------------
-
-// ------------------------------------------------------------
-// TODO: Test bad bags in testadata for specific errors
-// ------------------------------------------------------------
-
 // These good bags are from the old Bagman test suite. We have to make sure they
 // pass here, so we know validation is backwards-compatible.
 func TestValidate_GoodBags(t *testing.T) {
@@ -556,5 +547,91 @@ func TestValidate_NoDataDir(t *testing.T) {
 	assert.True(t, result.ParseSummary.HasErrors())
 	assert.NotNil(t, result.ValidationSummary)
 	require.True(t, result.ValidationSummary.HasErrors())
-	fmt.Println(result.IntellectualObject.IngestErrorMessage)
+}
+
+func TestValidate_NoMd5Manifest(t *testing.T) {
+	bagValidationConfig, err := getValidationConfig()
+	if err != nil {
+		assert.Fail(t, "Could not load BagValidationConfig: %s", err.Error())
+	}
+	optionalFileSpec := validation.FileSpec{ Presence: "OPTIONAL" }
+	bagValidationConfig.FileSpecs["tagmanifest-md5.txt"] = optionalFileSpec
+	_, filename, _, _ := runtime.Caller(0)
+	dir := filepath.Dir(filename)
+	pathToBag, err := filepath.Abs(path.Join(dir, "..", "testdata", "example.edu.sample_no_md5_manifest.tar"))
+	validator, err := validation.NewBagValidator(pathToBag, bagValidationConfig)
+	if err != nil {
+		assert.Fail(t, "NewBagValidator returned unexpected error: %s", err.Error())
+	}
+	result := validator.Validate()
+	assert.NotNil(t, result.IntellectualObject)
+	assert.Equal(t, 8, len(result.IntellectualObject.GenericFiles))
+	// First error is general: BagIt spec says all bags should contain
+	// at least one payload manifest.
+	assert.True(t, strings.Contains(result.IntellectualObject.IngestErrorMessage,
+		"Bag has no payload manifest (manifest-<alg>.txt)"))
+	// Second error is from our specific BagValidationConfig, which says
+	// that the bag must have an md5 manifest.
+	assert.True(t, strings.Contains(result.IntellectualObject.IngestErrorMessage,
+		"Required file 'manifest-md5.txt' is missing."))
+	assert.True(t, strings.Contains(result.IntellectualObject.IngestErrorMessage,
+		"File 'data/datastream-DC' does not appear in any payload manifest"))
+	assert.True(t, strings.Contains(result.IntellectualObject.IngestErrorMessage,
+		"File 'data/datastream-descMetadata' does not appear in any payload manifest"))
+	assert.True(t, strings.Contains(result.IntellectualObject.IngestErrorMessage,
+		"File 'data/datastream-MARC' does not appear in any payload manifest"))
+	assert.True(t, strings.Contains(result.IntellectualObject.IngestErrorMessage,
+		"File 'data/datastream-RELS-EXT' does not appear in any payload manifest"))
+	assert.False(t, result.ParseSummary.HasErrors())
+	assert.NotNil(t, result.ValidationSummary)
+	require.True(t, result.ValidationSummary.HasErrors())
+}
+
+func TestValidate_NoTitle(t *testing.T) {
+	bagValidationConfig, err := getValidationConfig()
+	if err != nil {
+		assert.Fail(t, "Could not load BagValidationConfig: %s", err.Error())
+	}
+	optionalFileSpec := validation.FileSpec{ Presence: "OPTIONAL" }
+	bagValidationConfig.FileSpecs["tagmanifest-md5.txt"] = optionalFileSpec
+	_, filename, _, _ := runtime.Caller(0)
+	dir := filepath.Dir(filename)
+	pathToBag, err := filepath.Abs(path.Join(dir, "..", "testdata", "example.edu.sample_no_title.tar"))
+	validator, err := validation.NewBagValidator(pathToBag, bagValidationConfig)
+	if err != nil {
+		assert.Fail(t, "NewBagValidator returned unexpected error: %s", err.Error())
+	}
+	result := validator.Validate()
+	assert.NotNil(t, result.IntellectualObject)
+	assert.Equal(t, 9, len(result.IntellectualObject.GenericFiles))
+	assert.True(t, strings.Contains(result.IntellectualObject.IngestErrorMessage,
+		"Value for tag 'Title' is missing."))
+	assert.False(t, result.ParseSummary.HasErrors())
+	assert.NotNil(t, result.ValidationSummary)
+	require.True(t, result.ValidationSummary.HasErrors())
+}
+
+func TestValidate_WrongFolderName(t *testing.T) {
+	bagValidationConfig, err := getValidationConfig()
+	if err != nil {
+		assert.Fail(t, "Could not load BagValidationConfig: %s", err.Error())
+	}
+	optionalFileSpec := validation.FileSpec{ Presence: "OPTIONAL" }
+	bagValidationConfig.FileSpecs["tagmanifest-md5.txt"] = optionalFileSpec
+	_, filename, _, _ := runtime.Caller(0)
+	dir := filepath.Dir(filename)
+	pathToBag, err := filepath.Abs(path.Join(dir, "..", "testdata", "example.edu.sample_wrong_folder_name.tar"))
+	validator, err := validation.NewBagValidator(pathToBag, bagValidationConfig)
+	if err != nil {
+		assert.Fail(t, "NewBagValidator returned unexpected error: %s", err.Error())
+	}
+
+	result := validator.Validate()
+	assert.NotNil(t, result.IntellectualObject)
+	assert.Equal(t, 8, len(result.IntellectualObject.GenericFiles))
+	assert.True(t, strings.Contains(result.IntellectualObject.IngestErrorMessage,
+		"Tarred bag should untar to directory 'example.edu.sample_wrong_folder_name', not 'wrong_folder_name'"))
+	assert.False(t, result.ParseSummary.HasErrors())
+	assert.NotNil(t, result.ValidationSummary)
+	require.True(t, result.ValidationSummary.HasErrors())
 }
