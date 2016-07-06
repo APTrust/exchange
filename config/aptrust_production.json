@@ -1,0 +1,255 @@
+{
+    "TarDirectory": "/mnt/apt/data",
+    "RestoreDirectory": "/mnt/apt/restore",
+    "LogDirectory": "/mnt/apt/logs",
+    "ReplicationDirectory": "/mnt/apt/replication",
+    "DPNStagingDirectory": "/mnt/dpn/staging",
+    "DPNHomeDirectory": "/mnt/dpn",
+    "MaxFileSize": 0,
+    "SkipAlreadyProcessed": true,
+    "DeleteOnSuccess": true,
+    "LogToStderr": false,
+    "LogLevel": 4,
+
+    "PharosURL": "https://repository.aptrust.org",
+    "PharosAPIVersion": "v1",
+
+    "NsqdHttpAddress": "http://54.175.41.111:4151",
+    "NsqLookupd": "54.175.41.111:4161",
+
+    "PreservationBucket": "aptrust.preservation.storage",
+    "ReplicationBucket": "aptrust.preservation.oregon",
+    "DPNPreservationBucket": "aptrust.dpn.preservation",
+    "CustomRestoreBucket": "",
+    "RestoreToTestBuckets": false,
+    "MaxDaysSinceFixityCheck": 90,
+
+    "PrepareWorker": {
+        "NetworkConnections": 6,
+        "Workers": 6,
+        "NsqTopic": "prepare_topic",
+        "NsqChannel": "prepare_channel",
+        "MaxAttempts": 3,
+        "MaxInFlight": 20,
+        "HeartbeatInterval": "10s",
+        "ReadTimeout": "60s",
+        "WriteTimeout": "10s",
+        "MessageTimeout": "180m"
+    },
+
+    "StoreWorker": {
+        "NetworkConnections": 12,
+        "Workers": 6,
+        "NsqTopic": "store_topic",
+        "NsqChannel": "store_channel",
+        "MaxAttempts": 3,
+        "MaxInFlight": 20,
+        "HeartbeatInterval": "10s",
+        "ReadTimeout": "60s",
+        "WriteTimeout": "10s",
+        "MessageTimeout": "180m"
+    },
+
+    "RecordWorker": {
+        "NetworkConnections": 6,
+        "Workers": 3,
+        "NsqTopic": "record_topic",
+        "NsqChannel": "record_channel",
+        "MaxAttempts": 3,
+        "MaxInFlight": 20,
+        "HeartbeatInterval": "10s",
+        "ReadTimeout": "60s",
+        "WriteTimeout": "10s",
+        "MessageTimeout": "180m"
+    },
+
+    "ReplicationWorker": {
+        "NetworkConnections": 12,
+        "Workers": 8,
+        "NsqTopic": "replication_topic",
+        "NsqChannel": "replication_channel",
+        "MaxAttempts": 5,
+        "MaxInFlight": 20,
+        "HeartbeatInterval": "10s",
+        "ReadTimeout": "60s",
+        "WriteTimeout": "10s",
+        "MessageTimeout": "180m"
+    },
+
+    "FailedReplicationWorker": {
+        "NetworkConnections": 4,
+        "Workers": 1,
+        "NsqTopic": "failed_replication_topic",
+        "NsqChannel": "failed_replication_channel",
+        "MaxAttempts": 3,
+        "MaxInFlight": 20,
+        "HeartbeatInterval": "10s",
+        "ReadTimeout": "60s",
+        "WriteTimeout": "10s",
+        "MessageTimeout": "5m"
+    },
+
+    "RestoreWorker": {
+        "NetworkConnections": 8,
+        "Workers": 4,
+        "NsqTopic": "restore_topic",
+        "NsqChannel": "restore_channel",
+        "MaxAttempts": 3,
+        "MaxInFlight": 20,
+        "HeartbeatInterval": "10s",
+        "ReadTimeout": "60s",
+        "WriteTimeout": "10s",
+        "MessageTimeout": "720m"
+    },
+
+    "FileDeleteWorker": {
+        "NetworkConnections": 12,
+        "Workers": 4,
+        "NsqTopic": "file_delete_topic",
+        "NsqChannel": "file_delete_channel",
+        "MaxAttempts": 3,
+        "MaxInFlight": 20,
+        "HeartbeatInterval": "10s",
+        "ReadTimeout": "60s",
+        "WriteTimeout": "10s",
+        "MessageTimeout": "30m"
+    },
+
+    "TroubleWorker": {
+        "NetworkConnections": 1,
+        "Workers": 1,
+        "NsqTopic": "trouble_topic",
+        "NsqChannel": "trouble_channel",
+        "MaxAttempts": 3,
+        "MaxInFlight": 20,
+        "HeartbeatInterval": "10s",
+        "ReadTimeout": "60s",
+        "WriteTimeout": "10s",
+        "MessageTimeout": "10m"
+    },
+
+    "FixityWorker": {
+        "NetworkConnections": 4,
+        "Workers": 4,
+        "NsqTopic": "fixity_topic",
+        "NsqChannel": "fixity_channel",
+        "MaxAttempts": 3,
+        "MaxInFlight": 20,
+        "HeartbeatInterval": "10s",
+        "ReadTimeout": "60s",
+        "WriteTimeout": "10s",
+        "MessageTimeout": "180m"
+    },
+
+    "FailedFixityWorker": {
+        "NetworkConnections": 1,
+        "Workers": 1,
+        "NsqTopic": "failed_fixity_topic",
+        "NsqChannel": "failed_fixity_channel",
+        "MaxAttempts": 3,
+        "MaxInFlight": 20,
+        "HeartbeatInterval": "10s",
+        "ReadTimeout": "60s",
+        "WriteTimeout": "10s",
+        "MessageTimeout": "3m"
+    },
+
+    "DPNPackageWorker": {
+        "NetworkConnections": 8,
+        "Workers": 4,
+        "NsqTopic": "dpn_package_topic",
+        "NsqChannel": "dpn_package_channel",
+        "MaxAttempts": 3,
+        "MaxInFlight": 20,
+        "HeartbeatInterval": "10s",
+        "ReadTimeout": "60s",
+        "WriteTimeout": "10s",
+        "MessageTimeout": "180m"
+    },
+
+    "DPNValidationWorker": {
+        "NetworkConnections": 8,
+        "Workers": 4,
+        "NsqTopic": "dpn_validation_topic",
+        "NsqChannel": "dpn_validation_channel",
+        "MaxAttempts": 3,
+        "MaxInFlight": 20,
+        "HeartbeatInterval": "10s",
+        "ReadTimeout": "60s",
+        "WriteTimeout": "10s",
+        "MessageTimeout": "180m"
+    },
+
+    "DPNCopyWorker": {
+        "NetworkConnections": 8,
+        "Workers": 4,
+        "NsqTopic": "dpn_copy_topic",
+        "NsqChannel": "dpn_copy_channel",
+        "MaxAttempts": 3,
+        "MaxInFlight": 20,
+        "HeartbeatInterval": "10s",
+        "ReadTimeout": "60s",
+        "WriteTimeout": "10s",
+        "MessageTimeout": "180m"
+    },
+
+    "DPNStoreWorker": {
+        "NetworkConnections": 4,
+        "Workers": 4,
+        "NsqTopic": "dpn_store_topic",
+        "NsqChannel": "dpn_store_channel",
+        "MaxAttempts": 3,
+        "MaxInFlight": 20,
+        "HeartbeatInterval": "10s",
+        "ReadTimeout": "60s",
+        "WriteTimeout": "10s",
+        "MessageTimeout": "180m"
+    },
+
+    "DPNRecordWorker": {
+        "NetworkConnections": 4,
+        "Workers": 4,
+        "NsqTopic": "dpn_record_topic",
+        "NsqChannel": "dpn_record_channel",
+        "MaxAttempts": 3,
+        "MaxInFlight": 20,
+        "HeartbeatInterval": "10s",
+        "ReadTimeout": "60s",
+        "WriteTimeout": "10s",
+        "MessageTimeout": "180m"
+    },
+
+    "DPNTroubleWorker": {
+        "NetworkConnections": 4,
+        "Workers": 4,
+        "NsqTopic": "dpn_trouble_topic",
+        "NsqChannel": "dpn_trouble_channel",
+        "MaxAttempts": 3,
+        "MaxInFlight": 20,
+        "HeartbeatInterval": "10s",
+        "ReadTimeout": "60s",
+        "WriteTimeout": "10s",
+        "MessageTimeout": "10m"
+    },
+
+    "ReceivingBuckets": [
+        "aptrust.receiving.columbia.edu",
+        "aptrust.receiving.georgetown.edu",
+        "aptrust.receiving.indiana.edu",
+        "aptrust.receiving.jhu.edu",
+        "aptrust.receiving.miami.edu",
+        "aptrust.receiving.ncsu.edu",
+        "aptrust.receiving.psu.edu",
+        "aptrust.receiving.syr.edu",
+        "aptrust.receiving.uchicago.edu",
+        "aptrust.receiving.uc.edu",
+        "aptrust.receiving.uchicago.edu",
+        "aptrust.receiving.uconn.edu",
+        "aptrust.receiving.umd.edu",
+        "aptrust.receiving.umich.edu",
+        "aptrust.receiving.unc.edu",
+        "aptrust.receiving.nd.edu",
+        "aptrust.receiving.virginia.edu",
+        "aptrust.receiving.vt.edu"
+    ]
+}
