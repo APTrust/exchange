@@ -24,8 +24,8 @@ func TestEnsureLogDirectory(t *testing.T) {
 }
 
 func TestLoad(t *testing.T) {
-	configFile := filepath.Join("testdata", "config.json")
-	appConfig, err := models.Load(configFile, "test")  // TODO: Change to new load
+	configFile := filepath.Join("config", "aptrust_test.json")
+	appConfig, err := models.LoadConfigFile(configFile)
 	require.Nil(t, err)
 
 	// Spot check a few settings.
@@ -36,8 +36,8 @@ func TestLoad(t *testing.T) {
 }
 
 func TestEnsurePharosConfig(t *testing.T) {
-	configFile := filepath.Join("testdata", "config.json")
-	appConfig, err := models.Load(configFile, "test") // TODO: Change to new load
+	configFile := filepath.Join("config", "aptrust_test.json")
+	appConfig, err := models.LoadConfigFile(configFile)
 	require.Nil(t, err)
 
 	url := appConfig.PharosURL

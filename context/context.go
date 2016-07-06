@@ -17,7 +17,7 @@ etc.). It also encapsulates some functions common to all of
 those services.
 */
 type Context struct {
-	Config          models.Config
+	Config          *models.Config
 	MessageLog      *logging.Logger
 	PharosClient    *network.PharosClient
 //	Volume          *util.Volume            // *** TODO *** Re-add Volume as service!
@@ -37,13 +37,13 @@ This object is meant to used as a singleton with any of the
 stand-along processing services (bag_processor, bag_restorer,
 cleanup, etc.).
 */
-func NewContext(appConfig models.Config) (context *Context) {
+func NewContext(config *models.Config) (context *Context) {
 	context = &Context {
 		succeeded: int64(0),
 		failed: int64(0),
 	}
-	context.Config = appConfig
-	context.MessageLog, context.pathToLogFile = logger.InitLogger(&appConfig)
+	context.Config = config
+	context.MessageLog, context.pathToLogFile = logger.InitLogger(config)
 	context.initPharosClient()
 	return context
 }

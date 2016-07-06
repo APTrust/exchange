@@ -7,7 +7,6 @@ import (
 	"github.com/op/go-logging"
 	"os"
 	"path/filepath"
-	"strings"
 )
 
 type WorkerConfig struct {
@@ -77,7 +76,6 @@ type WorkerConfig struct {
 	// The format is the same as for HeartbeatInterval.
 	WriteTimeout       string
 }
-
 
 type Config struct {
 	// ActiveConfig is the configuration currently
@@ -260,6 +258,26 @@ type Config struct {
 
 }
 
+// This returns the configuration that the user requested,
+// which is specified in the -config flag when we run a
+// program from the command line
+func LoadConfigFile(pathToConfigFile string) (*Config, error) {
+	file, err := fileutil.LoadRelativeFile(pathToConfigFile)
+	if err != nil {
+		detailedError := fmt.Errorf("Error reading config file '%s': %v\n",
+			pathToConfigFile, err)
+		return nil, detailedError
+	}
+	config := &Config{}
+	err = json.Unmarshal(file, config)
+	if err != nil {
+		detailedError := fmt.Errorf("Error parsing JSON from config file '%s':",
+			pathToConfigFile, err)
+		return nil, detailedError
+	}
+	return config, nil
+}
+
 // Ensures that the logging directory exists, creating it if necessary.
 // Returns the absolute path the logging directory.
 func (config *Config) EnsureLogDirectory() (string, error) {
@@ -279,67 +297,6 @@ func (config *Config) AbsLogDirectory() (string) {
 		panic(msg)
 	}
 	return absLogDir
-}
-
-// This returns the configuration that the user requested.
-// If the user did not specify any configuration (using the
-// -config flag), or if the specified configuration cannot
-// be found, this prints a help message and terminates the
-// program. Param pathToConfig file should be a path relative
-// to EXCHANGE_HOME. Param requestedConfig should be "dev",
-// "demo", "test" or some other config environment name
-// defined in the config file.
-func Load(pathToConfigFile, requestedConfig string) (config Config, err error) {
-	configurations, err := loadConfigFile(pathToConfigFile)
-	if err != nil {
-		return Config{}, err
-	}
-	config, configExists := configurations[requestedConfig]
-	if requestedConfig == "" || !configExists {
-		configNames := availableConfigNames(configurations)
-		detailedError := fmt.Errorf("Unrecognized config '%s'. " +
-			"Please specify one of the following configurations: %s",
-			requestedConfig, strings.Join(configNames, ","))
-		return Config{}, detailedError
-	}
-	config.ActiveConfig = requestedConfig
-	config.ExpandFilePaths()
-	err = config.createDirectories()
-	if err != nil {
-		return Config{}, err
-	}
-	return config, nil
-}
-
-func availableConfigNames(configurations map[string]Config) []string {
-	names := make([]string, len(configurations))
-	i := 0
-	for name, _ := range configurations {
-		names[i] = name
-		i++
-	}
-	return names
-}
-
-// This function reads the config.json file and returns a map of
-// available configurations.
-func loadConfigFile(pathToConfigFile string) (configurations map[string]Config, err error) {
-	if pathToConfigFile == "" {
-		filepath.Join("config", "config.json")
-	}
-	file, err := fileutil.LoadRelativeFile(pathToConfigFile)
-	if err != nil {
-		detailedError := fmt.Errorf("Error reading config file '%s': %v\n",
-			pathToConfigFile, err)
-		return nil, detailedError
-	}
-	err = json.Unmarshal(file, &configurations)
-	if err != nil {
-		detailedError := fmt.Errorf("Error parsing JSON from config file '%s':",
-			pathToConfigFile, err)
-		return nil, detailedError
-	}
-	return configurations, nil
 }
 
 func (config *Config) EnsurePharosConfig() error {

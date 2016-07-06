@@ -12,8 +12,8 @@ import (
 )
 
 func TestNewContext(t *testing.T) {
-	configFile := filepath.Join("testdata", "config.json")
-	appConfig, err := models.Load(configFile, "test")  // TODO: Change to new load
+	configFile := filepath.Join("config", "aptrust_test.json")
+	appConfig, err := models.LoadConfigFile(configFile)
 	require.Nil(t, err)
 
 	// In some tests we want to log to STDERR, but in this case, if it
