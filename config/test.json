@@ -5,8 +5,6 @@
     "LogDirectory": "~/tmp/test_log",
     "RestoreDirectory": "~/tmp/test_restore",
     "ReplicationDirectory": "~/tmp/test_replicate",
-    "DPNStagingDirectory": "~/tmp/dpn_staging",
-    "DPNHomeDirectory": "~/tmp/dpn_home",
     "MaxFileSize": 0,
     "SkipAlreadyProcessed": true,
     "DeleteOnSuccess": false,
@@ -156,84 +154,6 @@
         "MessageTimeout": "3m"
     },
 
-    "DPNPackageWorker": {
-        "NetworkConnections": 8,
-        "Workers": 4,
-        "NsqTopic": "dpn_package_topic",
-        "NsqChannel": "dpn_package_channel",
-        "MaxAttempts": 3,
-        "MaxInFlight": 20,
-        "HeartbeatInterval": "10s",
-        "ReadTimeout": "60s",
-        "WriteTimeout": "10s",
-        "MessageTimeout": "180m"
-    },
-
-    "DPNValidationWorker": {
-        "NetworkConnections": 8,
-        "Workers": 4,
-        "NsqTopic": "dpn_validation_topic",
-        "NsqChannel": "dpn_validation_channel",
-        "MaxAttempts": 3,
-        "MaxInFlight": 20,
-        "HeartbeatInterval": "10s",
-        "ReadTimeout": "60s",
-        "WriteTimeout": "10s",
-        "MessageTimeout": "180m"
-    },
-
-    "DPNCopyWorker": {
-        "NetworkConnections": 8,
-        "Workers": 4,
-        "NsqTopic": "dpn_copy_topic",
-        "NsqChannel": "dpn_copy_channel",
-        "MaxAttempts": 3,
-        "MaxInFlight": 20,
-        "HeartbeatInterval": "10s",
-        "ReadTimeout": "60s",
-        "WriteTimeout": "10s",
-        "MessageTimeout": "180m"
-    },
-
-    "DPNStoreWorker": {
-        "NetworkConnections": 4,
-        "Workers": 4,
-        "NsqTopic": "dpn_store_topic",
-        "NsqChannel": "dpn_store_channel",
-        "MaxAttempts": 3,
-        "MaxInFlight": 20,
-        "HeartbeatInterval": "10s",
-        "ReadTimeout": "60s",
-        "WriteTimeout": "10s",
-        "MessageTimeout": "180m"
-    },
-
-    "DPNRecordWorker": {
-        "NetworkConnections": 4,
-        "Workers": 4,
-        "NsqTopic": "dpn_record_topic",
-        "NsqChannel": "dpn_record_channel",
-        "MaxAttempts": 3,
-        "MaxInFlight": 20,
-        "HeartbeatInterval": "10s",
-        "ReadTimeout": "60s",
-        "WriteTimeout": "10s",
-        "MessageTimeout": "180m"
-    },
-
-    "DPNTroubleWorker": {
-        "NetworkConnections": 4,
-        "Workers": 4,
-        "NsqTopic": "dpn_trouble_topic",
-        "NsqChannel": "dpn_trouble_channel",
-        "MaxAttempts": 3,
-        "MaxInFlight": 20,
-        "HeartbeatInterval": "10s",
-        "ReadTimeout": "60s",
-        "WriteTimeout": "10s",
-        "MessageTimeout": "10m"
-    },
-
     "ReceivingBuckets": [
         "aptrust.receiving.test.columbia.edu",
         "aptrust.receiving.test.georgetown.edu",
@@ -253,6 +173,122 @@
         "aptrust.receiving.test.nd.edu",
         "aptrust.receiving.test.virginia.edu",
         "aptrust.receiving.test.vt.edu"
-    ]
+    ],
 
+    "DPN": {
+        "StagingDirectory": "~/tmp/dpn_staging",
+        "RemoteNodeHomeDirectory": "~/tmp/dpn_home",
+        "LocalNode": "aptrust",
+        "LogDirectory": "~/tmp/logs",
+        "LogLevel": 4,
+        "LogToStderr": false,
+        "ReplicateToNumNodes": 2,
+        "AcceptInvalidSSLCerts": true,
+        "UseSSHWithRsync": false,
+        "RestClient": {
+            "Comment": "Settings for our local DPN REST API server. Load LocalAuthToken from environment!",
+            "LocalServiceURL": "http://localhost:3001",
+            "LocalAPIRoot": "api-v1",
+            "LocalAuthToken": "aptrust_token"
+        },
+        "DefaultMetadata": {
+            "Comment": "Config settings for common DPN bagit metadata",
+            "BagItVersion": "0.97",
+            "BagItEncoding": "UTF-8",
+            "IngestNodeName": "APTrust",
+            "IngestNodeAddress": "160 McCormick Rd., Charlottesville, VA 22904",
+            "IngestNodeContactName": "APTrust Administrator",
+            "IngestNodeContactEmail": "help@aptrust.org"
+        },
+        "RemoteNodeAdminTokensForTesting": {
+            "chron": "chron_token",
+            "hathi": "hathi_token",
+            "sdr":   "sdr_token",
+            "tdr":   "tdr_token"
+        },
+        "RemoteNodeTokens": {
+            "chron": "aptrust_token",
+            "hathi": "aptrust_token",
+            "sdr":   "aptrust_token",
+            "tdr":   "aptrust_token"
+        },
+        "RemoteNodeURLs": {
+            "chron": "http://localhost:3002",
+            "hathi": "http://localhost:3003",
+            "sdr":   "http://localhost:3004",
+            "tdr":   "http://localhost:3005"
+        },
+        "DPNPackageWorker": {
+            "NetworkConnections": 8,
+            "Workers": 4,
+            "NsqTopic": "dpn_package_topic",
+            "NsqChannel": "dpn_package_channel",
+            "MaxAttempts": 3,
+            "MaxInFlight": 20,
+            "HeartbeatInterval": "10s",
+            "ReadTimeout": "60s",
+            "WriteTimeout": "10s",
+            "MessageTimeout": "180m"
+        },
+        "DPNValidationWorker": {
+            "NetworkConnections": 8,
+            "Workers": 4,
+            "NsqTopic": "dpn_validation_topic",
+            "NsqChannel": "dpn_validation_channel",
+            "MaxAttempts": 3,
+            "MaxInFlight": 20,
+            "HeartbeatInterval": "10s",
+            "ReadTimeout": "60s",
+            "WriteTimeout": "10s",
+            "MessageTimeout": "180m"
+        },
+        "DPNCopyWorker": {
+            "NetworkConnections": 8,
+            "Workers": 4,
+            "NsqTopic": "dpn_copy_topic",
+            "NsqChannel": "dpn_copy_channel",
+            "MaxAttempts": 3,
+            "MaxInFlight": 20,
+            "HeartbeatInterval": "10s",
+            "ReadTimeout": "60s",
+            "WriteTimeout": "10s",
+            "MessageTimeout": "180m"
+        },
+        "DPNStoreWorker": {
+            "NetworkConnections": 4,
+            "Workers": 4,
+            "NsqTopic": "dpn_store_topic",
+            "NsqChannel": "dpn_store_channel",
+            "MaxAttempts": 3,
+            "MaxInFlight": 20,
+            "HeartbeatInterval": "10s",
+            "ReadTimeout": "60s",
+            "WriteTimeout": "10s",
+            "MessageTimeout": "180m"
+        },
+        "DPNRecordWorker": {
+            "NetworkConnections": 4,
+            "Workers": 4,
+            "NsqTopic": "dpn_record_topic",
+            "NsqChannel": "dpn_record_channel",
+            "MaxAttempts": 3,
+            "MaxInFlight": 20,
+            "HeartbeatInterval": "10s",
+            "ReadTimeout": "60s",
+            "WriteTimeout": "10s",
+            "MessageTimeout": "180m"
+        },
+        "DPNTroubleWorker": {
+            "NetworkConnections": 4,
+            "Workers": 4,
+            "NsqTopic": "dpn_trouble_topic",
+            "NsqChannel": "dpn_trouble_channel",
+            "MaxAttempts": 3,
+            "MaxInFlight": 20,
+            "HeartbeatInterval": "10s",
+            "ReadTimeout": "60s",
+            "WriteTimeout": "10s",
+            "MessageTimeout": "10m"
+        }
+    }
 }

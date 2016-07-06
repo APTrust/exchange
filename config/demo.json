@@ -1,10 +1,10 @@
 {
-    "TarDirectory": "/mnt/dpn/data",
-    "RestoreDirectory": "/mnt/dpn/restore",
-    "LogDirectory": "/mnt/dpn/logs",
-    "ReplicationDirectory": "/mnt/dpn/replication",
-    "DPNStagingDirectory": "/mnt/dpn/staging",
-    "DPNHomeDirectory": "/home",
+    "Comment": "Config file for APTrust demo server.",
+
+    "TarDirectory": "/mnt/apt/data",
+    "RestoreDirectory": "/mnt/apt/restore",
+    "LogDirectory": "/mnt/apt/logs",
+    "ReplicationDirectory": "/mnt/apt/replication",
     "MaxFileSize": 100000000,
     "SkipAlreadyProcessed": true,
     "DeleteOnSuccess": true,
@@ -154,84 +154,6 @@
         "MessageTimeout": "3m"
     },
 
-    "DPNPackageWorker": {
-        "NetworkConnections": 8,
-        "Workers": 4,
-        "NsqTopic": "dpn_package_topic",
-        "NsqChannel": "dpn_package_channel",
-        "MaxAttempts": 3,
-        "MaxInFlight": 20,
-        "HeartbeatInterval": "10s",
-        "ReadTimeout": "60s",
-        "WriteTimeout": "10s",
-        "MessageTimeout": "180m"
-    },
-
-    "DPNValidationWorker": {
-        "NetworkConnections": 8,
-        "Workers": 4,
-        "NsqTopic": "dpn_validation_topic",
-        "NsqChannel": "dpn_validation_channel",
-        "MaxAttempts": 3,
-        "MaxInFlight": 20,
-        "HeartbeatInterval": "10s",
-        "ReadTimeout": "60s",
-        "WriteTimeout": "10s",
-        "MessageTimeout": "180m"
-    },
-
-    "DPNCopyWorker": {
-        "NetworkConnections": 8,
-        "Workers": 4,
-        "NsqTopic": "dpn_copy_topic",
-        "NsqChannel": "dpn_copy_channel",
-        "MaxAttempts": 3,
-        "MaxInFlight": 20,
-        "HeartbeatInterval": "10s",
-        "ReadTimeout": "60s",
-        "WriteTimeout": "10s",
-        "MessageTimeout": "180m"
-    },
-
-    "DPNStoreWorker": {
-        "NetworkConnections": 4,
-        "Workers": 4,
-        "NsqTopic": "dpn_store_topic",
-        "NsqChannel": "dpn_store_channel",
-        "MaxAttempts": 3,
-        "MaxInFlight": 20,
-        "HeartbeatInterval": "10s",
-        "ReadTimeout": "60s",
-        "WriteTimeout": "10s",
-        "MessageTimeout": "180m"
-    },
-
-    "DPNRecordWorker": {
-        "NetworkConnections": 4,
-        "Workers": 4,
-        "NsqTopic": "dpn_record_topic",
-        "NsqChannel": "dpn_record_channel",
-        "MaxAttempts": 3,
-        "MaxInFlight": 20,
-        "HeartbeatInterval": "10s",
-        "ReadTimeout": "60s",
-        "WriteTimeout": "10s",
-        "MessageTimeout": "180m"
-    },
-
-    "DPNTroubleWorker": {
-        "NetworkConnections": 4,
-        "Workers": 4,
-        "NsqTopic": "dpn_trouble_topic",
-        "NsqChannel": "dpn_trouble_channel",
-        "MaxAttempts": 3,
-        "MaxInFlight": 20,
-        "HeartbeatInterval": "10s",
-        "ReadTimeout": "60s",
-        "WriteTimeout": "10s",
-        "MessageTimeout": "10m"
-    },
-
     "ReceivingBuckets": [
         "aptrust.receiving.test.columbia.edu",
         "aptrust.receiving.test.georgetown.edu",
@@ -251,5 +173,125 @@
         "aptrust.receiving.test.nd.edu",
         "aptrust.receiving.test.virginia.edu",
         "aptrust.receiving.test.vt.edu"
-    ]
+    ],
+
+    "DPN": {
+        "LocalNode": "aptrust",
+        "LogDirectory": "/mnt/dpn/logs",
+        "StagingDirectory": "/mnt/dpn/staging",
+        "RemoteNodeHomeDirectory": "/home",
+        "LogLevel": 4,
+        "LogToStderr": false,
+        "ReplicateToNumNodes": 2,
+        "AcceptInvalidSSLCerts": false,
+        "UseSSHWithRsync": true,
+        "RestClient": {
+            "Comment": "Settings for our local DPN REST API server. Load LocalAuthToken from environment!",
+            "LocalServiceURL": "https://dpn-demo.aptrust.org/",
+            "LocalAPIRoot": "api-v1",
+            "LocalAuthToken": ""
+        },
+        "DefaultMetadata": {
+            "Comment": "Config settings for common DPN bagit metadata",
+            "BagItVersion": "0.97",
+            "BagItEncoding": "UTF-8",
+            "IngestNodeName": "APTrust",
+            "IngestNodeAddress": "160 McCormick Rd., Charlottesville, VA 22904",
+            "IngestNodeContactName": "APTrust Administrator",
+            "IngestNodeContactEmail": "help@aptrust.org"
+        },
+        "comment": "Remote node admin tokens are ignored in this config.",
+        "RemoteNodeAdminTokensForTesting": {
+            "chron": "",
+            "hathi": "",
+            "sdr":   "",
+            "tdr":   ""
+        },
+        "comment": "Set these in the environment, not here. Export DPN_<NODE>_TOKEN.",
+        "RemoteNodeTokens": {
+            "chron": "",
+            "hathi": "",
+            "sdr":   "",
+            "tdr":   ""
+        },
+        "comment": "Remote node URLs in demo come from node records in the local REST service.",
+        "RemoteNodeURLs": {
+            "chron": "",
+            "hathi": "",
+            "sdr":   "",
+            "tdr":   ""
+        },
+        "DPNPackageWorker": {
+            "NetworkConnections": 8,
+            "Workers": 4,
+            "NsqTopic": "dpn_package_topic",
+            "NsqChannel": "dpn_package_channel",
+            "MaxAttempts": 3,
+            "MaxInFlight": 20,
+            "HeartbeatInterval": "10s",
+            "ReadTimeout": "60s",
+            "WriteTimeout": "10s",
+            "MessageTimeout": "180m"
+        },
+        "DPNValidationWorker": {
+            "NetworkConnections": 8,
+            "Workers": 4,
+            "NsqTopic": "dpn_validation_topic",
+            "NsqChannel": "dpn_validation_channel",
+            "MaxAttempts": 3,
+            "MaxInFlight": 20,
+            "HeartbeatInterval": "10s",
+            "ReadTimeout": "60s",
+            "WriteTimeout": "10s",
+            "MessageTimeout": "180m"
+        },
+        "DPNCopyWorker": {
+            "NetworkConnections": 8,
+            "Workers": 4,
+            "NsqTopic": "dpn_copy_topic",
+            "NsqChannel": "dpn_copy_channel",
+            "MaxAttempts": 3,
+            "MaxInFlight": 20,
+            "HeartbeatInterval": "10s",
+            "ReadTimeout": "60s",
+            "WriteTimeout": "10s",
+            "MessageTimeout": "180m"
+        },
+        "DPNStoreWorker": {
+            "NetworkConnections": 4,
+            "Workers": 4,
+            "NsqTopic": "dpn_store_topic",
+            "NsqChannel": "dpn_store_channel",
+            "MaxAttempts": 3,
+            "MaxInFlight": 20,
+            "HeartbeatInterval": "10s",
+            "ReadTimeout": "60s",
+            "WriteTimeout": "10s",
+            "MessageTimeout": "180m"
+        },
+        "DPNRecordWorker": {
+            "NetworkConnections": 4,
+            "Workers": 4,
+            "NsqTopic": "dpn_record_topic",
+            "NsqChannel": "dpn_record_channel",
+            "MaxAttempts": 3,
+            "MaxInFlight": 20,
+            "HeartbeatInterval": "10s",
+            "ReadTimeout": "60s",
+            "WriteTimeout": "10s",
+            "MessageTimeout": "180m"
+        },
+        "DPNTroubleWorker": {
+            "NetworkConnections": 4,
+            "Workers": 4,
+            "NsqTopic": "dpn_trouble_topic",
+            "NsqChannel": "dpn_trouble_channel",
+            "MaxAttempts": 3,
+            "MaxInFlight": 20,
+            "HeartbeatInterval": "10s",
+            "ReadTimeout": "60s",
+            "WriteTimeout": "10s",
+            "MessageTimeout": "10m"
+        }
+    }
 }

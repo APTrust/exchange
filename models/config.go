@@ -82,6 +82,9 @@ type Config struct {
 	// in use.
 	ActiveConfig            string
 
+	// Config options specific to DPN services.
+	DPN                     DPNConfig
+
 	// Configuration options for apt_bag_delete
 	BagDeleteWorker         WorkerConfig
 
@@ -94,45 +97,6 @@ type Config struct {
 	// Should we delete the uploaded tar file from the receiving
 	// bucket after successfully processing this bag?
 	DeleteOnSuccess         bool
-
-	// DPNCopyWorker copies tarred bags from other nodes into our
-	// DPN staging area, so we can replication them. Currently,
-	// copying is done by rsync over ssh.
-	DPNCopyWorker           WorkerConfig
-
-	// DPNHomeDirectory is the prefix to the home directory
-	// for all DPN users. On demo and production, this should
-	// be "/home". The full home directory for a user like tdr
-	// would be "/home/dpn.tdr". On a local dev or test machine,
-	// DPNHomeDirectory can be any path the user has full read/write
-	// access to.
-	DPNHomeDirectory        string
-
-	// DPNPackageWorker records details about fixity checks
-	// that could not be completed.
-	DPNPackageWorker        WorkerConfig
-
-	// The name of the long-term storage bucket for DPN
-	DPNPreservationBucket   string
-
-	// DPNRecordWorker records DPN storage events in Pharos
-	// and through the DPN REST API.
-	DPNRecordWorker         WorkerConfig
-
-	// The local directory for DPN staging. We store DPN bags
-	// here while they await transfer to the DPN preservation
-	// bucket and while they await replication to other nodes.
-	DPNStagingDirectory     string
-
-	// DPNStoreWorker copies DPN bags to AWS Glacier.
-	DPNStoreWorker          WorkerConfig
-
-	// DPNTroubleWorker records failed DPN tasks in the DPN
-	// trouble queue.
-	DPNTroubleWorker        WorkerConfig
-
-	// DPNValidationWorker validates DPN bags.
-	DPNValidationWorker     WorkerConfig
 
 	// FailedFixityWorker records details about fixity checks
 	// that could not be completed.
@@ -275,11 +239,15 @@ func LoadConfigFile(pathToConfigFile string) (*Config, error) {
 			pathToConfigFile, err)
 		return nil, detailedError
 	}
+	config.ActiveConfig = pathToConfigFile
 	return config, nil
 }
 
 // Ensures that the logging directory exists, creating it if necessary.
 // Returns the absolute path the logging directory.
+//
+// TODO: Rename this, since it's ensuring more than just the existence
+// of the log directory.
 func (config *Config) EnsureLogDirectory() (string, error) {
 	config.ExpandFilePaths()
 	err := config.createDirectories()
@@ -330,13 +298,17 @@ func (config *Config) ExpandFilePaths() {
 	if err == nil {
 		config.ReplicationDirectory = expanded
 	}
-	expanded, err = fileutil.ExpandTilde(config.DPNStagingDirectory)
+	expanded, err = fileutil.ExpandTilde(config.DPN.StagingDirectory)
 	if err == nil {
-		config.DPNStagingDirectory = expanded
+		config.DPN.StagingDirectory = expanded
 	}
-	expanded, err = fileutil.ExpandTilde(config.DPNHomeDirectory)
+	expanded, err = fileutil.ExpandTilde(config.DPN.RemoteNodeHomeDirectory)
 	if err == nil {
-		config.DPNHomeDirectory = expanded
+		config.DPN.RemoteNodeHomeDirectory = expanded
+	}
+	expanded, err = fileutil.ExpandTilde(config.DPN.LogDirectory)
+	if err == nil {
+		config.DPN.LogDirectory = expanded
 	}
 }
 
@@ -377,5 +349,128 @@ func (config *Config) createDirectories() (error) {
 			return err
 		}
 	}
+	// TODO: Test these two
+	if config.DPN.LogDirectory != "" && !fileutil.FileExists(config.DPN.LogDirectory) {
+		err := os.MkdirAll(config.DPN.LogDirectory, 0755)
+		if err != nil {
+			return err
+		}
+	}
+	if config.DPN.StagingDirectory != "" && !fileutil.FileExists(config.DPN.StagingDirectory) {
+		err := os.MkdirAll(config.DPN.StagingDirectory, 0755)
+		if err != nil {
+			return err
+		}
+	}
 	return nil
+}
+
+
+// DefaultMetadata includes mostly static information about bags
+// that APTrust packages for DPN.
+type DefaultMetadata struct {
+	Comment                string
+	BagItVersion           string
+	BagItEncoding          string
+	IngestNodeName         string
+	IngestNodeAddress      string
+	IngestNodeContactName  string
+	IngestNodeContactEmail string
+}
+
+// Config options for our DPN REST client.
+type RestClientConfig struct {
+	Comment                string
+	LocalServiceURL        string
+	LocalAPIRoot           string
+	LocalAuthToken         string
+}
+
+type DPNConfig struct {
+	// Should we accept self-signed and otherwise invalid SSL
+	// certificates? We need to do this in testing, but it
+	// should not be allowed in production. Bools in Go default
+	// to false, so if this is not set in config, we should be
+	// safe.
+	AcceptInvalidSSLCerts  bool
+
+	// Default metadata that goes into bags produced at our node.
+	DefaultMetadata        DefaultMetadata
+
+	// DPNCopyWorker copies tarred bags from other nodes into our
+	// DPN staging area, so we can replication them. Currently,
+	// copying is done by rsync over ssh.
+	DPNCopyWorker           WorkerConfig
+
+	// DPNPackageWorker records details about fixity checks
+	// that could not be completed.
+	DPNPackageWorker        WorkerConfig
+
+	// The name of the long-term storage bucket for DPN
+	DPNPreservationBucket   string
+
+	// DPNRecordWorker records DPN storage events in Pharos
+	// and through the DPN REST API.
+	DPNRecordWorker         WorkerConfig
+
+	// DPNStoreWorker copies DPN bags to AWS Glacier.
+	DPNStoreWorker          WorkerConfig
+
+	// DPNTroubleWorker records failed DPN tasks in the DPN
+	// trouble queue.
+	DPNTroubleWorker        WorkerConfig
+
+	// DPNValidationWorker validates DPN bags.
+	DPNValidationWorker     WorkerConfig
+
+	// LocalNode is the namespace of the node this code is running on.
+	// E.g. "aptrust", "chron", "hathi", "tdr", "sdr"
+	LocalNode              string
+
+	// Where should DPN service logs go?
+	LogDirectory           string
+
+	// Log level (4 = debug)
+	LogLevel               logging.Level
+
+	// Should we log to Stderr in addition to writing to
+	// the log file?
+	LogToStderr            bool
+
+	// RemoteNodeHomeDirectory is the prefix to the home directory
+	// for remote DPN nodes that connect to our node via rsync/ssh.
+	// On demo and production, this should be "/home". The full home
+	// directory for a user like tdr  would be "/home/dpn.tdr".
+	// On a local dev or test machine,this can be any path the user
+	// has full read/write access to.
+	RemoteNodeHomeDirectory        string
+
+	// Number of nodes we should replicate bags to.
+	ReplicateToNumNodes    int
+
+	// Settings for connecting to our own REST service
+	RestClient             RestClientConfig
+
+	// RemoteNodeAdminTokensForTesting are used in integration
+	// tests only, when we want to perform admin-only operations,
+	// such as creating bags and replication requests on a remote
+	// node in the test cluster.
+	RemoteNodeAdminTokensForTesting map[string]string
+
+	// API Tokens for connecting to remote nodes
+	RemoteNodeTokens       map[string]string
+
+	// URLs for remote nodes. Set these only if you want to
+	// override the node URLs we get back from our local
+	// DPN REST server.
+	RemoteNodeURLs         map[string]string
+
+	// The local directory for DPN staging. We store DPN bags
+	// here while they await transfer to the DPN preservation
+	// bucket and while they await replication to other nodes.
+	StagingDirectory     string
+
+	// When copying bags from remote nodes, should we use rsync
+	// over SSH (true) or just plain rsync (false)?
+	UseSSHWithRsync        bool
 }

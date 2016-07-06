@@ -12,7 +12,7 @@ import (
 )
 
 func TestNewContext(t *testing.T) {
-	configFile := filepath.Join("config", "aptrust_test.json")
+	configFile := filepath.Join("config", "test.json")
 	appConfig, err := models.LoadConfigFile(configFile)
 	require.Nil(t, err)
 
