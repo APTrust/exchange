@@ -2,7 +2,7 @@ package logger
 
 import (
 	"fmt"
-	"github.com/APTrust/exchange/config"
+	"github.com/APTrust/exchange/models"
 	"github.com/op/go-logging"
 	"io/ioutil"
 	stdlog "log"
@@ -15,7 +15,7 @@ import (
 InitLogger creates and returns a logger suitable for logging
 human-readable message. Also returns the path to the log file.
 */
-func InitLogger(config *config.Config) (*logging.Logger, string) {
+func InitLogger(config *models.Config) (*logging.Logger, string) {
 	processName := path.Base(os.Args[0])
 	logDir, err := config.EnsureLogDirectory()
 	if err != nil {
@@ -62,7 +62,7 @@ data. Bagman JSON logs consist of a single JSON object per line,
 with no extraneous data. Because all of the data in the file is
 pure JSON, with one record per line, these files are easy to parse.
 */
-func InitJsonLogger(config *config.Config) (*stdlog.Logger, string) {
+func InitJsonLogger(config *models.Config) (*stdlog.Logger, string) {
 	processName := path.Base(os.Args[0])
 	logDir, err := config.EnsureLogDirectory()
 	if err != nil {

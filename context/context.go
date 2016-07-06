@@ -2,7 +2,7 @@ package context
 
 import (
 	"fmt"
-	"github.com/APTrust/exchange/config"
+	"github.com/APTrust/exchange/models"
 	"github.com/APTrust/exchange/network"
 	"github.com/APTrust/exchange/util/logger"
 	"github.com/op/go-logging"
@@ -17,7 +17,7 @@ etc.). It also encapsulates some functions common to all of
 those services.
 */
 type Context struct {
-	Config          config.Config
+	Config          models.Config
 	MessageLog      *logging.Logger
 	PharosClient    *network.PharosClient
 //	Volume          *util.Volume            // *** TODO *** Re-add Volume as service!
@@ -37,7 +37,7 @@ This object is meant to used as a singleton with any of the
 stand-along processing services (bag_processor, bag_restorer,
 cleanup, etc.).
 */
-func NewContext(appConfig config.Config) (context *Context) {
+func NewContext(appConfig models.Config) (context *Context) {
 	context = &Context {
 		succeeded: int64(0),
 		failed: int64(0),

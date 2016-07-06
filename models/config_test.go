@@ -1,7 +1,7 @@
-package config_test
+package models_test
 
 import (
-	"github.com/APTrust/exchange/config"
+	"github.com/APTrust/exchange/models"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"os"
@@ -11,7 +11,7 @@ import (
 )
 
 func TestEnsureLogDirectory(t *testing.T) {
-	config := &config.Config{
+	config := &models.Config{
 		TarDirectory: "~/tmp/tar",
 		LogDirectory: "~/tmp/log",
 		RestoreDirectory: "~/tmp/restore",
@@ -25,7 +25,7 @@ func TestEnsureLogDirectory(t *testing.T) {
 
 func TestLoad(t *testing.T) {
 	configFile := filepath.Join("testdata", "config.json")
-	appConfig, err := config.Load(configFile, "test")
+	appConfig, err := models.Load(configFile, "test")  // TODO: Change to new load
 	require.Nil(t, err)
 
 	// Spot check a few settings.
@@ -37,7 +37,7 @@ func TestLoad(t *testing.T) {
 
 func TestEnsurePharosConfig(t *testing.T) {
 	configFile := filepath.Join("testdata", "config.json")
-	appConfig, err := config.Load(configFile, "test")
+	appConfig, err := models.Load(configFile, "test") // TODO: Change to new load
 	require.Nil(t, err)
 
 	url := appConfig.PharosURL
@@ -62,7 +62,7 @@ func TestEnsurePharosConfig(t *testing.T) {
 }
 
 func TestExpandFilePaths(t *testing.T) {
-	config := &config.Config{
+	config := &models.Config{
 		TarDirectory: "~/tmp/tar",
 		LogDirectory: "~/tmp/log",
 		RestoreDirectory: "~/tmp/restore",

@@ -125,9 +125,8 @@ func TestRecursiveFileList(t *testing.T) {
 	}
 	sampleFiles := []string{
 		getPath("README.md"),
-		getPath("config/config.go"),
 		getPath("constants/constants.go"),
-		getPath("config/config.go"),
+		getPath("models/config.go"),
 		getPath("models/generic_file.go"),
 		getPath("testdata/intel_obj.json"),
 		getPath("util/logger/logger.go"),

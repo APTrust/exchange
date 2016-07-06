@@ -1,8 +1,8 @@
 package context_test
 
 import (
-	"github.com/APTrust/exchange/config"
 	"github.com/APTrust/exchange/context"
+	"github.com/APTrust/exchange/models"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"os"
@@ -13,7 +13,7 @@ import (
 
 func TestNewContext(t *testing.T) {
 	configFile := filepath.Join("testdata", "config.json")
-	appConfig, err := config.Load(configFile, "test")
+	appConfig, err := models.Load(configFile, "test")  // TODO: Change to new load
 	require.Nil(t, err)
 
 	// In some tests we want to log to STDERR, but in this case, if it
