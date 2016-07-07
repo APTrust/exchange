@@ -31,6 +31,13 @@ type DPNRestClient struct {
 	transport    *http.Transport
 }
 
+type NodeResult struct {
+	Node         Node
+	Request     *http.Request
+	Response    *http.Response
+	Error       error
+}
+
 type NodeListResult struct {
 	Count       int32                      `json:count`
 	Next        *string                    `json:next`
@@ -41,6 +48,13 @@ type NodeListResult struct {
 	Error       error                      `json:-`
 }
 
+type MemberResult struct {
+	Member      Member
+	Request     *http.Request
+	Response    *http.Response
+	Error       error
+}
+
 type MemberListResult struct {
 	Count       int32                      `json:count`
 	Next        *string                    `json:next`
@@ -49,6 +63,13 @@ type MemberListResult struct {
 	Request     *http.Request              `json:-`
 	Response    *http.Response             `json:-`
 	Error       error                      `json:-`
+}
+
+type BagResult struct {
+	Bag         DPNBag
+	Request     *http.Request
+	Response    *http.Response
+	Error       error
 }
 
 // BagListResult is what the REST service returns when
@@ -63,6 +84,13 @@ type BagListResult struct {
 	Error       error                      `json:-`
 }
 
+type ReplicationResult struct {
+	Xfer        ReplicationTransfer
+	Request     *http.Request
+	Response    *http.Response
+	Error       error
+}
+
 // ReplicationListResult is what the REST service returns when
 // we ask for a list of transfer requests.
 type ReplicationListResult struct {
@@ -73,6 +101,13 @@ type ReplicationListResult struct {
 	Request     *http.Request             `json:-`
 	Response    *http.Response            `json:-`
 	Error       error                     `json:-`
+}
+
+type RestoreResult struct {
+	Xfer        RestoreTransfer
+	Request     *http.Request
+	Response    *http.Response
+	Error       error
 }
 
 // RestoreListResult is what the REST service returns when
