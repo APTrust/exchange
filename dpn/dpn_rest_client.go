@@ -4,10 +4,8 @@ import (
 	"bytes"
 	"crypto/tls"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"github.com/APTrust/exchange/models"
-	"github.com/op/go-logging"
 	"io"
 	"io/ioutil"
 	"net"
@@ -31,7 +29,6 @@ type DPNRestClient struct {
 	dpnConfig    *models.DPNConfig
 	httpClient   *http.Client
 	transport    *http.Transport
-	logger       *logging.Logger
 }
 
 type NodeListResult struct {
@@ -92,7 +89,7 @@ type RestoreListResult struct {
 
 
 // Creates a new DPN REST client.
-func NewDPNRestClient(hostUrl, apiVersion, apiKey, node string, dpnConfig *models.DPNConfig, logger *logging.Logger) (*DPNRestClient, error) {
+func NewDPNRestClient(hostUrl, apiVersion, apiKey, node string, dpnConfig *models.DPNConfig) (*DPNRestClient, error) {
 	cookieJar, err := cookiejar.New(nil)
 	if err != nil {
 		return nil, fmt.Errorf("Can't create cookie jar for DPN REST client: %v", err)
@@ -127,7 +124,6 @@ func NewDPNRestClient(hostUrl, apiVersion, apiKey, node string, dpnConfig *model
 		dpnConfig: dpnConfig,
 		httpClient: httpClient,
 		transport: transport,
-		logger: logger,
 	}
 	return client, nil
 }
@@ -162,7 +158,6 @@ func (client *DPNRestClient) NewJsonRequest(method, targetUrl string, body io.Re
 func (client *DPNRestClient) MemberGet(identifier string) (*Member, error) {
 	relativeUrl := fmt.Sprintf("/%s/member/%s/", client.APIVersion, identifier)
 	objUrl := client.BuildUrl(relativeUrl, nil)
-	client.logger.Debug("Requesting member from DPN REST service: %s", objUrl)
 	request, err := client.NewJsonRequest("GET", objUrl, nil)
 	if err != nil {
 		return nil, err
@@ -175,7 +170,6 @@ func (client *DPNRestClient) MemberGet(identifier string) (*Member, error) {
 	// 404 for object not found
 	if response.StatusCode != 200 {
 		error := fmt.Errorf("MemberGet expected status 200 but got %d. URL: %s", response.StatusCode, objUrl)
-		client.buildAndLogError(body, error.Error())
 		return nil, error
 	}
 
@@ -209,7 +203,6 @@ func (client *DPNRestClient) MemberGetByName(name string) (*Member, error) {
 func (client *DPNRestClient) MemberListGet(queryParams *url.Values) (*MemberListResult, error) {
 	relativeUrl := fmt.Sprintf("/%s/member/", client.APIVersion)
 	objUrl := client.BuildUrl(relativeUrl, queryParams)
-	client.logger.Debug("Requesting member list from DPN REST service: %s", objUrl)
 	request, err := client.NewJsonRequest("GET", objUrl, nil)
 	if err != nil {
 		return nil, err
@@ -221,7 +214,6 @@ func (client *DPNRestClient) MemberListGet(queryParams *url.Values) (*MemberList
 
 	if response.StatusCode != 200 {
 		error := fmt.Errorf("MemberListGet expected status 200 but got %d. URL: %s", response.StatusCode, objUrl)
-		client.buildAndLogError(body, error.Error())
 		return nil, error
 	}
 
@@ -253,7 +245,6 @@ func (client *DPNRestClient) dpnMemberSave(member *Member, method string) (*Memb
 		objUrl = client.BuildUrl(relativeUrl, nil)
 		expectedResponseCode = 200
 	}
-	client.logger.Debug("%sing member to DPN REST service: %s", method, objUrl)
 	postData, err := json.Marshal(member)
 	if err != nil {
 		return nil, err
@@ -269,15 +260,12 @@ func (client *DPNRestClient) dpnMemberSave(member *Member, method string) (*Memb
 	if response.StatusCode != expectedResponseCode {
 		error := fmt.Errorf("%s to %s returned status code %d. Post data: %v",
 			method, objUrl, response.StatusCode, string(postData))
-		client.buildAndLogError(body, error.Error())
-		fmt.Println(string(body))
 		return nil, error
 	}
 	returnedMember := Member{}
 	err = json.Unmarshal(body, &returnedMember)
 	if err != nil {
 		error := fmt.Errorf("Could not parse JSON response from  %s", objUrl)
-		client.buildAndLogError(body, error.Error())
 		return nil, error
 	}
 	return &returnedMember, nil
@@ -286,7 +274,6 @@ func (client *DPNRestClient) dpnMemberSave(member *Member, method string) (*Memb
 func (client *DPNRestClient) NodeGet(identifier string) (*Node, error) {
 	relativeUrl := fmt.Sprintf("/%s/node/%s/", client.APIVersion, identifier)
 	objUrl := client.BuildUrl(relativeUrl, nil)
-	client.logger.Debug("Requesting node from DPN REST service: %s", objUrl)
 	request, err := client.NewJsonRequest("GET", objUrl, nil)
 	if err != nil {
 		return nil, err
@@ -299,7 +286,6 @@ func (client *DPNRestClient) NodeGet(identifier string) (*Node, error) {
 	// 404 for object not found
 	if response.StatusCode != 200 {
 		error := fmt.Errorf("NodeGet expected status 200 but got %d. URL: %s", response.StatusCode, objUrl)
-		client.buildAndLogError(body, error.Error())
 		return nil, error
 	}
 
@@ -322,7 +308,6 @@ func (client *DPNRestClient) NodeGet(identifier string) (*Node, error) {
 func (client *DPNRestClient) NodeListGet(queryParams *url.Values) (*NodeListResult, error) {
 	relativeUrl := fmt.Sprintf("/%s/node/", client.APIVersion)
 	objUrl := client.BuildUrl(relativeUrl, queryParams)
-	client.logger.Debug("Requesting node list from DPN REST service: %s", objUrl)
 	request, err := client.NewJsonRequest("GET", objUrl, nil)
 	if err != nil {
 		return nil, err
@@ -334,7 +319,6 @@ func (client *DPNRestClient) NodeListGet(queryParams *url.Values) (*NodeListResu
 
 	if response.StatusCode != 200 {
 		error := fmt.Errorf("NodeListGet expected status 200 but got %d. URL: %s", response.StatusCode, objUrl)
-		client.buildAndLogError(body, error.Error())
 		return nil, error
 	}
 
@@ -361,7 +345,6 @@ func (client *DPNRestClient) NodeUpdate(node *Node) (*Node, error) {
 	relativeUrl := fmt.Sprintf("/%s/node/%s/", client.APIVersion, node.Namespace)
 	objUrl := client.BuildUrl(relativeUrl, nil)
 	expectedResponseCode := 200
-	client.logger.Debug("Updating Node %s to DPN REST service: %s", node.Namespace, objUrl)
 	postData, err := json.Marshal(node)
 	if err != nil {
 		return nil, err
@@ -376,8 +359,6 @@ func (client *DPNRestClient) NodeUpdate(node *Node) (*Node, error) {
 	}
 	if response.StatusCode != expectedResponseCode {
 		error := fmt.Errorf("PUT to %s returned status code %d", objUrl, response.StatusCode)
-		client.buildAndLogError(body, error.Error())
-		fmt.Println(string(body))
 		return nil, error
 	}
 
@@ -388,7 +369,6 @@ func (client *DPNRestClient) NodeUpdate(node *Node) (*Node, error) {
 	err = json.Unmarshal(body, &returnedNode)
 	if err != nil {
 		error := fmt.Errorf("Could not parse JSON response from  %s", objUrl)
-		client.buildAndLogError(body, error.Error())
 		return nil, error
 	}
 	return &returnedNode, nil
@@ -410,7 +390,6 @@ func (client *DPNRestClient) NodeGetLastPullDate(identifier string) (time.Time, 
 func (client *DPNRestClient) DPNBagGet(identifier string) (*DPNBag, error) {
 	relativeUrl := fmt.Sprintf("/%s/bag/%s/", client.APIVersion, identifier)
 	objUrl := client.BuildUrl(relativeUrl, nil)
-	client.logger.Debug("Requesting bag from DPN REST service: %s", objUrl)
 	request, err := client.NewJsonRequest("GET", objUrl, nil)
 	if err != nil {
 		return nil, err
@@ -423,7 +402,6 @@ func (client *DPNRestClient) DPNBagGet(identifier string) (*DPNBag, error) {
 	// 404 for object not found
 	if response.StatusCode != 200 {
 		error := fmt.Errorf("DPNBagGet expected status 200 but got %d. URL: %s", response.StatusCode, objUrl)
-		client.buildAndLogError(body, error.Error())
 		return nil, error
 	}
 
@@ -439,7 +417,6 @@ func (client *DPNRestClient) DPNBagGet(identifier string) (*DPNBag, error) {
 func (client *DPNRestClient) DPNBagListGet(queryParams *url.Values) (*BagListResult, error) {
 	relativeUrl := fmt.Sprintf("/%s/bag/", client.APIVersion)
 	objUrl := client.BuildUrl(relativeUrl, queryParams)
-	client.logger.Debug("Requesting bag list from DPN REST service: %s", objUrl)
 	request, err := client.NewJsonRequest("GET", objUrl, nil)
 	if err != nil {
 		return nil, err
@@ -452,7 +429,6 @@ func (client *DPNRestClient) DPNBagListGet(queryParams *url.Values) (*BagListRes
 	if response.StatusCode != 200 {
 		error := fmt.Errorf("DPNBagListGet expected status 200 but got %d. URL: %s",
 			response.StatusCode, objUrl)
-		client.buildAndLogError(body, error.Error())
 		return nil, error
 	}
 
@@ -485,7 +461,6 @@ func (client *DPNRestClient) dpnBagSave(bag *DPNBag, method string) (*DPNBag, er
 		objUrl = client.BuildUrl(relativeUrl, nil)
 		expectedResponseCode = 200
 	}
-	client.logger.Debug("%sing bag to DPN REST service: %s", method, objUrl)
 	postData, err := json.Marshal(bag)
 	if err != nil {
 		return nil, err
@@ -501,15 +476,12 @@ func (client *DPNRestClient) dpnBagSave(bag *DPNBag, method string) (*DPNBag, er
 	if response.StatusCode != expectedResponseCode {
 		error := fmt.Errorf("%s to %s returned status code %d. Post data: %v",
 			method, objUrl, response.StatusCode, string(postData))
-		client.buildAndLogError(body, error.Error())
-		fmt.Println(string(body))
 		return nil, error
 	}
 	returnedBag := DPNBag{}
 	err = json.Unmarshal(body, &returnedBag)
 	if err != nil {
 		error := fmt.Errorf("Could not parse JSON response from  %s", objUrl)
-		client.buildAndLogError(body, error.Error())
 		return nil, error
 	}
 	return &returnedBag, nil
@@ -519,7 +491,6 @@ func (client *DPNRestClient) ReplicationTransferGet(identifier string) (*Replica
 	// /api-v1/replicate/aptrust-999999/
 	relativeUrl := fmt.Sprintf("/%s/replicate/%s/", client.APIVersion, identifier)
 	objUrl := client.BuildUrl(relativeUrl, nil)
-	client.logger.Debug("Requesting replication xfer record from DPN REST service: %s", objUrl)
 	request, err := client.NewJsonRequest("GET", objUrl, nil)
 	if err != nil {
 		return nil, err
@@ -533,7 +504,6 @@ func (client *DPNRestClient) ReplicationTransferGet(identifier string) (*Replica
 	if response.StatusCode != 200 {
 		error := fmt.Errorf("ReplicationTransferGet expected status 200 but got %d. URL: %s",
 			response.StatusCode, objUrl)
-		client.buildAndLogError(body, error.Error())
 		return nil, error
 	}
 
@@ -549,7 +519,6 @@ func (client *DPNRestClient) ReplicationTransferGet(identifier string) (*Replica
 func (client *DPNRestClient) ReplicationListGet(queryParams *url.Values) (*ReplicationListResult, error) {
 	relativeUrl := fmt.Sprintf("/%s/replicate/", client.APIVersion)
 	objUrl := client.BuildUrl(relativeUrl, queryParams)
-	client.logger.Debug("Requesting replication list from DPN REST service: %s", objUrl)
 	request, err := client.NewJsonRequest("GET", objUrl, nil)
 	if err != nil {
 		return nil, err
@@ -562,7 +531,6 @@ func (client *DPNRestClient) ReplicationListGet(queryParams *url.Values) (*Repli
 	if response.StatusCode != 200 {
 		error := fmt.Errorf("ReplicationListGet expected status 200 but got %d. URL: %s",
 			response.StatusCode, objUrl)
-		client.buildAndLogError(body, error.Error())
 		return nil, error
 	}
 
@@ -595,7 +563,6 @@ func (client *DPNRestClient) replicationTransferSave(xfer *ReplicationTransfer, 
 		objUrl = client.BuildUrl(relativeUrl, nil)
 		expectedResponseCode = 200
 	}
-	client.logger.Debug("%sing replication transfer to DPN REST service: %s", method, objUrl)
 	xfer.UpdatedAt = time.Now().UTC().Truncate(time.Second)
 	postData, err := json.Marshal(xfer)
 	if err != nil {
@@ -613,15 +580,12 @@ func (client *DPNRestClient) replicationTransferSave(xfer *ReplicationTransfer, 
 	if response.StatusCode != expectedResponseCode {
 		error := fmt.Errorf("%s to %s returned status code %d. Post data: %v",
 			method, objUrl, response.StatusCode, string(postData))
-		client.buildAndLogError(body, error.Error())
-		fmt.Println(string(body))
 		return nil, error
 	}
 	returnedXfer := ReplicationTransfer{}
 	err = json.Unmarshal(body, &returnedXfer)
 	if err != nil {
 		error := fmt.Errorf("Could not parse JSON response from %s: %v", objUrl, err)
-		client.buildAndLogError(body, error.Error())
 		return nil, error
 	}
 	return &returnedXfer, nil
@@ -631,7 +595,6 @@ func (client *DPNRestClient) RestoreTransferGet(identifier string) (*RestoreTran
 	// /api-v1/restore/aptrust-64/
 	relativeUrl := fmt.Sprintf("/%s/restore/%s/", client.APIVersion, identifier)
 	objUrl := client.BuildUrl(relativeUrl, nil)
-	client.logger.Debug("Requesting restore xfer record from DPN REST service: %s", objUrl)
 	request, err := client.NewJsonRequest("GET", objUrl, nil)
 	if err != nil {
 		return nil, err
@@ -645,7 +608,6 @@ func (client *DPNRestClient) RestoreTransferGet(identifier string) (*RestoreTran
 	if response.StatusCode != 200 {
 		error := fmt.Errorf("RestoreTransferGet expected status 200 but got %d. URL: %s",
 			response.StatusCode, objUrl)
-		client.buildAndLogError(body, error.Error())
 		return nil, error
 	}
 
@@ -661,7 +623,6 @@ func (client *DPNRestClient) RestoreTransferGet(identifier string) (*RestoreTran
 func (client *DPNRestClient) RestoreListGet(queryParams *url.Values) (*RestoreListResult, error) {
 	relativeUrl := fmt.Sprintf("/%s/restore/", client.APIVersion)
 	objUrl := client.BuildUrl(relativeUrl, queryParams)
-	client.logger.Debug("Requesting restore list from DPN REST service: %s", objUrl)
 	request, err := client.NewJsonRequest("GET", objUrl, nil)
 	if err != nil {
 		return nil, err
@@ -674,7 +635,6 @@ func (client *DPNRestClient) RestoreListGet(queryParams *url.Values) (*RestoreLi
 	if response.StatusCode != 200 {
 		error := fmt.Errorf("RestoreListGet expected status 200 but got %d. URL: %s",
 			response.StatusCode, objUrl)
-		client.buildAndLogError(body, error.Error())
 		return nil, error
 	}
 
@@ -706,7 +666,6 @@ func (client *DPNRestClient) restoreTransferSave(xfer *RestoreTransfer, method s
 		objUrl = client.BuildUrl(relativeUrl, nil)
 		expectedResponseCode = 200
 	}
-	client.logger.Debug("%sing restore transfer to DPN REST service: %s", method, objUrl)
 	postData, err := json.Marshal(xfer)
 	if err != nil {
 		return nil, err
@@ -722,8 +681,6 @@ func (client *DPNRestClient) restoreTransferSave(xfer *RestoreTransfer, method s
 	if response.StatusCode != expectedResponseCode {
 		error := fmt.Errorf("%s to %s returned status code %d. Post data: %v",
 			method, objUrl, response.StatusCode, string(postData))
-		client.buildAndLogError(body, error.Error())
-		fmt.Println(string(body))
 		return nil, error
 	}
 
@@ -731,7 +688,6 @@ func (client *DPNRestClient) restoreTransferSave(xfer *RestoreTransfer, method s
 	err = json.Unmarshal(body, &returnedXfer)
 	if err != nil {
 		error := fmt.Errorf("Could not parse JSON response from  %s", objUrl)
-		client.buildAndLogError(body, error.Error())
 		return nil, error
 	}
 	return &returnedXfer, nil
@@ -745,7 +701,7 @@ func (client *DPNRestClient) restoreTransferSave(xfer *RestoreTransfer, method s
 // and API key. We use this function to get a client that can
 // update a replication request or a restore request on the
 // originating node.
-func (client *DPNRestClient) GetRemoteClient(remoteNodeNamespace string, dpnConfig *models.DPNConfig, logger *logging.Logger) (*DPNRestClient, error) {
+func (client *DPNRestClient) GetRemoteClient(remoteNodeNamespace string, dpnConfig *models.DPNConfig) (*DPNRestClient, error) {
 	remoteNode, err := client.NodeGet(remoteNodeNamespace)
 	if err != nil {
 		detailedError := fmt.Errorf("Error retrieving node record for '%s' "+
@@ -759,12 +715,8 @@ func (client *DPNRestClient) GetRemoteClient(remoteNodeNamespace string, dpnConf
 		return nil, detailedError
 	}
 	apiRoot := remoteNode.APIRoot
+	// Overriding DPN REST client URL if DPNConfig.RemoteNodeURLs says so
 	if dpnConfig.RemoteNodeURLs != nil && dpnConfig.RemoteNodeURLs[remoteNodeNamespace] != "" {
-		logger.Debug("Overriding DPN REST client URL for node %s " +
-			"because DPNConfig.RemoteNodeURLs " +
-			"says the URL for that node should be %s",
-			remoteNodeNamespace,
-			dpnConfig.RemoteNodeURLs[remoteNodeNamespace])
 		apiRoot = dpnConfig.RemoteNodeURLs[remoteNodeNamespace]
 	}
 	remoteRESTClient, err := NewDPNRestClient(
@@ -772,8 +724,7 @@ func (client *DPNRestClient) GetRemoteClient(remoteNodeNamespace string, dpnConf
 		dpnConfig.RestClient.LocalAPIRoot, // All nodes should be on same version
 		authToken,
 		remoteNodeNamespace,
-		dpnConfig,
-		logger)
+		dpnConfig)
 	if err != nil {
 		detailedError := fmt.Errorf("Could not create REST client for remote node %s: %v",
 			remoteNode.Namespace, err)
@@ -806,14 +757,6 @@ func (client *DPNRestClient) doRequest(request *http.Request) (data []byte, resp
 	return data, response, err
 }
 
-func (client *DPNRestClient) buildAndLogError(body []byte, errStr string) (err error) {
-	if len(body) < MAX_ERR_MSG_SIZE {
-		errStr += fmt.Sprintf(" Response body: %s", string(body))
-	}
-	err = errors.New(errStr)
-	client.logger.Error(strings.Replace(err.Error(), "%", "%%", -1))
-	return err
-}
 
 func (client *DPNRestClient) formatJsonError(callerName string, body []byte, err error) (error) {
 	json := strings.Replace(string(body), "\n", " ", -1)
