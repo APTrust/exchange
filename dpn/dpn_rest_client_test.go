@@ -149,11 +149,9 @@ func TestNodeUpdate(t *testing.T) {
 	}
 	client := getClient(t)
 	result := client.NodeGet("sdr")
-	if err != nil {
-		t.Error(err)
-		return
-	}
-	origName := result.Name
+	require.Nil(t, result.Error)
+
+	origName := result.Node.Name
 	if origName == "" {
 		origName = "No Name"
 	}
@@ -164,21 +162,16 @@ func TestNodeUpdate(t *testing.T) {
 		i--;
 		newName[i] = c;
     }
-	result.Name = string(newName)
-	savedNode, err := client.NodeUpdate(result)
-	if err != nil {
-		t.Error(err)
-		return
-	}
-	if savedNode == nil {
-		t.Errorf("Call to NodeUpdate returned nil")
-		return
-	}
+	result.Node.Name = string(newName)
+	savedNodeResult = client.NodeUpdate(result.Node)
+	require.Nil(t, savedNodeResult.Error)
+	require.NotNil(t, savedNodeResult.Node)
+	assert.NotNil(t, savedNodeResult.Request)
+	assert.NotNil(t, savedNodeResult.Response)
+
 	// This is broken on the server, causing our test to fail.
 	// Uncomment when the server is fixed.
-	// if savedNode.Name != string(newName) {
-	// t.Errorf("Expected name %s, got %s", string(newName), savedNode.Name)
-	// }
+	// 	assert.Equal(t, newName, savedNodeResult.Node.Name)
 }
 
 func TestNodeGetLastPullDate(t *testing.T) {
@@ -203,24 +196,18 @@ func TestMemberListGet(t *testing.T) {
 		return
 	}
 	client := getClient(t)
-	memberList, err := client.MemberListGet(nil)
-	if err != nil {
-		t.Errorf("MemberListGet returned error: %v", err)
-	}
-	if len(memberList.Results) != 5 {
-		t.Errorf("MemberListGet returned %d results; expected %d",
-			len(memberList.Results), 5)
-	}
+	memberList := client.MemberListGet(nil)
+	assert.Nil(t, memberList.Error)
+	assert.Equal(t, 5, memberList.Count)
+	assert.Equal(t, 5, len(memberList.Results))
 	params := url.Values{}
 	params.Set("name", "Faber College")
-	memberList, err = client.MemberListGet(&params)
-	if err != nil {
-		t.Errorf("MemberListGet returned error: %v", err)
-	}
-	if len(memberList.Results) != 1 {
-		t.Errorf("MemberListGet returned %d results; expected %d",
-			len(memberList.Results), 1)
-	}
+	memberList  = client.MemberListGet(&params)
+	assert.Nil(t, memberList.Error)
+	assert.NotNil(t, memberList.Request)
+	assert.NotNil(t, memberList.Response)
+	assert.Equal(t, 1, memberList.Count)
+	assert.Equal(t, 1, len(memberList.Results))
 }
 
 func TestMemberGet(t *testing.T) {
@@ -228,17 +215,12 @@ func TestMemberGet(t *testing.T) {
 		return
 	}
 	client := getClient(t)
-	member, err := client.MemberGet(memberIdentifier)
-	if err != nil {
-		t.Errorf("MemberGet returned error: %v", err)
-	}
-	if member == nil {
-		t.Errorf("MemberGet returned nothing")
-		return
-	}
-	if member.UUID != memberIdentifier {
-		t.Errorf("MemberGet returned the wrong member")
-	}
+	result := client.MemberGet(memberIdentifier)
+	require.Nil(t, result.Error)
+	require.NotNil(t, result.Member)
+	assert.NotNil(t, result.Request)
+	assert.NotNil(t, result.Response)
+	assert.Equal(t, memberIdentifier, result.Member.UUID)
 }
 
 func TestMemberCreate(t *testing.T) {
@@ -252,23 +234,14 @@ func TestMemberCreate(t *testing.T) {
 		Name: fmt.Sprintf("GO-TEST-MEMBER-%s", id),
 		Email: fmt.Sprintf("%s@example.com", id),
 	}
-	newMember, err := client.MemberCreate(&member)
-	if err != nil {
-		t.Errorf("MemberGet returned error: %v", err)
-	}
-	if newMember == nil {
-		t.Errorf("MemberGet returned nothing")
-		return
-	}
-	if newMember.UUID != member.UUID {
-		t.Errorf("New member UUID was not saved correctly")
-	}
-	if newMember.Name != member.Name {
-		t.Errorf("New member Name was not saved correctly")
-	}
-	if newMember.Email != member.Email {
-		t.Errorf("New member Email was not saved correctly")
-	}
+	result := client.MemberCreate(&member)
+	require.Nil(t, result.Error)
+	require.NotNil(t, result.Member)
+	assert.NotNil(t, result.Request)
+	assert.NotNil(t, result.Response)
+	assert.Equal(t, member.UUID, result.Member.UUID)
+	assert.Equal(t, member.Name, result.Member.Name)
+	assert.Equal(t, member.Email, result.Member.Email)
 }
 
 func TestMemberUpdate(t *testing.T) {
