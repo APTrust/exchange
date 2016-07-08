@@ -3,9 +3,11 @@ package dpn_test
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/APTrust/exchange/util/logger"
 	"github.com/APTrust/exchange/dpn"
+	"github.com/APTrust/exchange/models"
 	"github.com/satori/go.uuid"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -28,7 +30,7 @@ See the data/README.md file in that repo for information about how to
 load that test data into your DPN instance.
 */
 
-var configFile = "dpn/dpn_config.json"
+var configFile = "config/test.json"
 var skipRestMessagePrinted = false
 var aptrustBagIdentifier = "00000000-0000-4000-a000-000000000001"
 var replicationIdentifier = "10000000-0000-4111-a000-000000000001"
@@ -36,14 +38,15 @@ var restoreIdentifier = "11000000-0000-4111-a000-000000000001"
 var memberIdentifier = "9a000000-0000-4000-a000-000000000001"
 
 func runRestTests(t *testing.T) bool {
-	config := loadConfig(t, configFile)
-	_, err := http.Get(config.RestClient.LocalServiceURL)
+	config, err := models.LoadConfigFile(configFile)
+	require.Nil(t, err)
+	_, err = http.Get(config.DPN.RestClient.LocalServiceURL)
 	if err != nil {
 		if skipRestMessagePrinted == false {
 			skipRestMessagePrinted = true
 			fmt.Printf("Skipping DPN REST integration tests: "+
 				"DPN REST server is not running at %s\n",
-				config.RestClient.LocalServiceURL)
+				config.DPN.RestClient.LocalServiceURL)
 		}
 		return false
 	}
@@ -53,15 +56,14 @@ func runRestTests(t *testing.T) bool {
 func getClient(t *testing.T) (*dpn.DPNRestClient) {
 	// If you want to debug, change ioutil.Discard to os.Stdout
 	// to see log output from the client.
-	config := loadConfig(t, configFile)
-	logger := logger.DiscardLogger("dpn_rest_client_test")
+	config, err := models.LoadConfigFile(configFile)
+	require.Nil(t, err)
 	client, err := dpn.NewDPNRestClient(
-		config.RestClient.LocalServiceURL,
-		config.RestClient.LocalAPIRoot,
-		config.RestClient.LocalAuthToken,
-		dpnConfig.LocalNode,
-		dpnConfig,
-		logger)
+		config.DPN.RestClient.LocalServiceURL,
+		config.DPN.RestClient.LocalAPIRoot,
+		config.DPN.RestClient.LocalAuthToken,
+		config.DPN.LocalNode,
+		config.DPN)
 	if err != nil {
 		t.Errorf("Error constructing DPN REST client: %v", err)
 	}
@@ -71,19 +73,18 @@ func getClient(t *testing.T) (*dpn.DPNRestClient) {
 func getRemoteClient(t *testing.T, namespace string) (*dpn.DPNRestClient) {
 	// If you want to debug, change ioutil.Discard to os.Stdout
 	// to see log output from the client.
-	config := loadConfig(t, configFile)
-	logger := logger.DiscardLogger("dpn_rest_client_test")
+	config, err := models.LoadConfigFile(configFile)
+	require.Nil(t, err)
 	client, err := dpn.NewDPNRestClient(
-		config.RestClient.LocalServiceURL,
-		config.RestClient.LocalAPIRoot,
-		config.RestClient.LocalAuthToken,
-		dpnConfig.LocalNode,
-		dpnConfig,
-		logger)
+		config.DPN.RestClient.LocalServiceURL,
+		config.DPN.RestClient.LocalAPIRoot,
+		config.DPN.RestClient.LocalAuthToken,
+		config.DPN.LocalNode,
+		config.DPN)
 	if err != nil {
 		t.Errorf("Error constructing DPN REST client: %v", err)
 	}
-	remoteClient, err := client.GetRemoteClient(namespace, config, logger)
+	remoteClient, err := client.GetRemoteClient(namespace, config)
 	if err != nil {
 		t.Errorf("Error constructing remote DPN REST client for node %s: %v",
 			namespace, err)
@@ -92,10 +93,12 @@ func getRemoteClient(t *testing.T, namespace string) (*dpn.DPNRestClient) {
 }
 
 func TestBuildUrl(t *testing.T) {
-	config := loadConfig(t, configFile)
+	config, err := models.LoadConfigFile(configFile)
+	require.Nil(t, err)
 	client := getClient(t)
+	require.NotNil(t, client)
 	relativeUrl := "/api-v1/popeye/olive/oyl/"
-	expectedUrl := config.RestClient.LocalServiceURL + relativeUrl
+	expectedUrl := config.DPN.RestClient.LocalServiceURL + relativeUrl
 	if client.BuildUrl(relativeUrl, nil) != expectedUrl {
 		t.Errorf("BuildUrl returned '%s', expected '%s'",
 			client.BuildUrl(relativeUrl, nil), expectedUrl)
@@ -106,9 +109,7 @@ func TestBuildUrl(t *testing.T) {
 	params.Set("size", "extra medium")
 	actualUrl := client.BuildUrl(relativeUrl, &params)
 	expectedUrl = expectedUrl + "?color=blue&material=cotton&size=extra+medium"
-	if actualUrl != expectedUrl {
-		t.Errorf("Got URL '%s', expected '%s'", actualUrl, expectedUrl)
-	}
+	assert.Equal(t, expectedUrl, actualUrl)
 }
 
 func TestNodeGet(t *testing.T) {
@@ -116,18 +117,14 @@ func TestNodeGet(t *testing.T) {
 		return
 	}
 	client := getClient(t)
-	dpnNode, err := client.NodeGet("aptrust")
-	if err != nil {
-		t.Error(err)
-		return
-	}
-	if dpnNode.Name != "APTrust" {
-		t.Errorf("Name: expected 'APTrust', got '%s'", dpnNode.Name)
-	}
-	if dpnNode.Namespace != "aptrust" {
-		t.Errorf("Namespace: expected 'aptrust', got '%s'", dpnNode.Namespace)
-	}
-	if !strings.HasPrefix(dpnNode.APIRoot, "https://") && !strings.HasPrefix(dpnNode.APIRoot, "http://") {
+	result := client.NodeGet("aptrust")
+	require.Nil(t, result.Error)
+	require.NotNil(t, result.Node)
+	assert.NotNil(t, result.Request)
+	assert.NotNil(t, result.Response)
+	assert.Equal(t, "APTrust", result.Node.Name)
+	assert.Equal(t, "aptrust", result.Node.Namespace)
+	if !strings.HasPrefix(result.Node.APIRoot, "https://") && !strings.HasPrefix(result.Node.APIRoot, "http://") {
 		t.Errorf("APIRoot should begin with http:// or https://")
 	}
 }
@@ -138,16 +135,12 @@ func TestNodeListGet(t *testing.T) {
 	}
 	client := getClient(t)
 	nodeList, err := client.NodeListGet(nil)
-	if err != nil {
-		t.Error(err)
-		return
-	}
-	if nodeList.Count != 5 {
-		t.Errorf("Expected 5 nodes, got %d", nodeList.Count)
-	}
-	if len(nodeList.Results) != 5 {
-		t.Errorf("Expected 5 nodes, got %d", len(nodeList.Results))
-	}
+	require.Nil(t, nodeList.Error)
+	require.NotEmpty(t, nodeList.Results)
+	assert.Equal(t, 5, nodeList.Results.Count)
+	assert.Equal(t, 5, len(nodeList.Results))
+	assert.NotNil(t, nodeList.Request)
+	assert.NotNil(t, nodeList.Response)
 }
 
 func TestNodeUpdate(t *testing.T) {
@@ -155,12 +148,12 @@ func TestNodeUpdate(t *testing.T) {
 		return
 	}
 	client := getClient(t)
-	dpnNode, err := client.NodeGet("sdr")
+	result := client.NodeGet("sdr")
 	if err != nil {
 		t.Error(err)
 		return
 	}
-	origName := dpnNode.Name
+	origName := result.Name
 	if origName == "" {
 		origName = "No Name"
 	}
@@ -171,8 +164,8 @@ func TestNodeUpdate(t *testing.T) {
 		i--;
 		newName[i] = c;
     }
-	dpnNode.Name = string(newName)
-	savedNode, err := client.NodeUpdate(dpnNode)
+	result.Name = string(newName)
+	savedNode, err := client.NodeUpdate(result)
 	if err != nil {
 		t.Error(err)
 		return
@@ -1120,12 +1113,12 @@ func TestGetRemoteClient(t *testing.T) {
 	if runRestTests(t) == false {
 		return
 	}
-	config := loadConfig(t, configFile)
-	logger := logger.DiscardLogger("dpnrestclient_test")
+	config := models.LoadConfigFile(configFile)
+	require.Nil(t, err)
 	client := getClient(t)
 	nodes := []string { "chron", "hathi", "sdr", "tdr" }
 	for _, node := range nodes {
-		_, err := client.GetRemoteClient(node, config, logger)
+		_, err := client.GetRemoteClient(node, config)
 		if err != nil {
 			t.Errorf("Error creating remote client: %v", err)
 		}
