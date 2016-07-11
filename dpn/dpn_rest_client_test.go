@@ -10,7 +10,6 @@ import (
 	"github.com/stretchr/testify/require"
 	"net/http"
 	"net/url"
-	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -501,34 +500,26 @@ func TestReplicationTransferUpdate(t *testing.T) {
 		return
 	}
 	client := getClient(t)
-	//remoteClient := getRemoteClient(t, "chron")
 
 	// The transfer request must refer to an actual bag,
 	// so let's make a bag...
 	bag := MakeDPNBag()
-	dpnBag, err := client.DPNBagCreate(bag)
-	if err != nil {
-		t.Errorf("DPNBagCreate returned error %v", err)
-		return
-	}
+	dpnBagResult := client.DPNBagCreate(bag)
+	require.NotNil(t, dpnBagResult)
+	require.Nil(t, dpnBagResult.Error)
 
 	// Make sure we can create a transfer request.
-	xfer := MakeXferRequest("chron", "aptrust", dpnBag.UUID)
+	xfer := MakeXferRequest("chron", "aptrust", bag.UUID)
 
 	// Null out the fixity value, because once it's set, we can't change
 	// it. And below, we want to set a bad fixity value to see what happens.
 	xfer.FixityValue = nil
-	newXfer, err := client.ReplicationTransferCreate(xfer)
-	if err != nil {
-		t.Errorf("ReplicationTransferCreate returned error %v", err)
-		return
-	}
-	if newXfer == nil {
-		t.Errorf("ReplicationTransferCreate did not return an object")
-		return
-	}
+	xferResult := client.ReplicationTransferCreate(xfer)
+	require.NotNil(t, xferResult)
+	require.Nil(t, xferResult.Error)
 
 	// Mark as received, with a bad fixity.
+	newXfer := xferResult.Xfer
 	bagValid := true
 	newFixityValue :=  "1234567890"
 	newXfer.Status = "received"
@@ -536,21 +527,10 @@ func TestReplicationTransferUpdate(t *testing.T) {
 	newXfer.BagValid = &bagValid
 	newXfer.FixityValue = &newFixityValue
 
-	updatedXfer, err := client.ReplicationTransferUpdate(newXfer)
-	if err != nil {
-		t.Errorf("ReplicationTransferUpdate returned error %v", err)
-		return
-	}
-	if updatedXfer == nil {
-		t.Errorf("ReplicationTransferUpdate did not return an object")
-		return
-	}
-
-	// ... make sure status is correct
-	if updatedXfer.Status != "received" {
-		t.Errorf("Status is %s; expected received", updatedXfer.Status)
-	}
-
+	updatedXfer := client.ReplicationTransferUpdate(newXfer)
+	require.NotNil(t, updatedXfer.Xfer)
+	require.Nil(t, updatedXfer.Error)
+	assert.Equal(t, "received", updatedXfer.Xfer.Status)
 
 	// Mark as confirmed and send a bad fixity value.
 	// The server should cancel this transfer.
@@ -560,47 +540,17 @@ func TestReplicationTransferUpdate(t *testing.T) {
 	newXfer.Status = "confirmed"
 	newXfer.UpdatedAt = newXfer.UpdatedAt.Add(1 * time.Second)
 
-	updatedXfer, err = client.ReplicationTransferUpdate(newXfer)
-	if err != nil {
-		t.Errorf("ReplicationTransferUpdate returned error %v", err)
-		return
-	}
-	if updatedXfer == nil {
-		t.Errorf("ReplicationTransferUpdate did not return an object")
-		return
-	}
-
-	// Make sure the fields were set correctly.
-	if updatedXfer.FixityValue == nil || *updatedXfer.FixityValue != "1234567890" {
-		val := "nil"
-		if updatedXfer.FixityValue != nil {
-			val = *updatedXfer.FixityValue
-		}
-		t.Errorf("FixityValue was %s; expected 1234567890", val)
-	}
-	if updatedXfer.FixityAccept == nil || *updatedXfer.FixityAccept != false {
-		value := "nil"
-		if updatedXfer.FixityAccept != nil {
-			value = strconv.FormatBool(*updatedXfer.FixityAccept)
-		}
-		t.Errorf("FixityAccept is %s; expected false", value)
-	}
-	if updatedXfer.FixityAccept == nil || *updatedXfer.BagValid != true {
-		value := "nil"
-		if updatedXfer.BagValid != nil {
-			value = strconv.FormatBool(*updatedXfer.BagValid)
-		}
-		t.Errorf("BagValid is %s; expected true", value)
-	}
-	// Note: Status will be cancelled instead of received because
-	// we sent a bogus checksum, and that causes the server to cancel
-	// the transfer.
-	if updatedXfer.Status != "cancelled" {
-		t.Errorf("Status is %s; expected cancelled", updatedXfer.Status)
-	}
-	if updatedXfer.UpdatedAt.After(newXfer.UpdatedAt) == false {
-		t.Errorf("UpdatedAt was not updated")
-	}
+	updatedXfer = client.ReplicationTransferUpdate(newXfer)
+	require.NotNil(t, updatedXfer.Xfer)
+	require.Nil(t, updatedXfer.Error)
+	require.NotNil(t, updatedXfer.Xfer.FixityValue)
+	assert.Equal(t, "1234567890", updatedXfer.Xfer.FixityValue)
+	require.NotNil(t, updatedXfer.Xfer.FixityAccept)
+	assert.False(t, *updatedXfer.Xfer.FixityAccept)
+	require.NotNil(t, updatedXfer.Xfer.BagValid)
+	assert.True(t, *updatedXfer.Xfer.BagValid)
+	assert.Equal(t, "cancelled", updatedXfer.Xfer.Status)
+	assert.True(t, updatedXfer.Xfer.UpdatedAt.After(newXfer.UpdatedAt))
 }
 
 func TestRestoreTransferGet(t *testing.T) {
@@ -608,42 +558,19 @@ func TestRestoreTransferGet(t *testing.T) {
 		return
 	}
 	client := getClient(t)
-	xfer, err := client.RestoreTransferGet(restoreIdentifier)
-	if err != nil {
-		t.Error(err)
-		return
-	}
-	if xfer.FromNode != "hathi" {
-		t.Errorf("FromNode: expected 'hathi', got '%s'", xfer.FromNode)
-	}
-	if xfer.ToNode != "aptrust" {
-		t.Errorf("ToNode: expected 'aptrust', got '%s'", xfer.ToNode)
-	}
-	if xfer.BagId != aptrustBagIdentifier {
-		t.Errorf("UUID: expected '%s', got '%s'",
-			aptrustBagIdentifier, xfer.BagId)
-	}
-	if xfer.RestoreId != restoreIdentifier {
-		t.Errorf("RestoreId: expected '%s', got '%s'", restoreIdentifier, xfer.RestoreId)
-	}
-	if xfer.Status != "requested" {
-		t.Errorf("Status: expected 'requested', got '%s'", xfer.Status)
-	}
-	if xfer.Protocol != "rsync" {
-		t.Errorf("Protocol: expected 'R', got '%s'", xfer.Protocol)
-	}
-	if xfer.CreatedAt.Format(time.RFC3339) != "2015-09-15T19:38:31Z" {
-		t.Errorf("CreatedAt: expected '2015-09-15T19:38:31Z', got '%s'",
-			xfer.CreatedAt.Format(time.RFC3339))
-	}
-	if xfer.UpdatedAt.Format(time.RFC3339) != "2015-09-15T19:38:31Z" {
-		t.Errorf("UpdatedAt: expected '2015-09-15T19:38:31Z', got '%s'",
-			xfer.UpdatedAt.Format(time.RFC3339))
-	}
+	xferResult := client.RestoreTransferGet(restoreIdentifier)
+	require.NotNil(t, xferResult)
+	require.Nil(t, xferResult.Error)
+	assert.Equal(t, "hathi", xferResult.Xfer.FromNode)
+	assert.Equal(t, "aptrust", xferResult.Xfer.ToNode)
+	assert.Equal(t, aptrustBagIdentifier, xferResult.Xfer.BagId)
+	assert.Equal(t, restoreIdentifier, xferResult.Xfer.RestoreId)
+	assert.Equal(t, "requested", xferResult.Xfer.Status)
+	assert.Equal(t, "rsync", xferResult.Xfer.Protocol)
+	assert.Equal(t, "2015-09-15T19:38:31Z", xferResult.Xfer.CreatedAt.Format(time.RFC3339))
+	assert.Equal(t, "2015-09-15T19:38:31Z", xferResult.Xfer.UpdatedAt.Format(time.RFC3339))
 	expectedTarName := fmt.Sprintf("%s.tar", aptrustBagIdentifier)
-	if !strings.HasSuffix(xfer.Link, expectedTarName) {
-		t.Errorf("Expected link to end with '%s', got '%s'", expectedTarName, xfer.Link)
-	}
+	assert.True(t, strings.HasSuffix(xferResult.Xfer.Link, expectedTarName))
 }
 
 func TestRestoreListGet(t *testing.T) {
@@ -651,70 +578,51 @@ func TestRestoreListGet(t *testing.T) {
 		return
 	}
 	client := getClient(t)
-	xferList, err := client.RestoreListGet(nil)
-	if err != nil {
-		t.Error(err)
-		return
-	}
-	if xferList == nil {
-		t.Errorf("RestoreListGet returned nil result")
-		return
-	}
-	if xferList.Count == 0 || len(xferList.Results) == 0 {
-		t.Errorf("RestoreListGet returned zero results")
-		return
-	}
+	xferList := client.RestoreListGet(nil)
+	require.NotNil(t, xferList)
+	require.Nil(t, xferList.Error)
+	assert.NotEmpty(t, xferList.Results)
+	assert.False(t, xferList.Count == 0)
 
 	totalRecordCount := xferList.Count
 
 	params := &url.Values{}
 	params.Set("bag_valid", "true")
-	xferList, err = client.RestoreListGet(params)
-	if err != nil {
-		t.Error(err)
-		return
-	}
+	xferList  = client.RestoreListGet(params)
+	require.NotNil(t, xferList)
+	require.Nil(t, xferList.Error)
+
 	params.Set("bag_valid", "false")
-	xferList, err = client.RestoreListGet(params)
-	if err != nil {
-		t.Error(err)
-		return
-	}
+	xferList = client.RestoreListGet(params)
+	require.NotNil(t, xferList)
+	require.Nil(t, xferList.Error)
+
 	params.Del("bag_valid")
 	params.Set("fixity_accept", "true")
-	xferList, err = client.RestoreListGet(params)
-	if err != nil {
-		t.Error(err)
-		return
-	}
+	xferList = client.RestoreListGet(params)
+	require.NotNil(t, xferList)
+	require.Nil(t, xferList.Error)
+
 	params.Set("fixity_accept", "false")
-	xferList, err = client.RestoreListGet(params)
-	if err != nil {
-		t.Error(err)
-		return
-	}
+	xferList = client.RestoreListGet(params)
+	require.NotNil(t, xferList)
+	require.Nil(t, xferList.Error)
+
 	params.Del("fixity_accept")
 
 	aLongTimeAgo := time.Date(1999, time.December, 31, 23, 0, 0, 0, time.UTC)
 	params.Set("after", aLongTimeAgo.Format(time.RFC3339Nano))
-	xferList, err = client.RestoreListGet(params)
-	if err != nil {
-		t.Error(err)
-		return
-	}
-	if xferList.Count != totalRecordCount {
-		t.Errorf("Expected %d records, got %d", totalRecordCount, xferList.Count)
-	}
+	xferList = client.RestoreListGet(params)
+	require.NotNil(t, xferList)
+	require.Nil(t, xferList.Error)
+	assert.Equal(t, totalRecordCount, xferList.Count)
 
 	params.Set("after", time.Now().Add(1 * time.Hour).Format(time.RFC3339Nano))
-	xferList, err = client.RestoreListGet(params)
-	if err != nil {
-		t.Error(err)
-		return
-	}
-	if xferList.Count != 0 {
-		t.Errorf("Expected 0 records, got %d", xferList.Count)
-	}
+	xferList = client.RestoreListGet(params)
+	require.NotNil(t, xferList)
+	require.Nil(t, xferList.Error)
+	assert.True(t, xferList.Count > 0)
+	assert.NotEmpty(t, xferList.Results)
 }
 
 func TestRestoreTransferCreate(t *testing.T) {
@@ -726,52 +634,25 @@ func TestRestoreTransferCreate(t *testing.T) {
 	// The transfer request must refer to an actual bag,
 	// so let's make a bag...
 	bag := MakeDPNBag()
-	dpnBag, err := client.DPNBagCreate(bag)
-	if err != nil {
-		t.Errorf("DPNBagCreate returned error %v", err)
-		return
-	}
+	dpnBagResult := client.DPNBagCreate(bag)
+	require.NotNil(t, dpnBagResult)
+	require.Nil(t, dpnBagResult.Error)
 
 	// Make sure we can create a transfer request.
-	xfer := MakeRestoreRequest("tdr", "aptrust", dpnBag.UUID)
-	newXfer, err := client.RestoreTransferCreate(xfer)
-	if err != nil {
-		t.Errorf("RestoreTransferCreate returned error %v", err)
-		return
-	}
-	if newXfer == nil {
-		t.Errorf("RestoreTransferCreate did not return an object")
-		return
-	}
+	xfer := MakeRestoreRequest("tdr", "aptrust", bag.UUID)
+	xferResult := client.RestoreTransferCreate(xfer)
+	require.NotNil(t, xferResult)
+	require.Nil(t, xferResult.Error)
 
-	// Make sure the fields were set correctly.
-	if newXfer.FromNode != xfer.FromNode {
-		t.Errorf("FromNode is %s; expected %s", newXfer.FromNode, xfer.FromNode)
-	}
-	if newXfer.ToNode != xfer.ToNode {
-		t.Errorf("ToNode is %s; expected %s", newXfer.ToNode, xfer.ToNode)
-	}
-	if newXfer.BagId != xfer.BagId {
-		t.Errorf("UUID is %s; expected %s", newXfer.BagId, xfer.BagId)
-	}
-	if newXfer.RestoreId == "" {
-		t.Errorf("RestoreId is missing")
-	}
-	if newXfer.Status != "requested" {
-		t.Errorf("Status is %s; expected requested", newXfer.Status)
-	}
-	if newXfer.Protocol != xfer.Protocol {
-		t.Errorf("Protocol is %s; expected %s", newXfer.Protocol, xfer.Protocol)
-	}
-	if newXfer.Link != xfer.Link {
-		t.Errorf("Link is %s; expected %s", newXfer.Link, xfer.Link)
-	}
-	if newXfer.CreatedAt.IsZero() {
-		t.Errorf("CreatedAt was not set")
-	}
-	if newXfer.UpdatedAt.IsZero() {
-		t.Errorf("UpdatedAt was not set")
-	}
+	assert.Equal(t, xfer.FromNode, xferResult.Xfer.FromNode)
+	assert.Equal(t, xfer.ToNode, xferResult.Xfer.ToNode)
+	assert.Equal(t, xfer.BagId, xferResult.Xfer.BagId)
+	assert.NotEmpty(t, xferResult.Xfer.RestoreId)
+	assert.Equal(t, "requested", xferResult.Xfer.Status)
+	assert.Equal(t, xfer.Protocol, xferResult.Xfer.Protocol)
+	assert.Equal(t, xfer.Link, xferResult.Xfer.Link)
+	assert.NotEmpty(t, xferResult.Xfer.CreatedAt)
+	assert.NotEmpty(t, xferResult.Xfer.UpdatedAt)
 }
 
 func TestRestoreTransferUpdate(t *testing.T) {
@@ -783,91 +664,52 @@ func TestRestoreTransferUpdate(t *testing.T) {
 	// The transfer request must refer to an actual bag,
 	// so let's make a bag...
 	bag := MakeDPNBag()
-	dpnBag, err := client.DPNBagCreate(bag)
-	if err != nil {
-		t.Errorf("DPNBagCreate returned error %v", err)
-		return
-	}
+	dpnBagResult := client.DPNBagCreate(bag)
+	require.NotNil(t, dpnBagResult)
+	require.Nil(t, dpnBagResult.Error)
 
 	// Make sure we can create a transfer request.
-	xfer := MakeRestoreRequest("chron", "aptrust", dpnBag.UUID)
-	newXfer, err := client.RestoreTransferCreate(xfer)
-	if err != nil {
-		t.Errorf("RestoreTransferCreate returned error %v", err)
-		return
-	}
-	if newXfer == nil {
-		t.Errorf("RestoreTransferCreate did not return an object")
-		return
-	}
+	xfer := MakeRestoreRequest("chron", "aptrust", bag.UUID)
+	xferResult := client.RestoreTransferCreate(xfer)
+	require.NotNil(t, xferResult)
+	require.Nil(t, xferResult.Error)
 
 	// Reject this one...
-	newXfer.Status = "rejected"
+	xferResult.Xfer.Status = "rejected"
 
-	updatedXfer, err := client.RestoreTransferUpdate(newXfer)
-	if err != nil {
-		t.Errorf("RestoreTransferUpdate returned error %v", err)
-		return
-	}
-	if updatedXfer == nil {
-		t.Errorf("RestoreTransferUpdate did not return an object")
-		return
-	}
-
-	// ... make sure status is correct
-	if updatedXfer.Status != "rejected" {
-		t.Errorf("Status is '%s'; expected 'rejected'", updatedXfer.Status)
-	}
-
+	updatedXfer := client.RestoreTransferUpdate(xferResult.Xfer)
+	require.NotNil(t, updatedXfer)
+	require.Nil(t, updatedXfer.Error)
+	assert.Equal(t, "rejected", updatedXfer.Xfer.Status)
 
 	// Update the allowed fields. We're going to send a bad
 	// fixity value, because we don't know the good one, so
 	// the server will cancel this transfer.
+	newXfer := updatedXfer.Xfer
 	link := "rsync://blah/blah/blah/yadda/yadda/beer"
 	newXfer.Status = "prepared"
 	newXfer.Link = link
+	newXfer.UpdatedAt = time.Now().Add(1 * time.Second).UTC()
 
-	// Now that there are no milliseconds on the DPN timestamps,
-	// we have to sleep for more than 1 second to test whether
-	// UpdatedAt timestamps change after update.
-	time.Sleep(1500 * time.Millisecond)
-	newXfer.UpdatedAt = time.Now()
-
-	updatedXfer, err = client.RestoreTransferUpdate(newXfer)
-	if err != nil {
-		t.Errorf("RestoreTransferUpdate returned error %v", err)
-		return
-	}
-	if updatedXfer == nil {
-		t.Errorf("RestoreTransferUpdate did not return an object")
-		return
-	}
-
-	// Make sure values were stored...
-	if updatedXfer.Status != "prepared" {
-		t.Errorf("Status is %s; expected prepared", updatedXfer.Status)
-	}
-	if updatedXfer.Link != link {
-		t.Errorf("Status is %s; expected %s", updatedXfer.Link, link)
-	}
-	if updatedXfer.UpdatedAt.After(newXfer.UpdatedAt) == false {
-		t.Errorf("UpdatedAt was not updated")
-	}
+	updatedXfer = client.RestoreTransferUpdate(newXfer)
+	require.NotNil(t, updatedXfer)
+	require.Nil(t, updatedXfer.Error)
+	assert.Equal(t, "prepared", updatedXfer.Xfer.Status)
+	assert.Equal(t, link, updatedXfer.Xfer.Link)
+	assert.True(t, updatedXfer.Xfer.UpdatedAt.After(newXfer.UpdatedAt))
 }
 
 func TestGetRemoteClient(t *testing.T) {
 	if runRestTests(t) == false {
 		return
 	}
-	config := models.LoadConfigFile(configFile)
+	config, err := models.LoadConfigFile(configFile)
 	require.Nil(t, err)
 	client := getClient(t)
 	nodes := []string { "chron", "hathi", "sdr", "tdr" }
 	for _, node := range nodes {
-		_, err := client.GetRemoteClient(node, config)
-		if err != nil {
-			t.Errorf("Error creating remote client: %v", err)
-		}
+		_, err := client.GetRemoteClient(node, config.DPN)
+		assert.Nil(t, err)
 	}
 }
 
@@ -888,7 +730,5 @@ func testHackNullDates(jsonString string, t *testing.T) {
 	jsonBytes := []byte(jsonString)
 	hackedBytes := dpn.HackNullDates(jsonBytes)
 	json.Unmarshal(hackedBytes, &data)
-	if data["last_pull_date"] != "1980-01-01T00:00:00Z" {
-		t.Errorf("Got unexpected last_pull_date %s", data["last_pull_date"])
-	}
+	assert.Equal(t, "1980-01-01T00:00:00Z", data["last_pull_date"])
 }

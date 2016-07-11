@@ -27,7 +27,7 @@ func MakeDPNBag() (*dpn.DPNBag) {
 		Interpretive: []string{},
 		Rights: []string{},
 		ReplicatingNodes: []string{},
-		Fixities: &dpn.DPNFixity{
+		Fixities: &dpn.Fixity{
 		Sha256: randChars,
 	},
 		LocalId: fmt.Sprintf("GO-TEST-BAG-%s", youyoueyedee.String()),
