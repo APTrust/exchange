@@ -333,71 +333,22 @@ func TestDPNBagCreate(t *testing.T) {
 		return
 	}
 	client := getClient(t)
-	bag := MakeBag()
-	dpnBag, err := client.DPNBagCreate(bag)
-	if err != nil {
-		t.Errorf("DPNBagCreate returned error %v", err)
-		return
-	}
-
-	// We should get back a copy of the same bag we sent,
-	// with some additional info filled in.
-	if dpnBag.UUID != bag.UUID {
-		t.Errorf("UUIDs don't match. Ours = %s, Theirs = %s", bag.UUID, dpnBag.UUID)
-	}
-	if dpnBag.LocalId != bag.LocalId {
-		t.Errorf("LocalIds don't match. Ours = %s, Theirs = %s", bag.LocalId, dpnBag.LocalId)
-	}
-	if dpnBag.Size != bag.Size {
-		t.Errorf("Sizes don't match. Ours = %d, Theirs = %d", bag.Size, dpnBag.Size)
-	}
-	if dpnBag.FirstVersionUUID != bag.FirstVersionUUID {
-		t.Errorf("FirstVersionUUIDs don't match. Ours = %s, Theirs = %s",
-			bag.FirstVersionUUID, dpnBag.FirstVersionUUID)
-	}
-	if dpnBag.Version != bag.Version {
-		t.Errorf("Versions don't match. Ours = %d, Theirs = %d", bag.Version, dpnBag.Version)
-	}
-	if dpnBag.BagType != bag.BagType {
-		t.Errorf("BagTypes don't match. Ours = %s, Theirs = %s", bag.BagType, dpnBag.BagType)
-	}
-	if dpnBag.Fixities == nil || dpnBag.Fixities.Sha256 == "" {
-		t.Errorf("Bag fixities are missing")
-	}
-	if dpnBag.Fixities.Sha256 != bag.Fixities.Sha256 {
-		t.Errorf("Fixities don't match. Ours = %s, Theirs = %s",
-			bag.Fixities.Sha256, dpnBag.Fixities.Sha256)
-	}
-
-	// These tests really check that the server is behaving correctly,
-	// which isn't our business, but if it's not, we want to know.
-	if dpnBag.IngestNode == "" {
-		t.Errorf("IngestNode was not set")
-	}
-	if dpnBag.IngestNode != dpnBag.AdminNode {
-		t.Errorf("Ingest/Admin node mismatch. Ingest = %s, Admin = %s",
-			dpnBag.IngestNode, dpnBag.AdminNode)
-	}
-	if dpnBag.CreatedAt.IsZero() {
-		t.Errorf("CreatedAt was not set")
-	}
-	if dpnBag.UpdatedAt.IsZero() {
-		t.Errorf("UpdatedAt was not set")
-	}
-
-	// We were using Rights and Interpretive bags, but these are hold
-	// as of fall, 2015.
-	anotherBag := MakeBag()
-	//anotherBag.Rights = append(anotherBag.Rights, bag.UUID)
-	//anotherBag.Interpretive = append(anotherBag.Interpretive, bag.UUID)
-
-	dpnBag, err = client.DPNBagCreate(anotherBag)
-	if err != nil {
-		t.Errorf("DPNBagCreate returned error when creating bag " +
-			"with rights and interpretive UUIDs: %v", err)
-		return
-	}
-
+	bag := MakeDPNBag()
+	dpnBagResult := client.DPNBagCreate(bag)
+	require.NotNil(t, dpnBagResult)
+	require.Nil(t, dpnBagResult.Error)
+	assert.Equal(t, bag.UUID, dpnBagResult.Bag.UUID)
+	assert.Equal(t, bag.LocalId, dpnBagResult.Bag.LocalId)
+	assert.Equal(t, bag.Size, dpnBagResult.Bag.Size)
+	assert.Equal(t, bag.FirstVersionUUID, dpnBagResult.Bag.FirstVersionUUID)
+	assert.Equal(t, bag.Version, dpnBagResult.Bag.Version)
+	assert.Equal(t, bag.BagType, dpnBagResult.Bag.BagType)
+	require.NotNil(t, dpnBagResult.Bag.Fixities)
+	assert.Equal(t, bag.Fixities.Sha256, dpnBagResult.Bag.Fixities.Sha256)
+	assert.NotEmpty(t, dpnBagResult.Bag.IngestNode)
+	assert.Equal(t, dpnBagResult.Bag.IngestNode, dpnBagResult.Bag.AdminNode)
+	assert.NotEmpty(t, dpnBagResult.Bag.CreatedAt)
+	assert.NotEmpty(t, dpnBagResult.Bag.UpdatedAt)
 }
 
 func TestDPNBagUpdate(t *testing.T) {
@@ -405,34 +356,25 @@ func TestDPNBagUpdate(t *testing.T) {
 		return
 	}
 	client := getClient(t)
-	bag := MakeBag()
-	dpnBag, err := client.DPNBagCreate(bag)
-	if err != nil {
-		t.Errorf("DPNBagCreate returned error %v", err)
-		return
-	}
+	bag := MakeDPNBag()
+	dpnBagResult := client.DPNBagCreate(bag)
+	require.NotNil(t, dpnBagResult)
+	require.Nil(t, dpnBagResult.Error)
 
 	// We have to set UpdatedAt ahead, or the server won't update
 	// record we're sending.
 	newTimestamp := time.Now().UTC().Add(1 * time.Second).Truncate(time.Second)
 	newLocalId := fmt.Sprintf("GO-TEST-BAG-%s", uuid.NewV4().String())
 
+	dpnBag := dpnBagResult.Bag
 	dpnBag.UpdatedAt = newTimestamp
 	dpnBag.LocalId = newLocalId
 
-	updatedBag, err := client.DPNBagUpdate(dpnBag)
-	if err != nil {
-		t.Errorf("DPNBagUpdate returned error %v", err)
-		return
-	}
-	if updatedBag.UpdatedAt != newTimestamp {
-		t.Errorf("Expected UpdatedAt = '%s', got '%s'",
-			newTimestamp, updatedBag.UpdatedAt)
-	}
-	if updatedBag.LocalId != newLocalId {
-		t.Errorf("Expected LocalId '%s', got '%s'",
-			newLocalId, updatedBag.LocalId)
-	}
+	updatedBagResult := client.DPNBagUpdate(dpnBag)
+	require.NotNil(t, updatedBagResult)
+	require.Nil(t, updatedBagResult.Error)
+	assert.Equal(t, newTimestamp, updatedBagResult.Bag.UpdatedAt)
+	assert.Equal(t, newLocalId, updatedBagResult.Bag.LocalId)
 }
 
 func TestReplicationTransferGet(t *testing.T) {
@@ -440,56 +382,31 @@ func TestReplicationTransferGet(t *testing.T) {
 		return
 	}
 	client := getClient(t)
-	xfer, err := client.ReplicationTransferGet(replicationIdentifier)
-	if err != nil {
-		t.Error(err)
-		return
+	xferResult := client.ReplicationTransferGet(replicationIdentifier)
+	require.NotNil(t, xferResult)
+	require.Nil(t, xferResult.Error)
+	assert.Equal(t, "aptrust", xferResult.Xfer.FromNode)
+	assert.Equal(t, "hathi", xferResult.Xfer.ToNode)
+	assert.Equal(t, aptrustBagIdentifier, xferResult.Xfer.BagId)
+	assert.Equal(t, replicationIdentifier, xferResult.Xfer.ReplicationId)
+
+	if xferResult.Xfer.FixityNonce != nil && *xferResult.Xfer.FixityNonce != "" {
+		t.Errorf("FixityNonce: expected '', got '%s'", *xferResult.Xfer.FixityNonce)
 	}
-	if xfer.FromNode != "aptrust" {
-		t.Errorf("FromNode: expected 'aptrust', got '%s'", xfer.FromNode)
+	if xferResult.Xfer.FixityValue != nil && *xferResult.Xfer.FixityValue != "" {
+		t.Errorf("FixityValue: expected empty, got '%s'", *xferResult.Xfer.FixityValue)
 	}
-	if xfer.ToNode != "hathi" {
-		t.Errorf("ToNode: expected 'hathi', got '%s'", xfer.ToNode)
-	}
-	if xfer.BagId != aptrustBagIdentifier {
-		t.Errorf("UUID: expected '%s', got '%s'", aptrustBagIdentifier, xfer.BagId)
-	}
-	if xfer.ReplicationId != replicationIdentifier {
-		t.Errorf("ReplicationId: expected '%s', got '%s'", replicationIdentifier, xfer.ReplicationId)
-	}
-	if xfer.FixityNonce != nil && *xfer.FixityNonce != "" {
-		t.Errorf("FixityNonce: expected '', got '%s'", *xfer.FixityNonce)
-	}
-	if xfer.FixityValue != nil && *xfer.FixityValue != "" {
-		t.Errorf("FixityValue: expected empty, got '%s'", *xfer.FixityValue)
-	}
-	if xfer.FixityAlgorithm != "sha256" {
-		t.Errorf("FixityAlgorithm: expected 'sha256', got '%s'", xfer.FixityAlgorithm)
-	}
-	if *xfer.FixityAccept != true {
-		t.Errorf("FixityAccept: expected true, got %t", *xfer.FixityAccept)
-	}
-	if *xfer.BagValid != true {
-		t.Errorf("BagValid: expected true, got %s", *xfer.BagValid)
-	}
-	if xfer.Status != "stored" {
-		t.Errorf("Status: expected 'requested', got '%s'", xfer.Status)
-	}
-	if xfer.Protocol != "rsync" {
-		t.Errorf("Protocol: expected 'R', got '%s'", xfer.Protocol)
-	}
+
+	assert.Equal(t, "sha256", xferResult.Xfer.FixityAlgorithm)
+	assert.True(t, *xferResult.Xfer.FixityAccept)
+	assert.True(t, *xferResult.Xfer.BagValid)
+	assert.Equal(t, "stored", xferResult.Xfer.Status)
+	assert.Equal(t, "rsync", xferResult.Xfer.Protocol)
+
 	expectedTarName := fmt.Sprintf("%s.tar", aptrustBagIdentifier)
-	if !strings.HasSuffix(xfer.Link, expectedTarName) {
-		t.Errorf("Expected link to end with '%s', got '%s'", expectedTarName, xfer.Link)
-	}
-	if xfer.CreatedAt.Format(time.RFC3339) != "2015-09-15T19:38:31Z" {
-		t.Errorf("CreatedAt: expected '2015-09-15T19:38:31Z', got '%s'",
-			xfer.CreatedAt.Format(time.RFC3339))
-	}
-	if xfer.UpdatedAt.Format(time.RFC3339) != "2015-09-15T19:38:31Z" {
-		t.Errorf("UpdatedAt: expected '2015-09-15T19:38:31Z', got '%s'",
-			xfer.UpdatedAt.Format(time.RFC3339))
-	}
+	assert.True(t, strings.HasSuffix(xferResult.Xfer.Link, expectedTarName))
+	assert.Equal(t, "2015-09-15T19:38:31Z", xferResult.Xfer.CreatedAt.Format(time.RFC3339))
+	assert.Equal(t, "2015-09-15T19:38:31Z", xferResult.Xfer.UpdatedAt.Format(time.RFC3339))
 }
 
 func TestReplicationListGet(t *testing.T) {
@@ -497,70 +414,51 @@ func TestReplicationListGet(t *testing.T) {
 		return
 	}
 	client := getClient(t)
-	xferList, err := client.ReplicationListGet(nil)
-	if err != nil {
-		t.Error(err)
-		return
-	}
-	if xferList == nil {
-		t.Errorf("ReplicationListGet returned nil result")
-		return
-	}
-	if xferList.Count == 0 || len(xferList.Results) == 0 {
-		t.Errorf("ReplicationListGet returned zero results")
-		return
-	}
+	xferList := client.ReplicationListGet(nil)
+	require.NotNil(t, xferList)
+	require.Nil(t, xferList.Error)
+	assert.True(t, xferList.Count > 0)
+	assert.True(t, len(xferList.Results) > 0)
 
 	totalRecordCount := xferList.Count
 
 	params := &url.Values{}
 	params.Set("bag_valid", "true")
-	xferList, err = client.ReplicationListGet(params)
-	if err != nil {
-		t.Error(err)
-		return
-	}
+	xferList = client.ReplicationListGet(params)
+	require.NotNil(t, xferList)
+	require.Nil(t, xferList.Error)
+
 	params.Set("bag_valid", "false")
-	xferList, err = client.ReplicationListGet(params)
-	if err != nil {
-		t.Error(err)
-		return
-	}
+	xferList = client.ReplicationListGet(params)
+	require.NotNil(t, xferList)
+	require.Nil(t, xferList.Error)
+
 	params.Del("bag_valid")
 	params.Set("fixity_accept", "true")
-	xferList, err = client.ReplicationListGet(params)
-	if err != nil {
-		t.Error(err)
-		return
-	}
+	xferList = client.ReplicationListGet(params)
+	require.NotNil(t, xferList)
+	require.Nil(t, xferList.Error)
+
 	params.Set("fixity_accept", "false")
-	xferList, err = client.ReplicationListGet(params)
-	if err != nil {
-		t.Error(err)
-		return
-	}
+	xferList  = client.ReplicationListGet(params)
+	require.NotNil(t, xferList)
+	require.Nil(t, xferList.Error)
+
 	params.Del("fixity_accept")
 
 	aLongTimeAgo := time.Date(1999, time.December, 31, 23, 0, 0, 0, time.UTC)
 	params.Set("after", aLongTimeAgo.Format(time.RFC3339Nano))
-	xferList, err = client.ReplicationListGet(params)
-	if err != nil {
-		t.Error(err)
-		return
-	}
-	if xferList.Count != totalRecordCount {
-		t.Errorf("Expected %d records, got %d", totalRecordCount, xferList.Count)
-	}
+	xferList = client.ReplicationListGet(params)
+	require.NotNil(t, xferList)
+	require.Nil(t, xferList.Error)
+
+	assert.Equal(t, totalRecordCount, xferList.Count)
 
 	params.Set("after", time.Now().Add(1 * time.Hour).Format(time.RFC3339Nano))
-	xferList, err = client.ReplicationListGet(params)
-	if err != nil {
-		t.Error(err)
-		return
-	}
-	if xferList.Count != 0 {
-		t.Errorf("Expected 0 records, got %d", xferList.Count)
-	}
+	xferList = client.ReplicationListGet(params)
+	require.NotNil(t, xferList)
+	require.Nil(t, xferList.Error)
+	assert.Equal(t, 0, xferList.Count)
 }
 
 func TestReplicationTransferCreate(t *testing.T) {
@@ -571,70 +469,31 @@ func TestReplicationTransferCreate(t *testing.T) {
 
 	// The transfer request must refer to an actual bag,
 	// so let's make a bag...
-	bag := MakeBag()
-	dpnBag, err := client.DPNBagCreate(bag)
-	if err != nil {
-		t.Errorf("DPNBagCreate returned error %v", err)
-		return
-	}
+	bag := MakeDPNBag()
+	dpnBagResult := client.DPNBagCreate(bag)
+	require.NotNil(t, dpnBagResult)
+	require.Nil(t, dpnBagResult.Error)
 
 	// Make sure we can create a transfer request.
-	xfer := MakeXferRequest("aptrust", "chron", dpnBag.UUID)
-	newXfer, err := client.ReplicationTransferCreate(xfer)
-	if err != nil {
-		t.Errorf("ReplicationTransferCreate returned error %v", err)
-	}
-	if newXfer == nil {
-		t.Errorf("ReplicationTransferCreate did not return an object")
-		return
-	}
+	xfer := MakeXferRequest("aptrust", "chron", dpnBagResult.Bag.UUID)
+	xferResult := client.ReplicationTransferCreate(xfer)
+	require.NotNil(t, xferResult)
+	require.Nil(t, xferResult.Error)
 
-	// Make sure the fields were set correctly.
-	if newXfer.FromNode != xfer.FromNode {
-		t.Errorf("FromNode is %s; expected %s", newXfer.FromNode, xfer.FromNode)
-	}
-	if newXfer.ToNode != xfer.ToNode {
-		t.Errorf("ToNode is %s; expected %s", newXfer.ToNode, xfer.ToNode)
-	}
-	if newXfer.BagId != xfer.BagId {
-		t.Errorf("UUID is %s; expected %s", newXfer.BagId, xfer.BagId)
-	}
-	if newXfer.ReplicationId == "" {
-		t.Errorf("ReplicationId is missing")
-	}
-	if newXfer.FixityAlgorithm != xfer.FixityAlgorithm {
-		t.Errorf("FixityAlgorithm is %s; expected %s",
-			newXfer.FixityAlgorithm, xfer.FixityAlgorithm)
-	}
-	if newXfer.FixityNonce != nil {
-		t.Errorf("FixityNonce is %s; expected nil",
-			*newXfer.FixityNonce)
-	}
-	if newXfer.FixityValue != nil {
-		t.Errorf("FixityValue: expected nil but got %s",
-			*newXfer.FixityValue)
-	}
-	if newXfer.FixityAccept != nil {
-		t.Errorf("FixityAccept is %t; expected nil", *newXfer.FixityAccept)
-	}
-	if newXfer.BagValid != nil {
-		t.Errorf("BagValid is %s; expected nil", *newXfer.BagValid)
-	}
-	if newXfer.Status != "requested" {
-		t.Errorf("Status is %s; expected requested", newXfer.Status)
-	}
-	if newXfer.Protocol != xfer.Protocol {
-		t.Errorf("Protocol is %s; expected %s", newXfer.Protocol, xfer.Protocol)
-	}
-	if newXfer.Link != xfer.Link {
-		t.Errorf("Link is %s; expected %s", newXfer.Link, xfer.Link)
-	}
-	if newXfer.CreatedAt.IsZero() {
-		t.Errorf("CreatedAt was not set")
-	}
-	if newXfer.UpdatedAt.IsZero() {
-		t.Errorf("UpdatedAt was not set")
-	}
+	assert.Equal(t, xfer.FromNode, xferResult.Xfer.FromNode)
+	assert.Equal(t, xfer.ToNode, xferResult.Xfer.ToNode)
+	assert.Equal(t, xfer.BagId, xferResult.Xfer.BagId)
+	assert.NotEmpty(t, xferResult.Xfer.ReplicationId)
+	assert.Equal(t, xfer.FixityAlgorithm, xferResult.Xfer.FixityAlgorithm)
+	assert.Equal(t, xfer.FixityNonce, xferResult.Xfer.FixityNonce)
+	assert.Equal(t, xfer.FixityValue, xferResult.Xfer.FixityValue)
+	assert.Equal(t, xfer.FixityAccept, xferResult.Xfer.FixityAccept)
+	assert.Equal(t, xfer.BagValid, xferResult.Xfer.BagValid)
+	assert.Equal(t, xfer.Status, xferResult.Xfer.Status)
+	assert.Equal(t, xfer.Protocol, xferResult.Xfer.Protocol)
+	assert.Equal(t, xfer.Link, xferResult.Xfer.Link)
+	assert.NotEmpty(t, xferResult.Xfer.CreatedAt)
+	assert.NotEmpty(t, xferResult.Xfer.UpdatedAt)
 }
 
 func TestReplicationTransferUpdate(t *testing.T) {
@@ -646,7 +505,7 @@ func TestReplicationTransferUpdate(t *testing.T) {
 
 	// The transfer request must refer to an actual bag,
 	// so let's make a bag...
-	bag := MakeBag()
+	bag := MakeDPNBag()
 	dpnBag, err := client.DPNBagCreate(bag)
 	if err != nil {
 		t.Errorf("DPNBagCreate returned error %v", err)
@@ -866,7 +725,7 @@ func TestRestoreTransferCreate(t *testing.T) {
 
 	// The transfer request must refer to an actual bag,
 	// so let's make a bag...
-	bag := MakeBag()
+	bag := MakeDPNBag()
 	dpnBag, err := client.DPNBagCreate(bag)
 	if err != nil {
 		t.Errorf("DPNBagCreate returned error %v", err)
@@ -923,7 +782,7 @@ func TestRestoreTransferUpdate(t *testing.T) {
 
 	// The transfer request must refer to an actual bag,
 	// so let's make a bag...
-	bag := MakeBag()
+	bag := MakeDPNBag()
 	dpnBag, err := client.DPNBagCreate(bag)
 	if err != nil {
 		t.Errorf("DPNBagCreate returned error %v", err)

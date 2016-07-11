@@ -18,7 +18,7 @@ func awsEnvAvailable() (envVarsOk bool) {
 }
 
 // Creates a DPN bag.
-func MakeBag() (*dpn.DPNBag) {
+func MakeDPNBag() (*dpn.DPNBag) {
 	youyoueyedee := uuid.NewV4()
 	randChars := youyoueyedee.String()[0:8]
 	tenSecondsAgo := time.Now().Add(-10 * time.Second)
