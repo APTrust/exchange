@@ -297,7 +297,9 @@ func (client *DPNRestClient) dpnMemberSave(member *Member, method string) (*Memb
 		result.Error = err
 		return result
 	}
-	result.Error = json.Unmarshal(body, result.Member)
+	savedMember := &Member{}
+	result.Error = json.Unmarshal(body, savedMember)
+	result.Member = savedMember
 	return result
 }
 
@@ -322,7 +324,9 @@ func (client *DPNRestClient) NodeGet(identifier string) (*NodeResult) {
 	body = HackNullDates(body)
 
 	// Build and return the data structure
-	result.Error = json.Unmarshal(body, result.Node)
+	node := &Node{}
+	result.Error = json.Unmarshal(body, node)
+	result.Node = node
 	if result.Error == nil {
 		result.Node.LastPullDate, result.Error = client.NodeGetLastPullDate(identifier)
 	}
@@ -364,6 +368,7 @@ func (client *DPNRestClient) NodeUpdate(node *Node) (*NodeResult) {
 	relativeUrl := fmt.Sprintf("/%s/node/%s/", client.APIVersion, node.Namespace)
 	objUrl := client.BuildUrl(relativeUrl, nil)
 	postData, err := json.Marshal(node)
+	fmt.Println(string(postData))
 	if err != nil {
 		result.Error = err
 		return result
@@ -383,8 +388,9 @@ func (client *DPNRestClient) NodeUpdate(node *Node) (*NodeResult) {
 
 	// HACK! Get rid of this when Golang fixes the JSON null date problem!
 	body = HackNullDates(body)
-
-	result.Error = json.Unmarshal(body, result.Node)
+	savedNode := &Node{}
+	result.Error = json.Unmarshal(body, savedNode)
+	result.Node = savedNode
 	return result
 }
 
@@ -417,7 +423,9 @@ func (client *DPNRestClient) DPNBagGet(identifier string) (*BagResult) {
 		result.Error = err
 		return result
 	}
-	result.Error = json.Unmarshal(body, result.Bag)
+	bag := &DPNBag{}
+	result.Error = json.Unmarshal(body, bag)
+	result.Bag = bag
 	return result
 }
 
@@ -477,7 +485,9 @@ func (client *DPNRestClient) dpnBagSave(bag *DPNBag, method string) (*BagResult)
 		result.Error = err
 		return result
 	}
-	result.Error = json.Unmarshal(body, result.Bag)
+	savedBag := &DPNBag{}
+	result.Error = json.Unmarshal(body, savedBag)
+	result.Bag = savedBag
 	return result
 }
 
@@ -498,7 +508,9 @@ func (client *DPNRestClient) ReplicationTransferGet(identifier string) (*Replica
 		result.Error = err
 		return result
 	}
-	result.Error = json.Unmarshal(body, result.Xfer)
+	xfer := &ReplicationTransfer{}
+	result.Error = json.Unmarshal(body, xfer)
+	result.Xfer = xfer
 	return result
 }
 
@@ -560,7 +572,9 @@ func (client *DPNRestClient) replicationTransferSave(xfer *ReplicationTransfer, 
 		result.Error = err
 		return result
 	}
-	result.Error = json.Unmarshal(body, result.Xfer)
+	xfer = &ReplicationTransfer{}
+	result.Error = json.Unmarshal(body, xfer)
+	result.Xfer = xfer
 	return result
 }
 
@@ -581,7 +595,9 @@ func (client *DPNRestClient) RestoreTransferGet(identifier string) (*RestoreResu
 		result.Error = err
 		return result
 	}
-	result.Error = json.Unmarshal(body, result.Xfer)
+	xfer := &RestoreTransfer{}
+	result.Error = json.Unmarshal(body, xfer)
+	result.Xfer = xfer
 	return result
 }
 
@@ -640,7 +656,9 @@ func (client *DPNRestClient) restoreTransferSave(xfer *RestoreTransfer, method s
 		result.Error = err
 		return result
 	}
-	result.Error = json.Unmarshal(body, result.Xfer)
+	xfer = &RestoreTransfer{}
+	result.Error = json.Unmarshal(body, xfer)
+	result.Xfer = xfer
 	return result
 }
 

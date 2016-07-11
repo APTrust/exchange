@@ -19,7 +19,7 @@ type Node struct {
 	CreatedAt            time.Time    `json:"created_at"`
 	UpdatedAt            time.Time    `json:"updated_at"`
 	LastPullDate         time.Time    `json:"last_pull_date"`
-	Storage              *Storage  `json:"storage"`
+	Storage              *Storage     `json:"storage"`
 }
 
 
