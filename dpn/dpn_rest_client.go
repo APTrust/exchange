@@ -26,7 +26,7 @@ type DPNRestClient struct {
 	APIVersion   string
 	APIKey       string
 	Node         string
-	dpnConfig    *models.DPNConfig
+	dpnConfig    models.DPNConfig
 	httpClient   *http.Client
 	transport    *http.Transport
 }
@@ -124,7 +124,7 @@ type RestoreListResult struct {
 
 
 // Creates a new DPN REST client.
-func NewDPNRestClient(hostUrl, apiVersion, apiKey, node string, dpnConfig *models.DPNConfig) (*DPNRestClient, error) {
+func NewDPNRestClient(hostUrl, apiVersion, apiKey, node string, dpnConfig models.DPNConfig) (*DPNRestClient, error) {
 	cookieJar, err := cookiejar.New(nil)
 	if err != nil {
 		return nil, fmt.Errorf("Can't create cookie jar for DPN REST client: %v", err)
@@ -652,7 +652,7 @@ func (client *DPNRestClient) restoreTransferSave(xfer *RestoreTransfer, method s
 // and API key. We use this function to get a client that can
 // update a replication request or a restore request on the
 // originating node.
-func (client *DPNRestClient) GetRemoteClient(remoteNodeNamespace string, dpnConfig *models.DPNConfig) (*DPNRestClient, error) {
+func (client *DPNRestClient) GetRemoteClient(remoteNodeNamespace string, dpnConfig models.DPNConfig) (*DPNRestClient, error) {
 	nodeResult := client.NodeGet(remoteNodeNamespace)
 	if nodeResult.Error != nil {
 		detailedError := fmt.Errorf("Error retrieving node record for '%s' "+

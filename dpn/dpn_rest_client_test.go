@@ -84,7 +84,7 @@ func getRemoteClient(t *testing.T, namespace string) (*dpn.DPNRestClient) {
 	if err != nil {
 		t.Errorf("Error constructing DPN REST client: %v", err)
 	}
-	remoteClient, err := client.GetRemoteClient(namespace, config)
+	remoteClient, err := client.GetRemoteClient(namespace, config.DPN)
 	if err != nil {
 		t.Errorf("Error constructing remote DPN REST client for node %s: %v",
 			namespace, err)
@@ -134,10 +134,10 @@ func TestNodeListGet(t *testing.T) {
 		return
 	}
 	client := getClient(t)
-	nodeList, err := client.NodeListGet(nil)
+	nodeList := client.NodeListGet(nil)
 	require.Nil(t, nodeList.Error)
 	require.NotEmpty(t, nodeList.Results)
-	assert.Equal(t, 5, nodeList.Results.Count)
+	assert.Equal(t, 5, nodeList.Count)
 	assert.Equal(t, 5, len(nodeList.Results))
 	assert.NotNil(t, nodeList.Request)
 	assert.NotNil(t, nodeList.Response)
@@ -163,7 +163,7 @@ func TestNodeUpdate(t *testing.T) {
 		newName[i] = c;
     }
 	result.Node.Name = string(newName)
-	savedNodeResult = client.NodeUpdate(result.Node)
+	savedNodeResult := client.NodeUpdate(result.Node)
 	require.Nil(t, savedNodeResult.Error)
 	require.NotNil(t, savedNodeResult.Node)
 	assert.NotNil(t, savedNodeResult.Request)
@@ -181,7 +181,7 @@ func TestNodeGetLastPullDate(t *testing.T) {
 	client := getClient(t)
 	nodes := []string{"tdr", "sdr", "hathi", "chron"}
 	for _, node := range nodes {
-		lastPull, err := client.DPNGetLastPullDate(node)
+		lastPull, err := client.NodeGetLastPullDate(node)
 		if err != nil {
 			t.Errorf("Error getting last pull date for %s: %v", node, err)
 		}
@@ -249,28 +249,16 @@ func TestMemberUpdate(t *testing.T) {
 		return
 	}
 	client := getClient(t)
-	member, err := client.MemberGet(memberIdentifier)
-	if err != nil {
-		t.Errorf("MemberGet returned error: %v", err)
-	}
-	if member == nil {
-		t.Errorf("MemberGet returned nothing")
-		return
-	}
+	memberResult := client.MemberGet(memberIdentifier)
+	require.NotNil(t, memberResult)
+	require.Nil(t, memberResult.Error)
 	newName := fmt.Sprintf("GO-UPDATED-%s", uuid.NewV4().String())
-	member.Name = newName
-	member.UpdatedAt = time.Now().UTC().Truncate(time.Second)
-	newMember, err := client.MemberUpdate(member)
-	if err != nil {
-		t.Errorf("MemberGet returned error: %v", err)
-	}
-	if newMember == nil {
-		t.Errorf("MemberGet returned nothing")
-		return
-	}
-	if newMember.Name != newName {
-		t.Errorf("New member Name was not updated correctly")
-	}
+	memberResult.Member.Name = newName
+	memberResult.Member.UpdatedAt = time.Now().UTC().Truncate(time.Second)
+	newMemberResult := client.MemberUpdate(memberResult.Member)
+	require.NotNil(t, newMemberResult)
+	require.Nil(t, newMemberResult.Error)
+	assert.Equal(t, newName, newMemberResult.Member.Name)
 }
 
 func TestDPNBagGet(t *testing.T) {
@@ -278,86 +266,26 @@ func TestDPNBagGet(t *testing.T) {
 		return
 	}
 	client := getClient(t)
-	dpnBag, err := client.DPNBagGet(aptrustBagIdentifier)
-	if err != nil {
-		t.Error(err)
-		return
-	}
-	if dpnBag.UUID != aptrustBagIdentifier {
-		t.Errorf("UUID: expected '%s', got '%s'", aptrustBagIdentifier, dpnBag.UUID)
-	}
-	if dpnBag.LocalId != "APTrust Bag 1" {
-		t.Errorf("LocalId: expected 'APTrust Bag 1', got '%s'", dpnBag.LocalId)
-	}
-	if dpnBag.Size != 71680 {
-		t.Errorf("Size: expected 71680, got %d", dpnBag.Size)
-	}
-	if dpnBag.FirstVersionUUID != aptrustBagIdentifier {
-		t.Errorf("FirstVersionUUID: expected '%s', got '%s'",
-			aptrustBagIdentifier, dpnBag.FirstVersionUUID)
-	}
-	if dpnBag.BagType != "D" {
-		t.Errorf("BagType: expected 'D', got '%s'", dpnBag.BagType)
-	}
-	if dpnBag.Version != 1 {
-		t.Errorf("Version: expected 1, got %d", dpnBag.Version)
-	}
-	if dpnBag.IngestNode != "aptrust" {
-		t.Errorf("IngestNode: expected 'aptrust', got '%s'", dpnBag.IngestNode)
-	}
-	if dpnBag.AdminNode != "aptrust" {
-		t.Errorf("AdminNode: expected 'aptrust', got '%s'", dpnBag.AdminNode)
-	}
-	if dpnBag.CreatedAt.Format(time.RFC3339) != "2015-09-15T17:56:03Z" {
-		t.Errorf("CreatedAt: expected '2015-09-15T17:56:03Z', got '%s'",
-			dpnBag.CreatedAt.Format(time.RFC3339))
-	}
-	if dpnBag.UpdatedAt.Format(time.RFC3339) != "2015-09-15T17:56:03Z" {
-		t.Errorf("UpdatedAt: expected '2015-09-15T17:56:03Z', got '%s'",
-			dpnBag.UpdatedAt.Format(time.RFC3339))
-	}
-	//
-	// TODO - We're not using Rights/Interpretive bags at launch. If that changes,
-    //        Add Rights/Interpretive to this test object and then uncomment the
-	//        following tests.
-	//
-	// if len(dpnBag.Rights) != 1 {
-	// t.Errorf("Rights: expected 1 item, got %d", len(dpnBag.Rights))
-	// }
-	// if dpnBag.Rights[0] != "ff297922-a5b2-4b66-9475-3ce98b074d37" {
-	// t.Errorf("Rights[0]: expected 'ff297922-a5b2-4b66-9475-3ce98b074d37', got '%s'",
-	// dpnBag.Rights[0])
-	// }
-	// if len(dpnBag.Interpretive) != 1 {
-	// t.Errorf("Interpretive: expected 1 item, got %d", len(dpnBag.Interpretive))
-	// }
-	// if dpnBag.Interpretive[0] != "821decbb-4063-48b1-adef-1d3906bf7b87" {
-	// t.Errorf("Interpretive[0]: expected '821decbb-4063-48b1-adef-1d3906bf7b87', got '%s'",
-	// dpnBag.Interpretive[0])
-	// }
-	if len(dpnBag.ReplicatingNodes) != 2 {
-		t.Errorf("ReplicatingNodes: expected 2 items, got %d", len(dpnBag.ReplicatingNodes))
-	}
-	if len(dpnBag.ReplicatingNodes) == 0 {
-		t.Errorf("Got zero replicating nodes. Abandoning test.")
-		return
-	}
-	if dpnBag.ReplicatingNodes[0] != "chron" {
-		t.Errorf("ReplicatingNodes[0]: expected 'chron', got '%s'",
-			dpnBag.ReplicatingNodes[0])
-	}
-	if dpnBag.ReplicatingNodes[1] != "hathi" {
-		t.Errorf("ReplicatingNodes[1]: expected 'hathi', got '%s'",
-			dpnBag.ReplicatingNodes[1])
-	}
-	if dpnBag.Fixities == nil || dpnBag.Fixities.Sha256 == "" {
-		t.Errorf("Fixities: should not be empty")
-	}
-	expectedFixity := "7569cf2d4bcd8b000b75bcbca82512be6e34f90f5a5479ccf7322b4d56825fde"
-	if dpnBag.Fixities.Sha256 != expectedFixity {
-		t.Errorf("Fixities.Sha256: expected '%s', got '%s'",
-			expectedFixity, dpnBag.Fixities.Sha256)
-	}
+	bagResult := client.DPNBagGet(aptrustBagIdentifier)
+	require.NotNil(t, bagResult)
+	require.Nil(t, bagResult.Error)
+	assert.Equal(t, aptrustBagIdentifier, bagResult.Bag.UUID)
+	assert.Equal(t, "APTrust Bag 1", bagResult.Bag.LocalId)
+	assert.EqualValues(t, 71680, bagResult.Bag.Size)
+	assert.Equal(t, aptrustBagIdentifier, bagResult.Bag.FirstVersionUUID)
+	assert.Equal(t, "D", bagResult.Bag.BagType)
+	assert.Equal(t, 1, bagResult.Bag.Version)
+	assert.Equal(t, "aptrust", bagResult.Bag.IngestNode)
+	assert.Equal(t, "aptrust", bagResult.Bag.AdminNode)
+	assert.Equal(t, "2015-09-15T17:56:03Z", bagResult.Bag.CreatedAt.Format(time.RFC3339))
+	assert.Equal(t, "2015-09-15T17:56:03Z", bagResult.Bag.UpdatedAt.Format(time.RFC3339))
+	assert.Equal(t, 2, len(bagResult.Bag.ReplicatingNodes))
+	require.True(t, len(bagResult.Bag.ReplicatingNodes) > 1)
+	assert.Equal(t, "chron", bagResult.Bag.ReplicatingNodes[0])
+	assert.Equal(t, "hathi", bagResult.Bag.ReplicatingNodes[1])
+	require.NotNil(t, bagResult.Bag.Fixities)
+	assert.Equal(t, "7569cf2d4bcd8b000b75bcbca82512be6e34f90f5a5479ccf7322b4d56825fde",
+		bagResult.Bag.Fixities.Sha256)
 }
 
 func TestDPNBagListGet(t *testing.T) {
@@ -365,15 +293,10 @@ func TestDPNBagListGet(t *testing.T) {
 		return
 	}
 	client := getClient(t)
-	bagList, err := client.DPNBagListGet(nil)
-	if err != nil {
-		t.Error(err)
-		return
-	}
-	if bagList == nil {
-		t.Errorf("DPNBagListGet returned nil result")
-		return
-	}
+	bagList := client.DPNBagListGet(nil)
+	require.NotNil(t, bagList)
+	require.Nil(t, bagList.Error)
+
 	unfilteredCount := bagList.Count
 	if unfilteredCount == 0 {
 		t.Errorf("DPNBagListGet returned zero results. Are there any bags in the registry?")
@@ -392,26 +315,17 @@ func TestDPNBagListGet(t *testing.T) {
 	aLongTimeAgo := time.Date(1999, time.December, 31, 23, 0, 0, 0, time.UTC)
 	params := url.Values{}
 	params.Set("after", aLongTimeAgo.Format(time.RFC3339Nano))
-	bagList, err = client.DPNBagListGet(&params)
-	if err != nil {
-		t.Error(err)
-		return
-	}
-	if bagList.Count != unfilteredCount {
-		t.Errorf("Filter by 'after' returned %d results, expected %d", bagList.Count, unfilteredCount)
-	}
+	bagList = client.DPNBagListGet(&params)
+	require.NotNil(t, bagList)
+	require.Nil(t, bagList.Error)
+	assert.Equal(t, unfilteredCount, bagList.Count)
 
 	// Get all bags updated after 1 hour from now
 	params.Set("after", time.Now().Add(1 * time.Hour).Format(time.RFC3339Nano))
-	bagList, err = client.DPNBagListGet(&params)
-	if err != nil {
-		t.Error(err)
-		return
-	}
-	if bagList.Count != 0 {
-		t.Errorf("Filter by 'after' returned %d results, expected 0", bagList.Count)
-	}
-
+	bagList = client.DPNBagListGet(&params)
+	require.NotNil(t, bagList)
+	require.Nil(t, bagList.Error)
+	assert.Equal(t, 0, bagList.Count)
 }
 
 func TestDPNBagCreate(t *testing.T) {
