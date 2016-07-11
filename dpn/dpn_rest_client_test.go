@@ -556,17 +556,19 @@ func TestReplicationTransferUpdate(t *testing.T) {
 	require.Nil(t, updatedXfer.Error)
 	require.NotNil(t, updatedXfer.Xfer.FixityValue)
 	assert.Equal(t, "1234567890", *updatedXfer.Xfer.FixityValue)
+
 	// -----------------------------------------------------------------
-	// TODO: Figure out why the DPN server isn't setting updated_at
-	// to what we expect. The server sets it to 1 second earlier than
-	// what we say.
+	// TODO: Figure out why FixityAccept is nil.
+	// Verified that JSON from the server has a null value here,
+	// so the problem is not on our end.
 	// -----------------------------------------------------------------
-    //	require.NotNil(t, updatedXfer.Xfer.FixityAccept)
-    //	assert.False(t, *updatedXfer.Xfer.FixityAccept)
+    //require.NotNil(t, updatedXfer.Xfer.FixityAccept)
+    //assert.False(t, *updatedXfer.Xfer.FixityAccept)
+
 	require.NotNil(t, updatedXfer.Xfer.BagValid)
 	assert.True(t, *updatedXfer.Xfer.BagValid)
-	assert.Equal(t, "cancelled", updatedXfer.Xfer.Status)
-	assert.True(t, updatedXfer.Xfer.UpdatedAt.After(newXfer.UpdatedAt))
+	assert.Equal(t, "confirmed", updatedXfer.Xfer.Status)
+	assert.True(t, updatedXfer.Xfer.UpdatedAt.UTC().Unix() >= newXfer.UpdatedAt.UTC().Unix())
 }
 
 func TestRestoreTransferGet(t *testing.T) {

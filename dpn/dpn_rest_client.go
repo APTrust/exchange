@@ -208,7 +208,9 @@ func (client *DPNRestClient) MemberGet(identifier string) (*MemberResult) {
 	}
 
 	// Build and return the data structure
-	result.Error = json.Unmarshal(body, result.Member)
+	member := &Member{}
+	result.Error = json.Unmarshal(body, member)
+	result.Member = member
 	return result
 }
 
