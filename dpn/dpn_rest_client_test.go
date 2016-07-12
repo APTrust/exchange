@@ -731,6 +731,21 @@ func TestGetRemoteClient(t *testing.T) {
 	}
 }
 
+func TestGetRemoteClients(t *testing.T) {
+	if runRestTests(t) == false {
+		return
+	}
+	client := getClient(t)
+	remoteClients, err := client.GetRemoteClients()
+	require.NotNil(t, err)
+	nodes := []string { "chron", "hathi", "sdr", "tdr" }
+	for _, node := range nodes {
+		remoteClient := remoteClients[node]
+		assert.NotNil(t, remoteClient)
+		assert.Equal(t, node, remoteClient.Node)
+	}
+}
+
 func TestHackNullDates(t *testing.T) {
 	jsonString := `{ "id": 5, "last_pull_date": null }`
 	testHackNullDates(jsonString, t)

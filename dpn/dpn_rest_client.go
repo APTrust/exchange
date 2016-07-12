@@ -163,6 +163,26 @@ func NewDPNRestClient(hostUrl, apiVersion, apiKey, node string, dpnConfig models
 	return client, nil
 }
 
+// GetRemoteClients returns a map of clients that can connect to remote
+// DPN REST services. These clients are used to pull data from other nodes
+// and to update the status of replication and restore requests on other
+// nodes. The key in the returned map is the remote node's namespace. The
+// value is a pointer to a client object that connects to that node.
+//
+// This will return ONLY those clients for whom the config file contains
+// a RemoteNodeToken entry, because it's impossible to connect to a remote
+// node without a token.
+func (client *DPNRestClient) GetRemoteClients() (map[string]*DPNRestClient, error) {
+	remoteClients := make(map[string]*DPNRestClient)
+	for namespace, _ := range client.dpnConfig.RemoteNodeTokens {
+		remoteClient, err := client.GetRemoteClient(namespace, client.dpnConfig)
+		if err != nil {
+			return nil, fmt.Errorf("Error creating remote client for node %s: %v", namespace, err)
+		}
+		remoteClients[namespace] = remoteClient
+	}
+	return remoteClients, nil
+}
 
 // BuildUrl combines the host and protocol in client.HostUrl with
 // relativeUrl to create an absolute URL. For example, if client.HostUrl
