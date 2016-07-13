@@ -8,11 +8,12 @@ import (
 	"testing"
 )
 
-func TestClaimedReserveRelease(t *testing.T) {
+func TestClaimedReserveReleasePath(t *testing.T) {
 	_, filename, _, _ := runtime.Caller(0)
 	volume, err := models.NewVolume(filename)
 	require.Nil(t, err)
 	assert.EqualValues(t, 0, volume.ClaimedSpace())
+	assert.Equal(t, filename, volume.Path())
 
 	err = volume.Reserve("/path/to/file_0", 1000)
 	require.Nil(t, err)
@@ -63,4 +64,26 @@ func TestVolume(t *testing.T) {
 	// Now we should have enough space for this.
 	err = volume.Reserve("/path/to/file_4", numBytes * 2)
 	require.Nil(t, err)
+}
+
+func TestReservations(t *testing.T) {
+	_, filename, _, _ := runtime.Caller(0)
+	volume, err := models.NewVolume(filename)
+	require.Nil(t, err)
+
+	paths := []string{"p1", "p2", "p3", "p4", "p5"}
+	for i, path := range paths {
+		err = volume.Reserve(path, uint64(1000 + i))
+		assert.Nil(t, err)
+	}
+	reservations := volume.Reservations()
+	require.Equal(t, len(paths), len(reservations))
+	for i, path := range paths {
+		bytes, keyExists := reservations[path]
+		assert.True(t, keyExists)
+		assert.EqualValues(t, uint64(1000 + i), bytes)
+		// Releasing path should remove it from reservations
+		volume.Release(path)
+	}
+	assert.Empty(t, volume.Reservations())
 }
