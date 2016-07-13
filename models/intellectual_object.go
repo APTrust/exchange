@@ -35,7 +35,10 @@ type IntellectualObject struct {
 	CreatedAt              time.Time      `json:"created_at"`
 	UpdatedAt              time.Time      `json:"updated_at"`
 
-	// Exchange fields. These do not go to Pharos.
+	// The following are fields populated and used by the Exchange
+	// ingest code on ingest only. These fields are not stored in
+	// Pharos, and will not be populated on any IntellectualObject
+	// retrieved from Pharos.
 	IngestS3Bucket         string         `json:"ingest_s3_bucket"`
 	IngestS3Key            string         `json:"ingest_s3_key"`
 	IngestTarFilePath      string         `json:"ingest_tar_file_path"`
@@ -49,7 +52,7 @@ type IntellectualObject struct {
 	IngestFilesIgnored     []string       `json:"ingest_files_ignored"`
 	IngestTags             []*Tag         `json:"ingest_tags"`
 	IngestMissingFiles     []*MissingFile `json:"ingest_missing_files"`
-	IngestTopLevelDirNames []string     `json:"ingest_top_level_dir_names"`
+	IngestTopLevelDirNames []string       `json:"ingest_top_level_dir_names"`
 	IngestErrorMessage     string         `json:"ingest_error_message"`
 
 	genericFileMap         map[string]*GenericFile
