@@ -85,8 +85,11 @@ type GenericFile struct {
 
 
 	// ----------------------------------------------------
-	// The fields below are for internal housekeeping.
-	// We don't send this data to Pharos.
+	// The fields below are for internal housekeeping
+	// during the ingest process. We don't send this data
+	// to Pharos, and none of the Ingest fields will be
+	// populated on GenericFile objects retrieved from
+	// Pharos.
 	// ----------------------------------------------------
 
 
@@ -170,6 +173,40 @@ type GenericFile struct {
 
 	// File Mode/Permissions (unreliable)
 	IngestFileMode               int64          `json:"ingest_file_mode"`
+
+	// ----------------------------------------------------
+	// The fields below are for internal housekeeping
+	// during the restoration, fixity checking, and DPN
+	// packaging processes, during which Exchange services
+	// download files from long-term storage to run fixity
+	// or to rebuild a bag from its component files. The
+	// Fetch fields are not saved in Pharos,
+	// and GenericFiles retrieved from Pharos will not have
+	// Fetch data. Exchange populates those fields
+	// as necessary, according to the work it's doing.
+	// ----------------------------------------------------
+
+	// FetchLocalPath is the path on the local file system where we
+	// saved this file after retrieving it from S3 long-term storage.
+	// We only set this when we fetch files to be restored or to be
+	// packaged into a DPN bag. When we fetch files for fixity checking,
+	// we stream them to /dev/null, because we're only interested in
+	// computing a checksum.
+	FetchLocalPath              string         `json:"fetch_local_path"`
+
+	// FetchMd5Value is the md5 digest we computed on the file we pulled
+	// down from S3. This is supposed to match the file's known md5 fixity
+	// value.
+	FetchMd5Value               string         `json:"fetch_md5_value"`
+
+	// FetchSha256Value is the sha256 digest we computed on the file we
+	// pulled down from S3. This should match the known sha256 digest.
+	FetchSha256Value            string         `json:"fetch_sha256_value"`
+
+	// FetchErrorMessage describes any error that occured during the
+	// fetch process, including network errors, object not found, no disk
+	// space, fixity mismatches, etc.
+	FetchErrorMessage           string         `json:"fetch_error_message"`
 }
 
 func NewGenericFile() (*GenericFile) {
