@@ -2,42 +2,27 @@ package models_test
 
 import (
 	"github.com/APTrust/exchange/models"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"runtime"
 	"testing"
 )
 
-func TestInitialFreeSpace(t *testing.T) {
-	_, filename, _, _ := runtime.Caller(0)
-	volume, err := models.NewVolume(filename)
-	if err != nil {
-		t.Errorf("Cannot get file system's available space: %v\n", err)
-	}
-	initialSpace := volume.InitialFreeSpace()
-	if initialSpace <= 0 {
-		t.Error("InitialSpace() returned zero")
-	}
-}
-
 func TestClaimedReserveRelease(t *testing.T) {
 	_, filename, _, _ := runtime.Caller(0)
 	volume, err := models.NewVolume(filename)
-	if err != nil {
-		t.Errorf("Cannot get file system's available space: %v\n", err)
-	}
-	if volume.ClaimedSpace() != 0 {
-		t.Error("Claimed space should be zero")
-	}
-	err = volume.Reserve(1000)
-	if err != nil {
-		t.Errorf("Reserve returned error: %v\n", err)
-	}
-	if volume.ClaimedSpace() != 1000 {
-		t.Errorf("Claimed space should be 1000, returned %d", volume.ClaimedSpace())
-	}
-	volume.Release(1000)
-	if volume.ClaimedSpace() != 0 {
-		t.Error("Claimed space should be zero")
-	}
+	require.Nil(t, err)
+	assert.EqualValues(t, 0, volume.ClaimedSpace())
+
+	err = volume.Reserve("/path/to/file_0", 1000)
+	require.Nil(t, err)
+	assert.EqualValues(t, 1000, volume.ClaimedSpace())
+
+	volume.Release("/this/file/was/never/reserved")
+	assert.EqualValues(t, 1000, volume.ClaimedSpace())
+
+	volume.Release("/path/to/file_0")
+	assert.EqualValues(t, 0, volume.ClaimedSpace())
 }
 
 // This functional/behavioral test goes through some more realistic
@@ -45,54 +30,37 @@ func TestClaimedReserveRelease(t *testing.T) {
 func TestVolume(t *testing.T) {
 	_, filename, _, _ := runtime.Caller(0)
 	volume, err := models.NewVolume(filename)
-	if err != nil {
-		t.Errorf("Cannot get file system's available space: %v\n", err)
-	}
+	require.Nil(t, err)
 
 	// Make sure we can reserve space that's actually there.
-	initialSpace := volume.InitialFreeSpace()
+	initialSpace, err := volume.AvailableSpace()
+	require.Nil(t, err)
 	numBytes := initialSpace / 3
-	err = volume.Reserve(numBytes)
-	if err != nil {
-		t.Errorf("Reserve rejected first reservation request: %v", err)
-	}
-	err = volume.Reserve(numBytes)
-	if err != nil {
-		t.Errorf("Reserve rejected second reservation request: %v", err)
-	}
+	err = volume.Reserve("/path/to/file_1", numBytes)
+	require.Nil(t, err)
+	err = volume.Reserve("/path/to/file_2", numBytes)
+	require.Nil(t, err)
 
 	// Make sure we're tracking the available space correctly.
-	bytesAvailable := volume.AvailableSpace()
-	if err != nil {
-		t.Errorf("AvailableSpace() returned error: %v", err)
-	}
+	bytesAvailable, err := volume.AvailableSpace()
+	require.Nil(t, err)
 	expectedBytesAvailable := (initialSpace - (2 * numBytes))
-	if bytesAvailable != expectedBytesAvailable {
-		t.Errorf("Available space was calculated incorrectly after Reserve: was %d, expected %d",
-			bytesAvailable, expectedBytesAvailable)
-	}
+	assert.Equal(t, expectedBytesAvailable, bytesAvailable)
 
 	// Make sure a request for too much space is rejected
-	err = volume.Reserve(numBytes * 2)
-	if err == nil {
-		t.Error("Reserve should have rejected third reservation request")
-	}
+	err = volume.Reserve("/path/to/file_3", numBytes * 2)
+	require.NotNil(t, err)
 
 	// Free the two chunks of space we just requested.
-	volume.Release(numBytes)
-	volume.Release(numBytes)
+	volume.Release("/path/to/file_1")
+	volume.Release("/path/to/file_2")
 
 	// Make sure it was freed.
-	if volume.AvailableSpace() != volume.InitialFreeSpace() {
-		t.Errorf("Available space was calculated incorrectly after Release: "+
-			"was %d, expected something close to %d",
-			volume.AvailableSpace(), volume.InitialFreeSpace())
-	}
+	bytesAvailable, err = volume.AvailableSpace()
+	require.Nil(t, err)
+	assert.Equal(t, initialSpace, bytesAvailable)
 
 	// Now we should have enough space for this.
-	err = volume.Reserve(numBytes * 2)
-	if err != nil {
-		t.Errorf("Reserve rejected final reservation request: %v", err)
-	}
-
+	err = volume.Reserve("/path/to/file_4", numBytes * 2)
+	require.Nil(t, err)
 }

@@ -7,6 +7,7 @@ package models
 
 import (
 	"fmt"
+	"sync"
 	"syscall"
 )
 
@@ -18,9 +19,10 @@ import (
 // avoid downloading 100GB files when we know ahead of time that
 // we don't have enough space to process them.
 type Volume struct {
-	path        string
-	initialFree uint64
-	claimed     uint64
+	path         string
+	mutex        *sync.Mutex
+	claimed      uint64
+	reservations map[string]uint64
 }
 
 // Creates a new Volume object to track free and used space on
@@ -28,12 +30,9 @@ type Volume struct {
 func NewVolume(path string) (*Volume, error) {
 	volume := &Volume{}
 	volume.path = path
-	volume.claimed = 0
-	initialFree, err := volume.currentFreeSpace()
-	if err != nil {
-		return nil, err
-	}
-	volume.initialFree = initialFree
+	volume.claimed = uint64(0)
+	volume.mutex = &sync.Mutex{}
+	volume.reservations = make(map[string]uint64)
 	return volume, nil
 }
 
@@ -47,16 +46,8 @@ func (volume *Volume) Path() (string) {
 	return volume.path
 }
 
-// InitialFreeSpace returns the number of bytes available to an
-// unprivileged user on the volume at the time the Volume struct
-// was initialized.
-func (volume *Volume) InitialFreeSpace() (numBytes uint64) {
-	return volume.initialFree
-}
-
-// Claimed space returns the number of bytes reserved for pending
-// operations, including downloading and untarring bag archives.
-func (volume *Volume) ClaimedSpace() (numBytes uint64) {
+// Returns the number of bytes claimed but not yet written to disk.
+func (volume *Volume) ClaimedSpace() (uint64) {
 	return volume.claimed
 }
 
@@ -79,14 +70,13 @@ func (volume *Volume) currentFreeSpace() (numBytes uint64, err error) {
 // number of bytes reserved for pending processes. The value returned
 // will never be 100% accurate, because other processes may be writing
 // to the volume.
-func (volume *Volume) AvailableSpace() (numBytes uint64) {
-	available := volume.initialFree
-	currentlyAvailable, err := volume.currentFreeSpace()
-	if err == nil {
-		available = currentlyAvailable
+func (volume *Volume) AvailableSpace() (uint64, error) {
+	available, err := volume.currentFreeSpace()
+	if err != nil {
+		return uint64(0), err
 	}
-	numBytes = available - volume.claimed
-	return numBytes
+	numBytes := available - volume.claimed
+	return numBytes, nil
 }
 
 // Reserve requests that a number of bytes on disk be reserved for an
@@ -95,22 +85,38 @@ func (volume *Volume) AvailableSpace() (numBytes uint64) {
 // simply allows the Volume struct to maintain some internal bookkeeping.
 // Reserve will return an error if there is not enough free disk space to
 // accomodate the requested number of bytes.
-func (volume *Volume) Reserve(numBytes uint64) (err error) {
-	available := volume.AvailableSpace()
+func (volume *Volume) Reserve(path string, numBytes uint64) (error) {
+	available, err := volume.AvailableSpace()
+	if err != nil {
+		return err
+	}
 	if numBytes >= available {
 		err = fmt.Errorf("Requested %d bytes on volume, "+
 			"but only %d are available", numBytes, available)
 	} else {
+		volume.mutex.Lock()
+		volume.reservations[path] = numBytes
 		volume.claimed += numBytes
+		volume.mutex.Unlock()
 	}
 	return err
 }
 
-// Release tells the Volume struct that numBytes have been deleted from
-// the underlying volume and are free to be reused later.
-func (volume *Volume) Release(numBytes uint64) {
-	if numBytes > volume.claimed {
-		panic("Volume.claimed should not be less than zero!")
+// Release tells the Volume that the bytes no longer need to be
+// reserved. This could be because they have already been written
+// (and hence will show up in volume.currentFreeSpace()) or because
+// the bytes will not be written at all.
+func (volume *Volume) Release(path string) {
+	volume.mutex.Lock()
+	numBytes, ok := volume.reservations[path]
+	if ok {
+		volume.claimed -= numBytes
 	}
-	volume.claimed = volume.claimed - numBytes
+	delete(volume.reservations, path)
+	volume.mutex.Unlock()
+}
+
+// This is for reporting and debugging.
+func (volume *Volume) Reservations() (map[string]uint64) {
+	return volume.reservations
 }
