@@ -233,6 +233,23 @@ func (builder *BagBuilder) buildAPTrustBagIt()  {
 		APTRUST_BAGIT_ENCODING))
 }
 
+// AddTagFile creates a new tag file and adds it to the bag,
+// one level up from the data directory. After you add the tag
+// file, you can programmatically define its contents by calling
+//
+// if err := builder.AddTagfile("bag-info.txt"); err != nil {
+//    return err
+// }
+// tagFile, err := builder.Bag.TagFile("bag-info.txt")
+// if err != nil {
+//    return err
+// }
+//
+// tagFile.Data.AddField(*bagins.NewTagField("Source-Organization", "uva.edu"))
+// tagFile.Data.AddField(*bagins.NewTagField("Bag-Count", "1"))
+//
+// If you want to copy an existing file into your bag as a tag file, use
+// builder.Bag.AddCustomTagFile(absSourcePath, relDestPath string)
 func (builder *BagBuilder) AddTagFile(tagFileName string) (*bagins.TagFile, error) {
 	err := builder.Bag.AddTagfile(tagFileName)
 	if err != nil {
