@@ -19,31 +19,28 @@ import (
 // avoid downloading 100GB files when we know ahead of time that
 // we don't have enough space to process them.
 type Volume struct {
-	path         string
+	mountPoint   string
 	mutex        *sync.Mutex
 	claimed      uint64
 	reservations map[string]uint64
 }
 
 // Creates a new Volume object to track free and used space on
-// a volume (disk).
-func NewVolume(path string) (*Volume, error) {
+// a volume (disk). Param mountPoint is the point at which the
+// volume is mounted. The volume itself can be a physical disk
+// or a logical partition.
+func NewVolume(mountPoint string) (*Volume) {
 	volume := &Volume{}
-	volume.path = path
+	volume.mountPoint = mountPoint
 	volume.claimed = uint64(0)
 	volume.mutex = &sync.Mutex{}
 	volume.reservations = make(map[string]uint64)
-	return volume, nil
+	return volume
 }
 
-// Returns the path to the volume. This path may actually point
-// to a subdirectory within the volume, but all stats will be
-// for the volume itself. For example, if path is
-// /mnt/dpn/staging, the actual mounted volume may be at
-// /mnt/dpn, and the stats this object returns will be for
-// the volume at /mnt/dpn.
-func (volume *Volume) Path() (string) {
-	return volume.path
+// Returns the mountPoint to the volume.
+func (volume *Volume) MountPoint() (string) {
+	return volume.mountPoint
 }
 
 // Returns the number of bytes claimed but not yet written to disk.
@@ -57,7 +54,7 @@ func (volume *Volume) ClaimedSpace() (uint64) {
 // take into account the number of bytes reserved for pending operations.
 func (volume *Volume) currentFreeSpace() (numBytes uint64, err error) {
 	stat := &syscall.Statfs_t{}
-	err = syscall.Statfs(volume.path, stat)
+	err = syscall.Statfs(volume.mountPoint, stat)
 	if err != nil {
 		return 0, err
 	}
@@ -120,3 +117,19 @@ func (volume *Volume) Release(path string) {
 func (volume *Volume) Reservations() (map[string]uint64) {
 	return volume.reservations
 }
+
+//
+// TODO: Reimplement!
+// Find a way to do this without passing vars through to the shell.
+// That's just unsafe, since the volume service will be taking
+// input from http requests.
+//
+// func GetMountPointFromPath (path string) (string, error) {
+// 	// Make sure path is safe!!!
+// 	cmd := ""
+// 	if runtime.GOOS == 'linux' {
+// 		cmd = fmt.Sprintf(`df -P "%s" | tail -1 | awk '{ print $6 }'`, path)
+// 	} else if runtime.GOOS == 'darwin' {
+// 		cmd = fmt.Sprintf(`df -P "%s" | tail -1 | awk '{ print $7 }'`, path)
+// 	}
+// }
