@@ -36,7 +36,8 @@ func (service *VolumeService) Serve() {
     http.HandleFunc("/reserve/", service.makeReserveHandler())
     http.HandleFunc("/release/", service.makeReleaseHandler())
     http.HandleFunc("/report/", service.makeReportHandler())
-    http.ListenAndServe(":8080", nil)
+	listenAddr := fmt.Sprintf("127.0.0.1:%d", service.port)
+    http.ListenAndServe(listenAddr, nil)
 }
 
 // Returns a Volume object with info about the volume at the specified
@@ -80,6 +81,7 @@ func (service *VolumeService) makeReserveHandler() http.HandlerFunc {
 				service.logger.Error("[%s] %s", r.RemoteAddr, response.ErrorMessage)
 				status = http.StatusInternalServerError
 			} else {
+				response.Succeeded = true
 				service.logger.Info("[%s] Reserved %d bytes for %s", r.RemoteAddr, bytes, path)
 			}
 		}
