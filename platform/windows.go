@@ -15,3 +15,9 @@ import (
 func GetOwnerAndGroup(finfo os.FileInfo, header *tar.Header) {
 	return
 }
+
+// Don't even try. This function is for use with the VolumeService,
+// which we're not going to run on Windows.
+func GetMountPointFromPath (path string) (string, error) {
+	return path, nil
+}

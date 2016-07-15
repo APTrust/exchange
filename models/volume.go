@@ -117,19 +117,3 @@ func (volume *Volume) Release(path string) {
 func (volume *Volume) Reservations() (map[string]uint64) {
 	return volume.reservations
 }
-
-//
-// TODO: Reimplement!
-// Find a way to do this without passing vars through to the shell.
-// That's just unsafe, since the volume service will be taking
-// input from http requests.
-//
-// func GetMountPointFromPath (path string) (string, error) {
-// 	// Make sure path is safe!!!
-// 	cmd := ""
-// 	if runtime.GOOS == 'linux' {
-// 		cmd = fmt.Sprintf(`df -P "%s" | tail -1 | awk '{ print $6 }'`, path)
-// 	} else if runtime.GOOS == 'darwin' {
-// 		cmd = fmt.Sprintf(`df -P "%s" | tail -1 | awk '{ print $7 }'`, path)
-// 	}
-// }

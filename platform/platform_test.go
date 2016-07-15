@@ -3,6 +3,8 @@ package platform_test
 import (
 	"archive/tar"
 	"github.com/APTrust/exchange/platform"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"io"
 	"io/ioutil"
 	"os"
@@ -13,13 +15,9 @@ import (
 
 func setupMimeTest(t *testing.T) (string) {
 	tempfile, err := ioutil.TempFile("", "mime_test")
-	if err != nil {
-		t.Error(err)
-	}
+	require.Nil(t, err)
 	_, err = io.WriteString(tempfile, "This is a text file.")
-	if err != nil {
-		t.Error(err)
-	}
+	require.Nil(t, err)
 	tempfile.Close()
 	return tempfile.Name()
 }
@@ -40,10 +38,7 @@ func TestGuessMimeType(t *testing.T) {
 		t.Error(err)
 	}
 	if !platform.IsPartnerBuild {
-		if mimetype != "text/plain" {
-			t.Errorf("Got mime type %s for file %s. Expected text/plain",
-				mimetype, pathToTempFile)
-		}
+		assert.Equal(t, "text/plain", mimetype)
 	}
 }
 
@@ -51,22 +46,15 @@ func TestGuessMimeTypeByBuffer(t *testing.T) {
 	pathToTempFile := setupMimeTest(t)
 	defer teardownMimeTest(pathToTempFile)
 	file, err := os.Open(pathToTempFile)
-	if err != nil {
-		t.Errorf("Cannot read '%s': %v", err)
-		return
-	}
+	require.Nil(t, err)
+
 	defer file.Close()
 	buf := make([]byte, 256)
 	_, _ = file.Read(buf)
 	mimetype, err := platform.GuessMimeTypeByBuffer(buf)
-	if err != nil {
-		t.Error(err)
-	}
+	require.Nil(t, err)
 	if !platform.IsPartnerBuild {
-		if mimetype != "text/plain" {
-			t.Errorf("Got mime type %s for file %s. Expected text/plain",
-				mimetype, pathToTempFile)
-		}
+		assert.Equal(t, "text/plain", mimetype)
 	}
 }
 
@@ -77,22 +65,31 @@ func TestGetOwnerAndGroup(t *testing.T) {
 	pathToTempFile := setupMimeTest(t)
 	defer teardownMimeTest(pathToTempFile)
 	tempfile, err := os.Open(pathToTempFile)
-	if err != nil {
-		t.Errorf("Could not open temp file: %v", err)
-	}
+	require.Nil(t, err)
+
 	finfo, err := tempfile.Stat()
-	if err != nil {
-		t.Errorf("Could not stat file %s: %v", pathToTempFile, err)
-	}
+	require.Nil(t, err)
+
 	tarHeader := &tar.Header{}
 	platform.GetOwnerAndGroup(finfo, tarHeader)
 	if runtime.GOOS == "linux" || runtime.GOOS == "darwin" ||
 		runtime.GOOS == "unix" || runtime.GOOS == "bsd" {
-		if tarHeader.Uid == 0 {
-			t.Errorf("GetOwnerAndGroup should have gotten a UID on posix system.")
-		}
-		if tarHeader.Gid == 0 {
-			t.Errorf("GetOwnerAndGroup should have gotten a UID on posix system.")
-		}
+		// We just wrote these files, so their uid and gid
+		// should match ours.
+		assert.EqualValues(t, os.Getuid(), tarHeader.Uid)
+		assert.EqualValues(t, os.Getgid(), tarHeader.Gid)
+	}
+}
+
+func TestGetMountPointFromPath(t *testing.T) {
+	tempfile, err := ioutil.TempFile("", "platform_test")
+	require.Nil(t, err)
+	mountpoint, err := platform.GetMountPointFromPath(tempfile.Name())
+	assert.Nil(t, err)
+	if runtime.GOOS == "linux" || runtime.GOOS == "darwin" ||
+		runtime.GOOS == "unix" || runtime.GOOS == "bsd" {
+		assert.Equal(t, "/", mountpoint)
+	} else if runtime.GOOS == "windows" {
+		assert.Equal(t, tempfile.Name(), mountpoint)
 	}
 }
