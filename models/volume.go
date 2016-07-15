@@ -29,6 +29,11 @@ type Volume struct {
 // a volume (disk). Param mountPoint is the point at which the
 // volume is mounted. The volume itself can be a physical disk
 // or a logical partition.
+//
+// On Mac and *nix systems, use posix.GetMountPointFromPath to
+// get the mountpoint. If you're on Windows, Mr. T pities you,
+// fool! This volume manager won't work for you. Upgrade to a
+// more sensible OS.
 func NewVolume(mountPoint string) (*Volume) {
 	volume := &Volume{}
 	volume.mountPoint = mountPoint
