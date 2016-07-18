@@ -220,6 +220,12 @@ type Config struct {
 	// Configuration options for apt_trouble
 	TroubleWorker           WorkerConfig
 
+	// The port number, on localhost, where the HTTP
+	// VolumeService should run. This is always on
+	// 127.0.0.1, because it has to access the same
+	// volumes and mounts as the locally running
+	// services.
+	VolumeServicePort       int
 }
 
 // This returns the configuration that the user requested,

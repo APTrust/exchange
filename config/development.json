@@ -9,6 +9,7 @@
     "SkipAlreadyProcessed": false,
     "DeleteOnSuccess": false,
     "LogToStderr": true,
+    "VolumeServicePort": 8898,
     "LogLevel": 4,
 
     "PharosURL": "http://localhost:3000",
