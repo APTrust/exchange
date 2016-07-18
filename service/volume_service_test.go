@@ -17,18 +17,23 @@ import (
 
 var port = 8818
 var serviceUrl = fmt.Sprintf("http://127.0.0.1:%d", port)
+var volumeService *service.VolumeService
+
+func runService(t *testing.T) {
+	if volumeService == nil {
+		log := logger.DiscardLogger("test_volume_service")
+		volumeService = service.NewVolumeService(port, log)
+		require.NotNil(t, volumeService)
+		go volumeService.Serve()
+	}
+}
 
 func TestNewVolumeService(t *testing.T) {
-	log := logger.DiscardLogger("test_volume_service")
-	volumeService := service.NewVolumeService(port, log)
-	assert.NotNil(t, volumeService)
+	runService(t)
 }
 
 func TestReserve(t *testing.T) {
-	log := logger.DiscardLogger("test_volume_service")
-	volumeService := service.NewVolumeService(port, log)
-	require.NotNil(t, volumeService)
-	go volumeService.Serve()
+	runService(t)
 
 	reserveUrl := fmt.Sprintf("%s/reserve/", serviceUrl)
 
@@ -77,7 +82,37 @@ func TestReserve(t *testing.T) {
 }
 
 func TestRelease(t *testing.T) {
+	runService(t)
 
+	reserveUrl := fmt.Sprintf("%s/release/", serviceUrl)
+
+	// Good request
+	params := url.Values{
+		"path": {"/tmp/some_file"},
+	}
+	resp, err := http.PostForm(reserveUrl, params)
+	require.Nil(t, err)
+	data, err := ioutil.ReadAll(resp.Body)
+	assert.Nil(t, err)
+	resp.Body.Close()
+
+	expected := `{"Succeeded":true,"ErrorMessage":""}`
+	assert.Equal(t, expected, string(data))
+	assert.Equal(t, http.StatusOK, resp.StatusCode)
+
+	// Bad request - no path
+	params = url.Values{
+		"useless_param": {"/tmp/some_file"},
+	}
+	resp, err = http.PostForm(reserveUrl, params)
+	require.Nil(t, err)
+	data, err = ioutil.ReadAll(resp.Body)
+	assert.Nil(t, err)
+	resp.Body.Close()
+
+	expected = `{"Succeeded":false,"ErrorMessage":"Param 'path' is required."}`
+	assert.Equal(t, expected, string(data))
+	assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
 }
 
 func TestReport(t *testing.T) {

@@ -104,6 +104,7 @@ func (service *VolumeService) makeReleaseHandler() http.HandlerFunc {
 		} else {
 			volume := service.getVolume(path)
 			volume.Release(path)
+			response.Succeeded = true
 			service.logger.Info("[%s] Released %s", r.RemoteAddr, path)
 		}
 		jsonResponse, _ := json.Marshal(response)
