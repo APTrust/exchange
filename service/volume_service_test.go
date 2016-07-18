@@ -48,7 +48,7 @@ func TestReserve(t *testing.T) {
 	assert.Nil(t, err)
 	resp.Body.Close()
 
-	expected := `{"Succeeded":true,"ErrorMessage":""}`
+	expected := `{"Succeeded":true,"ErrorMessage":"","Data":null}`
 	assert.Equal(t, expected, string(data))
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
 
@@ -62,7 +62,7 @@ func TestReserve(t *testing.T) {
 	assert.Nil(t, err)
 	resp.Body.Close()
 
-	expected = `{"Succeeded":false,"ErrorMessage":"Param 'path' is required."}`
+	expected = `{"Succeeded":false,"ErrorMessage":"Param 'path' is required.","Data":null}`
 	assert.Equal(t, expected, string(data))
 	assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
 
@@ -76,7 +76,7 @@ func TestReserve(t *testing.T) {
 	assert.Nil(t, err)
 	resp.Body.Close()
 
-	expected = `{"Succeeded":false,"ErrorMessage":"Param 'bytes' must be an integer greater than zero."}`
+	expected = `{"Succeeded":false,"ErrorMessage":"Param 'bytes' must be an integer greater than zero.","Data":null}`
 	assert.Equal(t, expected, string(data))
 	assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
 }
@@ -96,7 +96,7 @@ func TestRelease(t *testing.T) {
 	assert.Nil(t, err)
 	resp.Body.Close()
 
-	expected := `{"Succeeded":true,"ErrorMessage":""}`
+	expected := `{"Succeeded":true,"ErrorMessage":"","Data":null}`
 	assert.Equal(t, expected, string(data))
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
 
@@ -110,11 +110,58 @@ func TestRelease(t *testing.T) {
 	assert.Nil(t, err)
 	resp.Body.Close()
 
-	expected = `{"Succeeded":false,"ErrorMessage":"Param 'path' is required."}`
+	expected = `{"Succeeded":false,"ErrorMessage":"Param 'path' is required.","Data":null}`
 	assert.Equal(t, expected, string(data))
 	assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
 }
 
 func TestReport(t *testing.T) {
+	runService(t)
 
+	// Reserve a chunk of space with 8000 bytes
+	reserveUrl := fmt.Sprintf("%s/reserve/", serviceUrl)
+	params := url.Values{
+		"path": {"/tmp/some_file"},
+		"bytes": {"8000"},
+	}
+	resp, err := http.PostForm(reserveUrl, params)
+	require.Nil(t, err)
+	data, err := ioutil.ReadAll(resp.Body)
+	assert.Nil(t, err)
+	resp.Body.Close()
+	assert.Equal(t, http.StatusOK, resp.StatusCode)
+
+	// Reserve another chunk with 24000 bytes
+	params = url.Values{
+		"path": {"/tmp/some_other_file"},
+		"bytes": {"24000"},
+	}
+	resp, err = http.PostForm(reserveUrl, params)
+	require.Nil(t, err)
+	data, err = ioutil.ReadAll(resp.Body)
+	assert.Nil(t, err)
+	resp.Body.Close()
+	assert.Equal(t, http.StatusOK, resp.StatusCode)
+
+	reportUrl := fmt.Sprintf("%s/report/", serviceUrl)
+	resp, err = http.Get(reportUrl)
+	require.Nil(t, err)
+	data, err = ioutil.ReadAll(resp.Body)
+	assert.Nil(t, err)
+	resp.Body.Close()
+
+	expected := `{"Succeeded":false,"ErrorMessage":"Param 'path' is required.","Data":null}`
+	assert.Equal(t, expected, string(data))
+	assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
+
+	reportUrl = fmt.Sprintf("%s/report/?path=/", serviceUrl)
+	resp, err = http.Get(reportUrl)
+	require.Nil(t, err)
+	data, err = ioutil.ReadAll(resp.Body)
+	assert.Nil(t, err)
+	resp.Body.Close()
+
+	expected = `{"Succeeded":true,"ErrorMessage":"","Data":{"/tmp/some_file":8000,"/tmp/some_other_file":24000}}`
+	assert.Equal(t, expected, string(data))
+	assert.Equal(t, http.StatusOK, resp.StatusCode)
 }

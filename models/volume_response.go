@@ -4,4 +4,5 @@ package models
 type VolumeResponse struct {
 	Succeeded       bool
 	ErrorMessage    string
+	Data            map[string]uint64
 }

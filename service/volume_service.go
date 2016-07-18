@@ -116,6 +116,22 @@ func (service *VolumeService) makeReleaseHandler() http.HandlerFunc {
 
 func (service *VolumeService) makeReportHandler() http.HandlerFunc {
 	return func (w http.ResponseWriter, r *http.Request) {
-		// Return info about existing reservations
+		response := &models.VolumeResponse{}
+		path := r.FormValue("path")
+		status := http.StatusOK
+		if path == "" {
+			response.Succeeded = false
+			response.ErrorMessage = "Param 'path' is required."
+			status = http.StatusBadRequest
+		} else {
+			volume := service.getVolume(path)
+			response.Succeeded = true
+			response.Data = volume.Reservations()
+			service.logger.Info("[%s] Reservations (%d)", r.RemoteAddr, path, len(response.Data))
+		}
+		jsonResponse, _ := json.Marshal(response)
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
+		w.WriteHeader(status)
+		w.Write(jsonResponse)
 	}
 }
