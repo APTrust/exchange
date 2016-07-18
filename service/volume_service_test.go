@@ -164,3 +164,18 @@ func TestReport(t *testing.T) {
 	assert.Equal(t, expected, string(data))
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
 }
+
+func TestPing(t *testing.T) {
+	runService(t)
+
+	pingUrl := fmt.Sprintf("%s/ping/", serviceUrl)
+	resp, err := http.Get(pingUrl)
+	require.Nil(t, err)
+	data, err := ioutil.ReadAll(resp.Body)
+	assert.Nil(t, err)
+	resp.Body.Close()
+
+	expected := `{"Succeeded":true,"ErrorMessage":"","Data":null}`
+	assert.Equal(t, expected, string(data))
+	assert.Equal(t, http.StatusOK, resp.StatusCode)
+}

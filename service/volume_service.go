@@ -36,6 +36,7 @@ func (service *VolumeService) Serve() {
     http.HandleFunc("/reserve/", service.makeReserveHandler())
     http.HandleFunc("/release/", service.makeReleaseHandler())
     http.HandleFunc("/report/", service.makeReportHandler())
+    http.HandleFunc("/ping/", service.makePingHandler())
 	listenAddr := fmt.Sprintf("127.0.0.1:%d", service.port)
     http.ListenAndServe(listenAddr, nil)
 }
@@ -129,6 +130,18 @@ func (service *VolumeService) makeReportHandler() http.HandlerFunc {
 			response.Data = volume.Reservations()
 			service.logger.Info("[%s] Reservations (%d)", r.RemoteAddr, path, len(response.Data))
 		}
+		jsonResponse, _ := json.Marshal(response)
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
+		w.WriteHeader(status)
+		w.Write(jsonResponse)
+	}
+}
+
+func (service *VolumeService) makePingHandler() http.HandlerFunc {
+	return func (w http.ResponseWriter, r *http.Request) {
+		response := &models.VolumeResponse{}
+		response.Succeeded = true
+		status := http.StatusOK
 		jsonResponse, _ := json.Marshal(response)
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.WriteHeader(status)
