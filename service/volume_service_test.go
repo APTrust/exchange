@@ -10,7 +10,6 @@ import (
 	"github.com/stretchr/testify/require"
 	"io/ioutil"
 	"net/http"
-//	"net/http/httptest"
 	"net/url"
 	"testing"
 )
