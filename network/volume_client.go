@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/url"
 	"strconv"
+	"time"
 )
 
 type VolumeClient struct {
@@ -24,9 +25,13 @@ func (client *VolumeClient) BaseURL() (string) {
 	return client.serviceUrl
 }
 
-func (client *VolumeClient) Ping() (error) {
+func (client *VolumeClient) Ping(msTimeout int) (error) {
 	pingUrl := fmt.Sprintf("%s/ping/", client.serviceUrl)
-	_, err := http.Get(pingUrl)
+	timeout := time.Duration(time.Duration(msTimeout) * time.Millisecond)
+	httpClient := http.Client{
+		Timeout: timeout,
+	}
+	_, err := httpClient.Get(pingUrl)
 	return err
 }
 

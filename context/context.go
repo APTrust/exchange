@@ -20,7 +20,7 @@ type Context struct {
 	Config          *models.Config
 	MessageLog      *logging.Logger
 	PharosClient    *network.PharosClient
-//	Volume          *util.Volume            // *** TODO *** Re-add Volume as service!
+	VolumeClient    *network.VolumeClient
 	pathToLogFile   string
 	succeeded       int64
 	failed          int64
@@ -44,20 +44,10 @@ func NewContext(config *models.Config) (context *Context) {
 	}
 	context.Config = config
 	context.MessageLog, context.pathToLogFile = logger.InitLogger(config)
+	context.VolumeClient = network.NewVolumeClient(context.Config.VolumeServicePort)
 	context.initPharosClient()
 	return context
 }
-
-// Sets up a new Volume object to track estimated disk usage.
-// func (context *Context) initVolume() {
-// 	volume, err := NewVolume(context.Config.TarDirectory, context.MessageLog)
-// 	if err != nil {
-// 		message := fmt.Sprintf("Exiting. Cannot init Volume object: %v", err)
-// 		fmt.Fprintln(os.Stderr, message)
-// 		context.MessageLog.Fatal(message)
-// 	}
-// 	context.Volume = volume
-// }
 
 // Initializes a reusable Pharos client.
 func (context *Context) initPharosClient() {
@@ -74,12 +64,12 @@ func (context *Context) initPharosClient() {
 	context.PharosClient = pharosClient
 }
 
-// Returns the number of processed items that succeeded.
+// Returns the number of work items that succeeded.
 func (context *Context) Succeeded() (int64) {
 	return context.succeeded
 }
 
-// Returns the number of processed items that failed.
+// Returns the number of work items that failed.
 func (context *Context) Failed() (int64) {
 	return context.failed
 }

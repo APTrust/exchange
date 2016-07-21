@@ -78,6 +78,6 @@ func TestPing(t *testing.T) {
 	client := network.NewVolumeClient(volTestPort)
 	require.NotNil(t, client)
 
-	err := client.Ping()
+	err := client.Ping(500)
 	assert.Nil(t, err)
 }
