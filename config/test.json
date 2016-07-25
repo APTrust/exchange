@@ -13,7 +13,7 @@
     "LogLevel": 4,
 
     "PharosURL": "http://localhost:3000",
-    "PharosAPIVersion": "v1",
+    "PharosAPIVersion": "v2",
 
     "NsqdHttpAddress": "http://localhost:4151",
     "NsqLookupd": "localhost:4161",

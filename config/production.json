@@ -11,7 +11,7 @@
     "LogLevel": 4,
 
     "PharosURL": "https://repository.aptrust.org",
-    "PharosAPIVersion": "v1",
+    "PharosAPIVersion": "v2",
 
     "NsqdHttpAddress": "http://54.175.41.111:4151",
     "NsqLookupd": "54.175.41.111:4161",

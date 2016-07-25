@@ -13,7 +13,7 @@
     "LogLevel": 4,
 
     "PharosURL": "http://test.aptrust.org",
-    "PharosAPIVersion": "v1",
+    "PharosAPIVersion": "v2",
 
     "NsqdHttpAddress": "http://apt-util.aptrust.org:4151",
     "NsqLookupd": "apt-util.aptrust.org:4161",

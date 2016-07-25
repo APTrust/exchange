@@ -166,7 +166,7 @@ func (client *PharosClient) IntellectualObjectSave(obj *models.IntellectualObjec
 	relativeUrl := fmt.Sprintf("/api/%s/objects/", client.apiVersion)
 	httpMethod := "POST"
 	if obj.Id > 0 {
-		// PUT URL looks like /api/v1/objects/college.edu%2Fobject_name
+		// PUT URL looks like /api/v2/objects/college.edu%2Fobject_name
 		relativeUrl = fmt.Sprintf("%s%s", relativeUrl, escapeSlashes(obj.Identifier))
 		httpMethod = "PUT"
 	}
@@ -258,7 +258,7 @@ func (client *PharosClient) GenericFileSave(obj *models.GenericFile) (*PharosRes
 	relativeUrl := fmt.Sprintf("/api/%s/files/", client.apiVersion)
 	httpMethod := "POST"
 	if obj.Id > 0 {
-		// PUT URL looks like /api/v1/files/college.edu%2Fobject_name%2Ffile.xml
+		// PUT URL looks like /api/v2/files/college.edu%2Fobject_name%2Ffile.xml
 		relativeUrl = fmt.Sprintf("%s%s", relativeUrl, escapeSlashes(obj.Identifier))
 		httpMethod = "PUT"
 	}
@@ -433,7 +433,7 @@ func (client *PharosClient) WorkItemSave(obj *models.WorkItem) (*PharosResponse)
 	relativeUrl := fmt.Sprintf("/api/%s/work_items/", client.apiVersion)
 	httpMethod := "POST"
 	if obj.Id > 0 {
-		// URL should look like /api/v1/work_items/46956/
+		// URL should look like /api/v2/work_items/46956/
 		relativeUrl = fmt.Sprintf("%s%d/", relativeUrl, obj.Id)
 		httpMethod = "PUT"
 	}

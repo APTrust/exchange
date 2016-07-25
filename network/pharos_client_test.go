@@ -17,7 +17,7 @@ import (
 )
 
 func TestNewPharosClient(t *testing.T) {
-	_, err := network.NewPharosClient("http://example.com", "v1", "user", "key")
+	_, err := network.NewPharosClient("http://example.com", "v2", "user", "key")
 	if err != nil {
 		t.Error(err)
 	}
@@ -27,7 +27,7 @@ func TestInstitutionGet(t *testing.T) {
 	testServer := httptest.NewServer(http.HandlerFunc(institutionGetHander))
 	defer testServer.Close()
 
-	client, err := network.NewPharosClient(testServer.URL, "v1", "user", "key")
+	client, err := network.NewPharosClient(testServer.URL, "v2", "user", "key")
 	if err != nil {
 		t.Error(err)
 		return
@@ -37,7 +37,7 @@ func TestInstitutionGet(t *testing.T) {
 
 	// Check the request URL and method
 	assert.Equal(t, "GET", response.Request.Method)
-	assert.Equal(t, "/api/v1/institutions/college.edu/", response.Request.URL.Opaque)
+	assert.Equal(t, "/api/v2/institutions/college.edu/", response.Request.URL.Opaque)
 
 	// Basic sanity check on response values
 	assert.Nil(t, response.Error)
@@ -52,7 +52,7 @@ func TestInstitutionList(t *testing.T) {
 	testServer := httptest.NewServer(http.HandlerFunc(institutionListHander))
 	defer testServer.Close()
 
-	client, err := network.NewPharosClient(testServer.URL, "v1", "user", "key")
+	client, err := network.NewPharosClient(testServer.URL, "v2", "user", "key")
 	if err != nil {
 		t.Error(err)
 		return
@@ -62,7 +62,7 @@ func TestInstitutionList(t *testing.T) {
 
 	// Check the request URL and method
 	assert.Equal(t, "GET", response.Request.Method)
-	assert.Equal(t, "/api/v1/institutions/?", response.Request.URL.Opaque)
+	assert.Equal(t, "/api/v2/institutions/?", response.Request.URL.Opaque)
 
 	// Basic sanity check on response values
 	assert.Nil(t, response.Error)
@@ -84,7 +84,7 @@ func TestInstitutionList(t *testing.T) {
 	// Make sure params are added to URL
 	params := sampleParams()
 	response = client.InstitutionList(params)
-	expectedUrl := fmt.Sprintf("/api/v1/institutions/?%s", params.Encode())
+	expectedUrl := fmt.Sprintf("/api/v2/institutions/?%s", params.Encode())
 	assert.Equal(t, expectedUrl, response.Request.URL.Opaque)
 }
 
@@ -92,7 +92,7 @@ func TestIntellectualObjectGet(t *testing.T) {
 	testServer := httptest.NewServer(http.HandlerFunc(intellectualObjectGetHander))
 	defer testServer.Close()
 
-	client, err := network.NewPharosClient(testServer.URL, "v1", "user", "key")
+	client, err := network.NewPharosClient(testServer.URL, "v2", "user", "key")
 	if err != nil {
 		t.Error(err)
 		return
@@ -102,7 +102,7 @@ func TestIntellectualObjectGet(t *testing.T) {
 
 	// Check the request URL and method
 	assert.Equal(t, "GET", response.Request.Method)
-	assert.Equal(t, "/api/v1/objects/college.edu%2Fobject", response.Request.URL.Opaque)
+	assert.Equal(t, "/api/v2/objects/college.edu%2Fobject", response.Request.URL.Opaque)
 
 	// Basic sanity check on response values
 	assert.Nil(t, response.Error)
@@ -125,7 +125,7 @@ func TestIntellectualObjectList(t *testing.T) {
 	testServer := httptest.NewServer(http.HandlerFunc(intellectualObjectListHander))
 	defer testServer.Close()
 
-	client, err := network.NewPharosClient(testServer.URL, "v1", "user", "key")
+	client, err := network.NewPharosClient(testServer.URL, "v2", "user", "key")
 	if err != nil {
 		t.Error(err)
 		return
@@ -135,7 +135,7 @@ func TestIntellectualObjectList(t *testing.T) {
 
 	// Check the request URL and method
 	assert.Equal(t, "GET", response.Request.Method)
-	assert.Equal(t, "/api/v1/objects/?", response.Request.URL.Opaque)
+	assert.Equal(t, "/api/v2/objects/?", response.Request.URL.Opaque)
 
 	// Basic sanity check on response values
 	assert.Nil(t, response.Error)
@@ -157,7 +157,7 @@ func TestIntellectualObjectList(t *testing.T) {
 	// Make sure params are added to URL
 	params := sampleParams()
 	response = client.IntellectualObjectList(params)
-	expectedUrl := fmt.Sprintf("/api/v1/objects/?%s", params.Encode())
+	expectedUrl := fmt.Sprintf("/api/v2/objects/?%s", params.Encode())
 	assert.Equal(t, expectedUrl, response.Request.URL.Opaque)
 }
 
@@ -165,7 +165,7 @@ func TestIntellectualObjectSave(t *testing.T) {
 	testServer := httptest.NewServer(http.HandlerFunc(intellectualObjectSaveHander))
 	defer testServer.Close()
 
-	client, err := network.NewPharosClient(testServer.URL, "v1", "user", "key")
+	client, err := network.NewPharosClient(testServer.URL, "v2", "user", "key")
 	if err != nil {
 		t.Error(err)
 		return
@@ -180,7 +180,7 @@ func TestIntellectualObjectSave(t *testing.T) {
 
 	// Check the request URL and method
 	assert.Equal(t, "POST", response.Request.Method)
-	assert.Equal(t, "/api/v1/objects/", response.Request.URL.Opaque)
+	assert.Equal(t, "/api/v2/objects/", response.Request.URL.Opaque)
 
 	// Basic sanity check on response values
 	assert.Nil(t, response.Error)
@@ -205,7 +205,7 @@ func TestIntellectualObjectSave(t *testing.T) {
 	response = client.IntellectualObjectSave(obj)
 
 	// Check the request URL and method
-	expectedUrl := fmt.Sprintf("/api/v1/objects/%s", strings.Replace(obj.Identifier, "/", "%2F", -1))
+	expectedUrl := fmt.Sprintf("/api/v2/objects/%s", strings.Replace(obj.Identifier, "/", "%2F", -1))
 	assert.Equal(t, "PUT", response.Request.Method)
 	assert.Equal(t, expectedUrl, response.Request.URL.Opaque)
 
@@ -226,7 +226,7 @@ func TestGenericFileGet(t *testing.T) {
 	testServer := httptest.NewServer(http.HandlerFunc(genericFileGetHander))
 	defer testServer.Close()
 
-	client, err := network.NewPharosClient(testServer.URL, "v1", "user", "key")
+	client, err := network.NewPharosClient(testServer.URL, "v2", "user", "key")
 	if err != nil {
 		t.Error(err)
 		return
@@ -236,7 +236,7 @@ func TestGenericFileGet(t *testing.T) {
 
 	// Check the request URL and method
 	assert.Equal(t, "GET", response.Request.Method)
-	assert.Equal(t, "/api/v1/files/college.edu%2Fobject%2Ffile.xml", response.Request.URL.Opaque)
+	assert.Equal(t, "/api/v2/files/college.edu%2Fobject%2Ffile.xml", response.Request.URL.Opaque)
 
 	// Basic sanity check on response values
 	assert.Nil(t, response.Error)
@@ -257,7 +257,7 @@ func TestGenericFileList(t *testing.T) {
 	testServer := httptest.NewServer(http.HandlerFunc(genericFileListHander))
 	defer testServer.Close()
 
-	client, err := network.NewPharosClient(testServer.URL, "v1", "user", "key")
+	client, err := network.NewPharosClient(testServer.URL, "v2", "user", "key")
 	if err != nil {
 		t.Error(err)
 		return
@@ -267,7 +267,7 @@ func TestGenericFileList(t *testing.T) {
 
 	// Check the request URL and method
 	assert.Equal(t, "GET", response.Request.Method)
-	assert.Equal(t, "/api/v1/files/?", response.Request.URL.Opaque)
+	assert.Equal(t, "/api/v2/files/?", response.Request.URL.Opaque)
 
 	// Basic sanity check on response values
 	assert.Nil(t, response.Error)
@@ -289,7 +289,7 @@ func TestGenericFileList(t *testing.T) {
 	// Make sure params are added to URL
 	params := sampleParams()
 	response = client.GenericFileList(params)
-	expectedUrl := fmt.Sprintf("/api/v1/files/?%s", params.Encode())
+	expectedUrl := fmt.Sprintf("/api/v2/files/?%s", params.Encode())
 	assert.Equal(t, expectedUrl, response.Request.URL.Opaque)
 }
 
@@ -297,7 +297,7 @@ func TestGenericFileSave(t *testing.T) {
 	testServer := httptest.NewServer(http.HandlerFunc(genericFileSaveHander))
 	defer testServer.Close()
 
-	client, err := network.NewPharosClient(testServer.URL, "v1", "user", "key")
+	client, err := network.NewPharosClient(testServer.URL, "v2", "user", "key")
 	if err != nil {
 		t.Error(err)
 		return
@@ -312,7 +312,7 @@ func TestGenericFileSave(t *testing.T) {
 
 	// Check the request URL and method
 	assert.Equal(t, "POST", response.Request.Method)
-	assert.Equal(t, "/api/v1/files/", response.Request.URL.Opaque)
+	assert.Equal(t, "/api/v2/files/", response.Request.URL.Opaque)
 
 	// Basic sanity check on response values
 	assert.Nil(t, response.Error)
@@ -338,7 +338,7 @@ func TestGenericFileSave(t *testing.T) {
 
 	// Check the request URL and method
 	objIdEncoded := strings.Replace(obj.Identifier, " ", "%20", -1)
-	expectedUrl := fmt.Sprintf("/api/v1/files/%s", strings.Replace(objIdEncoded, "/", "%2F", -1))
+	expectedUrl := fmt.Sprintf("/api/v2/files/%s", strings.Replace(objIdEncoded, "/", "%2F", -1))
 	assert.Equal(t, "PUT", response.Request.Method)
 	assert.Equal(t, expectedUrl, response.Request.URL.Opaque)
 
@@ -359,7 +359,7 @@ func TestPremisEventGet(t *testing.T) {
 	testServer := httptest.NewServer(http.HandlerFunc(premisEventGetHander))
 	defer testServer.Close()
 
-	client, err := network.NewPharosClient(testServer.URL, "v1", "user", "key")
+	client, err := network.NewPharosClient(testServer.URL, "v2", "user", "key")
 	if err != nil {
 		t.Error(err)
 		return
@@ -369,7 +369,7 @@ func TestPremisEventGet(t *testing.T) {
 
 	// Check the request URL and method
 	assert.Equal(t, "GET", response.Request.Method)
-	assert.Equal(t, "/api/v1/events/000000000000-0000-0000-0000-00000000/", response.Request.URL.Opaque)
+	assert.Equal(t, "/api/v2/events/000000000000-0000-0000-0000-00000000/", response.Request.URL.Opaque)
 
 	// Basic sanity check on response values
 	assert.Nil(t, response.Error)
@@ -387,7 +387,7 @@ func TestPremisEventList(t *testing.T) {
 	testServer := httptest.NewServer(http.HandlerFunc(premisEventListHander))
 	defer testServer.Close()
 
-	client, err := network.NewPharosClient(testServer.URL, "v1", "user", "key")
+	client, err := network.NewPharosClient(testServer.URL, "v2", "user", "key")
 	if err != nil {
 		t.Error(err)
 		return
@@ -397,7 +397,7 @@ func TestPremisEventList(t *testing.T) {
 
 	// Check the request URL and method
 	assert.Equal(t, "GET", response.Request.Method)
-	assert.Equal(t, "/api/v1/events/?", response.Request.URL.Opaque)
+	assert.Equal(t, "/api/v2/events/?", response.Request.URL.Opaque)
 
 	// Basic sanity check on response values
 	assert.Nil(t, response.Error)
@@ -419,7 +419,7 @@ func TestPremisEventList(t *testing.T) {
 	// Make sure params are added to URL
 	params := sampleParams()
 	response = client.PremisEventList(params)
-	expectedUrl := fmt.Sprintf("/api/v1/events/?%s", params.Encode())
+	expectedUrl := fmt.Sprintf("/api/v2/events/?%s", params.Encode())
 	assert.Equal(t, expectedUrl, response.Request.URL.Opaque)
 }
 
@@ -427,7 +427,7 @@ func TestPremisEventSave(t *testing.T) {
 	testServer := httptest.NewServer(http.HandlerFunc(premisEventSaveHander))
 	defer testServer.Close()
 
-	client, err := network.NewPharosClient(testServer.URL, "v1", "user", "key")
+	client, err := network.NewPharosClient(testServer.URL, "v2", "user", "key")
 	if err != nil {
 		t.Error(err)
 		return
@@ -442,7 +442,7 @@ func TestPremisEventSave(t *testing.T) {
 
 	// Check the request URL and method
 	assert.Equal(t, "POST", response.Request.Method)
-	assert.Equal(t, "/api/v1/events/", response.Request.URL.Opaque)
+	assert.Equal(t, "/api/v2/events/", response.Request.URL.Opaque)
 
 	// Basic sanity check on response values
 	assert.Nil(t, response.Error)
@@ -463,7 +463,7 @@ func TestWorkItemGet(t *testing.T) {
 	testServer := httptest.NewServer(http.HandlerFunc(workItemGetHander))
 	defer testServer.Close()
 
-	client, err := network.NewPharosClient(testServer.URL, "v1", "user", "key")
+	client, err := network.NewPharosClient(testServer.URL, "v2", "user", "key")
 	if err != nil {
 		t.Error(err)
 		return
@@ -473,7 +473,7 @@ func TestWorkItemGet(t *testing.T) {
 
 	// Check the request URL and method
 	assert.Equal(t, "GET", response.Request.Method)
-	assert.Equal(t, "/api/v1/work_items/999/", response.Request.URL.Opaque)
+	assert.Equal(t, "/api/v2/work_items/999/", response.Request.URL.Opaque)
 
 	// Basic sanity check on response values
 	assert.Nil(t, response.Error)
@@ -493,7 +493,7 @@ func TestWorkItemList(t *testing.T) {
 	testServer := httptest.NewServer(http.HandlerFunc(workItemListHander))
 	defer testServer.Close()
 
-	client, err := network.NewPharosClient(testServer.URL, "v1", "user", "key")
+	client, err := network.NewPharosClient(testServer.URL, "v2", "user", "key")
 	if err != nil {
 		t.Error(err)
 		return
@@ -503,7 +503,7 @@ func TestWorkItemList(t *testing.T) {
 
 	// Check the request URL and method
 	assert.Equal(t, "GET", response.Request.Method)
-	assert.Equal(t, "/api/v1/work_items/?", response.Request.URL.Opaque)
+	assert.Equal(t, "/api/v2/work_items/?", response.Request.URL.Opaque)
 
 	// Basic sanity check on response values
 	assert.Nil(t, response.Error)
@@ -527,7 +527,7 @@ func TestWorkItemList(t *testing.T) {
 	// Make sure params are added to URL
 	params := sampleParams()
 	response = client.WorkItemList(params)
-	expectedUrl := fmt.Sprintf("/api/v1/work_items/?%s", params.Encode())
+	expectedUrl := fmt.Sprintf("/api/v2/work_items/?%s", params.Encode())
 	assert.Equal(t, expectedUrl, response.Request.URL.Opaque)
 }
 
@@ -535,7 +535,7 @@ func TestWorkItemSave(t *testing.T) {
 	testServer := httptest.NewServer(http.HandlerFunc(workItemSaveHander))
 	defer testServer.Close()
 
-	client, err := network.NewPharosClient(testServer.URL, "v1", "user", "key")
+	client, err := network.NewPharosClient(testServer.URL, "v2", "user", "key")
 	if err != nil {
 		t.Error(err)
 		return
@@ -550,7 +550,7 @@ func TestWorkItemSave(t *testing.T) {
 
 	// Check the request URL and method
 	assert.Equal(t, "POST", response.Request.Method)
-	assert.Equal(t, "/api/v1/work_items/", response.Request.URL.Opaque)
+	assert.Equal(t, "/api/v2/work_items/", response.Request.URL.Opaque)
 
 	// Basic sanity check on response values
 	assert.Nil(t, response.Error)
@@ -579,7 +579,7 @@ func TestWorkItemSave(t *testing.T) {
 	response = client.WorkItemSave(obj)
 
 	// Check the request URL and method
-	expectedUrl := fmt.Sprintf("/api/v1/work_items/%d/", obj.Id)
+	expectedUrl := fmt.Sprintf("/api/v2/work_items/%d/", obj.Id)
 	assert.Equal(t, "PUT", response.Request.Method)
 	assert.Equal(t, expectedUrl, response.Request.URL.Opaque)
 
