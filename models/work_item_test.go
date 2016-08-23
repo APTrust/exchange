@@ -47,7 +47,7 @@ func TestWorkItemSerializeForPharos(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	expected := `{"action":"Ingest","bag_date":"2104-07-02T12:00:00Z","bucket":"aptrust.receiving.ncsu.edu","created_at":"2014-09-10T12:00:00Z","date":"2014-09-10T12:00:00Z","etag":"12345","generic_file_identifier":"ncsu.edu/some_object/data/doc.pdf","institution":"ncsu.edu","name":"Sample Document","needs_admin_review":false,"node":"","note":"so many!","object_identifier":"ncsu.edu/some_object","outcome":"happy day!","pid":0,"retry":true,"reviewed":false,"stage":"Store","state":"{}","status":"Success","updated_at":"2014-09-10T12:00:00Z"}`
+	expected := `{"action":"Ingest","bag_date":"2104-07-02T12:00:00Z","bucket":"aptrust.receiving.ncsu.edu","created_at":"2014-09-10T12:00:00Z","date":"2014-09-10T12:00:00Z","etag":"12345","generic_file_identifier":"ncsu.edu/some_object/data/doc.pdf","institution":"ncsu.edu","name":"Sample Document","needs_admin_review":false,"node":"","note":"so many!","object_identifier":"ncsu.edu/some_object","outcome":"happy day!","pid":0,"queued_at":"0001-01-01T00:00:00Z","retry":true,"reviewed":false,"stage":"Store","state":"{}","status":"Success","updated_at":"2014-09-10T12:00:00Z"}`
 	assert.Equal(t, expected, string(bytes))
 }
 

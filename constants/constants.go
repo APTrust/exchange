@@ -81,6 +81,7 @@ const (
 	ActionFixityCheck            = "Fixity Check"
 	ActionRestore                = "Restore"
 	ActionDelete                 = "Delete"
+	ActionDPN                    = "DPN"
 )
 
 var ActionTypes []string = []string{

@@ -47,10 +47,12 @@ type WorkItem struct {
 	Outcome                string               `json:"outcome"`
 	Retry                  bool                 `json:"retry"`
 	Reviewed               bool                 `json:"reviewed"`
+	// TODO: Change to binary, and possibly move.
 	State                  string               `json:"state"`
 	Node                   string               `json:"node"`
 	Pid                    int                  `json:"pid"`
 	NeedsAdminReview       bool                 `json:"needs_admin_review"`
+	QueuedAt               time.Time            `json:"queued_at"`
 	CreatedAt              time.Time            `json:"created_at"`
 	UpdatedAt              time.Time            `json:"updated_at"`
 }
@@ -78,6 +80,7 @@ func (item *WorkItem) SerializeForPharos() ([]byte, error) {
 		"node":                    item.Node,
 		"pid":                     item.Pid,
 		"needs_admin_review":      item.NeedsAdminReview,
+		"queued_at":               item.QueuedAt,
 		"created_at":              item.CreatedAt,
 		"updated_at":              item.UpdatedAt,
 	})
