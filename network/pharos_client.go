@@ -434,10 +434,10 @@ func (client *PharosClient) WorkItemSave(obj *models.WorkItem) (*PharosResponse)
 	resp.workItems = make([]*models.WorkItem, 1)
 
 	// URL and method
-	relativeUrl := fmt.Sprintf("/api/%s/work_items/", client.apiVersion)
+	relativeUrl := fmt.Sprintf("/api/%s/items/", client.apiVersion)
 	httpMethod := "POST"
 	if obj.Id > 0 {
-		// URL should look like /api/v2/work_items/46956/
+		// URL should look like /api/v2/items/46956/
 		relativeUrl = fmt.Sprintf("%s%d/", relativeUrl, obj.Id)
 		httpMethod = "PUT"
 	}
@@ -471,7 +471,7 @@ func (client *PharosClient) WorkItemGet(id int) (*PharosResponse) {
 	resp.workItems = make([]*models.WorkItem, 1)
 
 	// Build the url and the request object
-	relativeUrl := fmt.Sprintf("/api/%s/work_items/%d/", client.apiVersion, id)
+	relativeUrl := fmt.Sprintf("/api/%s/items/%d/", client.apiVersion, id)
 	absoluteUrl := client.BuildUrl(relativeUrl)
 
 	// Run the request

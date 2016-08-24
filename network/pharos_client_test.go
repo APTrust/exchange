@@ -473,7 +473,7 @@ func TestWorkItemGet(t *testing.T) {
 
 	// Check the request URL and method
 	assert.Equal(t, "GET", response.Request.Method)
-	assert.Equal(t, "/api/v2/work_items/999/", response.Request.URL.Opaque)
+	assert.Equal(t, "/api/v2/items/999/", response.Request.URL.Opaque)
 
 	// Basic sanity check on response values
 	assert.Nil(t, response.Error)
@@ -503,7 +503,7 @@ func TestWorkItemList(t *testing.T) {
 
 	// Check the request URL and method
 	assert.Equal(t, "GET", response.Request.Method)
-	assert.Equal(t, "/api/v2/work_items/?", response.Request.URL.Opaque)
+	assert.Equal(t, "/api/v2/items/?", response.Request.URL.Opaque)
 
 	// Basic sanity check on response values
 	assert.Nil(t, response.Error)
@@ -527,7 +527,7 @@ func TestWorkItemList(t *testing.T) {
 	// Make sure params are added to URL
 	params := sampleParams()
 	response = client.WorkItemList(params)
-	expectedUrl := fmt.Sprintf("/api/v2/work_items/?%s", params.Encode())
+	expectedUrl := fmt.Sprintf("/api/v2/items/?%s", params.Encode())
 	assert.Equal(t, expectedUrl, response.Request.URL.Opaque)
 }
 
@@ -550,7 +550,7 @@ func TestWorkItemSave(t *testing.T) {
 
 	// Check the request URL and method
 	assert.Equal(t, "POST", response.Request.Method)
-	assert.Equal(t, "/api/v2/work_items/", response.Request.URL.Opaque)
+	assert.Equal(t, "/api/v2/items/", response.Request.URL.Opaque)
 
 	// Basic sanity check on response values
 	assert.Nil(t, response.Error)
@@ -579,7 +579,7 @@ func TestWorkItemSave(t *testing.T) {
 	response = client.WorkItemSave(obj)
 
 	// Check the request URL and method
-	expectedUrl := fmt.Sprintf("/api/v2/work_items/%d/", obj.Id)
+	expectedUrl := fmt.Sprintf("/api/v2/items/%d/", obj.Id)
 	assert.Equal(t, "PUT", response.Request.Method)
 	assert.Equal(t, expectedUrl, response.Request.URL.Opaque)
 
