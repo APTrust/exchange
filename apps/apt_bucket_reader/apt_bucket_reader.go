@@ -1,16 +1,20 @@
-package apt_bucket_reader
+package main
 
 import (
 	"flag"
 	"fmt"
 	"github.com/APTrust/exchange/context"
 	"github.com/APTrust/exchange/models"
+	"github.com/APTrust/exchange/network"
+	"net/http"
+	"net/url"
 	"os"
+	"runtime/debug"
 	"time"
 )
 
 var _context *context.Context
-var institutions map[string]models.Institution
+var institutions map[string]*models.Institution
 var recentIngestItems map[string]int
 
 func main() {
@@ -20,27 +24,41 @@ func main() {
 		fmt.Fprintf(os.Stderr, err.Error())
 		os.Exit(1)
 	}
+	institutions = make(map[string]*models.Institution)
+	recentIngestItems = make(map[string]int)
 	_context = context.NewContext(config)
 	cacheInstitutions()
 	cacheRecentIngestItems()
+	readAllBuckets()
 }
 
 // Cache a list of all institutions. There are < 20.
+// Exit on failure.
 func cacheInstitutions() {
 	// from Pharos client
 	// key = identifier, value = institution
 	// Die on error
+	params := url.Values{}
+	params.Add("page", "1")
+	params.Add("per_page", "100")
+	resp := _context.PharosClient.InstitutionList(params)
+	dieOnBadResponse("Can't get institutions list.", resp)
+	for _, inst := range resp.Institutions() {
+		institutions[inst.Identifier] = inst
+	}
+	_context.MessageLog.Info("Loaded %d institutions", len(institutions))
 }
 
 // Cache a list of Ingest items that have been added to
 // the list of WorkItems in the past 24 hours, so we won't
 // have to do 1000 lookups.
+// Exit on failure.
 func cacheRecentIngestItems() {
 	// From Pharos client
 	// Should have a policy in config:
 	// cache items where created_at <= 24 hours, or some such
 	// Can probably use key = name+etag+date, value = WorkItemId
-	// Die on error
+    // Die on error
 }
 
 func readAllBuckets() {
@@ -78,6 +96,7 @@ func markAsQueued(workItem *models.WorkItem) (*models.WorkItem, error) {
 	return workItem, nil
 }
 
+// See if you can figure out from the function name what this does.
 func parseCommandLine() (configFile string) {
 	var pathToConfigFile string
 	flag.StringVar(&pathToConfigFile, "config", "", "Path to APTrust config file")
@@ -89,6 +108,7 @@ func parseCommandLine() (configFile string) {
 	return pathToConfigFile
 }
 
+// Tell the user about the program.
 func printUsage() {
 	message := `
 apt_bucket_reader: Reads the contents of S3 receiving buckets, and creates
@@ -97,4 +117,29 @@ WorkItem entries and NSQ entries for bags awaiting ingest in those buckets.
 Usage: apt_bucket_reader -config=<absolute path to APTrust config file>
 `
 	fmt.Println(message)
+}
+
+func dieOnBadResponse(message string, resp *network.PharosResponse) {
+	if resp.Error != nil || resp.Response.StatusCode != http.StatusOK {
+		respData, _ := resp.RawResponseData()
+		detailedMessage := fmt.Sprintf(
+			"Message: %s " +
+			"Error: %s " +
+			"Raw response: %s",
+			message, resp.Error.Error(), string(respData))
+		die(detailedMessage)
+	}
+}
+
+
+// Print an error message to STDERR (and the log, if possible),
+// and then exit with a code indicating error.
+func die(message string) {
+	fmt.Fprintf(os.Stderr, "%s\n", message)
+	if _context != nil && _context.MessageLog != nil {
+		_context.MessageLog.Fatal(message,
+			"\n\nSTACK TRACE:\n\n",
+			string(debug.Stack()))
+	}
+	os.Exit(1)
 }
