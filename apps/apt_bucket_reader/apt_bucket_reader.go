@@ -10,6 +10,7 @@ import (
 	"net/url"
 	"os"
 	"runtime/debug"
+	"strconv"
 	"time"
 )
 
@@ -59,6 +60,34 @@ func cacheRecentIngestItems() {
 	// cache items where created_at <= 24 hours, or some such
 	// Can probably use key = name+etag+date, value = WorkItemId
     // Die on error
+	twentyFourHoursAgo := time.Now().Add(-24 * time.Hour).UTC()
+	params := url.Values{}
+	params.Add("page", "1")
+	params.Add("per_page", "100")
+	params.Add("action", "ingest")
+	params.Add("created_after", twentyFourHoursAgo.Format(time.RFC3339))
+	hasMoreResults := true
+	for hasMoreResults {
+		// TODO: Fix Pharos WorkItems Controller!
+		resp := _context.PharosClient.WorkItemList(params)
+		msg := fmt.Sprintf("Can't get page %s of WorkItem list.", params.Get("page"))
+		dieOnBadResponse(msg, resp)
+		for _, workItem := range resp.WorkItems() {
+			key := fmt.Sprintf("%s|%s|%s",workItem.Name, workItem.ETag,
+				workItem.BagDate.Format(time.RFC3339))
+			recentIngestItems[key] = workItem.Id
+		}
+		if resp.Next != nil {
+			pageNum, err := strconv.Atoi(params.Get("page"))
+			if err != nil {
+				msg := fmt.Sprintf("Aargh! %s don't look like no number!", params.Get("page"))
+				die(msg)
+			}
+			params.Set("page", strconv.Itoa(pageNum + 1))
+		} else {
+			hasMoreResults = false
+		}
+	}
 }
 
 func readAllBuckets() {

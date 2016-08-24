@@ -399,13 +399,17 @@ func (client *PharosClient) PremisEventSave(obj *models.PremisEvent) (*PharosRes
 // * node
 // * needs_admin_review
 // * process_after
+//
+// TODO: Fix Pharos WorkItems Controller, because it's not accepting
+// the values we're sending. Also, update the params list above to
+// match the WorkItem scopes in Pharos.
 func (client *PharosClient) WorkItemList(params url.Values) (*PharosResponse) {
 	// Set up the response object
 	resp := NewPharosResponse(PharosWorkItem)
 	resp.workItems = make([]*models.WorkItem, 0)
 
 	// Build the url and the request object
-	relativeUrl := fmt.Sprintf("/api/%s/work_items/?%s", client.apiVersion, encodeParams(params))
+	relativeUrl := fmt.Sprintf("/api/%s/items/?%s", client.apiVersion, encodeParams(params))
 	absoluteUrl := client.BuildUrl(relativeUrl)
 
 	// Run the request
