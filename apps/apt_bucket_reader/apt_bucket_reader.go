@@ -64,11 +64,10 @@ func cacheRecentIngestItems() {
 	params := url.Values{}
 	params.Add("page", "1")
 	params.Add("per_page", "100")
-	params.Add("action", "ingest")
+	params.Add("item_action", "ingest")
 	params.Add("created_after", twentyFourHoursAgo.Format(time.RFC3339))
 	hasMoreResults := true
 	for hasMoreResults {
-		// TODO: Fix Pharos WorkItems Controller!
 		resp := _context.PharosClient.WorkItemList(params)
 		msg := fmt.Sprintf("Can't get page %s of WorkItem list.", params.Get("page"))
 		dieOnBadResponse(msg, resp)
@@ -88,6 +87,7 @@ func cacheRecentIngestItems() {
 			hasMoreResults = false
 		}
 	}
+	_context.MessageLog.Info("Loaded %d recent ingest WorkItems", len(recentIngestItems))
 }
 
 func readAllBuckets() {
@@ -152,10 +152,12 @@ func dieOnBadResponse(message string, resp *network.PharosResponse) {
 	if resp.Error != nil || resp.Response.StatusCode != http.StatusOK {
 		respData, _ := resp.RawResponseData()
 		detailedMessage := fmt.Sprintf(
-			"Message: %s " +
-			"Error: %s " +
+			"URL: %s \n" +
+			"Message: %s \n" +
+			"Error: %s \n" +
 			"Raw response: %s",
-			message, resp.Error.Error(), string(respData))
+			resp.Request.URL, message,
+			resp.Error.Error(), string(respData))
 		die(detailedMessage)
 	}
 }

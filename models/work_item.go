@@ -52,7 +52,9 @@ type WorkItem struct {
 	Node                   string               `json:"node"`
 	Pid                    int                  `json:"pid"`
 	NeedsAdminReview       bool                 `json:"needs_admin_review"`
-	QueuedAt               time.Time            `json:"queued_at"`
+	// QueuedAt is a nullable DateTime in the Rails app,
+	// so it has to be a pointer here.
+	QueuedAt               *time.Time           `json:"queued_at"`
 	CreatedAt              time.Time            `json:"created_at"`
 	UpdatedAt              time.Time            `json:"updated_at"`
 }

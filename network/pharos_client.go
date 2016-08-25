@@ -386,23 +386,23 @@ func (client *PharosClient) PremisEventSave(obj *models.PremisEvent) (*PharosRes
 // Lists the work items meeting the specified filters, or all work
 // items if no filter params are set. Params include:
 //
-// * name
-// * etag
-// * bag_date
-// * stage
-// * status
-// * institution,
-// * retry
-// * reviewed
-// * object_identifier
-// * generic_file_identifier
-// * node
-// * needs_admin_review
-// * process_after
-//
-// TODO: Fix Pharos WorkItems Controller, because it's not accepting
-// the values we're sending. Also, update the params list above to
-// match the WorkItem scopes in Pharos.
+// created_before - DateTime in RFC3339 format
+// created_after - DateTime in RFC3339 format
+// updated_before - DateTime in RFC3339 format
+// updated_after - DateTime in RFC3339 format
+// name - Name of the tar file that appeared in the receiving bucket.
+// name_like - Match on partial tar file name
+// etag - The etag of the file uploaded to the receiving bucket.
+// etag_like - Match on partial etag.
+// object_identifier - The IntellectualObject identifier (null in some WorkItems)
+// object_identifier_like - Match on partial IntelObj
+// file_identifier - The GenericFile identifier (null on most WorkItems)
+// file_identifier_like - Match on partiak GenericFile identifier
+// status - String enum value from constants. StatusFetch, StatusUnpack, etc.
+// stage - String enum value from constants. StageReceive, StageCleanup, etc.
+// item_action - String enum value from constants. ActionIngest, ActionRestore, etc.
+// access - String enum value from constants.AccessRights.
+// state - "A" for active items, "D" for deleted items.
 func (client *PharosClient) WorkItemList(params url.Values) (*PharosResponse) {
 	// Set up the response object
 	resp := NewPharosResponse(PharosWorkItem)
