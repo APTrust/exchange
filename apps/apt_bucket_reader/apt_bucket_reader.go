@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"github.com/APTrust/exchange/constants"
 	"github.com/APTrust/exchange/context"
 	"github.com/APTrust/exchange/models"
 	"github.com/APTrust/exchange/network"
@@ -13,6 +14,10 @@ import (
 	"strconv"
 	"time"
 )
+
+// If Config.BucketReaderCacheHours isn't set to something
+// sensible, cache Ingest WorkItems up to this many hours old.
+const DEFAULT_CACHE_HOURS = 24
 
 var _context *context.Context
 var institutions map[string]*models.Institution
@@ -51,26 +56,27 @@ func cacheInstitutions() {
 }
 
 // Cache a list of Ingest items that have been added to
-// the list of WorkItems in the past 24 hours, so we won't
-// have to do 1000 lookups.
-// Exit on failure.
+// the list of WorkItems in the past X hours, so we won't
+// have to do 1000 lookups. (X is usually around 24, but
+// check Config.BucketReaderCacheHours for the exact value.
+// This function exits on failure.
 func cacheRecentIngestItems() {
-	// From Pharos client
-	// Should have a policy in config:
-	// cache items where created_at <= 24 hours, or some such
-	// Can probably use key = name+etag+date, value = WorkItemId
-    // Die on error
-	twentyFourHoursAgo := time.Now().Add(-24 * time.Hour).UTC()
+	hours := _context.Config.BucketReaderCacheHours
+	if hours < 1 {
+		hours = DEFAULT_CACHE_HOURS
+	}
+	createdAfter := time.Now().Add(time.Duration(-1 * hours) * time.Hour).UTC()
 	params := url.Values{}
 	params.Add("page", "1")
-	params.Add("per_page", "100")
-	params.Add("item_action", "ingest")
-	params.Add("created_after", twentyFourHoursAgo.Format(time.RFC3339))
+	params.Add("per_page", "100")  // change to 4 to test hasMoreResults loop
+	params.Add("item_action", constants.ActionIngest)
+	params.Add("created_after", createdAfter.Format(time.RFC3339))
 	hasMoreResults := true
 	for hasMoreResults {
 		resp := _context.PharosClient.WorkItemList(params)
-		msg := fmt.Sprintf("Can't get page %s of WorkItem list.", params.Get("page"))
-		dieOnBadResponse(msg, resp)
+		dieMessage := fmt.Sprintf("Can't get page %s of WorkItem list.", params.Get("page"))
+		dieOnBadResponse(dieMessage, resp)
+		_context.MessageLog.Debug("%s", resp.Request.URL.String())
 		for _, workItem := range resp.WorkItems() {
 			key := fmt.Sprintf("%s|%s|%s",workItem.Name, workItem.ETag,
 				workItem.BagDate.Format(time.RFC3339))

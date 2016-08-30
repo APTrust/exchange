@@ -11,6 +11,7 @@
     "LogToStderr": false,
     "VolumeServicePort": 8898,
     "LogLevel": 4,
+    "BucketReaderCacheHours": 24,
 
     "PharosURL": "http://test.aptrust.org",
     "PharosAPIVersion": "v2",

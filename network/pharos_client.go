@@ -391,13 +391,13 @@ func (client *PharosClient) PremisEventSave(obj *models.PremisEvent) (*PharosRes
 // updated_before - DateTime in RFC3339 format
 // updated_after - DateTime in RFC3339 format
 // name - Name of the tar file that appeared in the receiving bucket.
-// name_like - Match on partial tar file name
+// name_contains - Match on partial tar file name
 // etag - The etag of the file uploaded to the receiving bucket.
-// etag_like - Match on partial etag.
+// etag_contains - Match on partial etag.
 // object_identifier - The IntellectualObject identifier (null in some WorkItems)
-// object_identifier_like - Match on partial IntelObj
+// object_identifier_contains - Match on partial IntelObj
 // file_identifier - The GenericFile identifier (null on most WorkItems)
-// file_identifier_like - Match on partiak GenericFile identifier
+// file_identifier_contains - Match on partiak GenericFile identifier
 // status - String enum value from constants. StatusFetch, StatusUnpack, etc.
 // stage - String enum value from constants. StageReceive, StageCleanup, etc.
 // item_action - String enum value from constants. ActionIngest, ActionRestore, etc.

@@ -11,6 +11,7 @@
     "LogToStderr": true,
     "VolumeServicePort": 8898,
     "LogLevel": 4,
+    "BucketReaderCacheHours": 24,
 
     "PharosURL": "http://localhost:3000",
     "PharosAPIVersion": "v2",

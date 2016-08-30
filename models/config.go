@@ -88,6 +88,19 @@ type Config struct {
 	// Configuration options for apt_bag_delete
 	BagDeleteWorker         WorkerConfig
 
+	// The bucket reader checks for new items in the receiving
+	// buckets and queues them for ingest if they're not already
+	// queued. During periods of heavy ingest, we may have
+	// 10,000+ items in the receiving buckets. To avoid doing
+	// 10,000+ REST calls to Pharos to check for existing WorkItems,
+	// the bucket reader can do a handful of calls to cache
+	// all new ingest records from the past X hours. We usually set
+	// BucketReaderCacheHours to 24, to cache items that have appeared
+	// in the past day. The bucket reader WILL look items that aren't
+	// in the cache, but during peak hours when Pharos is under heavy
+	// load, this will save the server a lot of work.
+	BucketReaderCacheHours  int
+
 	// Set this in non-production environments to restore
 	// intellectual objects to a custom bucket. If this is set,
 	// all intellectual objects from all institutions will be
