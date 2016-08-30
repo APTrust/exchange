@@ -19,6 +19,8 @@
     "NsqdHttpAddress": "http://localhost:4151",
     "NsqLookupd": "localhost:4161",
 
+    "APTrustS3Region": "us-east-1",
+    "APTrustGlacierRegion": "us-west-2",
     "PreservationBucket": "aptrust.test.preservation",
     "ReplicationBucket": "aptrust.test.preservation.oregon",
     "CustomRestoreBucket": "aptrust.test.restore",
@@ -187,6 +189,7 @@
         "ReplicateToNumNodes": 2,
         "AcceptInvalidSSLCerts": true,
         "UseSSHWithRsync": false,
+        "DPNGlacierRegion": "us-east-1",
         "RestClient": {
             "Comment": "Settings for our local DPN REST API server. Load LocalAuthToken from environment!",
             "LocalServiceURL": "http://localhost:3001",

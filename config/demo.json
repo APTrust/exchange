@@ -19,6 +19,8 @@
     "NsqdHttpAddress": "http://apt-util.aptrust.org:4151",
     "NsqLookupd": "apt-util.aptrust.org:4161",
 
+    "APTrustS3Region": "us-east-1",
+    "APTrustGlacierRegion": "us-west-2",
     "PreservationBucket": "aptrust.test.preservation",
     "ReplicationBucket": "aptrust.test.preservation.oregon",
     "DPNPreservationBucket": "aptrust.dpn.test",
@@ -187,6 +189,7 @@
         "ReplicateToNumNodes": 2,
         "AcceptInvalidSSLCerts": false,
         "UseSSHWithRsync": true,
+        "DPNGlacierRegion": "us-east-1",
         "RestClient": {
             "Comment": "Settings for our local DPN REST API server. Load LocalAuthToken from environment!",
             "LocalServiceURL": "https://dpn-demo.aptrust.org/",

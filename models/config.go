@@ -82,6 +82,12 @@ type Config struct {
 	// in use.
 	ActiveConfig            string
 
+	// The name of the AWS region that hosts APTrust's S3 files.
+	APTrustGlacierRegion    string
+
+	// The name of the AWS region that hosts APTrust's Glacier files.
+	APTrustS3Region         string
+
 	// Config options specific to DPN services.
 	DPN                     DPNConfig
 
@@ -411,10 +417,13 @@ type DPNConfig struct {
 	// should not be allowed in production. Bools in Go default
 	// to false, so if this is not set in config, we should be
 	// safe.
-	AcceptInvalidSSLCerts  bool
+	AcceptInvalidSSLCerts   bool
 
 	// Default metadata that goes into bags produced at our node.
-	DefaultMetadata        DefaultMetadata
+	DefaultMetadata         DefaultMetadata
+
+	// The name of the AWS region that hosts DPN's Glacier files.
+	DPNGlacierRegion        string
 
 	// DPNCopyWorker copies tarred bags from other nodes into our
 	// DPN staging area, so we can replication them. Currently,
