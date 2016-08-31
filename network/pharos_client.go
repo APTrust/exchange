@@ -390,6 +390,7 @@ func (client *PharosClient) PremisEventSave(obj *models.PremisEvent) (*PharosRes
 // created_after - DateTime in RFC3339 format
 // updated_before - DateTime in RFC3339 format
 // updated_after - DateTime in RFC3339 format
+// bag_date - DateTime in RFC3339 format
 // name - Name of the tar file that appeared in the receiving bucket.
 // name_contains - Match on partial tar file name
 // etag - The etag of the file uploaded to the receiving bucket.

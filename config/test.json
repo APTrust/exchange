@@ -5,7 +5,7 @@
     "LogDirectory": "~/tmp/test_log",
     "RestoreDirectory": "~/tmp/test_restore",
     "ReplicationDirectory": "~/tmp/test_replicate",
-    "MaxFileSize": 0,
+    "MaxFileSize": 100000000,
     "SkipAlreadyProcessed": true,
     "DeleteOnSuccess": false,
     "LogToStderr": true,

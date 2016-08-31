@@ -7,6 +7,7 @@ import (
 	"github.com/APTrust/exchange/context"
 	"github.com/APTrust/exchange/models"
 	"github.com/APTrust/exchange/network"
+    "github.com/aws/aws-sdk-go/service/s3"
 	"net/http"
 	"net/url"
 	"os"
@@ -19,9 +20,13 @@ import (
 // sensible, cache Ingest WorkItems up to this many hours old.
 const DEFAULT_CACHE_HOURS = 24
 
+// How many S3 keys should we fetch in each batch when
+// we're getting the contents of a bucket?
+const MAX_KEYS = 1000
+
 var _context *context.Context
 var institutions map[string]*models.Institution
-var recentIngestItems map[string]int
+var recentIngestItems map[string]*models.WorkItem
 
 func main() {
 	pathToConfigFile := parseCommandLine()
@@ -31,7 +36,7 @@ func main() {
 		os.Exit(1)
 	}
 	institutions = make(map[string]*models.Institution)
-	recentIngestItems = make(map[string]int)
+	recentIngestItems = make(map[string]*models.WorkItem)
 	_context = context.NewContext(config)
 	cacheInstitutions()
 	cacheRecentIngestItems()
@@ -78,9 +83,9 @@ func cacheRecentIngestItems() {
 		dieOnBadResponse(dieMessage, resp)
 		_context.MessageLog.Debug("%s", resp.Request.URL.String())
 		for _, workItem := range resp.WorkItems() {
-			key := fmt.Sprintf("%s|%s|%s",workItem.Name, workItem.ETag,
+			hashKey := makeHashKey(workItem.Name, workItem.ETag,
 				workItem.BagDate.Format(time.RFC3339))
-			recentIngestItems[key] = workItem.Id
+			recentIngestItems[hashKey] = workItem
 		}
 		if resp.Next != nil {
 			pageNum, err := strconv.Atoi(params.Get("page"))
@@ -96,34 +101,90 @@ func cacheRecentIngestItems() {
 	_context.MessageLog.Info("Loaded %d recent ingest WorkItems", len(recentIngestItems))
 }
 
+func makeHashKey(key, etag, lastModified string) (string) {
+	return fmt.Sprintf("%s|%s|%s", key, etag, lastModified)
+}
+
 func readAllBuckets() {
-	// for each bucket in _context.Config.ReceivingBuckets
-	// ... readBucket(bucket)
+	for _, bucketName := range _context.Config.ReceivingBuckets {
+		processBucket(bucketName)
+	}
 }
 
-func readBucket(bucketName string) () {
-	// from network.S3ObjectList
-	// keep calling GetList until IsTruncated == false
-	// foreach item...
-	// ...skip if it exceeds max size
-	// ...skip if corresponding record exists in cache or Pharos
-	// Otherwise--
-	// -- create WorkItem in Pharos
-	// -- create NSQ entry
-	// -- set queued timestamp on WorkItem
+func processBucket(bucketName string) () {
+	_context.MessageLog.Debug("Checking bucket %s", bucketName)
+	s3ObjList := network.NewS3ObjectList(_context.Config.APTrustS3Region,
+		bucketName, MAX_KEYS)
+	keepFetching := true
+	for keepFetching {
+		s3ObjList.GetList()
+		if s3ObjList.ErrorMessage != "" {
+			_context.MessageLog.Error(s3ObjList.ErrorMessage)
+			break
+		}
+		for _, s3Object := range s3ObjList.Response.Contents {
+			processS3Object(s3Object, bucketName)
+		}
+		keepFetching = *s3ObjList.Response.IsTruncated
+	}
 }
 
-func createWorkItem(key, etag string, lastModified time.Time) (*models.WorkItem, error) {
+func processS3Object (s3Object *s3.Object, bucketName string) {
+	if _context.Config.MaxFileSize > int64(0) && *s3Object.Size > _context.Config.MaxFileSize {
+		_context.MessageLog.Debug("Skipping %s/%s because size %d is greater than " +
+			"current max file size %d", bucketName, *s3Object.Key, *s3Object.Size,
+			_context.Config.MaxFileSize)
+		return
+	}
+	workItem := findWorkItem(bucketName, *s3Object.Key, *s3Object.LastModified)
+	if workItem == nil {
+		workItem = createWorkItem(bucketName, *s3Object.Key, *s3Object.LastModified)
+	}
+	// if workItem.QueuedAt.IsZero() {
+	// 	addToNSQ(workItem.Id)
+	// 	markAsQueued(workItem)
+	// }
+}
+
+func findWorkItem(key, etag string, lastModified time.Time) (*models.WorkItem) {
+	hashKey := makeHashKey(key, etag, lastModified.Format(time.RFC3339))
+	if workItem, ok := recentIngestItems[hashKey]; ok {
+		_context.MessageLog.Debug("Found hash key '%s' in cache", hashKey)
+		return workItem
+	}
+	_context.MessageLog.Debug("Looking up hash key '%s' in Pharos", hashKey)
+	params := url.Values{}
+	params.Add("page", "1")
+	params.Add("per_page", "1")
+	params.Add("item_action", constants.ActionIngest)
+	params.Add("name", key)
+	params.Add("etag", etag)
+	params.Add("bag_date", lastModified.Format(time.RFC3339))
+	resp := _context.PharosClient.WorkItemList(params)
+	dieMessage := fmt.Sprintf("Error getting WorkItem for name '%s', etag '%s', time '%s'",
+		params.Get("name"), params.Get("etag"), params.Get("bag_date"))
+	dieOnBadResponse(dieMessage, resp)
+	_context.MessageLog.Debug("%s", resp.Request.URL.String())
+	items := resp.WorkItems()
+	if len(items) > 0 {
+		_context.MessageLog.Debug("Found WorkItem for hash key '%s' in Pharos", hashKey)
+		return items[0]
+	}
+	_context.MessageLog.Debug("Did not find WorkItem for hash key '%s' in Pharos", hashKey)
+	return nil
+}
+
+func createWorkItem(key, etag string, lastModified time.Time) (*models.WorkItem) {
 	// Create a WorkItem in Pharos
 	item := &models.WorkItem{}
 	// define it
 	// save it
-	return item, nil
+	return item
 }
 
-func addToNSQ(workItemId int) (error) {
+func addToNSQ(workItemId int) {
 	// Create NSQ entry and set WorkItem.QueuedAt
-	return nil
+	return
 }
 
 func markAsQueued(workItem *models.WorkItem) (*models.WorkItem, error) {

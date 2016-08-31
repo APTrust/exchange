@@ -5,7 +5,7 @@
     "LogDirectory": "~/tmp/test_log",
     "RestoreDirectory": "~/tmp/test_restore",
     "ReplicationDirectory": "~/tmp/test_replicate",
-    "MaxFileSize": 0,
+    "MaxFileSize": 100000000,
     "SkipAlreadyProcessed": true,
     "DeleteOnSuccess": false,
     "LogToStderr": true,
@@ -159,24 +159,7 @@
     },
 
     "ReceivingBuckets": [
-        "aptrust.receiving.test.columbia.edu",
-        "aptrust.receiving.test.georgetown.edu",
-        "aptrust.receiving.test.indiana.edu",
-        "aptrust.receiving.test.jhu.edu",
-        "aptrust.receiving.test.miami.edu",
-        "aptrust.receiving.test.ncsu.edu",
-        "aptrust.receiving.test.psu.edu",
-        "aptrust.receiving.test.syr.edu",
-        "aptrust.receiving.test.test.edu",
-        "aptrust.receiving.test.uc.edu",
-        "aptrust.receiving.test.uchicago.edu",
-        "aptrust.receiving.test.uconn.edu",
-        "aptrust.receiving.test.umd.edu",
-        "aptrust.receiving.test.umich.edu",
-        "aptrust.receiving.test.unc.edu",
-        "aptrust.receiving.test.nd.edu",
-        "aptrust.receiving.test.virginia.edu",
-        "aptrust.receiving.test.vt.edu"
+        "aptrust.receiving.test.test.edu"
     ],
 
     "DPN": {
