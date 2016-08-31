@@ -7,8 +7,8 @@ import (
 	"github.com/APTrust/exchange/context"
 	"github.com/APTrust/exchange/models"
 	"github.com/APTrust/exchange/network"
+	"github.com/APTrust/exchange/util"
     "github.com/aws/aws-sdk-go/service/s3"
-	"net/http"
 	"net/url"
 	"os"
 	"runtime/debug"
@@ -138,12 +138,12 @@ func processS3Object (s3Object *s3.Object, bucketName string) {
 	}
 	workItem := findWorkItem(bucketName, *s3Object.Key, *s3Object.LastModified)
 	if workItem == nil {
-		workItem = createWorkItem(bucketName, *s3Object.Key, *s3Object.LastModified)
+		workItem = createWorkItem(bucketName, *s3Object.Key, *s3Object.ETag, *s3Object.LastModified)
 	}
-	// if workItem.QueuedAt.IsZero() {
-	// 	addToNSQ(workItem.Id)
-	// 	markAsQueued(workItem)
-	// }
+	if workItem.QueuedAt == nil || workItem.QueuedAt.IsZero() {
+		addToNSQ(workItem.Id)
+		markAsQueued(workItem)
+	}
 }
 
 func findWorkItem(key, etag string, lastModified time.Time) (*models.WorkItem) {
@@ -165,21 +165,45 @@ func findWorkItem(key, etag string, lastModified time.Time) (*models.WorkItem) {
 		params.Get("name"), params.Get("etag"), params.Get("bag_date"))
 	dieOnBadResponse(dieMessage, resp)
 	_context.MessageLog.Debug("%s", resp.Request.URL.String())
-	items := resp.WorkItems()
-	if len(items) > 0 {
+	item := resp.WorkItem()
+	if item != nil {
 		_context.MessageLog.Debug("Found WorkItem for hash key '%s' in Pharos", hashKey)
-		return items[0]
+	} else {
+		_context.MessageLog.Debug("Did not find WorkItem for hash key '%s' in Pharos", hashKey)
 	}
-	_context.MessageLog.Debug("Did not find WorkItem for hash key '%s' in Pharos", hashKey)
-	return nil
+	return item
 }
 
-func createWorkItem(key, etag string, lastModified time.Time) (*models.WorkItem) {
+func createWorkItem(bucket, key, etag string, lastModified time.Time) (*models.WorkItem) {
 	// Create a WorkItem in Pharos
-	item := &models.WorkItem{}
-	// define it
-	// save it
-	return item
+	institution := institutions[util.OwnerOf(bucket)]
+	if institution == nil {
+		die(fmt.Sprintf("Cannot find institution record for %s", util.OwnerOf(bucket)))
+	}
+	workItem := &models.WorkItem{}
+	workItem.Name = key
+	workItem.Bucket = bucket
+	workItem.ETag = etag
+	workItem.BagDate = lastModified
+	workItem.InstitutionId = institution.Id
+	workItem.User = constants.APTrustSystemUser
+	workItem.Date = time.Now().UTC()
+	workItem.Note = "Bag is in receiving bucket"
+	workItem.Action = constants.ActionIngest
+	workItem.Stage = constants.StageReceive
+	workItem.Status = constants.StatusPending
+	workItem.Outcome = "Item is pending ingest"
+	workItem.Retry = true
+	resp := _context.PharosClient.WorkItemSave(workItem)
+	data, _ := resp.RawResponseData()
+	fmt.Println(string(data))
+	dieMessage := fmt.Sprintf("Error saving WorkItem for name '%s', etag '%s', time '%s'",
+		workItem.Name, workItem.ETag, workItem.BagDate)
+	dieOnBadResponse(dieMessage, resp)
+	savedWorkItem := resp.WorkItem()
+	_context.MessageLog.Debug("Created WorkItem with id %d for %s/%s in Pharos",
+		savedWorkItem.Id, bucket, key)
+	return savedWorkItem
 }
 
 func addToNSQ(workItemId int) {
@@ -187,9 +211,14 @@ func addToNSQ(workItemId int) {
 	return
 }
 
-func markAsQueued(workItem *models.WorkItem) (*models.WorkItem, error) {
-	// Update WorkItem, so QueuedAt is set
-	return workItem, nil
+func markAsQueued(workItem *models.WorkItem) (*models.WorkItem) {
+	utcNow := time.Now().UTC()
+	workItem.QueuedAt = &utcNow
+	resp := _context.PharosClient.WorkItemSave(workItem)
+	dieMessage := fmt.Sprintf("Error setting QueuedAt for WorkItem with id %d",
+		workItem.Id)
+	dieOnBadResponse(dieMessage, resp)
+	return resp.WorkItem()
 }
 
 // See if you can figure out from the function name what this does.
@@ -216,7 +245,7 @@ Usage: apt_bucket_reader -config=<absolute path to APTrust config file>
 }
 
 func dieOnBadResponse(message string, resp *network.PharosResponse) {
-	if resp.Error != nil || resp.Response.StatusCode != http.StatusOK {
+	if resp.Error != nil {
 		respData, _ := resp.RawResponseData()
 		detailedMessage := fmt.Sprintf(
 			"URL: %s \n" +
