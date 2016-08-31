@@ -18,6 +18,8 @@ var APTrustFileNamePattern = regexp.MustCompile("^[A-Za-z0-9\\._][A-Za-z0-9\\.\\
 // Regex for valid POSIX filenames.
 var PosixFileNamePattern = regexp.MustCompile("^[A-Za-z0-9\\._\\-]+$")
 
+const APTrustSystemUser = "system@aptrust.org"
+
 const (
 	APTrustNamespace        = "urn:mace:aptrust.org"
 	ReceiveBucketPrefix     = "aptrust.receiving."

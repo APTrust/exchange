@@ -37,7 +37,7 @@ type WorkItem struct {
 	Bucket                 string               `json:"bucket"`
 	ETag                   string               `json:"etag"`
 	BagDate                time.Time            `json:"bag_date"`
-	Institution            string               `json:"institution"`
+	InstitutionId          int                  `json:"institution_id"`
 	User                   string               `json:"user"`
 	Date                   time.Time            `json:"date"`
 	Note                   string               `json:"note"`
@@ -46,7 +46,6 @@ type WorkItem struct {
 	Status                 string               `json:"status"`
 	Outcome                string               `json:"outcome"`
 	Retry                  bool                 `json:"retry"`
-	Reviewed               bool                 `json:"reviewed"`
 	// TODO: Change to binary, and possibly move.
 	State                  string               `json:"state"`
 	Node                   string               `json:"node"`
@@ -59,15 +58,15 @@ type WorkItem struct {
 	UpdatedAt              time.Time            `json:"updated_at"`
 }
 
-// Convert WorkItem to JSON, omitting id, which Rails won't permit.
-// For internal use, json.Marshal() works fine.
+// Convert WorkItem to JSON, omitting id and other attributes that
+// Rails won't permit. For internal use, json.Marshal() works fine.
 func (item *WorkItem) SerializeForPharos() ([]byte, error) {
 	return json.Marshal(map[string]interface{}{
 		"name":                    item.Name,
 		"bucket":                  item.Bucket,
 		"etag":                    item.ETag,
 		"bag_date":                item.BagDate,
-		"institution":             item.Institution,
+		"institution_id":          item.InstitutionId,
 		"object_identifier":       item.ObjectIdentifier,
 		"generic_file_identifier": item.GenericFileIdentifier,
 		"date":                    item.Date,
@@ -77,14 +76,11 @@ func (item *WorkItem) SerializeForPharos() ([]byte, error) {
 		"status":                  item.Status,
 		"outcome":                 item.Outcome,
 		"retry":                   item.Retry,
-		"reviewed":                item.Reviewed,
 		"state":                   item.State,
 		"node":                    item.Node,
 		"pid":                     item.Pid,
 		"needs_admin_review":      item.NeedsAdminReview,
 		"queued_at":               item.QueuedAt,
-		"created_at":              item.CreatedAt,
-		"updated_at":              item.UpdatedAt,
 	})
 }
 

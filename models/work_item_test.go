@@ -23,7 +23,7 @@ func SampleWorkItem() *models.WorkItem {
 		Bucket: "aptrust.receiving.ncsu.edu",
 		ETag: "12345",
 		BagDate: bagDate,
-		Institution: "ncsu.edu",
+		InstitutionId: 324,
 		Date: ingestDate,
 		Note: "so many!",
 		Action: "Ingest",
@@ -31,7 +31,6 @@ func SampleWorkItem() *models.WorkItem {
 		Status: "Success",
 		Outcome: "happy day!",
 		Retry: true,
-		Reviewed: false,
 		Node: "",
 		Pid: 0,
 		State: "{}",
@@ -47,7 +46,7 @@ func TestWorkItemSerializeForPharos(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	expected := `{"action":"Ingest","bag_date":"2104-07-02T12:00:00Z","bucket":"aptrust.receiving.ncsu.edu","created_at":"2014-09-10T12:00:00Z","date":"2014-09-10T12:00:00Z","etag":"12345","generic_file_identifier":"ncsu.edu/some_object/data/doc.pdf","institution":"ncsu.edu","name":"Sample Document","needs_admin_review":false,"node":"","note":"so many!","object_identifier":"ncsu.edu/some_object","outcome":"happy day!","pid":0,"queued_at":null,"retry":true,"reviewed":false,"stage":"Store","state":"{}","status":"Success","updated_at":"2014-09-10T12:00:00Z"}`
+	expected := `{"action":"Ingest","bag_date":"2104-07-02T12:00:00Z","bucket":"aptrust.receiving.ncsu.edu","date":"2014-09-10T12:00:00Z","etag":"12345","generic_file_identifier":"ncsu.edu/some_object/data/doc.pdf","institution_id":324,"name":"Sample Document","needs_admin_review":false,"node":"","note":"so many!","object_identifier":"ncsu.edu/some_object","outcome":"happy day!","pid":0,"queued_at":null,"retry":true,"stage":"Store","state":"{}","status":"Success"}`
 	assert.Equal(t, expected, string(bytes))
 }
 
