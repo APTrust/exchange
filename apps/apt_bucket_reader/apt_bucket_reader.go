@@ -141,7 +141,7 @@ func processS3Object (s3Object *s3.Object, bucketName string) {
 		workItem = createWorkItem(bucketName, *s3Object.Key, *s3Object.ETag, *s3Object.LastModified)
 	}
 	if workItem.QueuedAt == nil || workItem.QueuedAt.IsZero() {
-		addToNSQ(workItem.Id)
+		addToNSQ(workItem)
 		markAsQueued(workItem)
 	}
 }
@@ -206,8 +206,14 @@ func createWorkItem(bucket, key, etag string, lastModified time.Time) (*models.W
 	return savedWorkItem
 }
 
-func addToNSQ(workItemId int) {
-	// Create NSQ entry and set WorkItem.QueuedAt
+func addToNSQ(workItem *models.WorkItem) {
+	client := network.NewNSQClient(_context.Config.NsqdHttpAddress)
+	err := client.Enqueue("apt_ingest_fetch", workItem.Id)
+	if err != nil {
+		die(fmt.Sprintf("Error sending WorkItem %d to NSQ: %v", workItem.Id, err))
+	}
+	_context.MessageLog.Info("Added WorkItem id %d to NSQ (%s/%s)",
+		workItem.Id, workItem.Bucket, workItem.Name)
 	return
 }
 
