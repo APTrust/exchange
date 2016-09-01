@@ -24,7 +24,7 @@ func TestNewPharosClient(t *testing.T) {
 }
 
 func TestInstitutionGet(t *testing.T) {
-	testServer := httptest.NewServer(http.HandlerFunc(institutionGetHander))
+	testServer := httptest.NewServer(http.HandlerFunc(institutionGetHandler))
 	defer testServer.Close()
 
 	client, err := network.NewPharosClient(testServer.URL, "v2", "user", "key")
@@ -49,7 +49,7 @@ func TestInstitutionGet(t *testing.T) {
 }
 
 func TestInstitutionList(t *testing.T) {
-	testServer := httptest.NewServer(http.HandlerFunc(institutionListHander))
+	testServer := httptest.NewServer(http.HandlerFunc(institutionListHandler))
 	defer testServer.Close()
 
 	client, err := network.NewPharosClient(testServer.URL, "v2", "user", "key")
@@ -89,7 +89,7 @@ func TestInstitutionList(t *testing.T) {
 }
 
 func TestIntellectualObjectGet(t *testing.T) {
-	testServer := httptest.NewServer(http.HandlerFunc(intellectualObjectGetHander))
+	testServer := httptest.NewServer(http.HandlerFunc(intellectualObjectGetHandler))
 	defer testServer.Close()
 
 	client, err := network.NewPharosClient(testServer.URL, "v2", "user", "key")
@@ -122,7 +122,7 @@ func TestIntellectualObjectGet(t *testing.T) {
 }
 
 func TestIntellectualObjectList(t *testing.T) {
-	testServer := httptest.NewServer(http.HandlerFunc(intellectualObjectListHander))
+	testServer := httptest.NewServer(http.HandlerFunc(intellectualObjectListHandler))
 	defer testServer.Close()
 
 	client, err := network.NewPharosClient(testServer.URL, "v2", "user", "key")
@@ -162,7 +162,7 @@ func TestIntellectualObjectList(t *testing.T) {
 }
 
 func TestIntellectualObjectSave(t *testing.T) {
-	testServer := httptest.NewServer(http.HandlerFunc(intellectualObjectSaveHander))
+	testServer := httptest.NewServer(http.HandlerFunc(intellectualObjectSaveHandler))
 	defer testServer.Close()
 
 	client, err := network.NewPharosClient(testServer.URL, "v2", "user", "key")
@@ -223,7 +223,7 @@ func TestIntellectualObjectSave(t *testing.T) {
 }
 
 func TestGenericFileGet(t *testing.T) {
-	testServer := httptest.NewServer(http.HandlerFunc(genericFileGetHander))
+	testServer := httptest.NewServer(http.HandlerFunc(genericFileGetHandler))
 	defer testServer.Close()
 
 	client, err := network.NewPharosClient(testServer.URL, "v2", "user", "key")
@@ -254,7 +254,7 @@ func TestGenericFileGet(t *testing.T) {
 }
 
 func TestGenericFileList(t *testing.T) {
-	testServer := httptest.NewServer(http.HandlerFunc(genericFileListHander))
+	testServer := httptest.NewServer(http.HandlerFunc(genericFileListHandler))
 	defer testServer.Close()
 
 	client, err := network.NewPharosClient(testServer.URL, "v2", "user", "key")
@@ -294,7 +294,7 @@ func TestGenericFileList(t *testing.T) {
 }
 
 func TestGenericFileSave(t *testing.T) {
-	testServer := httptest.NewServer(http.HandlerFunc(genericFileSaveHander))
+	testServer := httptest.NewServer(http.HandlerFunc(genericFileSaveHandler))
 	defer testServer.Close()
 
 	client, err := network.NewPharosClient(testServer.URL, "v2", "user", "key")
@@ -356,7 +356,7 @@ func TestGenericFileSave(t *testing.T) {
 }
 
 func TestPremisEventGet(t *testing.T) {
-	testServer := httptest.NewServer(http.HandlerFunc(premisEventGetHander))
+	testServer := httptest.NewServer(http.HandlerFunc(premisEventGetHandler))
 	defer testServer.Close()
 
 	client, err := network.NewPharosClient(testServer.URL, "v2", "user", "key")
@@ -384,7 +384,7 @@ func TestPremisEventGet(t *testing.T) {
 }
 
 func TestPremisEventList(t *testing.T) {
-	testServer := httptest.NewServer(http.HandlerFunc(premisEventListHander))
+	testServer := httptest.NewServer(http.HandlerFunc(premisEventListHandler))
 	defer testServer.Close()
 
 	client, err := network.NewPharosClient(testServer.URL, "v2", "user", "key")
@@ -424,7 +424,7 @@ func TestPremisEventList(t *testing.T) {
 }
 
 func TestPremisEventSave(t *testing.T) {
-	testServer := httptest.NewServer(http.HandlerFunc(premisEventSaveHander))
+	testServer := httptest.NewServer(http.HandlerFunc(premisEventSaveHandler))
 	defer testServer.Close()
 
 	client, err := network.NewPharosClient(testServer.URL, "v2", "user", "key")
@@ -460,7 +460,7 @@ func TestPremisEventSave(t *testing.T) {
 }
 
 func TestWorkItemGet(t *testing.T) {
-	testServer := httptest.NewServer(http.HandlerFunc(workItemGetHander))
+	testServer := httptest.NewServer(http.HandlerFunc(workItemGetHandler))
 	defer testServer.Close()
 
 	client, err := network.NewPharosClient(testServer.URL, "v2", "user", "key")
@@ -490,7 +490,7 @@ func TestWorkItemGet(t *testing.T) {
 }
 
 func TestWorkItemList(t *testing.T) {
-	testServer := httptest.NewServer(http.HandlerFunc(workItemListHander))
+	testServer := httptest.NewServer(http.HandlerFunc(workItemListHandler))
 	defer testServer.Close()
 
 	client, err := network.NewPharosClient(testServer.URL, "v2", "user", "key")
@@ -532,7 +532,7 @@ func TestWorkItemList(t *testing.T) {
 }
 
 func TestWorkItemSave(t *testing.T) {
-	testServer := httptest.NewServer(http.HandlerFunc(workItemSaveHander))
+	testServer := httptest.NewServer(http.HandlerFunc(workItemSaveHandler))
 	defer testServer.Close()
 
 	client, err := network.NewPharosClient(testServer.URL, "v2", "user", "key")
@@ -626,14 +626,14 @@ func sampleParams() (url.Values) {
 // Institution handlers
 // -------------------------------------------------------------------------
 
-func institutionGetHander(w http.ResponseWriter, r *http.Request) {
+func institutionGetHandler(w http.ResponseWriter, r *http.Request) {
 	obj := testutil.MakeInstitution()
 	objJson, _ := json.Marshal(obj)
 	w.Header().Set("Content-Type", "application/json")
 	fmt.Fprintln(w, string(objJson))
 }
 
-func institutionListHander(w http.ResponseWriter, r *http.Request) {
+func institutionListHandler(w http.ResponseWriter, r *http.Request) {
 	list := make([]*models.Institution, 4)
 	for i := 0; i < 4; i++ {
 		list[i] = testutil.MakeInstitution()
@@ -650,14 +650,14 @@ func institutionListHander(w http.ResponseWriter, r *http.Request) {
 // IntellectualObject handlers
 // -------------------------------------------------------------------------
 
-func intellectualObjectGetHander(w http.ResponseWriter, r *http.Request) {
+func intellectualObjectGetHandler(w http.ResponseWriter, r *http.Request) {
 	obj := testutil.MakeIntellectualObject(2,3,4,5)
 	objJson, _ := json.Marshal(obj)
 	w.Header().Set("Content-Type", "application/json")
 	fmt.Fprintln(w, string(objJson))
 }
 
-func intellectualObjectListHander(w http.ResponseWriter, r *http.Request) {
+func intellectualObjectListHandler(w http.ResponseWriter, r *http.Request) {
 	list := make([]*models.IntellectualObject, 4)
 	for i := 0; i < 4; i++ {
 		list[i] = testutil.MakeIntellectualObject(2,3,4,5)
@@ -669,7 +669,7 @@ func intellectualObjectListHander(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintln(w, string(listJson))
 }
 
-func intellectualObjectSaveHander(w http.ResponseWriter, r *http.Request) {
+func intellectualObjectSaveHandler(w http.ResponseWriter, r *http.Request) {
 	decoder := json.NewDecoder(r.Body)
     data := make(map[string]interface{})
     err := decoder.Decode(&data)
@@ -691,14 +691,14 @@ func intellectualObjectSaveHander(w http.ResponseWriter, r *http.Request) {
 // GenericFile handlers
 // -------------------------------------------------------------------------
 
-func genericFileGetHander(w http.ResponseWriter, r *http.Request) {
+func genericFileGetHandler(w http.ResponseWriter, r *http.Request) {
 	obj := testutil.MakeGenericFile(2,3, "kollege.kom/objekt")
 	objJson, _ := json.Marshal(obj)
 	w.Header().Set("Content-Type", "application/json")
 	fmt.Fprintln(w, string(objJson))
 }
 
-func genericFileListHander(w http.ResponseWriter, r *http.Request) {
+func genericFileListHandler(w http.ResponseWriter, r *http.Request) {
 	list := make([]*models.GenericFile, 4)
 	for i := 0; i < 4; i++ {
 		list[i] = testutil.MakeGenericFile(2,3,"kollege.kom/objekt")
@@ -710,7 +710,7 @@ func genericFileListHander(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintln(w, string(listJson))
 }
 
-func genericFileSaveHander(w http.ResponseWriter, r *http.Request) {
+func genericFileSaveHandler(w http.ResponseWriter, r *http.Request) {
 	decoder := json.NewDecoder(r.Body)
 	decoder.UseNumber()
     data := make(map[string]interface{})
@@ -734,7 +734,7 @@ func genericFileSaveHander(w http.ResponseWriter, r *http.Request) {
 // PremisEvent handlers
 // -------------------------------------------------------------------------
 
-func premisEventGetHander(w http.ResponseWriter, r *http.Request) {
+func premisEventGetHandler(w http.ResponseWriter, r *http.Request) {
 	obj := testutil.MakePremisEvent()
 	obj.Identifier = "000000000000-0000-0000-0000-00000000"
 	objJson, _ := json.Marshal(obj)
@@ -742,7 +742,7 @@ func premisEventGetHander(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintln(w, string(objJson))
 }
 
-func premisEventListHander(w http.ResponseWriter, r *http.Request) {
+func premisEventListHandler(w http.ResponseWriter, r *http.Request) {
 	list := make([]*models.PremisEvent, 4)
 	for i := 0; i < 4; i++ {
 		list[i] = testutil.MakePremisEvent()
@@ -754,7 +754,7 @@ func premisEventListHander(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintln(w, string(listJson))
 }
 
-func premisEventSaveHander(w http.ResponseWriter, r *http.Request) {
+func premisEventSaveHandler(w http.ResponseWriter, r *http.Request) {
 	decoder := json.NewDecoder(r.Body)
 	decoder.UseNumber()
     data := make(map[string]interface{})
@@ -778,14 +778,14 @@ func premisEventSaveHander(w http.ResponseWriter, r *http.Request) {
 // WorkItem handlers
 // -------------------------------------------------------------------------
 
-func workItemGetHander(w http.ResponseWriter, r *http.Request) {
+func workItemGetHandler(w http.ResponseWriter, r *http.Request) {
 	obj := testutil.MakeWorkItem()
 	objJson, _ := json.Marshal(obj)
 	w.Header().Set("Content-Type", "application/json")
 	fmt.Fprintln(w, string(objJson))
 }
 
-func workItemListHander(w http.ResponseWriter, r *http.Request) {
+func workItemListHandler(w http.ResponseWriter, r *http.Request) {
 	list := make([]*models.WorkItem, 4)
 	for i := 0; i < 4; i++ {
 		list[i] = testutil.MakeWorkItem()
@@ -797,7 +797,7 @@ func workItemListHander(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintln(w, string(listJson))
 }
 
-func workItemSaveHander(w http.ResponseWriter, r *http.Request) {
+func workItemSaveHandler(w http.ResponseWriter, r *http.Request) {
 	decoder := json.NewDecoder(r.Body)
 	decoder.UseNumber()
     data := make(map[string]interface{})
