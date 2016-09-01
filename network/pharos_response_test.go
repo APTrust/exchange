@@ -28,7 +28,7 @@ func TestNewPharosResponse(t *testing.T) {
 }
 
 func TestRawResponseData(t *testing.T) {
-	testServer := httptest.NewServer(http.HandlerFunc(institutionGetHander))
+	testServer := httptest.NewServer(http.HandlerFunc(institutionGetHandler))
 	defer testServer.Close()
 	client, err := network.NewPharosClient(testServer.URL, "v1", "user", "key")
 	if err != nil {
@@ -94,7 +94,7 @@ func TestParamsForPreviousPage(t *testing.T) {
 }
 
 func TestInstitution(t *testing.T) {
-	testServer := httptest.NewServer(http.HandlerFunc(institutionGetHander))
+	testServer := httptest.NewServer(http.HandlerFunc(institutionGetHandler))
 	defer testServer.Close()
 	client, err := network.NewPharosClient(testServer.URL, "v1", "user", "key")
 	if err != nil {
@@ -106,7 +106,7 @@ func TestInstitution(t *testing.T) {
 }
 
 func TestInstitutions(t *testing.T) {
-	testServer := httptest.NewServer(http.HandlerFunc(institutionListHander))
+	testServer := httptest.NewServer(http.HandlerFunc(institutionListHandler))
 	defer testServer.Close()
 	client, err := network.NewPharosClient(testServer.URL, "v1", "user", "key")
 	if err != nil {
@@ -118,7 +118,7 @@ func TestInstitutions(t *testing.T) {
 }
 
 func TestIntellectualObject(t *testing.T) {
-	testServer := httptest.NewServer(http.HandlerFunc(intellectualObjectGetHander))
+	testServer := httptest.NewServer(http.HandlerFunc(intellectualObjectGetHandler))
 	defer testServer.Close()
 	client, err := network.NewPharosClient(testServer.URL, "v1", "user", "key")
 	if err != nil {
@@ -130,7 +130,7 @@ func TestIntellectualObject(t *testing.T) {
 }
 
 func TestIntellectualObjects(t *testing.T) {
-	testServer := httptest.NewServer(http.HandlerFunc(intellectualObjectListHander))
+	testServer := httptest.NewServer(http.HandlerFunc(intellectualObjectListHandler))
 	defer testServer.Close()
 	client, err := network.NewPharosClient(testServer.URL, "v1", "user", "key")
 	if err != nil {
@@ -142,7 +142,7 @@ func TestIntellectualObjects(t *testing.T) {
 }
 
 func TestGenericFile(t *testing.T) {
-	testServer := httptest.NewServer(http.HandlerFunc(genericFileGetHander))
+	testServer := httptest.NewServer(http.HandlerFunc(genericFileGetHandler))
 	defer testServer.Close()
 	client, err := network.NewPharosClient(testServer.URL, "v1", "user", "key")
 	if err != nil {
@@ -154,7 +154,7 @@ func TestGenericFile(t *testing.T) {
 }
 
 func TestGenericFiles(t *testing.T) {
-	testServer := httptest.NewServer(http.HandlerFunc(genericFileListHander))
+	testServer := httptest.NewServer(http.HandlerFunc(genericFileListHandler))
 	defer testServer.Close()
 	client, err := network.NewPharosClient(testServer.URL, "v1", "user", "key")
 	if err != nil {
@@ -166,7 +166,7 @@ func TestGenericFiles(t *testing.T) {
 }
 
 func TestPremisEvent(t *testing.T) {
-	testServer := httptest.NewServer(http.HandlerFunc(premisEventGetHander))
+	testServer := httptest.NewServer(http.HandlerFunc(premisEventGetHandler))
 	defer testServer.Close()
 	client, err := network.NewPharosClient(testServer.URL, "v1", "user", "key")
 	if err != nil {
@@ -178,7 +178,7 @@ func TestPremisEvent(t *testing.T) {
 }
 
 func TestPremisEvents(t *testing.T) {
-	testServer := httptest.NewServer(http.HandlerFunc(premisEventListHander))
+	testServer := httptest.NewServer(http.HandlerFunc(premisEventListHandler))
 	defer testServer.Close()
 	client, err := network.NewPharosClient(testServer.URL, "v1", "user", "key")
 	if err != nil {
@@ -190,7 +190,7 @@ func TestPremisEvents(t *testing.T) {
 }
 
 func TestWorkItem(t *testing.T) {
-	testServer := httptest.NewServer(http.HandlerFunc(workItemGetHander))
+	testServer := httptest.NewServer(http.HandlerFunc(workItemGetHandler))
 	defer testServer.Close()
 	client, err := network.NewPharosClient(testServer.URL, "v1", "user", "key")
 	if err != nil {
@@ -202,7 +202,7 @@ func TestWorkItem(t *testing.T) {
 }
 
 func TestWorkItems(t *testing.T) {
-	testServer := httptest.NewServer(http.HandlerFunc(workItemListHander))
+	testServer := httptest.NewServer(http.HandlerFunc(workItemListHandler))
 	defer testServer.Close()
 	client, err := network.NewPharosClient(testServer.URL, "v1", "user", "key")
 	if err != nil {
