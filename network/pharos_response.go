@@ -113,7 +113,7 @@ func (resp *PharosResponse) RawResponseData() ([]byte, error) {
 // returns a byte array. The body MUST be closed, or you'll wind up
 // with a lot of open network connections.
 func (resp *PharosResponse) readResponse () {
-	if !resp.hasBeenRead && resp.Response.Body != nil {
+	if !resp.hasBeenRead && resp.Response != nil && resp.Response.Body != nil {
 		resp.data, resp.Error = ioutil.ReadAll(resp.Response.Body)
 		resp.Response.Body.Close()
 		resp.hasBeenRead = true
