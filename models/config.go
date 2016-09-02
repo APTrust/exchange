@@ -350,16 +350,16 @@ func (config *Config) ExpandFilePaths() {
 
 func (config *Config) createDirectories() (error) {
 	if config.TarDirectory == "" {
-		return fmt.Errorf("You must defined config.TarDirectory")
+		return fmt.Errorf("You must define config.TarDirectory")
 	}
 	if config.LogDirectory == "" {
-		return fmt.Errorf("You must defined config.LogDirectory")
+		return fmt.Errorf("You must define config.LogDirectory")
 	}
 	if config.RestoreDirectory == "" {
-		return fmt.Errorf("You must defined config.RestoreDirectory")
+		return fmt.Errorf("You must define config.RestoreDirectory")
 	}
 	if config.ReplicationDirectory == "" {
-		return fmt.Errorf("You must defined config.ReplicationDirectory")
+		return fmt.Errorf("You must define config.ReplicationDirectory")
 	}
 	if !fileutil.FileExists(config.TarDirectory) {
 		err := os.MkdirAll(config.TarDirectory, 0755)
@@ -394,6 +394,12 @@ func (config *Config) createDirectories() (error) {
 	}
 	if config.DPN.StagingDirectory != "" && !fileutil.FileExists(config.DPN.StagingDirectory) {
 		err := os.MkdirAll(config.DPN.StagingDirectory, 0755)
+		if err != nil {
+			return err
+		}
+	}
+	if config.DPN.RemoteNodeHomeDirectory != "" && !fileutil.FileExists(config.DPN.RemoteNodeHomeDirectory) {
+		err := os.MkdirAll(config.DPN.RemoteNodeHomeDirectory, 0755)
 		if err != nil {
 			return err
 		}
