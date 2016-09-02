@@ -136,6 +136,5 @@ func TestEnsureLogDir(t *testing.T) {
 	assert.True(t, fileutil.FileExists(config.RestoreDirectory))
 	assert.True(t, fileutil.FileExists(config.ReplicationDirectory))
 	assert.True(t, fileutil.FileExists(config.DPN.LogDirectory))
-	assert.True(t, fileutil.FileExists(config.DPN.RemoteNodeHomeDirectory))
 	assert.True(t, fileutil.FileExists(config.DPN.StagingDirectory))
 }

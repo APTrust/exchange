@@ -398,12 +398,6 @@ func (config *Config) createDirectories() (error) {
 			return err
 		}
 	}
-	if config.DPN.RemoteNodeHomeDirectory != "" && !fileutil.FileExists(config.DPN.RemoteNodeHomeDirectory) {
-		err := os.MkdirAll(config.DPN.RemoteNodeHomeDirectory, 0755)
-		if err != nil {
-			return err
-		}
-	}
 	return nil
 }
 
