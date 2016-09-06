@@ -485,7 +485,6 @@ func TestWorkItemGet(t *testing.T) {
 	}
 	assert.NotEqual(t, "", obj.Action)
 	assert.NotEqual(t, "", obj.Status)
-	assert.NotEqual(t, "", obj.State)
 	assert.True(t, obj.Retry)
 }
 
@@ -521,7 +520,6 @@ func TestWorkItemList(t *testing.T) {
 	for _, obj := range list {
 		assert.NotEqual(t, "", obj.Action)
 		assert.NotEqual(t, "", obj.Status)
-		assert.NotEqual(t, "", obj.State)
 	}
 
 	// Make sure params are added to URL

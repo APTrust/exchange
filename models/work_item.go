@@ -3,7 +3,6 @@ package models
 import (
 	"encoding/json"
 	"github.com/APTrust/exchange/constants"
-	"github.com/op/go-logging"
 	"os"
 	"time"
 )
@@ -46,8 +45,6 @@ type WorkItem struct {
 	Status                 string               `json:"status"`
 	Outcome                string               `json:"outcome"`
 	Retry                  bool                 `json:"retry"`
-	// TODO: Change to binary, and possibly move.
-	State                  string               `json:"state"`
 	Node                   string               `json:"node"`
 	Pid                    int                  `json:"pid"`
 	NeedsAdminReview       bool                 `json:"needs_admin_review"`
@@ -76,7 +73,6 @@ func (item *WorkItem) SerializeForPharos() ([]byte, error) {
 		"status":                  item.Status,
 		"outcome":                 item.Outcome,
 		"retry":                   item.Retry,
-		"state":                   item.State,
 		"node":                    item.Node,
 		"pid":                     item.Pid,
 		"needs_admin_review":      item.NeedsAdminReview,
@@ -144,22 +140,11 @@ func HasPendingIngestRequest(workItems []*WorkItem) (bool) {
 }
 
 // Set state, node and pid on WorkItem.
-func (item *WorkItem) SetNodePidState(object interface{}, logger *logging.Logger) {
-	jsonBytes, err := json.Marshal(object)
-	jsonData := ""
-	if err != nil {
-		if logger != nil {
-			logger.Error(err.Error())
-		}
-	} else {
-		jsonData = string(jsonBytes)
-	}
-
+func (item *WorkItem) SetNodeAndPid() {
 	hostname, err := os.Hostname()
 	if err != nil {
 		hostname = "hostname?"
 	}
 	item.Node = hostname
 	item.Pid = os.Getpid()
-	item.State = jsonData
 }

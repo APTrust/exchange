@@ -179,7 +179,6 @@ func TestMakeWorkItem(t *testing.T) {
 	assert.NotEqual(t, "", item.Status)
 	assert.NotEqual(t, "", item.Outcome)
 	assert.True(t, item.Retry)
-	assert.NotEqual(t, "", item.State)
 	assert.NotEqual(t, "", item.Node)
 	assert.NotEqual(t, 0, item.Pid)
 	assert.False(t, item.NeedsAdminReview)

@@ -3,7 +3,6 @@ package models_test
 import (
 	"github.com/APTrust/exchange/constants"
 	"github.com/APTrust/exchange/models"
-	"github.com/APTrust/exchange/util/logger"
 	"github.com/stretchr/testify/assert"
 	"os"
 	"testing"
@@ -33,7 +32,6 @@ func SampleWorkItem() *models.WorkItem {
 		Retry: true,
 		Node: "",
 		Pid: 0,
-		State: "{}",
 		NeedsAdminReview: false,
 		CreatedAt: ingestDate,
 		UpdatedAt: ingestDate,
@@ -46,7 +44,7 @@ func TestWorkItemSerializeForPharos(t *testing.T) {
 	if err != nil {
 		t.Error(err)
 	}
-	expected := `{"action":"Ingest","bag_date":"2104-07-02T12:00:00Z","bucket":"aptrust.receiving.ncsu.edu","date":"2014-09-10T12:00:00Z","etag":"12345","generic_file_identifier":"ncsu.edu/some_object/data/doc.pdf","institution_id":324,"name":"Sample Document","needs_admin_review":false,"node":"","note":"so many!","object_identifier":"ncsu.edu/some_object","outcome":"happy day!","pid":0,"queued_at":null,"retry":true,"stage":"Store","state":"{}","status":"Success"}`
+	expected := `{"action":"Ingest","bag_date":"2104-07-02T12:00:00Z","bucket":"aptrust.receiving.ncsu.edu","date":"2014-09-10T12:00:00Z","etag":"12345","generic_file_identifier":"ncsu.edu/some_object/data/doc.pdf","institution_id":324,"name":"Sample Document","needs_admin_review":false,"node":"","note":"so many!","object_identifier":"ncsu.edu/some_object","outcome":"happy day!","pid":0,"queued_at":null,"retry":true,"stage":"Store","status":"Success"}`
 	assert.Equal(t, expected, string(bytes))
 }
 
@@ -199,13 +197,9 @@ func TestHasPendingIngestRequest(t *testing.T) {
 	assert.False(t, models.HasPendingIngestRequest(workItems))
 }
 
-func TestSetNodePidState(t *testing.T) {
+func TestSetNodeAndPid(t *testing.T) {
 	item := SampleWorkItem()
-	object := make(map[string]string)
-	object["key"] = "value"
-
-	discardLogger := logger.DiscardLogger("workitem_test")
-	item.SetNodePidState(object, discardLogger)
+	item.SetNodeAndPid()
 	hostname, _ := os.Hostname()
 	if hostname == "" {
 		assert.Equal(t, "hostname?", item.Node)
@@ -213,5 +207,4 @@ func TestSetNodePidState(t *testing.T) {
 		assert.Equal(t, hostname, item.Node)
 	}
 	assert.EqualValues(t, os.Getpid(), item.Pid)
-	assert.Equal(t, "{\"key\":\"value\"}", item.State)
 }

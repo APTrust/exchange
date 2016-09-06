@@ -168,7 +168,6 @@ func MakeWorkItem() (*models.WorkItem) {
 		Status: RandomStatus(),
 		Outcome: fake.Sentence(),
 		Retry: true,
-		State: `{"key1": "value1", "key2", "value2"}`,
 		Node: fake.Word(),
 		Pid: rand.Intn(50000) + 1,
 		NeedsAdminReview: false,
