@@ -25,7 +25,7 @@ sleep 3
 # Wait for this one to finish
 echo "Starting bucket reader"
 cd ~/go/src/github.com/APTrust/exchange/apps/apt_bucket_reader
-go run apt_bucket_reader.go -config=config/integration.json
+go run apt_bucket_reader.go -config=config/integration.json -stats=~/tmp/logs/bucket_reader_stats.json
 
 echo "We're all done. Logs are in ~/tmp/logs. Control-C to quit."
 
