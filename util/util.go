@@ -176,3 +176,15 @@ func StringListContains(list []string, item string) (bool) {
 	}
 	return false
 }
+
+// Returns true if the list of ints contains item.
+func IntListContains(list []int, item int) (bool) {
+	if list != nil {
+		for i := range list {
+			if list[i] == item {
+				return true
+			}
+		}
+	}
+	return false
+}

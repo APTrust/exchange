@@ -180,3 +180,11 @@ func TestStringListContains(t *testing.T) {
 	// Don't crash on nil list
 	assert.False(t, util.StringListContains(nil, "mars"))
 }
+
+func TestIntListContains(t *testing.T) {
+	list := []int{ 101, 102, 103 }
+	assert.True(t, util.IntListContains(list, 102))
+	assert.False(t, util.IntListContains(list, 87))
+	// Don't crash on nil list
+	assert.False(t, util.IntListContains(nil, 599))
+}
