@@ -212,3 +212,15 @@ func TestWorkItems(t *testing.T) {
 	resp := client.WorkItemList(nil)
 	assert.NotEmpty(t, resp.WorkItems())
 }
+
+func TestWorkItemState(t *testing.T) {
+	testServer := httptest.NewServer(http.HandlerFunc(workItemStateGetHandler))
+	defer testServer.Close()
+	client, err := network.NewPharosClient(testServer.URL, "v1", "user", "key")
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	resp := client.WorkItemStateGet(1000)
+	assert.NotNil(t, resp.WorkItemState())
+}

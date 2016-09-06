@@ -490,6 +490,71 @@ func (client *PharosClient) WorkItemGet(id int) (*PharosResponse) {
 	return resp
 }
 
+// Saves a WorkItemState record to Pharos. If the WorkItemState's ID is zero,
+// this performs a POST to create a new record. For non-zero IDs, this
+// performs a PUT to update the existing record. The response object
+// will include a new copy of the WorkItemState if it was saved successfully.
+func (client *PharosClient) WorkItemStateSave(obj *models.WorkItemState) (*PharosResponse) {
+	// Set up the response object
+	resp := NewPharosResponse(PharosWorkItemState)
+	resp.workItemStates = make([]*models.WorkItemState, 1)
+
+	// URL and method
+	relativeUrl := fmt.Sprintf("/api/%s/item_state/", client.apiVersion)
+	httpMethod := "POST"
+	if obj.Id > 0 {
+		// URL should look like /api/v2/item_state/46956/
+		relativeUrl = fmt.Sprintf("%s%d/", relativeUrl, obj.Id)
+		httpMethod = "PUT"
+	}
+	absoluteUrl := client.BuildUrl(relativeUrl)
+
+	// Prepare the JSON data
+	postData, err := json.Marshal(obj)
+	if err != nil {
+		resp.Error = err
+	}
+
+	// Run the request
+	client.DoRequest(resp, httpMethod, absoluteUrl, bytes.NewBuffer(postData))
+	if resp.Error != nil {
+		return resp
+	}
+
+	// Parse the JSON from the response body
+	workItemState := &models.WorkItemState{}
+	resp.Error = json.Unmarshal(resp.data, workItemState)
+	if resp.Error == nil {
+		resp.workItemStates[0] = workItemState
+	}
+	return resp
+}
+
+// Returns the WorkItemState with the specified WorkItemId.
+func (client *PharosClient) WorkItemStateGet(workItemId int) (*PharosResponse) {
+	// Set up the response object
+	resp := NewPharosResponse(PharosWorkItemState)
+	resp.workItemStates = make([]*models.WorkItemState, 1)
+
+	// Build the url and the request object
+	relativeUrl := fmt.Sprintf("/api/%s/item_state/%d/", client.apiVersion, workItemId)
+	absoluteUrl := client.BuildUrl(relativeUrl)
+
+	// Run the request
+	client.DoRequest(resp, "GET", absoluteUrl, nil)
+	if resp.Error != nil {
+		return resp
+	}
+
+	// Parse the JSON from the response body
+	workItemState := &models.WorkItemState{}
+	resp.Error = json.Unmarshal(resp.data, workItemState)
+	if resp.Error == nil {
+		resp.workItemStates[0] = workItemState
+	}
+	return resp
+}
+
 
 // -------------------------------------------------------------------------
 // Utility Methods

@@ -67,6 +67,10 @@ type PharosResponse struct {
 	// objectType is not WorkItem.
 	workItems         []*models.WorkItem
 
+	// A slice of WorkItemState pointers. Will be nil if
+	// objectType is not WorkItemState.
+	workItemStates    []*models.WorkItemState
+
 	// Indicates whether the HTTP response body has been
 	// read (and closed).
 	hasBeenRead       bool
@@ -86,6 +90,7 @@ const (
 	PharosGenericFile                         = "GenericFile"
 	PharosPremisEvent                         = "PremisEvent"
 	PharosWorkItem                            = "WorkItem"
+	PharosWorkItemState                       = "WorkItemState"
 )
 
 // Creates a new PharosResponse and returns a pointer to it.
@@ -243,6 +248,22 @@ func (resp *PharosResponse) WorkItems() ([]*models.WorkItem) {
 	return resp.workItems
 }
 
+// Returns the WorkItemState parsed from the HTTP response body, or nil.
+func (resp *PharosResponse) WorkItemState() (*models.WorkItemState) {
+	if resp.workItemStates != nil && len(resp.workItemStates) > 0 {
+		return resp.workItemStates[0]
+	}
+	return nil
+}
+
+// Returns a list of WorkItemStates parsed from the HTTP response body.
+func (resp *PharosResponse) WorkItemStates() ([]*models.WorkItemState) {
+	if resp.workItemStates == nil {
+		return make([]*models.WorkItemState, 0)
+	}
+	return resp.workItemStates
+}
+
 // UnmarshalJsonList converts JSON response from the Pharos server
 // into a list of usable objects. The Pharos list response has this
 // structure:
@@ -265,6 +286,8 @@ func(resp *PharosResponse) UnmarshalJsonList() (error) {
 		return resp.decodeAsPremisEventList()
 	case PharosWorkItem:
 		return resp.decodeAsWorkItemList()
+	case PharosWorkItemState:
+		return resp.decodeAsWorkItemStateList()
 	default:
 		return fmt.Errorf("PharosObjectType %v not supported", resp.objectType)
 	}
@@ -386,6 +409,30 @@ func(resp *PharosResponse) decodeAsWorkItemList() (error) {
 	resp.Next = temp.Next
 	resp.Previous = temp.Previous
 	resp.workItems = temp.Results
+	resp.listHasBeenParsed = true
+	return resp.Error
+}
+
+func(resp *PharosResponse) decodeAsWorkItemStateList() (error) {
+	if resp.listHasBeenParsed {
+		return nil
+	}
+	temp := struct{
+		Count    int     `json:"count"`
+		Next     *string  `json:"next"`
+		Previous *string  `json:"previous"`
+		Results  []*models.WorkItemState `json:"results"`
+	}{ 0, nil, nil, nil }
+	data, err := resp.RawResponseData()
+	if err != nil {
+		resp.Error = err
+		return err
+	}
+	resp.Error = json.Unmarshal(data, &temp)
+	resp.Count = temp.Count
+	resp.Next = temp.Next
+	resp.Previous = temp.Previous
+	resp.workItemStates = temp.Results
 	resp.listHasBeenParsed = true
 	return resp.Error
 }

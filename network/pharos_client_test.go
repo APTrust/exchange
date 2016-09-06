@@ -593,6 +593,108 @@ func TestWorkItemSave(t *testing.T) {
 	assert.NotEqual(t, origModTime, obj.UpdatedAt)
 }
 
+func TestWorkStateItemGet(t *testing.T) {
+	testServer := httptest.NewServer(http.HandlerFunc(workItemStateGetHandler))
+	defer testServer.Close()
+
+	client, err := network.NewPharosClient(testServer.URL, "v2", "user", "key")
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	response := client.WorkItemStateGet(999)
+
+	// Check the request URL and method
+	assert.Equal(t, "GET", response.Request.Method)
+	assert.Equal(t, "/api/v2/item_state/999/", response.Request.URL.Opaque)
+
+	// Basic sanity check on response values
+	assert.Nil(t, response.Error)
+
+	obj := response.WorkItemState()
+	assert.EqualValues(t, "WorkItemState", response.ObjectType())
+	if obj == nil {
+		t.Errorf("WorkItemState should not be nil")
+	}
+	assert.NotEqual(t, "", obj.Action)
+	assert.NotEqual(t, "", obj.State)
+	assert.False(t, obj.CreatedAt.IsZero())
+	assert.False(t, obj.UpdatedAt.IsZero())
+}
+
+func TestWorkItemStateSave(t *testing.T) {
+	testServer := httptest.NewServer(http.HandlerFunc(workItemStateSaveHandler))
+	defer testServer.Close()
+
+	client, err := network.NewPharosClient(testServer.URL, "v2", "user", "key")
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	// ---------------------------------------------
+	// First, test create...
+	// ---------------------------------------------
+	obj := testutil.MakeWorkItemState()
+	obj.Id = 0
+	response := client.WorkItemStateSave(obj)
+
+	// Check the request URL and method
+	assert.Equal(t, "POST", response.Request.Method)
+	assert.Equal(t, "/api/v2/item_state/", response.Request.URL.Opaque)
+
+	// Basic sanity check on response values
+	assert.Nil(t, response.Error)
+
+	obj = response.WorkItemState()
+	assert.EqualValues(t, "WorkItemState", response.ObjectType())
+	if obj == nil {
+		t.Errorf("WorkItemState should not be nil")
+	}
+	assert.NotEqual(t, 0, obj.Id)
+	assert.NotEqual(t, 0, obj.WorkItemId)
+	assert.Equal(t, "Ingest", obj.Action)
+	assert.Equal(t, `{"key1":"value1","key2":"value2"}`, obj.State)
+	assert.False(t, obj.CreatedAt.IsZero())
+	assert.False(t, obj.UpdatedAt.IsZero())
+
+	// Make sure the client returns the SAVED object,
+	// not the unsaved one we sent.
+	assert.NotEqual(t, 0, obj.Id)
+
+
+	// ---------------------------------------------
+	// Now test with an update...
+	// ---------------------------------------------
+	obj = testutil.MakeWorkItemState()
+	origModTime := obj.UpdatedAt
+	origId := obj.Id
+	origWorkItemId := obj.WorkItemId
+
+	// Change this
+	obj.State = `{"key3":"value3"}`
+	response = client.WorkItemStateSave(obj)
+
+	// Check the request URL and method
+	expectedUrl := fmt.Sprintf("/api/v2/item_state/%d/", obj.Id)
+	assert.Equal(t, "PUT", response.Request.Method)
+	assert.Equal(t, expectedUrl, response.Request.URL.Opaque)
+
+	// Basic sanity check on response values
+	assert.Nil(t, response.Error)
+
+	obj = response.WorkItemState()
+	assert.EqualValues(t, "WorkItemState", response.ObjectType())
+	if obj == nil {
+		t.Errorf("WorkItemState should not be nil")
+	}
+	assert.Equal(t, origId, obj.Id)
+	assert.Equal(t, origWorkItemId, obj.WorkItemId)
+	assert.Equal(t, `{"key3":"value3"}`, obj.State)
+	assert.NotEqual(t, origModTime, obj.UpdatedAt)
+}
+
 
 // -------------------------------------------------------------------------
 // -------------------------------------------------------------------------
@@ -809,6 +911,39 @@ func workItemSaveHandler(w http.ResponseWriter, r *http.Request) {
 	// Assign ID and timestamps, as if the object has been saved.
 	data["id"] = 1000
 	data["created_at"] = time.Now().UTC()
+	data["updated_at"] = time.Now().UTC()
+	objJson, _ := json.Marshal(data)
+	w.Header().Set("Content-Type", "application/json")
+	fmt.Fprintln(w, string(objJson))
+}
+
+// -------------------------------------------------------------------------
+// WorkItem handlers
+// -------------------------------------------------------------------------
+
+func workItemStateGetHandler(w http.ResponseWriter, r *http.Request) {
+	obj := testutil.MakeWorkItemState()
+	objJson, _ := json.Marshal(obj)
+	w.Header().Set("Content-Type", "application/json")
+	fmt.Fprintln(w, string(objJson))
+}
+
+func workItemStateSaveHandler(w http.ResponseWriter, r *http.Request) {
+	decoder := json.NewDecoder(r.Body)
+	decoder.UseNumber()
+    data := make(map[string]interface{})
+    err := decoder.Decode(&data)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error decoding JSON data: %v", err)
+		fmt.Fprintln(w, "")
+		return
+	}
+
+	// Assign ID and timestamps, as if the object has been saved.
+	if r.Method == "POST" {
+		data["id"] = 1000
+		data["created_at"] = time.Now().UTC()
+	}
 	data["updated_at"] = time.Now().UTC()
 	objJson, _ := json.Marshal(data)
 	w.Header().Set("Content-Type", "application/json")

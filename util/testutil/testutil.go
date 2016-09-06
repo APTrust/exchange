@@ -152,7 +152,7 @@ func MakeTag() (*models.Tag) {
 
 func MakeWorkItem() (*models.WorkItem) {
 	return &models.WorkItem{
-	Id: rand.Intn(50000) + 1,
+		Id: rand.Intn(50000) + 1,
 		ObjectIdentifier: RandomObjectIdentifier(),
 		GenericFileIdentifier: "",
 		Name: fake.Word(),
@@ -171,6 +171,17 @@ func MakeWorkItem() (*models.WorkItem) {
 		Node: fake.Word(),
 		Pid: rand.Intn(50000) + 1,
 		NeedsAdminReview: false,
+	}
+}
+
+func MakeWorkItemState() (*models.WorkItemState) {
+	return &models.WorkItemState{
+		Id: rand.Intn(50000) + 1,
+		WorkItemId: rand.Intn(50000) + 1,
+		Action: constants.ActionIngest,
+		State: `{"key1":"value1","key2":"value2"}`,
+		CreatedAt: RandomDateTime(),
+		UpdatedAt: time.Now().UTC(),
 	}
 }
 
