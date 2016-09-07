@@ -298,7 +298,7 @@ func (reader *APTBucketReader) createWorkItem(bucket, key, etag string, lastModi
 	reader.Context.MessageLog.Debug("Created WorkItem with id %d for %s/%s in Pharos",
 		savedWorkItem.Id, bucket, key)
 	if reader.stats != nil {
-		reader.stats.AddToWorkItemsFetched(savedWorkItem)
+		reader.stats.AddToWorkItemsCreated(savedWorkItem)
 	}
 	return savedWorkItem
 }
