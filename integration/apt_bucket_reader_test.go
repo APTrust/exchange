@@ -60,11 +60,11 @@ func TestInstutionsCached(t *testing.T) {
 	testWorkItemsCached(t, expected, actual)
 	testWorkItemsFetched(t, expected, actual)
 	testWorkItemsCreated(t, expected, actual)
-	// testWorkItemsQueued(t, expected, actual)
-	// testWorkItemsMarkedAsQueued(t, expected, actual)
-	// testS3Items(t, expected, actual)
-	// testErrors(t, expected, actual)
-	// testWarnings(t, expected, actual)
+	testWorkItemsQueued(t, expected, actual)
+	testWorkItemsMarkedAsQueued(t, expected, actual)
+	testS3Items(t, expected, actual)
+	testErrors(t, expected, actual)
+	testWarnings(t, expected, actual)
 }
 
 func testInstCache(t *testing.T, expected *stats.APTBucketReaderStats, actual *stats.APTBucketReaderStats) {
@@ -104,4 +104,26 @@ func testWorkItemsQueued(t *testing.T, expected *stats.APTBucketReaderStats, act
 		assert.NotNil(t, matchingItem,
 			"WorkItem %s missing from WorkItemsQueued", item.Name)
 	}
+}
+
+func testWorkItemsMarkedAsQueued(t *testing.T, expected *stats.APTBucketReaderStats, actual *stats.APTBucketReaderStats) {
+	for _, item := range expected.WorkItemsMarkedAsQueued {
+		matchingItem, _ := actual.FindWorkItemByNameAndEtag("WorkItemsMarkedAsQueued", item.Name, item.ETag)
+		assert.NotNil(t, matchingItem,
+			"WorkItem %s missing from WorkItemsMarkedAsQueued", item.Name)
+	}
+}
+
+func testS3Items(t *testing.T, expected *stats.APTBucketReaderStats, actual *stats.APTBucketReaderStats) {
+	for _, item := range expected.S3Items {
+		assert.True(t, actual.S3ItemWasFound(item))
+	}
+}
+
+func testErrors(t *testing.T, expected *stats.APTBucketReaderStats, actual *stats.APTBucketReaderStats) {
+	assert.Equal(t, 0, len(actual.Errors))
+}
+
+func testWarnings(t *testing.T, expected *stats.APTBucketReaderStats, actual *stats.APTBucketReaderStats) {
+	assert.Equal(t, 0, len(actual.Warnings))
 }
