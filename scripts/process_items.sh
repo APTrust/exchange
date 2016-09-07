@@ -30,6 +30,12 @@ echo "Starting bucket reader"
 cd ~/go/src/github.com/APTrust/exchange/apps/apt_bucket_reader
 go run apt_bucket_reader.go -config=config/integration.json -stats=~/tmp/test_logs/bucket_reader_stats.json
 
+echo "Testing bucket reader output"
+cd ~/go/src/github.com/APTrust/exchange/integration
+go test apt_bucket_reader_test.go
+RUN_EXCHANGE_INTEGRATION=true go test -v apt_bucket_reader_test.go
+
+
 echo "We're all done. Logs are in ~/tmp/logs. Control-C to quit."
 
 kill_all()
