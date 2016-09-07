@@ -56,8 +56,52 @@ func TestInstutionsCached(t *testing.T) {
 		t.Skip("Skipping integration test. Set ENV var RUN_EXCHANGE_INTEGRATION=true if you want to run them.")
 	}
 	expected, actual := getBucketReaderOutputs(t)
+	testInstCache(t, expected, actual)
+	testWorkItemsCached(t, expected, actual)
+	testWorkItemsFetched(t, expected, actual)
+	testWorkItemsCreated(t, expected, actual)
+	// testWorkItemsQueued(t, expected, actual)
+	// testWorkItemsMarkedAsQueued(t, expected, actual)
+	// testS3Items(t, expected, actual)
+	// testErrors(t, expected, actual)
+	// testWarnings(t, expected, actual)
+}
+
+func testInstCache(t *testing.T, expected *stats.APTBucketReaderStats, actual *stats.APTBucketReaderStats) {
 	for _, inst := range expected.InstitutionsCached {
 		assert.True(t, actual.InstitutionsCachedContains(inst.Identifier),
 			"Institution %s missing from inst cache", inst.Identifier)
+	}
+}
+
+func testWorkItemsCached(t *testing.T, expected *stats.APTBucketReaderStats, actual *stats.APTBucketReaderStats) {
+	for _, item := range expected.WorkItemsCached {
+		matchingItem, _ := actual.FindWorkItemByNameAndEtag("WorkItemsCached", item.Name, item.ETag)
+		assert.NotNil(t, matchingItem,
+			"WorkItem %s missing from WorkItemsCache", item.Name)
+	}
+}
+
+func testWorkItemsFetched(t *testing.T, expected *stats.APTBucketReaderStats, actual *stats.APTBucketReaderStats) {
+	for _, item := range expected.WorkItemsFetched {
+		matchingItem, _ := actual.FindWorkItemByNameAndEtag("WorkItemsFetched", item.Name, item.ETag)
+		assert.NotNil(t, matchingItem,
+			"WorkItem %s missing from WorkItemsFetched", item.Name)
+	}
+}
+
+func testWorkItemsCreated(t *testing.T, expected *stats.APTBucketReaderStats, actual *stats.APTBucketReaderStats) {
+	for _, item := range expected.WorkItemsCreated {
+		matchingItem, _ := actual.FindWorkItemByNameAndEtag("WorkItemsCreated", item.Name, item.ETag)
+		assert.NotNil(t, matchingItem,
+			"WorkItem %s missing from WorkItemsCreated", item.Name)
+	}
+}
+
+func testWorkItemsQueued(t *testing.T, expected *stats.APTBucketReaderStats, actual *stats.APTBucketReaderStats) {
+	for _, item := range expected.WorkItemsQueued {
+		matchingItem, _ := actual.FindWorkItemByNameAndEtag("WorkItemsQueued", item.Name, item.ETag)
+		assert.NotNil(t, matchingItem,
+			"WorkItem %s missing from WorkItemsQueued", item.Name)
 	}
 }

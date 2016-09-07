@@ -23,8 +23,8 @@ type APTBucketReaderStats struct {
 	WorkItemsCached           []*models.WorkItem
 	WorkItemsFetched          []*models.WorkItem
 	WorkItemsCreated          []*models.WorkItem
-	WorkItemsQueued           []int
-	WorkItemsMarkedAsQueued   []int
+	WorkItemsQueued           []*models.WorkItem
+	WorkItemsMarkedAsQueued   []*models.WorkItem
 	S3Items                   []string
 	Errors                    []string
 	Warnings                  []string
@@ -37,8 +37,8 @@ func NewAPTBucketReaderStats() (*APTBucketReaderStats) {
 		WorkItemsCached: make([]*models.WorkItem, 0),
 		WorkItemsFetched: make([]*models.WorkItem, 0),
 		WorkItemsCreated: make([]*models.WorkItem, 0),
-		WorkItemsQueued: make([]int, 0),
-		WorkItemsMarkedAsQueued: make([]int, 0),
+		WorkItemsQueued: make([]*models.WorkItem, 0),
+		WorkItemsMarkedAsQueued: make([]*models.WorkItem, 0),
 		S3Items: make([]string, 0),
 		Errors: make([]string, 0),
 		Warnings: make([]string, 0),
@@ -119,75 +119,70 @@ func (stats *APTBucketReaderStats) InstitutionByIdentifier (identifier string) (
 	return matchingInst
 }
 
-// Adds a WorkItem to the WorkItems cache.
-func (stats *APTBucketReaderStats) AddToWorkItemsCached (item *models.WorkItem) {
-	stats.WorkItemsCached = append(stats.WorkItemsCached, item)
+// Adds a WorkItem to a list.
+func (stats *APTBucketReaderStats) AddWorkItem (listName string, item *models.WorkItem) (error) {
+	if listName == "WorkItemsCached" {
+		stats.WorkItemsCached = append(stats.WorkItemsCached, item)
+	} else if listName == "WorkItemsFetched" {
+		stats.WorkItemsFetched = append(stats.WorkItemsFetched, item)
+	} else if listName == "WorkItemsCreated" {
+		stats.WorkItemsCreated = append(stats.WorkItemsCreated, item)
+	} else if listName == "WorkItemsQueued" {
+		stats.WorkItemsQueued = append(stats.WorkItemsQueued, item)
+	} else if listName == "WorkItemsMarkedAsQueued" {
+		stats.WorkItemsMarkedAsQueued = append(stats.WorkItemsMarkedAsQueued, item)
+	} else {
+		return fmt.Errorf("No list called %s", listName)
+	}
+	return nil
 }
 
-// Returns the item from the WorkItemsCache with the matching name and etag,
-// or nil.
-func (stats *APTBucketReaderStats) WorkItemsCacheFindByNameAndEtag (name, etag string) (*models.WorkItem) {
-	return stats.findWorkItemByNameAndEtag(stats.WorkItemsCached, name, etag)
+// Does what it says.
+func (stats *APTBucketReaderStats) FindWorkItemByNameAndEtag (listName, name, etag string) (*models.WorkItem, error) {
+	var list []*models.WorkItem
+	if listName == "WorkItemsCached" {
+		list = stats.WorkItemsCached
+	} else if listName == "WorkItemsFetched" {
+		list = stats.WorkItemsFetched
+	} else if listName == "WorkItemsCreated" {
+		list = stats.WorkItemsCreated
+	} else if listName == "WorkItemsQueued" {
+		list = stats.WorkItemsQueued
+	} else if listName == "WorkItemsMarkedAsQueued" {
+		list = stats.WorkItemsMarkedAsQueued
+	} else {
+		return nil, fmt.Errorf("No list called %s", listName)
+	}
+	for _, item := range list {
+		if item.Name == name && item.ETag == etag {
+			return item, nil
+		}
+	}
+	return nil, nil
 }
 
-// Returns the item from the WorkItemsCache with the matching id, or nil.
-func (stats *APTBucketReaderStats) WorkItemsCacheFindById (id int) (*models.WorkItem) {
-	return stats.findWorkItemById(stats.WorkItemsCached, id)
-}
-
-// Adds a WorkItem to the list of WorkItems fetched individually from Pharos.
-// Items in this list were fetch one at a time because they were not in the
-// initial cache.
-func (stats *APTBucketReaderStats) AddToWorkItemsFetched (item *models.WorkItem) {
-	stats.WorkItemsFetched = append(stats.WorkItemsFetched, item)
-}
-
-// Returns the item from WorkItemsFetched with the matching name and etag,
-// or nil.
-func (stats *APTBucketReaderStats) WorkItemsFetchedFindByNameAndEtag (name, etag string) (*models.WorkItem) {
-	return stats.findWorkItemByNameAndEtag(stats.WorkItemsFetched, name, etag)
-}
-
-// Returns the item from WorkItemsFetched with the matching id, or nil.
-func (stats *APTBucketReaderStats) WorkItemsFetchedFindById (id int) (*models.WorkItem) {
-	return stats.findWorkItemById(stats.WorkItemsFetched, id)
-}
-
-// Adds a WorkItem to the list WorkItems created by the bucket reader.
-func (stats *APTBucketReaderStats) AddToWorkItemsCreated (item *models.WorkItem) {
-	stats.WorkItemsCreated = append(stats.WorkItemsCreated, item)
-}
-
-// Returns the item from WorkItemsCreated with the matching name and etag,
-// or nil.
-func (stats *APTBucketReaderStats) WorkItemsCreatedFindByNameAndEtag (name, etag string) (*models.WorkItem) {
-	return stats.findWorkItemByNameAndEtag(stats.WorkItemsCreated, name, etag)
-}
-
-// Returns the item from WorkItemsCreated with the matching id, or nil.
-func (stats *APTBucketReaderStats) WorkItemsCreatedFindById (id int) (*models.WorkItem) {
-	return stats.findWorkItemById(stats.WorkItemsCreated, id)
-}
-
-// Adds an ID to the list of WorkItem IDs that the bucket reader
-// pushed into NSQ.
-func (stats *APTBucketReaderStats) AddToWorkItemsQueued (itemId int) {
-	stats.WorkItemsQueued = append(stats.WorkItemsQueued, itemId)
-}
-
-// Returns true if the work item with the specified ID was queued.
-func (stats *APTBucketReaderStats) WorkItemWasQueued (itemId int) (bool) {
-	return util.IntListContains(stats.WorkItemsQueued, itemId)
-}
-
-// Adds an ID to the list of WorkItems that the bucket reader marked as queued.
-func (stats *APTBucketReaderStats) AddToWorkItemsMarkedAsQueued (itemId int) {
-	stats.WorkItemsMarkedAsQueued = append(stats.WorkItemsMarkedAsQueued, itemId)
-}
-
-// Returns true if the WorkItem with the specified ID was marked as queued.
-func (stats *APTBucketReaderStats) WorkItemWasMarkedAsQueued (itemId int) (bool) {
-	return util.IntListContains(stats.WorkItemsMarkedAsQueued, itemId)
+// Returns the WorkItem with the matching ID, or nil.
+func (stats *APTBucketReaderStats) FindWorkItemById (listName string, id int) (*models.WorkItem, error) {
+	var list []*models.WorkItem
+	if listName == "WorkItemsCached" {
+		list = stats.WorkItemsCached
+	} else if listName == "WorkItemsFetched" {
+		list = stats.WorkItemsFetched
+	} else if listName == "WorkItemsCreated" {
+		list = stats.WorkItemsCreated
+	} else if listName == "WorkItemsQueued" {
+		list = stats.WorkItemsQueued
+	} else if listName == "WorkItemsMarkedAsQueued" {
+		list = stats.WorkItemsMarkedAsQueued
+	} else {
+		return nil, fmt.Errorf("No list called %s", listName)
+	}
+	for _, item := range list {
+		if item.Id == id {
+			return item, nil
+		}
+	}
+	return nil, nil
 }
 
 // Adds an item to the list of files that the bucket reader found in the S3
@@ -226,16 +221,6 @@ func (stats *APTBucketReaderStats) HasWarnings () (bool) {
 func (stats *APTBucketReaderStats) findWorkItemByNameAndEtag (workItemList []*models.WorkItem, name, etag string) (*models.WorkItem) {
 	for _, item := range workItemList {
 		if item.Name == name && item.ETag == etag {
-			return item
-		}
-	}
-	return nil
-}
-
-// Returns the WorkItem with the matching ID, or nil.
-func (stats *APTBucketReaderStats) findWorkItemById (workItemList []*models.WorkItem, id int) (*models.WorkItem) {
-	for _, item := range workItemList {
-		if item.Id == id {
 			return item
 		}
 	}

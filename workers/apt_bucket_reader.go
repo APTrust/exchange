@@ -122,7 +122,7 @@ func (reader *APTBucketReader) cacheRecentIngestItems() (error) {
 				workItem.BagDate.Format(time.RFC3339))
 			reader.RecentIngestItems[hashKey] = workItem
 			if reader.stats != nil {
-				reader.stats.AddToWorkItemsCached(workItem)
+				reader.stats.AddWorkItem("WorkItemsCached", workItem)
 			}
 		}
 		if resp.Next != nil {
@@ -168,6 +168,7 @@ func (reader *APTBucketReader) processBucket(bucketName string) () {
 			break
 		}
 		for _, s3Object := range s3ObjList.Response.Contents {
+			reader.stats.AddS3Item(fmt.Sprintf("%s/%s", bucketName, *s3Object.Key))
 			reader.processS3Object(s3Object, bucketName)
 		}
 		keepFetching = *s3ObjList.Response.IsTruncated
@@ -243,7 +244,7 @@ func (reader *APTBucketReader) findWorkItem(key, etag string, lastModified time.
 	if workItem != nil {
 		reader.Context.MessageLog.Debug("Found WorkItem for hash key '%s' in Pharos", hashKey)
 		if reader.stats != nil {
-			reader.stats.AddToWorkItemsFetched(workItem)
+			reader.stats.AddWorkItem("WorkItemsFetched", workItem)
 		}
 	} else {
 		reader.Context.MessageLog.Debug("Did not find WorkItem for hash key '%s' in Pharos", hashKey)
@@ -298,7 +299,7 @@ func (reader *APTBucketReader) createWorkItem(bucket, key, etag string, lastModi
 	reader.Context.MessageLog.Debug("Created WorkItem with id %d for %s/%s in Pharos",
 		savedWorkItem.Id, bucket, key)
 	if reader.stats != nil {
-		reader.stats.AddToWorkItemsCreated(savedWorkItem)
+		reader.stats.AddWorkItem("WorkItemsCreated", savedWorkItem)
 	}
 	return savedWorkItem
 }
@@ -317,7 +318,7 @@ func (reader *APTBucketReader) addToNSQ(workItem *models.WorkItem) {
 	reader.Context.MessageLog.Info("Added WorkItem id %d to NSQ (%s/%s)",
 		workItem.Id, workItem.Bucket, workItem.Name)
 	if reader.stats != nil {
-		reader.stats.AddToWorkItemsQueued(workItem.Id)
+		reader.stats.AddWorkItem("WorkItemsQueued", workItem)
 	}
 	return
 }
@@ -341,7 +342,7 @@ func (reader *APTBucketReader) markAsQueued(workItem *models.WorkItem) (*models.
 		return nil
 	}
 	if reader.stats != nil {
-		reader.stats.AddToWorkItemsMarkedAsQueued(workItem.Id)
+		reader.stats.AddWorkItem("WorkItemsMarkedAsQueued", workItem)
 	}
 	return resp.WorkItem()
 }

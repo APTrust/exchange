@@ -24,11 +24,11 @@ func makeAPTBucketReaderStats() (*stats.APTBucketReaderStats) {
 		workItem.Id = i
 		workItem.Name = fmt.Sprintf("item_%d.tar", i)
 		workItem.ETag = fmt.Sprintf("etag_%d", i)
-		_stats.AddToWorkItemsCached(workItem)
-		_stats.AddToWorkItemsFetched(workItem)
-		_stats.AddToWorkItemsCreated(workItem)
-		_stats.AddToWorkItemsQueued(workItem.Id)
-		_stats.AddToWorkItemsMarkedAsQueued(workItem.Id)
+		_stats.AddWorkItem("WorkItemsCached", workItem)
+		_stats.AddWorkItem("WorkItemsFetched", workItem)
+		_stats.AddWorkItem("WorkItemsCreated", workItem)
+		_stats.AddWorkItem("WorkItemsQueued", workItem)
+		_stats.AddWorkItem("WorkItemsMarkedAsQueued", workItem)
 		_stats.AddS3Item(fmt.Sprintf("test.edu/test_item_%d", i))
 	}
 	return _stats
@@ -71,17 +71,17 @@ func TestBucket_InstitutionByIdentifier(t *testing.T) {
 func TestBucket_AddToWorkItemsCached(t *testing.T) {
 	_stats := makeAPTBucketReaderStats()
 	workItem := testutil.MakeWorkItem()
-	_stats.AddToWorkItemsCached(workItem)
-	lastWorkItem := _stats.WorkItemsCached[len(_stats.WorkItemsCached) -1]
+	_stats.AddWorkItem("WorkItemsCached", workItem)
+	lastWorkItem := _stats.WorkItemsCached[len(_stats.WorkItemsCached) - 1]
 	assert.Equal(t, workItem.Name, lastWorkItem.Name)
 	assert.Equal(t, workItem.ETag, lastWorkItem.ETag)
 }
 
 func TestBucket_WorkItemCacheFindByNameAndEtag(t *testing.T) {
 	_stats := makeAPTBucketReaderStats()
-	item1 := _stats.WorkItemsCacheFindByNameAndEtag("item_1.tar", "etag_1")
-	item2 := _stats.WorkItemsCacheFindByNameAndEtag("item_2.tar", "etag_2")
-	noSuchItem := _stats.WorkItemsCacheFindByNameAndEtag("nosuchitem.tar", "etag_none")
+	item1 := _stats.FindWorkItemByNameAndEtag(_stats.WorkItemsCached, "item_1.tar", "etag_1")
+	item2 := _stats.FindWorkItemByNameAndEtag(_stats.WorkItemsCached, "item_2.tar", "etag_2")
+	noSuchItem := _stats.FindWorkItemByNameAndEtag(_stats.WorkItemsCached, "nosuchitem.tar", "etag_none")
 	require.NotNil(t, item1)
 	require.NotNil(t, item2)
 	assert.Nil(t, noSuchItem)
@@ -93,9 +93,9 @@ func TestBucket_WorkItemCacheFindByNameAndEtag(t *testing.T) {
 
 func TestBucket_WorkItemCacheFindById(t *testing.T) {
 	_stats := makeAPTBucketReaderStats()
-	item1 := _stats.WorkItemsCacheFindById(1)
-	item2 := _stats.WorkItemsCacheFindById(2)
-	noSuchItem := _stats.WorkItemsCacheFindById(351)
+	item1 := _stats.FindWorkItemById(_stats.WorkItemsCached, 1)
+	item2 := _stats.FindWorkItemById(_stats.WorkItemsCached, 2)
+	noSuchItem := _stats.FindWorkItemById(_stats.WorkItemsCached, 351)
 	require.NotNil(t, item1)
 	require.NotNil(t, item2)
 	assert.Nil(t, noSuchItem)
@@ -106,7 +106,7 @@ func TestBucket_WorkItemCacheFindById(t *testing.T) {
 func TestBucket_AddToWorkItemsFetched(t *testing.T) {
 	_stats := makeAPTBucketReaderStats()
 	workItem := testutil.MakeWorkItem()
-	_stats.AddToWorkItemsFetched(workItem)
+	_stats.AddWorkItem("WorkItemsFetched", workItem)
 	lastWorkItem := _stats.WorkItemsFetched[len(_stats.WorkItemsFetched) -1]
 	assert.Equal(t, workItem.Name, lastWorkItem.Name)
 	assert.Equal(t, workItem.ETag, lastWorkItem.ETag)
@@ -114,9 +114,9 @@ func TestBucket_AddToWorkItemsFetched(t *testing.T) {
 
 func TestBucket_WorkItemFetchedFindByNameAndEtag(t *testing.T) {
 	_stats := makeAPTBucketReaderStats()
-	item1 := _stats.WorkItemsFetchedFindByNameAndEtag("item_1.tar", "etag_1")
-	item2 := _stats.WorkItemsFetchedFindByNameAndEtag("item_2.tar", "etag_2")
-	noSuchItem := _stats.WorkItemsFetchedFindByNameAndEtag("nosuchitem.tar", "etag_none")
+	item1 := _stats.FindWorkItemByNameAndEtag(_stats.WorkItemsFetched, "item_1.tar", "etag_1")
+	item2 := _stats.FindWorkItemByNameAndEtag(_stats.WorkItemsFetched, "item_2.tar", "etag_2")
+	noSuchItem := _stats.FindWorkItemByNameAndEtag(_stats.WorkItemsFetched, "nosuchitem.tar", "etag_none")
 	require.NotNil(t, item1)
 	require.NotNil(t, item2)
 	assert.Nil(t, noSuchItem)
@@ -128,9 +128,9 @@ func TestBucket_WorkItemFetchedFindByNameAndEtag(t *testing.T) {
 
 func TestBucket_WorkItemFetchedFindById(t *testing.T) {
 	_stats := makeAPTBucketReaderStats()
-	item1 := _stats.WorkItemsFetchedFindById(1)
-	item2 := _stats.WorkItemsFetchedFindById(2)
-	noSuchItem := _stats.WorkItemsFetchedFindById(351)
+	item1 := _stats.FindWorkItemById(_stats.WorkItemsFetched, 1)
+	item2 := _stats.FindWorkItemById(_stats.WorkItemsFetched, 2)
+	noSuchItem := _stats.FindWorkItemById(_stats.WorkItemsFetched, 351)
 	require.NotNil(t, item1)
 	require.NotNil(t, item2)
 	assert.Nil(t, noSuchItem)
@@ -141,7 +141,7 @@ func TestBucket_WorkItemFetchedFindById(t *testing.T) {
 func TestBucket_AddToWorkItemsCreated(t *testing.T) {
 	_stats := makeAPTBucketReaderStats()
 	workItem := testutil.MakeWorkItem()
-	_stats.AddToWorkItemsCreated(workItem)
+	_stats.AddWorkItem("WorkItemsCreated", workItem)
 	lastWorkItem := _stats.WorkItemsCreated[len(_stats.WorkItemsCreated) -1]
 	assert.Equal(t, workItem.Name, lastWorkItem.Name)
 	assert.Equal(t, workItem.ETag, lastWorkItem.ETag)
@@ -149,9 +149,9 @@ func TestBucket_AddToWorkItemsCreated(t *testing.T) {
 
 func TestBucket_WorkItemCreatedFindByNameAndEtag(t *testing.T) {
 	_stats := makeAPTBucketReaderStats()
-	item1 := _stats.WorkItemsCreatedFindByNameAndEtag("item_1.tar", "etag_1")
-	item2 := _stats.WorkItemsCreatedFindByNameAndEtag("item_2.tar", "etag_2")
-	noSuchItem := _stats.WorkItemsCreatedFindByNameAndEtag("nosuchitem.tar", "etag_none")
+	item1 := _stats.FindWorkItemByNameAndEtag(_stats.WorkItemsCreated, "item_1.tar", "etag_1")
+	item2 := _stats.FindWorkItemByNameAndEtag(_stats.WorkItemsCreated, "item_2.tar", "etag_2")
+	noSuchItem := _stats.FindWorkItemByNameAndEtag(_stats.WorkItemsCreated, "nosuchitem.tar", "etag_none")
 	require.NotNil(t, item1)
 	require.NotNil(t, item2)
 	assert.Nil(t, noSuchItem)
@@ -163,9 +163,9 @@ func TestBucket_WorkItemCreatedFindByNameAndEtag(t *testing.T) {
 
 func TestBucket_WorkItemCreatedFindById(t *testing.T) {
 	_stats := makeAPTBucketReaderStats()
-	item1 := _stats.WorkItemsCreatedFindById(1)
-	item2 := _stats.WorkItemsCreatedFindById(2)
-	noSuchItem := _stats.WorkItemsCreatedFindById(351)
+	item1 := _stats.FindWorkItemById(_stats.WorkItemsCreated, 1)
+	item2 := _stats.FindWorkItemById(_stats.WorkItemsCreated, 2)
+	noSuchItem := _stats.FindWorkItemById(_stats.WorkItemsCreated, 351)
 	require.NotNil(t, item1)
 	require.NotNil(t, item2)
 	assert.Nil(t, noSuchItem)
@@ -176,31 +176,31 @@ func TestBucket_WorkItemCreatedFindById(t *testing.T) {
 func TestBucket_AddToWorkItemsQueued(t *testing.T) {
 	_stats := makeAPTBucketReaderStats()
 	workItem := testutil.MakeWorkItem()
-	_stats.AddToWorkItemsQueued(workItem.Id)
-	lastWorkItemId := _stats.WorkItemsQueued[len(_stats.WorkItemsQueued) -1]
-	assert.Equal(t, workItem.Id, lastWorkItemId)
+	_stats.AddWorkItem("WorkItemsQueued", workItem)
+	lastWorkItem := _stats.WorkItemsQueued[len(_stats.WorkItemsQueued) -1]
+	assert.Equal(t, workItem.Id, lastWorkItem.Id)
 }
 
 func TestBucket_WorkItemWasQueued(t *testing.T) {
 	_stats := makeAPTBucketReaderStats()
-	assert.True(t, _stats.WorkItemWasQueued(1))
-	assert.True(t, _stats.WorkItemWasQueued(2))
-	assert.False(t, _stats.WorkItemWasQueued(300))
+	assert.NotNil(t, _stats.FindWorkItemById(_stats.WorkItemsQueued, 1))
+	assert.NotNil(t, _stats.FindWorkItemById(_stats.WorkItemsQueued, 2))
+	assert.Nil(t, _stats.FindWorkItemById(_stats.WorkItemsQueued, 300))
 }
 
 func TestBucket_AddToWorkItemsMarkedAsQueued(t *testing.T) {
 	_stats := makeAPTBucketReaderStats()
 	workItem := testutil.MakeWorkItem()
-	_stats.AddToWorkItemsMarkedAsQueued(workItem.Id)
-	lastWorkItemId := _stats.WorkItemsMarkedAsQueued[len(_stats.WorkItemsMarkedAsQueued) -1]
-	assert.Equal(t, workItem.Id, lastWorkItemId)
+	_stats.AddWorkItem("WorkItemsMarkedAsQueued", workItem)
+	lastWorkItem := _stats.WorkItemsMarkedAsQueued[len(_stats.WorkItemsMarkedAsQueued) -1]
+	assert.Equal(t, workItem.Id, lastWorkItem.Id)
 }
 
 func TestBucket_WorkItemWasMarkedAsQueued(t *testing.T) {
 	_stats := makeAPTBucketReaderStats()
-	assert.True(t, _stats.WorkItemWasMarkedAsQueued(1))
-	assert.True(t, _stats.WorkItemWasMarkedAsQueued(2))
-	assert.False(t, _stats.WorkItemWasMarkedAsQueued(300))
+	assert.NotNil(t, _stats.FindWorkItemById(_stats.WorkItemsMarkedAsQueued, 1))
+	assert.NotNil(t, _stats.FindWorkItemById(_stats.WorkItemsMarkedAsQueued, 1))
+	assert.Nil(t, _stats.FindWorkItemById(_stats.WorkItemsMarkedAsQueued, 300))
 }
 
 func TestBucket_AddS3Item(t *testing.T) {
