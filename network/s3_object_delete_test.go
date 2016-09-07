@@ -55,7 +55,7 @@ func upload(key string) (error) {
 		constants.AWSVirginia,
 		testBucket,
 		key,
-		"../testdata/virginia.edu.uva-lib_2278801.tar",
+		"../testdata/unit_test_bags/virginia.edu.uva-lib_2278801.tar",
 		"application/tar",
 	)
 	upload.AddMetadata("testdata", "THIS IS DELETABLE TEST DATA")

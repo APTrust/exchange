@@ -49,7 +49,7 @@ func TestOriginalPath(t *testing.T) {
 }
 
 func TestGetChecksum(t *testing.T) {
-	filename := filepath.Join("testdata", "intel_obj.json")
+	filename := filepath.Join("testdata", "json_objects", "intel_obj.json")
 	intelObj, err := testutil.LoadIntelObjFixture(filename)
 	if err != nil {
 		t.Errorf("Error loading test data file '%s': %v", filename, err)
@@ -89,7 +89,7 @@ func TestPreservationStorageFileName(t *testing.T) {
 }
 
 func TestFindEventsByType(t *testing.T) {
-	filename := filepath.Join("testdata", "intel_obj.json")
+	filename := filepath.Join("testdata", "json_objects", "intel_obj.json")
 	intelObj, err := testutil.LoadIntelObjFixture(filename)
 	if err != nil {
 		t.Errorf("Error loading test data file '%s': %v", filename, err)
@@ -114,7 +114,7 @@ func TestFindEventsByType(t *testing.T) {
 }
 
 func TestSerializeFileForPharos(t *testing.T) {
-	filename := filepath.Join("testdata", "intel_obj.json")
+	filename := filepath.Join("testdata", "json_objects", "intel_obj.json")
 	intelObj, err := testutil.LoadIntelObjFixture(filename)
 	genericFile := intelObj.GenericFiles[1]
 	data, err := genericFile.SerializeForPharos()

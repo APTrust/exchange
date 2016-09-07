@@ -19,7 +19,7 @@ func TestNewIntellectualObject(t *testing.T) {
 }
 
 func TestTotalFileSize(t *testing.T) {
-	filepath := filepath.Join("testdata", "intel_obj.json")
+	filepath := filepath.Join("testdata", "json_objects", "intel_obj.json")
 	obj, err := testutil.LoadIntelObjFixture(filepath)
 	if err != nil {
 		t.Errorf("Error loading test data file '%s': %v", filepath, err)
@@ -30,7 +30,7 @@ func TestTotalFileSize(t *testing.T) {
 }
 
 func TestSerializeObjectForPharos(t *testing.T) {
-	filename := filepath.Join("testdata", "intel_obj.json")
+	filename := filepath.Join("testdata", "json_objects", "intel_obj.json")
 	intelObj, err := testutil.LoadIntelObjFixture(filename)
 	if err != nil {
 		t.Errorf("Error loading test data file '%s': %v", filename, err)
@@ -56,7 +56,7 @@ func TestSerializeObjectForPharos(t *testing.T) {
 }
 
 func TestFindGenericFile(t *testing.T) {
-	filepath := filepath.Join("testdata", "intel_obj.json")
+	filepath := filepath.Join("testdata", "json_objects", "intel_obj.json")
 	obj, err := testutil.LoadIntelObjFixture(filepath)
 	if err != nil {
 		t.Errorf("Error loading test data file '%s': %v", filepath, err)

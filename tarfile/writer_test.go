@@ -139,6 +139,6 @@ func TestAddToArchiveWithBadFilePath(t *testing.T) {
 
 func pathToTestFile(name string) (string) {
 	_, filename, _, _ := runtime.Caller(0)
-	testDataPath, _ := filepath.Abs(path.Join(filepath.Dir(filename), "..", "testdata"))
+	testDataPath, _ := filepath.Abs(path.Join(filepath.Dir(filename), "..", "testdata", "json_objects"))
 	return path.Join(testDataPath, name)
 }

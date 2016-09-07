@@ -71,7 +71,7 @@ func TestS3UploadGoodFile(t *testing.T) {
 		constants.AWSVirginia,
 		testBucket,
 		"s3_upload_test.tar",
-		"../testdata/virginia.edu.uva-lib_2278801.tar",
+		"../testdata/unit_test_bags/virginia.edu.uva-lib_2278801.tar",
 		"application/tar",
 	)
 	upload.AddMetadata("institution", "test.edu")

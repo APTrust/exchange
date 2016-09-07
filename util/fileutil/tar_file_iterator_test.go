@@ -16,7 +16,7 @@ import (
 func TestNewTarFileIterator(t *testing.T) {
 	_, filename, _, _ := runtime.Caller(0)
 	tarFilePath, _ := filepath.Abs(path.Join(filepath.Dir(filename),
-		"..", "..", "testdata", "example.edu.tagsample_good.tar"))
+		"..", "..", "testdata", "unit_test_bags", "example.edu.tagsample_good.tar"))
 	tfi, err := fileutil.NewTarFileIterator(tarFilePath)
 	assert.NotNil(t, tfi)
 	assert.Nil(t, err)
@@ -25,7 +25,7 @@ func TestNewTarFileIterator(t *testing.T) {
 func TestTFINext(t *testing.T) {
 	_, filename, _, _ := runtime.Caller(0)
 	tarFilePath, _ := filepath.Abs(path.Join(filepath.Dir(filename),
-		"..", "..", "testdata", "example.edu.tagsample_good.tar"))
+		"..", "..", "testdata", "unit_test_bags", "example.edu.tagsample_good.tar"))
 	tfi, err := fileutil.NewTarFileIterator(tarFilePath)
 	if tfi != nil {
 		defer tfi.Close()
@@ -71,7 +71,7 @@ func TestTFINext(t *testing.T) {
 func TestTarFileIteratorClose(t *testing.T) {
 	_, filename, _, _ := runtime.Caller(0)
 	tarFilePath, _ := filepath.Abs(path.Join(filepath.Dir(filename),
-		"..", "..", "testdata", "example.edu.tagsample_good.tar"))
+		"..", "..", "testdata", "unit_test_bags", "example.edu.tagsample_good.tar"))
 	tfi, _ := fileutil.NewTarFileIterator(tarFilePath)
 	if tfi == nil {
 		assert.Fail(t, "Could not get TarFileIterator")
@@ -96,7 +96,7 @@ func TestTarReaderCloserClose(t *testing.T) {
 func TestTFIGetTopLevelDirNames(t *testing.T) {
 	_, filename, _, _ := runtime.Caller(0)
 	tarFilePath, _ := filepath.Abs(path.Join(filepath.Dir(filename),
-		"..", "..", "testdata", "example.edu.tagsample_good.tar"))
+		"..", "..", "testdata", "unit_test_bags", "example.edu.tagsample_good.tar"))
 	tfi, _ := fileutil.NewTarFileIterator(tarFilePath)
 	if tfi == nil {
 		assert.Fail(t, "Could not get TarFileIterator")

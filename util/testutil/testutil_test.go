@@ -199,7 +199,7 @@ func TestMakeWorkSummary(t *testing.T) {
 }
 
 func TestLoadIntelObjFixture(t *testing.T) {
-	filename := filepath.Join("testdata", "intel_obj.json")
+	filename := filepath.Join("testdata", "json_objects", "intel_obj.json")
 	obj, err := testutil.LoadIntelObjFixture(filename)
 	if err != nil {
 		t.Error(err)

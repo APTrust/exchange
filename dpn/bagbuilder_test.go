@@ -23,7 +23,7 @@ func testBagPath() (string) {
 }
 
 func intelObj(t *testing.T) (*models.IntellectualObject) {
-	filename := filepath.Join("testdata", "intel_obj.json")
+	filename := filepath.Join("testdata", "json_objects", "intel_obj.json")
 	obj, err := testutil.LoadIntelObjFixture(filename)
 	if err != nil {
 		t.Errorf("Error loading test data file '%s': %v", filename, err)

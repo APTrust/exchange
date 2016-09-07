@@ -16,7 +16,7 @@ import (
 // Return a manifest pointing to our test tar file.
 func getReader(tarFileName string) (*tarfile.Reader) {
 	_, filename, _, _ := runtime.Caller(0)
-	tarFilePath, _ := filepath.Abs(path.Join(filepath.Dir(filename), "..", "testdata", tarFileName))
+	tarFilePath, _ := filepath.Abs(path.Join(filepath.Dir(filename), "..", "testdata", "unit_test_bags", tarFileName))
 	objIdentifier := strings.Replace(tarFileName, ".tar", "", 1)
 	parts := strings.Split(objIdentifier, ".")
 	institution := fmt.Sprintf("%s.%s", parts[0], parts[1])
@@ -43,7 +43,7 @@ func TestNewReader(t *testing.T) {
 	assert.Equal(t, "virginia.edu", r.Manifest.Object.Institution)
 	assert.Equal(t, "uva-lib_2278801", r.Manifest.Object.BagName)
 	assert.True(t, strings.HasPrefix(r.Manifest.Object.IngestTarFilePath, "/"))
-	assert.True(t, strings.HasSuffix(r.Manifest.Object.IngestTarFilePath, "testdata/virginia.edu.uva-lib_2278801.tar"))
+	assert.True(t, strings.HasSuffix(r.Manifest.Object.IngestTarFilePath, "testdata/unit_test_bags/virginia.edu.uva-lib_2278801.tar"))
 }
 
 func TestRecordStartOfWork(t *testing.T) {
@@ -214,6 +214,6 @@ func TestUntarNonExistentFile(t *testing.T) {
 // Returns what SHOULD be the path to the untarred files.
 func untarredPath(bagname string) (string) {
 	_, filename, _, _ := runtime.Caller(0)
-	testDataPath, _ := filepath.Abs(path.Join(filepath.Dir(filename), "..", "testdata"))
+	testDataPath, _ := filepath.Abs(path.Join(filepath.Dir(filename), "..", "testdata", "unit_test_bags"))
 	return path.Join(testDataPath, bagname)
 }

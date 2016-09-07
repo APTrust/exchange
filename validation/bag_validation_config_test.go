@@ -20,7 +20,7 @@ func TestNewBagValidationConfig(t *testing.T) {
 }
 
 func TestLoadBagValidationConfig(t *testing.T) {
-	configFilePath := path.Join("testdata", "bag_validation_config.json")
+	configFilePath := path.Join("testdata", "json_objects", "bag_validation_config.json")
 	conf, errors := validation.LoadBagValidationConfig(configFilePath)
 	if errors != nil && len(errors) > 0 {
 		assert.Fail(t, errors[0].Error())
@@ -57,11 +57,11 @@ func TestLoadBagValidationConfig(t *testing.T) {
 // Make sure we get an error and not a panic.
 func TestLoadBagValidationConfigBadFiles(t *testing.T) {
 	// Missing file
-	configFilePath := path.Join("testdata", "file_does_not_exist.json")
+	configFilePath := path.Join("testdata", "json_objects", "file_does_not_exist.json")
 	_, err := validation.LoadBagValidationConfig(configFilePath)
 	assert.NotNil(t, err)
 	// Unparseable JSON
-	configFilePath = path.Join("testdata", "virginia.edu.uva-lib_2278801.tar")
+	configFilePath = path.Join("testdata", "json_objects", "virginia.edu.uva-lib_2278801.tar")
 	_, err = validation.LoadBagValidationConfig(configFilePath)
 	assert.NotNil(t, err)
 }
@@ -94,7 +94,7 @@ func TestTagSpecValid(t *testing.T) {
 }
 
 func TestValidateConfig(t *testing.T) {
-	configFilePath := path.Join("testdata", "bag_validation_config.json")
+	configFilePath := path.Join("testdata", "json_objects", "bag_validation_config.json")
 	conf, errors := validation.LoadBagValidationConfig(configFilePath)
 	if errors != nil && len(errors) > 0 {
 		assert.Fail(t, errors[0].Error())
@@ -119,7 +119,7 @@ func TestValidateConfig(t *testing.T) {
 }
 
 func TestCompileFileNameRegex(t *testing.T) {
-	configFilePath := path.Join("testdata", "bag_validation_config.json")
+	configFilePath := path.Join("testdata", "json_objects", "bag_validation_config.json")
 	conf, errors := validation.LoadBagValidationConfig(configFilePath)
 	if errors != nil && len(errors) > 0 {
 		assert.Fail(t, errors[0].Error())

@@ -12,7 +12,7 @@ import (
 
 func TestDeleteAttemptedAndSucceeded(t *testing.T) {
 	// TODO: Need a more reliable way to get path to test data file
-	filepath := filepath.Join("..", "testdata", "cleanup_result.json")
+	filepath := filepath.Join("..", "testdata", "json_objects", "cleanup_result.json")
 	var result models.CleanupResult
 	file, err := ioutil.ReadFile(filepath)
 	if err != nil {

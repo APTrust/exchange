@@ -12,7 +12,7 @@ import (
 func VbagGetPath(fileName string) (string) {
 	_, filename, _, _ := runtime.Caller(0)
 	dir, _ := filepath.Abs(filepath.Dir(filename))
-	testDataPath := filepath.Join(dir, "..", "testdata", fileName)
+	testDataPath := filepath.Join(dir, "..", "testdata", "unit_test_bags", fileName)
 	return testDataPath
 }
 

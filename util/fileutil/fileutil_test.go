@@ -49,7 +49,7 @@ func TestExchangeHome(t *testing.T) {
 }
 
 func TestLoadRelativeFile(t *testing.T) {
-	path := filepath.Join("testdata", "ingest_result.json")
+	path := filepath.Join("testdata", "json_objects", "ingest_result.json")
 	data, err := fileutil.LoadRelativeFile(path)
 	if err != nil {
 		t.Error(err)
@@ -128,7 +128,7 @@ func TestRecursiveFileList(t *testing.T) {
 		getPath("constants/constants.go"),
 		getPath("models/config.go"),
 		getPath("models/generic_file.go"),
-		getPath("testdata/intel_obj.json"),
+		getPath("testdata/json_objects/intel_obj.json"),
 		getPath("util/logger/logger.go"),
 	}
 	for _, filePath := range sampleFiles {
