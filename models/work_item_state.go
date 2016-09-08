@@ -40,7 +40,7 @@ func (state *WorkItemState) IngestManifest() (*IngestManifest, error) {
 		return nil, fmt.Errorf("Cannot convert state to IngestManifest because action is '%s' " +
 			"and must be '%s'.", state.Action, constants.ActionIngest)
 	}
-	var ingestManifest *IngestManifest
+	ingestManifest := &IngestManifest{}
 	err := json.Unmarshal([]byte(state.State), ingestManifest)
 	return ingestManifest, err
 }
@@ -53,7 +53,7 @@ func (state *WorkItemState) SetStateFromIngestManifest(manifest *IngestManifest)
 			"and must be '%s'.", state.Action, constants.ActionIngest)
 	}
 	jsonData, err := json.MarshalIndent(manifest, "", "  ")
-	if err != nil {
+	if err == nil {
 		state.State = string(jsonData)
 	}
 	return err
