@@ -43,6 +43,7 @@ type IntellectualObject struct {
 	IngestS3Key            string         `json:"ingest_s3_key"`
 	IngestTarFilePath      string         `json:"ingest_tar_file_path"`
 	IngestUntarredPath     string         `json:"ingest_untarred_path"`
+	IngestSize             int64          `json:"ingest_size"`
 	IngestRemoteMd5        string         `json:"ingest_remote_md5"`
 	IngestLocalMd5         string         `json:"ingest_local_md5"`
 	IngestMd5Verified      bool           `json:"ingest_md5_verified"`
