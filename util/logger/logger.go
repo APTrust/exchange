@@ -35,7 +35,7 @@ func InitLogger(config *models.Config) (*logging.Logger, string) {
 	}
 
 	log := logging.MustGetLogger(processName)
-	format := logging.MustStringFormatter("%{time} [%{level}] %{message}")
+	format := logging.MustStringFormatter("[%{level}] %{time} - %{message}")
 	logging.SetFormatter(format)
 	logging.SetLevel(config.LogLevel, processName)
 
@@ -53,11 +53,8 @@ func InitLogger(config *models.Config) (*logging.Logger, string) {
 	return log, filename
 }
 
-// -----------------------------------------------------------------------
-// TODO - Delete this code if we decide not to use JSON logger in Context.
-// -----------------------------------------------------------------------
 /*
-InitLogger creates and returns a logger suitable for logging JSON
+InitJsonLogger creates and returns a logger suitable for logging JSON
 data. Bagman JSON logs consist of a single JSON object per line,
 with no extraneous data. Because all of the data in the file is
 pure JSON, with one record per line, these files are easy to parse.
@@ -66,7 +63,7 @@ func InitJsonLogger(config *models.Config) (*stdlog.Logger, string) {
 	processName := path.Base(os.Args[0])
 	logDir, err := config.EnsureLogDirectory()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Cannot create log director '%s': %v\n", logDir, err)
+		fmt.Fprintf(os.Stderr, "Cannot create log directory '%s': %v\n", logDir, err)
 		os.Exit(1)
 	}
 	filename := fmt.Sprintf("%s.json", processName)

@@ -24,19 +24,26 @@ func TestNewContext(t *testing.T) {
 	require.NotNil(t, _context)
 
 	expectedPathToLogFile := filepath.Join(_context.Config.AbsLogDirectory(), path.Base(os.Args[0])+".log")
+	expectedPathToJsonLog := filepath.Join(_context.Config.AbsLogDirectory(), path.Base(os.Args[0])+".json")
 
 	assert.NotNil(t, _context.Config)
 	assert.NotNil(t, _context.PharosClient)
 	assert.NotNil(t, _context.MessageLog)
+	assert.NotNil(t, _context.JsonLog)
 	assert.Equal(t, expectedPathToLogFile, _context.PathToLogFile())
+	assert.Equal(t, expectedPathToJsonLog, _context.PathToJsonLog())
 	assert.Equal(t, int64(0), _context.Succeeded())
 	assert.Equal(t, int64(0), _context.Failed())
 
 	assert.NotPanics(t, func() { _context.MessageLog.Info("Test INFO log message") })
 	assert.NotPanics(t, func() { _context.MessageLog.Debug("Test DEBUG log message") })
+	assert.NotPanics(t, func() { _context.JsonLog.Println(`{"message": "Test JSON log message"}`) })
 
 	// Cleanup, but only if context was successfully created
 	if _context != nil && _context.PathToLogFile() != "" {
 		os.Remove(_context.PathToLogFile())
+	}
+	if _context != nil && _context.PathToJsonLog() != "" {
+		os.Remove(_context.PathToJsonLog())
 	}
 }

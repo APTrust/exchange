@@ -6,6 +6,7 @@ import (
 	"github.com/APTrust/exchange/network"
 	"github.com/APTrust/exchange/util/logger"
 	"github.com/op/go-logging"
+	stdlog "log"
 	"os"
 	"sync/atomic"
 )
@@ -19,9 +20,11 @@ those services.
 type Context struct {
 	Config          *models.Config
 	MessageLog      *logging.Logger
+	JsonLog         *stdlog.Logger
 	PharosClient    *network.PharosClient
 	VolumeClient    *network.VolumeClient
 	pathToLogFile   string
+	pathToJsonLog   string
 	succeeded       int64
 	failed          int64
 }
@@ -44,6 +47,7 @@ func NewContext(config *models.Config) (context *Context) {
 	}
 	context.Config = config
 	context.MessageLog, context.pathToLogFile = logger.InitLogger(config)
+	context.JsonLog, context.pathToJsonLog = logger.InitJsonLogger(config)
 	context.VolumeClient = network.NewVolumeClient(context.Config.VolumeServicePort)
 	context.initPharosClient()
 	return context
@@ -89,6 +93,11 @@ func (context *Context) IncrementFailed() (int64) {
 // Returns the path to this process' log file
 func (context *Context) PathToLogFile() (string) {
 	return context.pathToLogFile
+}
+
+// Returns the path to this process' JSON log file
+func (context *Context) PathToJsonLog() (string) {
+	return context.pathToJsonLog
 }
 
 // Logs info about the number of items that have succeeded and failed.
