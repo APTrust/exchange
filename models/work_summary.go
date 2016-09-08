@@ -15,6 +15,10 @@ type WorkSummary struct {
 	// This starts at one.
 	AttemptNumber  int
 
+	// This will be set to true if an error is fatal. In that
+	// case, we should not try to reprocess the item.
+	ErrorIsFatal   bool
+
 	// Errors is a list of strings describing errors that occurred
 	// during bag validation.
 	Errors         []string

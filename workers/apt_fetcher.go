@@ -88,6 +88,9 @@ func (fetcher *APTFetcher) HandleMessage(message *nsq.Message) (error) {
 	return nil
 }
 
+// fetch copies the file from S3 to our local staging area.
+// If all goes well, the file will wind up in
+// fetchData.IngestManifest.Object.IngestTarFilePath
 func (fetcher *APTFetcher) fetch() {
 	for fetchData := range fetcher.FetchChannel {
 		// Tell NSQ we're working on this
@@ -109,6 +112,8 @@ func (fetcher *APTFetcher) fetch() {
 	}
 }
 
+// cleanup deletes the tar file we just downloaded, if we determine that
+// something is wrong with it and there should be no further processing.
 func (fetcher *APTFetcher) cleanup() {
 	for fetchData := range fetcher.CleanupChannel {
 		tarFile := fetchData.IngestManifest.Object.IngestTarFilePath
@@ -122,6 +127,9 @@ func (fetcher *APTFetcher) cleanup() {
 	}
 }
 
+// record tells Pharos what's happened with this WorkItem,
+// and it pushes the item into the next queue (validation)
+// if necessary.
 func (fetcher *APTFetcher) record() {
 //	for fetchData := range fetcher.RecordChannel {
 		// Call fetchData.IngestManifest.Fetch.Finish()
@@ -175,6 +183,9 @@ func (fetcher *APTFetcher) initFetchData (message *nsq.Message) (*FetchData, err
 	// Set some basic info on our IntellectualObject
 	fetchData.IngestManifest.Object.BagName = util.CleanBagName(fetchData.IngestManifest.S3Key)
 	fetchData.IngestManifest.Object.Institution = instIdentifier
+	// -----------------------------------------------------------
+	// TODO: Get institution id! (Cache them?)
+	// -----------------------------------------------------------
 	//fetchData.IngestManifest.Object.InstitutionId =
 	fetchData.IngestManifest.Object.IngestS3Bucket = fetchData.IngestManifest.S3Bucket
 	fetchData.IngestManifest.Object.IngestS3Key = fetchData.IngestManifest.S3Key
@@ -298,9 +309,10 @@ func (fetcher *APTFetcher) downloadFile (fetchData *FetchData) (error) {
 			downloader.ErrorMessage)
 	}
 
-	fetchData.IngestManifest.Object.IngestSize = downloader.BytesCopied
-	fetchData.IngestManifest.Object.IngestRemoteMd5 = *downloader.Response.ETag
-	fetchData.IngestManifest.Object.IngestLocalMd5 = downloader.Md5Digest
+	obj := fetchData.IngestManifest.Object
+	obj.IngestSize = downloader.BytesCopied
+	obj.IngestRemoteMd5 = *downloader.Response.ETag
+	obj.IngestLocalMd5 = downloader.Md5Digest
 
 	// The ETag for S3 object uploaded via single-part upload is
 	// the file's md5 digest. For objects uploaded via multi-part
@@ -308,10 +320,16 @@ func (fetcher *APTFetcher) downloadFile (fetchData *FetchData) (error) {
 	// dash near the end, followed by the number of parts in the
 	// multipart upload. We can't use that kind of ETag to verify
 	// the md5 checksum that we calculated.
-	fetchData.IngestManifest.Object.IngestMd5Verifiable = strings.Contains(downloader.Md5Digest, "-")
-	if fetchData.IngestManifest.Object.IngestMd5Verifiable {
-		fetchData.IngestManifest.Object.IngestMd5Verified = (
-			fetchData.IngestManifest.Object.IngestRemoteMd5 == fetchData.IngestManifest.Object.IngestLocalMd5)
+	obj.IngestMd5Verifiable = strings.Contains(downloader.Md5Digest, "-")
+	if obj.IngestMd5Verifiable {
+		obj.IngestMd5Verified = obj.IngestRemoteMd5 == obj.IngestLocalMd5
+	}
+
+	// If we got a bad checksum, note the error in the WorkSummary.
+	if obj.IngestMd5Verifiable && !obj.IngestMd5Verified {
+		fetchData.IngestManifest.Fetch.AddError("Our md5 '%s' does not match S3 md5 '%s'",
+			obj.IngestLocalMd5, obj.IngestRemoteMd5)
+		fetchData.IngestManifest.Fetch.ErrorIsFatal = true
 	}
 
 	return nil
