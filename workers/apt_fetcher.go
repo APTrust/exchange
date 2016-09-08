@@ -7,6 +7,7 @@ import (
 	"github.com/APTrust/exchange/models"
 	"github.com/nsqio/go-nsq"
 	"net/http"
+	"os"
 	"strconv"
 	"sync"
 //	"time"
@@ -14,11 +15,16 @@ import (
 
 type APTFetcher struct {
 	Context        *context.Context
-	InitChannel    chan *models.IngestManifest
-	FetchChannel   chan *models.IngestManifest
-	RecordChannel  chan *models.IngestManifest
-	CleanupChannel chan *models.IngestManifest
+	FetchChannel   chan *FetchData
+	RecordChannel  chan *FetchData
+	CleanupChannel chan *FetchData
 	WaitGroup      sync.WaitGroup
+}
+
+type FetchData struct {
+	WorkItem        *models.WorkItem
+	WorkItemState   *models.WorkItemState
+	IngestManifest  *models.IngestManifest
 }
 
 func NewATPFetcher(_context *context.Context) (*APTFetcher) {
@@ -28,16 +34,14 @@ func NewATPFetcher(_context *context.Context) (*APTFetcher) {
 	// Set up buffered channels
 	fetcherBufferSize := _context.Config.FetchWorker.NetworkConnections * 4
 	workerBufferSize := _context.Config.FetchWorker.Workers * 10
-	fetcher.InitChannel = make(chan *models.IngestManifest, workerBufferSize)
-	fetcher.FetchChannel = make(chan *models.IngestManifest, fetcherBufferSize)
-	fetcher.RecordChannel = make(chan *models.IngestManifest, workerBufferSize)
-	fetcher.CleanupChannel = make(chan *models.IngestManifest, workerBufferSize)
+	fetcher.FetchChannel = make(chan *FetchData, fetcherBufferSize)
+	fetcher.RecordChannel = make(chan *FetchData, workerBufferSize)
+	fetcher.CleanupChannel = make(chan *FetchData, workerBufferSize)
 	// Set up a limited number of go routines
 	for i := 0; i < _context.Config.FetchWorker.NetworkConnections; i++ {
 		go fetcher.fetch()
 	}
 	for i := 0; i < _context.Config.FetchWorker.Workers; i++ {
-		go fetcher.init()
 		go fetcher.cleanup()
 		go fetcher.record()
 	}
@@ -46,29 +50,22 @@ func NewATPFetcher(_context *context.Context) (*APTFetcher) {
 
 func (fetcher *APTFetcher) HandleMessage(message *nsq.Message) (error) {
 	message.DisableAutoResponse()
-	workItem, err := fetcher.getWorkItem(message)
+	fetchData, err := fetcher.initFetchData(message)
 	if err != nil {
 		fetcher.Context.MessageLog.Error(err.Error())
 		return err
 	}
-	workItemState, err := fetcher.getWorkItemState(workItem)
+	resp := fetcher.Context.PharosClient.WorkItemStateSave(fetchData.WorkItemState)
+	if resp.Error != nil {
+		return resp.Error
+	}
+	fetchData.WorkItem, err = fetcher.markWorkItemAsStarted(fetchData.WorkItem)
 	if err != nil {
 		fetcher.Context.MessageLog.Error(err.Error())
 		return err
 	}
-	ingestManifest, err := workItemState.IngestManifest()
-	if err != nil {
-		fetcher.Context.MessageLog.Error(err.Error())
-		return err
-	}
-	fetcher.FetchChannel <- ingestManifest
+	fetcher.FetchChannel <- fetchData
 	return nil
-}
-
-func (fetcher *APTFetcher) init() {
-//	for manifest := range fetcher.FetchChannel {
-//
-//	}
 }
 
 func (fetcher *APTFetcher) fetch() {
@@ -88,6 +85,31 @@ func (fetcher *APTFetcher) record() {
 
 	// }
 }
+
+func (fetcher *APTFetcher) initFetchData (message *nsq.Message) (*FetchData, error) {
+	workItem, err := fetcher.getWorkItem(message)
+	if err != nil {
+		fetcher.Context.MessageLog.Error(err.Error())
+		return nil, err
+	}
+	workItemState, err := fetcher.getWorkItemState(workItem)
+	if err != nil {
+		fetcher.Context.MessageLog.Error(err.Error())
+		return nil, err
+	}
+	ingestManifest, err := workItemState.IngestManifest()
+	if err != nil {
+		fetcher.Context.MessageLog.Error(err.Error())
+		return nil, err
+	}
+	fetchData := &FetchData{
+		WorkItem: workItem,
+		WorkItemState: workItemState,
+		IngestManifest: ingestManifest,
+	}
+	return fetchData, err
+}
+
 
 // Returns the WorkItem record from Pharos that has the WorkItemId
 // specified in the NSQ message.
@@ -117,7 +139,7 @@ func (fetcher *APTFetcher) getWorkItemState(workItem *models.WorkItem) (*models.
 	resp := fetcher.Context.PharosClient.WorkItemStateGet(workItem.Id)
 	if resp.Response.StatusCode == http.StatusNotFound {
 		// Record has not been created yet, so build a new one now.
-		workItemState, err = fetcher.InitWorkItemState(workItem)
+		workItemState, err = fetcher.initWorkItemState(workItem)
 		if err != nil {
 			return nil, err
 		}
@@ -135,7 +157,7 @@ func (fetcher *APTFetcher) getWorkItemState(workItem *models.WorkItem) (*models.
 	return workItemState, nil
 }
 
-func (fetcher *APTFetcher) InitWorkItemState (workItem *models.WorkItem) (*models.WorkItemState, error) {
+func (fetcher *APTFetcher) initWorkItemState (workItem *models.WorkItem) (*models.WorkItemState, error) {
 	ingestManifest := models.NewIngestManifest()
 	ingestManifest.WorkItemId = workItem.Id
 	ingestManifest.S3Bucket = workItem.Bucket
@@ -149,10 +171,24 @@ func (fetcher *APTFetcher) InitWorkItemState (workItem *models.WorkItem) (*model
 	return workItemState, nil
 }
 
+func (fetcher *APTFetcher) markWorkItemAsStarted (workItem *models.WorkItem) (*models.WorkItem, error) {
+	hostname, _ := os.Hostname()
+	if hostname == "" { hostname = "apt_fetcher_host" }
+	workItem.Node = hostname
+	workItem.Status = constants.StatusStarted
+	workItem.Pid = os.Getpid()
+	workItem.Note = "Fetching bag from receiving bucket."
+	resp := fetcher.Context.PharosClient.WorkItemSave(workItem)
+	if resp.Error != nil {
+		return nil, resp.Error
+	}
+	return resp.WorkItem(), nil
+}
+
 // This is for direct testing without NSQ.
-func (fetcher *APTFetcher) RunWithoutNsq(manifest *models.IngestManifest) {
+func (fetcher *APTFetcher) RunWithoutNsq(fetchData *FetchData) {
 	fetcher.WaitGroup.Add(1)
-	fetcher.InitChannel <- manifest
-	fetcher.Context.MessageLog.Debug("Put %s into Fluctus channel", manifest.S3Key)
+	fetcher.FetchChannel <- fetchData
+	fetcher.Context.MessageLog.Debug("Put %s into Fluctus channel", fetchData.IngestManifest.S3Key)
 	fetcher.WaitGroup.Wait()
 }
