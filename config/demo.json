@@ -28,7 +28,20 @@
     "RestoreToTestBuckets": true,
     "MaxDaysSinceFixityCheck": 90,
 
-    "PrepareWorker": {
+    "FetchWorker": {
+        "NetworkConnections": 8,
+        "Workers": 4,
+        "NsqTopic": "prepare_topic",
+        "NsqChannel": "prepare_channel",
+        "MaxAttempts": 3,
+        "MaxInFlight": 20,
+        "HeartbeatInterval": "10s",
+        "ReadTimeout": "60s",
+        "WriteTimeout": "10s",
+        "MessageTimeout": "180m"
+    },
+
+    "ValidateWorker": {
         "NetworkConnections": 8,
         "Workers": 4,
         "NsqTopic": "prepare_topic",

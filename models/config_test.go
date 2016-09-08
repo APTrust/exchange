@@ -47,7 +47,7 @@ func TestLoad(t *testing.T) {
 	// Spot check a few settings.
 	assert.Equal(t, 60, config.MaxDaysSinceFixityCheck)
 	assert.Equal(t, "http://localhost:3000", config.PharosURL)
-	assert.Equal(t, "10s", config.PrepareWorker.HeartbeatInterval)
+	assert.Equal(t, "10s", config.FetchWorker.HeartbeatInterval)
 	assert.Equal(t, 18, len(config.ReceivingBuckets))
 	assert.Equal(t, configFile, config.ActiveConfig)
 	assert.Equal(t, 24, config.BucketReaderCacheHours)

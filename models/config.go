@@ -126,6 +126,9 @@ type Config struct {
 	// bucket in Oregon.
 	FailedReplicationWorker WorkerConfig
 
+	// Configuration options for apt_fetch
+	FetchWorker             WorkerConfig
+
 	// Configuration options for apt_file_delete
 	FileDeleteWorker        WorkerConfig
 
@@ -188,9 +191,6 @@ type Config struct {
 	// receiving buckets.
 	MaxFileSize             int64
 
-	// Configuration options for apt_prepare
-	PrepareWorker           WorkerConfig
-
 	// The name of the preservation bucket to which we should
 	// copy files for long-term storage.
 	PreservationBucket      string
@@ -249,6 +249,9 @@ type Config struct {
 
 	// Configuration options for apt_trouble
 	TroubleWorker           WorkerConfig
+
+	// Configuration options for apt_validate
+	ValidateWorker          WorkerConfig
 
 	// The port number, on localhost, where the HTTP
 	// VolumeService should run. This is always on
