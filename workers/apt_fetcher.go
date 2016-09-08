@@ -5,10 +5,15 @@ import (
 	"github.com/APTrust/exchange/constants"
 	"github.com/APTrust/exchange/context"
 	"github.com/APTrust/exchange/models"
+	"github.com/APTrust/exchange/network"
+	"github.com/APTrust/exchange/util"
+	"github.com/APTrust/exchange/util/fileutil"
 	"github.com/nsqio/go-nsq"
 	"net/http"
 	"os"
+	"path/filepath"
 	"strconv"
+	"strings"
 	"sync"
 //	"time"
 )
@@ -49,43 +54,96 @@ func NewATPFetcher(_context *context.Context) (*APTFetcher) {
 }
 
 func (fetcher *APTFetcher) HandleMessage(message *nsq.Message) (error) {
-	message.DisableAutoResponse()
+
+	// Set up our fetch data. Most of this comes from Pharos;
+	// some of it we have to build fresh.
 	fetchData, err := fetcher.initFetchData(message)
 	if err != nil {
 		fetcher.Context.MessageLog.Error(err.Error())
 		return err
 	}
+	// Save the state of this item in Pharos.
 	resp := fetcher.Context.PharosClient.WorkItemStateSave(fetchData.WorkItemState)
 	if resp.Error != nil {
 		return resp.Error
 	}
-	fetchData.WorkItem, err = fetcher.markWorkItemAsStarted(fetchData.WorkItem)
+	// Tell Pharos that we've started work on the item.
+	fetchData.WorkItem, err = fetcher.recordFetchStarted(fetchData.WorkItem)
 	if err != nil {
 		fetcher.Context.MessageLog.Error(err.Error())
 		return err
 	}
+
+	// NSQ message autoresponse periodically tells the queue
+	// that the message is still being processed. This doesn't
+	// work for us in cases where we're fetching a file that's
+	// 100GB+ in size. We need to manually Touch() NSQ periodically
+	// to let the queue know that we're still actively working on
+	// the message. Otherwise, NSQ thinks it timed out and sends
+	// the message to a new worker.
+	message.DisableAutoResponse()
+
+	// Now get to work.
 	fetcher.FetchChannel <- fetchData
 	return nil
 }
 
 func (fetcher *APTFetcher) fetch() {
-//	for manifest := range fetcher.FetchChannel {
-//
-//	}
+	for fetchData := range fetcher.FetchChannel {
+		// Tell NSQ we're working on this
+		fetchData.IngestManifest.NSQMessage.Touch()
+
+		fetchData.IngestManifest.Fetch.Start()
+		fetchData.IngestManifest.Fetch.Attempted = true
+
+		err := fetcher.downloadFile(fetchData)
+
+		// Download may have taken 1 second or 3 hours.
+		// Remind NSQ that we're still on this.
+		fetchData.IngestManifest.NSQMessage.Touch()
+
+		if err != nil {
+			fetchData.IngestManifest.Fetch.AddError(err.Error())
+		}
+		fetcher.CleanupChannel <- fetchData
+	}
 }
 
 func (fetcher *APTFetcher) cleanup() {
-//	for manifest := range fetcher.FetchChannel {
-//
-//	}
+	for fetchData := range fetcher.CleanupChannel {
+		tarFile := fetchData.IngestManifest.Object.IngestTarFilePath
+		if fetchData.IngestManifest.Fetch.HasErrors() && fileutil.FileExists(tarFile) {
+			// Most likely bad md5 digest, but perhaps also a partial download.
+			fetcher.Context.MessageLog.Info("Deleting due to download error: %s",
+				tarFile)
+			os.Remove(tarFile)
+		}
+		fetcher.RecordChannel <- fetchData
+	}
 }
 
 func (fetcher *APTFetcher) record() {
-	// for manifest := range fetcher.FetchChannel {
+//	for fetchData := range fetcher.RecordChannel {
+		// Call fetchData.IngestManifest.Fetch.Finish()
 
-	// }
+		// Log WorkItemState
+		// Save WorkItemState to Pharos
+
+		// If no errors:
+		// Set WorkItem stage to StageValidate, status to StatusPending, node=nil, pid=0
+		// Finish the NSQ message
+
+		// If transient errors:
+		// Set WorkItem node=nil, pid=0
+		// Requeue the NSQ message
+
+		// If fatal errors:
+		// Set WorkItem node=nil, pid=0, retry=false, needs_admin_review=true
+		// Finish the NSQ message
+//	}
 }
 
+// Set up the basic pieces of data we'll need to process a fetch request.
 func (fetcher *APTFetcher) initFetchData (message *nsq.Message) (*FetchData, error) {
 	workItem, err := fetcher.getWorkItem(message)
 	if err != nil {
@@ -107,6 +165,23 @@ func (fetcher *APTFetcher) initFetchData (message *nsq.Message) (*FetchData, err
 		WorkItemState: workItemState,
 		IngestManifest: ingestManifest,
 	}
+
+	// instIdentifier is, e.g., virginia.edu, ncsu.edu, etc.
+	// We'll download the tar file from the receiving bucket to
+	// something like /mnt/apt/data/virginia.edu/name_of_bag.tar
+	// See IngestTarFilePath below.
+	instIdentifier := util.OwnerOf(fetchData.IngestManifest.S3Bucket)
+
+	// Set some basic info on our IntellectualObject
+	fetchData.IngestManifest.Object.BagName = util.CleanBagName(fetchData.IngestManifest.S3Key)
+	fetchData.IngestManifest.Object.Institution = instIdentifier
+	//fetchData.IngestManifest.Object.InstitutionId =
+	fetchData.IngestManifest.Object.IngestS3Bucket = fetchData.IngestManifest.S3Bucket
+	fetchData.IngestManifest.Object.IngestS3Key = fetchData.IngestManifest.S3Key
+	fetchData.IngestManifest.Object.IngestTarFilePath = filepath.Join(
+		fetcher.Context.Config.TarDirectory,
+		instIdentifier, fetchData.IngestManifest.S3Key)
+
 	return fetchData, err
 }
 
@@ -157,6 +232,9 @@ func (fetcher *APTFetcher) getWorkItemState(workItem *models.WorkItem) (*models.
 	return workItemState, nil
 }
 
+// Create a new WorkItemState object for this WorkItem.
+// We do this only when Pharos doesn't already have a WorkItemState
+// object, which is often the case when ingesting new bags.
 func (fetcher *APTFetcher) initWorkItemState (workItem *models.WorkItem) (*models.WorkItemState, error) {
 	ingestManifest := models.NewIngestManifest()
 	ingestManifest.WorkItemId = workItem.Id
@@ -171,10 +249,12 @@ func (fetcher *APTFetcher) initWorkItemState (workItem *models.WorkItem) (*model
 	return workItemState, nil
 }
 
-func (fetcher *APTFetcher) markWorkItemAsStarted (workItem *models.WorkItem) (*models.WorkItem, error) {
+// Tell Pharos we've started work on this item.
+func (fetcher *APTFetcher) recordFetchStarted (workItem *models.WorkItem) (*models.WorkItem, error) {
 	hostname, _ := os.Hostname()
 	if hostname == "" { hostname = "apt_fetcher_host" }
 	workItem.Node = hostname
+	workItem.Stage = constants.StageFetch
 	workItem.Status = constants.StatusStarted
 	workItem.Pid = os.Getpid()
 	workItem.Note = "Fetching bag from receiving bucket."
@@ -183,6 +263,58 @@ func (fetcher *APTFetcher) markWorkItemAsStarted (workItem *models.WorkItem) (*m
 		return nil, resp.Error
 	}
 	return resp.WorkItem(), nil
+}
+
+// Download the file, and update the IngestManifest while we're at it.
+func (fetcher *APTFetcher) downloadFile (fetchData *FetchData) (error) {
+	downloader := network.NewS3Download(
+		constants.AWSVirginia,
+		fetchData.IngestManifest.S3Bucket,
+		fetchData.IngestManifest.S3Key,
+		fetchData.IngestManifest.Object.IngestTarFilePath,
+		true,    // calculate md5 checksum on the entire tar file
+		false,   // calculate sha256 checksum on the entire tar file
+	)
+
+	// It's fairly common for very large bags to fail more than
+	// once on transient network errors (e.g. "Connection reset by peer")
+	// So we give this several tries.
+	for i := 0; i < 10; i++ {
+		downloader.Fetch()
+		if downloader.ErrorMessage == "" {
+			fetcher.Context.MessageLog.Info("Fetched %s/%s after %d attempts",
+				fetchData.IngestManifest.S3Bucket,
+				fetchData.IngestManifest.S3Key,
+				i + 1)
+			break
+		}
+	}
+
+	// Return now if we failed.
+	if downloader.ErrorMessage != "" {
+		return fmt.Errorf("Error fetching %s/%s: %v",
+			fetchData.IngestManifest.S3Bucket,
+			fetchData.IngestManifest.S3Key,
+			downloader.ErrorMessage)
+	}
+
+	fetchData.IngestManifest.Object.IngestSize = downloader.BytesCopied
+	fetchData.IngestManifest.Object.IngestRemoteMd5 = *downloader.Response.ETag
+	fetchData.IngestManifest.Object.IngestLocalMd5 = downloader.Md5Digest
+
+	// The ETag for S3 object uploaded via single-part upload is
+	// the file's md5 digest. For objects uploaded via multi-part
+	// upload, the ETag is calculated differently and includes a
+	// dash near the end, followed by the number of parts in the
+	// multipart upload. We can't use that kind of ETag to verify
+	// the md5 checksum that we calculated.
+	fetchData.IngestManifest.Object.IngestMd5Verifiable = strings.Contains(downloader.Md5Digest, "-")
+	if fetchData.IngestManifest.Object.IngestMd5Verifiable {
+		fetchData.IngestManifest.Object.IngestMd5Verified = (
+			fetchData.IngestManifest.Object.IngestRemoteMd5 == fetchData.IngestManifest.Object.IngestLocalMd5)
+	}
+
+	return nil
 }
 
 // This is for direct testing without NSQ.
