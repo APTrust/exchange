@@ -10,32 +10,32 @@ import (
 	"strings"
 )
 
-// ExchangeHome returns the absolute path to the bagman root directory,
+// ExchangeHome returns the absolute path to the exchange root directory,
 // which contains source, config and test files. This will usually be
-// something like /home/xxx/go/src/github.com/APTrust/bagman. You can
+// something like /home/xxx/go/src/github.com/APTrust/exchange. You can
 // set this explicitly by defining an environment variable called
-// BAGMAN_HOME. Otherwise, this function will try to infer the value
+// EXCHANGE_HOME. Otherwise, this function will try to infer the value
 // by appending to the environment variable GOPATH. If neither of
 // those variables is set, this returns an error.
-func ExchangeHome() (bagmanHome string, err error) {
-	bagmanHome = os.Getenv("EXCHANGE_HOME")
-	if bagmanHome == "" {
+func ExchangeHome() (exchangeHome string, err error) {
+	exchangeHome = os.Getenv("EXCHANGE_HOME")
+	if exchangeHome == "" {
 		goHome := os.Getenv("GOPATH")
 		if goHome != "" {
-			bagmanHome = filepath.Join(goHome, "src", "github.com", "APTrust", "exchange")
+			exchangeHome = filepath.Join(goHome, "src", "github.com", "APTrust", "exchange")
 		} else {
-			err = fmt.Errorf("Cannot determine bagman home because neither " +
-				"BAGMAN_HOME nor GOPATH is set in environment.")
+			err = fmt.Errorf("Cannot determine exchange home because neither " +
+				"EXCHANGE_HOME nor GOPATH is set in environment.")
 		}
 	}
-	if bagmanHome != "" {
-		bagmanHome, err = filepath.Abs(bagmanHome)
+	if exchangeHome != "" {
+		exchangeHome, err = filepath.Abs(exchangeHome)
 	}
-	return bagmanHome, err
+	return exchangeHome, err
 }
 
 // LoadRelativeFile reads the file at the specified path
-// relative to BAGMAN_HOME and returns the contents as a byte array.
+// relative to EXCHANGE_HOME and returns the contents as a byte array.
 func LoadRelativeFile(relativePath string) ([]byte, error) {
 	absPath, err := RelativeToAbsPath(relativePath)
 	if err != nil {
@@ -62,14 +62,14 @@ func JsonFileToObject(absPath string, obj interface{}) error {
 	return nil
 }
 
-// Converts a relative path within the bagman directory tree
+// Converts a relative path within the exchange directory tree
 // to an absolute path.
 func RelativeToAbsPath(relativePath string) (string, error) {
-	bagmanHome, err := ExchangeHome()
+	exchangeHome, err := ExchangeHome()
 	if err != nil {
 		return "", err
 	}
-	return filepath.Join(bagmanHome, relativePath), nil
+	return filepath.Join(exchangeHome, relativePath), nil
 }
 
 

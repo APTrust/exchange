@@ -12,6 +12,7 @@
     "VolumeServicePort": 8898,
     "LogLevel": 4,
     "BucketReaderCacheHours": 24,
+    "BagValidationConfigFile": "config/aptrust_bag_validation_config.json",
 
     "PharosURL": "http://test.aptrust.org",
     "PharosAPIVersion": "v2",
@@ -203,6 +204,7 @@
         "AcceptInvalidSSLCerts": false,
         "UseSSHWithRsync": true,
         "DPNGlacierRegion": "us-east-1",
+        "BagValidationConfigFile": "config/dpn_bag_validation_config.json",
         "RestClient": {
             "Comment": "Settings for our local DPN REST API server. Load LocalAuthToken from environment!",
             "LocalServiceURL": "https://dpn-demo.aptrust.org/",

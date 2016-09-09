@@ -94,6 +94,11 @@ type Config struct {
 	// Configuration options for apt_bag_delete
 	BagDeleteWorker         WorkerConfig
 
+	// Location of the config file for bag validation.
+	// Config will differ for APTrust and DPN. This is
+	// for the APTrust config file.
+	BagValidationConfigFile string
+
 	// The bucket reader checks for new items in the receiving
 	// buckets and queues them for ingest if they're not already
 	// queued. During periods of heavy ingest, we may have
@@ -319,7 +324,8 @@ func (config *Config) EnsurePharosConfig() error {
 	return nil
 }
 
-// Expands ~ file paths
+// Expands ~ file paths and bag validation config file relative
+// paths to absolute paths.
 func (config *Config) ExpandFilePaths() {
 	expanded, err := fileutil.ExpandTilde(config.TarDirectory)
 	if err == nil {
@@ -348,6 +354,22 @@ func (config *Config) ExpandFilePaths() {
 	expanded, err = fileutil.ExpandTilde(config.DPN.LogDirectory)
 	if err == nil {
 		config.DPN.LogDirectory = expanded
+	}
+
+	// Convert bag validation config files from relative to absolute paths.
+	absPath, _ := filepath.Abs(config.BagValidationConfigFile)
+	if absPath != config.BagValidationConfigFile {
+		expanded, err = fileutil.RelativeToAbsPath(config.BagValidationConfigFile)
+		if err == nil {
+			config.BagValidationConfigFile = expanded
+		}
+	}
+	absPath, _ = filepath.Abs(config.DPN.BagValidationConfigFile)
+	if absPath != config.DPN.BagValidationConfigFile {
+		expanded, err = fileutil.RelativeToAbsPath(config.DPN.BagValidationConfigFile)
+		if err == nil {
+			config.DPN.BagValidationConfigFile = expanded
+		}
 	}
 }
 
@@ -432,6 +454,11 @@ type DPNConfig struct {
 	// to false, so if this is not set in config, we should be
 	// safe.
 	AcceptInvalidSSLCerts   bool
+
+	// Location of the config file for bag validation.
+	// Config will differ for APTrust and DPN. This is
+	// for the DPN config file.
+	BagValidationConfigFile string
 
 	// Default metadata that goes into bags produced at our node.
 	DefaultMetadata         DefaultMetadata
