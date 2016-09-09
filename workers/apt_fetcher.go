@@ -8,6 +8,7 @@ import (
 	"github.com/APTrust/exchange/network"
 	"github.com/APTrust/exchange/util"
 	"github.com/APTrust/exchange/util/fileutil"
+	"github.com/APTrust/exchange/validation"
 	"github.com/nsqio/go-nsq"
 	"net/http"
 	"os"
@@ -19,11 +20,13 @@ import (
 )
 
 type APTFetcher struct {
-	Context        *context.Context
-	FetchChannel   chan *FetchData
-	RecordChannel  chan *FetchData
-	CleanupChannel chan *FetchData
-	WaitGroup      sync.WaitGroup
+	Context             *context.Context
+	BagValidationConfig *validation.BagValidationConfig
+	FetchChannel        chan *FetchData
+	RecordChannel       chan *FetchData
+	ValidationChannel   chan *FetchData
+	CleanupChannel      chan *FetchData
+	WaitGroup           sync.WaitGroup
 }
 
 type FetchData struct {
@@ -36,10 +39,17 @@ func NewATPFetcher(_context *context.Context) (*APTFetcher) {
 	fetcher := &APTFetcher{
 		Context: _context,
 	}
+
+	// Load the config settings that describe how to validate
+	// APTrust bags. We'll exit here if the config can't be
+	// loaded or is invalid.
+	fetcher.loadBagValidationConfig()
+
 	// Set up buffered channels
 	fetcherBufferSize := _context.Config.FetchWorker.NetworkConnections * 4
 	workerBufferSize := _context.Config.FetchWorker.Workers * 10
 	fetcher.FetchChannel = make(chan *FetchData, fetcherBufferSize)
+	fetcher.ValidationChannel = make(chan *FetchData, workerBufferSize)
 	fetcher.RecordChannel = make(chan *FetchData, workerBufferSize)
 	fetcher.CleanupChannel = make(chan *FetchData, workerBufferSize)
 	// Set up a limited number of go routines
@@ -47,8 +57,9 @@ func NewATPFetcher(_context *context.Context) (*APTFetcher) {
 		go fetcher.fetch()
 	}
 	for i := 0; i < _context.Config.FetchWorker.Workers; i++ {
-		go fetcher.cleanup()
+		go fetcher.validate()
 		go fetcher.record()
+		go fetcher.cleanup()
 	}
 	return fetcher
 }
@@ -112,6 +123,12 @@ func (fetcher *APTFetcher) fetch() {
 	}
 }
 
+func (fetcher *APTFetcher) validate() {
+//	for fetchData := range fetcher.FetchChannel {
+//
+//	}
+}
+
 // cleanup deletes the tar file we just downloaded, if we determine that
 // something is wrong with it and there should be no further processing.
 func (fetcher *APTFetcher) cleanup() {
@@ -149,6 +166,24 @@ func (fetcher *APTFetcher) record() {
 		// Set WorkItem node=nil, pid=0, retry=false, needs_admin_review=true
 		// Finish the NSQ message
 //	}
+}
+
+// Loads the bag validation config file specified in the general config
+// options. This will die if the bag validation config cannot be loaded
+// or is invalid.
+func (fetcher *APTFetcher) loadBagValidationConfig() {
+	bagValidationConfig, errors := validation.LoadBagValidationConfig(
+		fetcher.Context.Config.BagValidationConfigFile)
+	if errors != nil && len(errors) > 0 {
+		msg := fmt.Sprintf("Could not load bag validation config from %s",
+			fetcher.Context.Config.BagValidationConfigFile)
+		for _, err := range errors {
+			msg += fmt.Sprintf("%s ... ", err.Error)
+		}
+		fmt.Fprintln(os.Stderr, msg)
+		fetcher.Context.MessageLog.Fatal(msg)
+	}
+	fetcher.BagValidationConfig = bagValidationConfig
 }
 
 // Set up the basic pieces of data we'll need to process a fetch request.
