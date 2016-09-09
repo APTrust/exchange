@@ -143,6 +143,7 @@ func (fetcher *APTFetcher) fetch() {
 
 		fetchData.IngestManifest.FetchResult.Start()
 		fetchData.IngestManifest.FetchResult.Attempted = true
+		fetchData.IngestManifest.FetchResult.AttemptNumber += 1
 
 		err := fetcher.downloadFile(fetchData)
 
@@ -237,8 +238,36 @@ func (fetcher *APTFetcher) cleanup() {
 // if necessary.
 func (fetcher *APTFetcher) record() {
 	for fetchData := range fetcher.RecordChannel {
-		// Log WorkItemState
-		// Save WorkItemState to Pharos
+		// Serialize the IngestManifest to JSON, and stuff it into the
+		// WorkItemState.State. Subsequent workers need this info to
+		// store the object's files in S3 and Glacier, and to record
+		// results in Pharos.
+		err := fetchData.WorkItemState.SetStateFromIngestManifest(fetchData.IngestManifest)
+		if err != nil {
+			// If we couldn't serialize the IngestManifest, subsequent workers
+			// won't have the info they need to process this bag. We'll have to
+			// requeue this item and start all over.
+			fetcher.Context.MessageLog.Error(err.Error())
+			fetchData.IngestManifest.FetchResult.AddError("Could not convert Ingest Manifest " +
+				"to JSON. This item will have to be re-processed. Error was: %v", err)
+		} else {
+			// OK. We serialized the IngestManifest. Dump a copy into the
+			// file system for backup and troubleshooting, and send a copy
+			// over to Pharos, so the next worker in the chain (the save worker)
+			// can access it.
+			fetcher.Context.JsonLog.Println(fetchData.WorkItemState.State)
+			resp := fetcher.Context.PharosClient.WorkItemStateSave(fetchData.WorkItemState)
+			if resp.Error != nil {
+				// Could not send a copy of the WorkItemState to Pharos.
+				// That means subsequent workers won't have the info they
+				// need to work on this bag. We'll have to start processing
+				// all over again.
+				fetcher.Context.MessageLog.Error(err.Error())
+				fetchData.IngestManifest.FetchResult.AddError("Could not save WorkItemState " +
+					"to Pharos. This item will have to be re-processed. Error was: %v", err)
+			}
+		}
+		fetcher.Context.JsonLog.Println()
 
 		if fetchData.IngestManifest.HasFatalErrors() {
 			// Set WorkItem node=nil, pid=0, retry=false, needs_admin_review=true

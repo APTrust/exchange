@@ -83,6 +83,8 @@ func (validator *BagValidator) Validate() (*ValidationResult){
 		return result
 	}
 	result.ValidationSummary.Start()
+	result.ValidationSummary.Attempted = true
+	result.ValidationSummary.AttemptNumber += 1
 	for _, errMsg := range result.ParseSummary.Errors {
 		result.ValidationSummary.AddError(errMsg)
 	}
