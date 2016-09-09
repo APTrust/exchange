@@ -199,7 +199,7 @@ func (reader *APTBucketReader) processS3Object (s3Object *s3.Object, bucketName 
 		return
 	}
 	if workItem == nil {
-		workItem = reader.createWorkItem(bucketName, *s3Object.Key, *s3Object.ETag, *s3Object.LastModified)
+		workItem = reader.createWorkItem(bucketName, s3Object)
 		if workItem == nil {
 			// Error logged and statted at source.
 			return
@@ -252,12 +252,12 @@ func (reader *APTBucketReader) findWorkItem(key, etag string, lastModified time.
 	return workItem, nil
 }
 
-func (reader *APTBucketReader) createWorkItem(bucket, key, etag string, lastModified time.Time) (*models.WorkItem) {
+func (reader *APTBucketReader) createWorkItem(bucket string, s3Object *s3.Object) (*models.WorkItem) {
 	// Create a WorkItem in Pharos
 	institution := reader.Institutions[util.OwnerOf(bucket)]
 	if institution == nil {
 		errMsg := fmt.Sprintf("Cannot find institution record for item %s/%s. " +
-			"Owner computes to '%s'", bucket, key, util.OwnerOf(bucket))
+			"Owner computes to '%s'", bucket, *s3Object.Key, util.OwnerOf(bucket))
 		reader.Context.MessageLog.Error(errMsg)
 		if reader.stats != nil {
 			reader.stats.AddError(errMsg)
@@ -265,10 +265,11 @@ func (reader *APTBucketReader) createWorkItem(bucket, key, etag string, lastModi
 		return nil
 	}
 	workItem := &models.WorkItem{}
-	workItem.Name = key
+	workItem.Name = *s3Object.Key
 	workItem.Bucket = bucket
-	workItem.ETag = etag
-	workItem.BagDate = lastModified
+	workItem.ETag = *s3Object.ETag
+	workItem.Size = *s3Object.Size
+	workItem.BagDate = *s3Object.LastModified
 	workItem.InstitutionId = institution.Id
 	workItem.User = constants.APTrustSystemUser
 	workItem.Date = time.Now().UTC()
@@ -297,7 +298,7 @@ func (reader *APTBucketReader) createWorkItem(bucket, key, etag string, lastModi
 
 	savedWorkItem := resp.WorkItem()
 	reader.Context.MessageLog.Debug("Created WorkItem with id %d for %s/%s in Pharos",
-		savedWorkItem.Id, bucket, key)
+		savedWorkItem.Id, bucket, *s3Object.Key)
 	if reader.stats != nil {
 		reader.stats.AddWorkItem("WorkItemsCreated", savedWorkItem)
 	}

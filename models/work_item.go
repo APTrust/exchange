@@ -35,6 +35,7 @@ type WorkItem struct {
 	Name                   string               `json:"name"`
 	Bucket                 string               `json:"bucket"`
 	ETag                   string               `json:"etag"`
+	Size                   int64                `json:"size"`
 	BagDate                time.Time            `json:"bag_date"`
 	InstitutionId          int                  `json:"institution_id"`
 	User                   string               `json:"user"`
@@ -62,6 +63,7 @@ func (item *WorkItem) SerializeForPharos() ([]byte, error) {
 		"name":                    item.Name,
 		"bucket":                  item.Bucket,
 		"etag":                    item.ETag,
+		"size":                    item.Size,
 		"bag_date":                item.BagDate,
 		"institution_id":          item.InstitutionId,
 		"object_identifier":       item.ObjectIdentifier,
