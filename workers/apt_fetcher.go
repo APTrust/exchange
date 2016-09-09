@@ -30,10 +30,20 @@ type APTFetcher struct {
 }
 
 type FetchData struct {
+	NSQMessage      *nsq.Message
 	WorkItem        *models.WorkItem
 	WorkItemState   *models.WorkItemState
 	IngestManifest  *models.IngestManifest
 }
+
+// Tell NSQ we're still working on this item. NSQMessage will be nil if
+// we're doing one-off testing (see RunWithoutNSQ).
+func (fetchData *FetchData) TouchNSQ() {
+	if fetchData.NSQMessage != nil {
+		fetchData.NSQMessage.Touch()
+	}
+}
+
 
 func NewATPFetcher(_context *context.Context) (*APTFetcher) {
 	fetcher := &APTFetcher{
@@ -105,7 +115,7 @@ func (fetcher *APTFetcher) HandleMessage(message *nsq.Message) (error) {
 func (fetcher *APTFetcher) fetch() {
 	for fetchData := range fetcher.FetchChannel {
 		// Tell NSQ we're working on this
-		fetchData.IngestManifest.NSQMessage.Touch()
+		fetchData.TouchNSQ()
 
 		fetchData.IngestManifest.Fetch.Start()
 		fetchData.IngestManifest.Fetch.Attempted = true
@@ -114,19 +124,47 @@ func (fetcher *APTFetcher) fetch() {
 
 		// Download may have taken 1 second or 3 hours.
 		// Remind NSQ that we're still on this.
-		fetchData.IngestManifest.NSQMessage.Touch()
+		fetchData.TouchNSQ()
 
 		if err != nil {
 			fetchData.IngestManifest.Fetch.AddError(err.Error())
 		}
-		fetcher.CleanupChannel <- fetchData
+		fetchData.IngestManifest.Fetch.Finish()
+		fetcher.ValidationChannel <- fetchData
 	}
 }
 
+// Validate the bag.
 func (fetcher *APTFetcher) validate() {
-//	for fetchData := range fetcher.FetchChannel {
-//
-//	}
+	for fetchData := range fetcher.ValidationChannel {
+		fetchData.TouchNSQ()
+		var validationResult *validation.ValidationResult
+		validator, err := validation.NewBagValidator(
+			fetchData.IngestManifest.Object.IngestTarFilePath,
+			fetcher.BagValidationConfig)
+		if err != nil {
+			// Should this be fatal?
+			fetchData.IngestManifest.Validate.AddError(err.Error())
+		} else {
+			validationResult = validator.Validate()
+
+			// The validator creates its own WorkSummary, complete with
+			// Start/Finish timestamps, error messages and everything.
+			fetchData.IngestManifest.Validate = validationResult.ValidationSummary
+
+			// NOTE that we are OVERWRITING the IntellectualObject here
+			// with the much more complete version returned by the validator.
+			fetchData.IngestManifest.Object = validationResult.IntellectualObject
+
+			// If the bag is invalid, that's a fatal error. We should not do
+			// any further processing on it.
+			if validationResult.HasErrors() {
+				fetchData.IngestManifest.Fetch.ErrorIsFatal = true
+			}
+		}
+		fetchData.TouchNSQ()
+		fetcher.CleanupChannel <- fetchData
+	}
 }
 
 // cleanup deletes the tar file we just downloaded, if we determine that
