@@ -16,7 +16,6 @@ import (
 	"strconv"
 	"strings"
 	"sync"
-//	"time"
 )
 
 type APTFetcher struct {
@@ -95,11 +94,6 @@ func (fetcher *APTFetcher) HandleMessage(message *nsq.Message) (error) {
 		return err
 	}
 
-	// This may be the second or third attempt to ingest a bag.
-	// If so, clear out old error message from previous attempts.
-	fetchData.IngestManifest.FetchResult.ClearErrors()
-	fetchData.IngestManifest.ValidateResult.ClearErrors()
-
 	// NSQ message autoresponse periodically tells the queue
 	// that the message is still being processed. This doesn't
 	// work for us in cases where we're fetching a file that's
@@ -109,8 +103,24 @@ func (fetcher *APTFetcher) HandleMessage(message *nsq.Message) (error) {
 	// the message to a new worker.
 	message.DisableAutoResponse()
 
-	// Now get to work.
-	fetcher.FetchChannel <- fetchData
+	if fetcher.canSkipFetchAndValidate(fetchData) {
+		fetcher.Context.MessageLog.Info("Sending %s/%s straight to record queue",
+			fetchData.IngestManifest.S3Bucket, fetchData.IngestManifest.S3Key)
+		fetcher.RecordChannel <- fetchData
+	} else {
+		// Start at fetch, which is the very beginning.
+		// This may be the second or third attempt to ingest this bag.
+		// If so, clear out old error message from previous attempts.
+		fetchData.IngestManifest.FetchResult.ClearErrors()
+		fetchData.IngestManifest.ValidateResult.ClearErrors()
+
+		fetcher.Context.MessageLog.Info("Putting %s/%s straight to fetch queue",
+			fetchData.IngestManifest.S3Bucket, fetchData.IngestManifest.S3Key)
+
+		fetcher.FetchChannel <- fetchData
+	}
+
+	// Return no error, so NSQ knows we're OK.
 	return nil
 }
 
@@ -247,6 +257,18 @@ func (fetcher *APTFetcher) loadBagValidationConfig() {
 		fetcher.Context.MessageLog.Fatal(msg)
 	}
 	fetcher.BagValidationConfig = bagValidationConfig
+}
+
+// Returns true if we can skip fetch and validate. We can skip those
+// steps if on a previous run we validated the bag, and it's still
+// there in our working directory. This anticipates the case where
+// we did those steps but were not able to update the WorkItem record
+// in Pharos at the end of the fetch/validate process.
+func (fetcher *APTFetcher) canSkipFetchAndValidate (fetchData *FetchData) (bool) {
+		return (fetchData.WorkItem.Stage == constants.StageValidate &&
+			fetchData.IngestManifest.ValidateResult.Finished() &&
+			!fetchData.IngestManifest.HasFatalErrors() &&
+			fileutil.FileExists(fetchData.IngestManifest.Object.IngestTarFilePath))
 }
 
 // Set up the basic pieces of data we'll need to process a fetch request.
