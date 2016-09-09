@@ -16,6 +16,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 )
 
 type APTFetcher struct {
@@ -108,6 +109,14 @@ func (fetcher *APTFetcher) HandleMessage(message *nsq.Message) (error) {
 			fetchData.IngestManifest.S3Bucket, fetchData.IngestManifest.S3Key)
 		fetcher.RecordChannel <- fetchData
 	} else {
+
+		// Reserve disk space to download this item, or requeue it
+		// if we can't get the disk space.
+		if !fetcher.reserveSpaceForDownload(fetchData) {
+			message.Requeue(1 * time.Minute)
+			return nil
+		}
+
 		// Start at fetch, which is the very beginning.
 		// This may be the second or third attempt to ingest this bag.
 		// If so, clear out old error message from previous attempts.
@@ -210,7 +219,14 @@ func (fetcher *APTFetcher) cleanup() {
 			// Most likely bad md5 digest, but perhaps also a partial download.
 			fetcher.Context.MessageLog.Info("Deleting due to download error: %s",
 				tarFile)
-			os.Remove(tarFile)
+			err := os.Remove(tarFile)
+			if err != nil {
+				fetcher.Context.MessageLog.Warning(err.Error())
+			}
+			err = fetcher.Context.VolumeClient.Release(fetchData.IngestManifest.Object.IngestTarFilePath)
+			if err != nil {
+				fetcher.Context.MessageLog.Warning(err.Error())
+			}
 		}
 		fetcher.RecordChannel <- fetchData
 	}
@@ -257,6 +273,30 @@ func (fetcher *APTFetcher) loadBagValidationConfig() {
 		fetcher.Context.MessageLog.Fatal(msg)
 	}
 	fetcher.BagValidationConfig = bagValidationConfig
+}
+
+// Make sure we have space to download this item.
+func (fetcher *APTFetcher) reserveSpaceForDownload (fetchData *FetchData) (bool) {
+	okToDownload := false
+	err := fetcher.Context.VolumeClient.Ping(500)
+	if err == nil {
+		path := fetchData.IngestManifest.Object.IngestTarFilePath
+		ok, err := fetcher.Context.VolumeClient.Reserve(path, uint64(fetchData.WorkItem.Size))
+		if err != nil {
+			fetcher.Context.MessageLog.Warning("Volume service returned an error. " +
+				"Will requeue bag %s/%s because we may not have enough space to download %d bytes.",
+				fetchData.WorkItem.Bucket, fetchData.WorkItem.Name, fetchData.WorkItem.Size)
+		} else if ok {
+			// VolumeService says we have enough space for this.
+			okToDownload = ok
+		}
+	} else {
+		fetcher.Context.MessageLog.Warning("Volume service is not running or returned an error. " +
+			"Continuing as if we have enough space to download %d bytes.",
+			fetchData.WorkItem.Size)
+		okToDownload = true
+	}
+	return okToDownload
 }
 
 // Returns true if we can skip fetch and validate. We can skip those
