@@ -95,6 +95,11 @@ func (fetcher *APTFetcher) HandleMessage(message *nsq.Message) (error) {
 		return err
 	}
 
+	// This may be the second or third attempt to ingest a bag.
+	// If so, clear out old error message from previous attempts.
+	fetchData.IngestManifest.FetchResult.ClearErrors()
+	fetchData.IngestManifest.ValidateResult.ClearErrors()
+
 	// NSQ message autoresponse periodically tells the queue
 	// that the message is still being processed. This doesn't
 	// work for us in cases where we're fetching a file that's
@@ -205,22 +210,25 @@ func (fetcher *APTFetcher) cleanup() {
 // and it pushes the item into the next queue (validation)
 // if necessary.
 func (fetcher *APTFetcher) record() {
-//	for fetchData := range fetcher.RecordChannel {
+	for fetchData := range fetcher.RecordChannel {
 		// Log WorkItemState
 		// Save WorkItemState to Pharos
 
-		// If no errors:
-		// Set WorkItem stage to StageValidate, status to StatusPending, node=nil, pid=0
-		// Finish the NSQ message
+		if fetchData.IngestManifest.HasFatalErrors() {
+			// Set WorkItem node=nil, pid=0, retry=false, needs_admin_review=true
+			// Finish the NSQ message
 
-		// If transient errors:
-		// Set WorkItem node=nil, pid=0
-		// Requeue the NSQ message
+		} else if fetchData.IngestManifest.HasErrors() {
+			// Set WorkItem node=nil, pid=0
+			// Requeue the NSQ message
 
-		// If fatal errors:
-		// Set WorkItem node=nil, pid=0, retry=false, needs_admin_review=true
-		// Finish the NSQ message
-//	}
+		} else {
+			// Set WorkItem stage to StageStore, status to StatusPending, node=nil, pid=0
+			// Finish the NSQ message
+
+		}
+
+	}
 }
 
 // Loads the bag validation config file specified in the general config
