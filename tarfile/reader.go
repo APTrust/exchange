@@ -31,7 +31,7 @@ func NewReader(manifest *models.IngestManifest) (*Reader) {
 func (reader *Reader) Untar() {
 	reader.recordStartOfWork()
 	if !reader.manifestInfoIsValid() {
-		reader.Manifest.Untar.Finish()
+		reader.Manifest.UntarResult.Finish()
 		return
 	}
 
@@ -44,10 +44,10 @@ func (reader *Reader) Untar() {
 		defer file.Close()
 	}
 	if err != nil {
-		reader.Manifest.Untar.AddError(
+		reader.Manifest.UntarResult.AddError(
 			"Could not open file %s for untarring: %v",
 			reader.Manifest.Object.IngestTarFilePath, err)
-		reader.Manifest.Untar.Finish()
+		reader.Manifest.UntarResult.Finish()
 		return
 	}
 
@@ -60,11 +60,11 @@ func (reader *Reader) Untar() {
 			break // end of archive
 		}
 		if err != nil {
-			reader.Manifest.Untar.AddError(
+			reader.Manifest.UntarResult.AddError(
 				"Error reading tar file header: %v. " +
 				"Either this is not a tar file, or the file is corrupt.",
 				err)
-			reader.Manifest.Untar.Finish()
+			reader.Manifest.UntarResult.Finish()
 			return
 		}
 
@@ -72,8 +72,8 @@ func (reader *Reader) Untar() {
 		if reader.Manifest.Object.IngestUntarredPath == "" {
 			topLevelDir, err := reader.getTopLevelDir(header.Name)
 			if err != nil {
-				reader.Manifest.Untar.AddError(err.Error())
-				reader.Manifest.Untar.Finish()
+				reader.Manifest.UntarResult.AddError(err.Error())
+				reader.Manifest.UntarResult.Finish()
 				return
 			}
 			reader.Manifest.Object.IngestUntarredPath = filepath.Join(tarFileDir, topLevelDir)
@@ -85,7 +85,7 @@ func (reader *Reader) Untar() {
 		// Make sure the directory that we're about to write into exists.
 		err = os.MkdirAll(filepath.Dir(outputPath), 0755)
 		if err != nil {
-			reader.Manifest.Untar.AddError("Could not create destination file '%s' "+
+			reader.Manifest.UntarResult.AddError("Could not create destination file '%s' "+
 				"while unpacking tar archive: %v", outputPath, err)
 			return
 		}
@@ -95,15 +95,15 @@ func (reader *Reader) Untar() {
 		if header.Typeflag == tar.TypeReg || header.Typeflag == tar.TypeRegA {
 			fileName, err := getFileName(header.Name)
 			if err != nil {
-				reader.Manifest.Untar.AddError(err.Error())
-				reader.Manifest.Untar.Finish()
+				reader.Manifest.UntarResult.AddError(err.Error())
+				reader.Manifest.UntarResult.Finish()
 				return
 			}
 			if util.HasSavableName(fileName) {
 				gf := reader.createAndSaveGenericFile(fileName, header)
 				if gf.IngestErrorMessage != "" {
-					reader.Manifest.Untar.AddError(gf.IngestErrorMessage)
-					reader.Manifest.Untar.Finish()
+					reader.Manifest.UntarResult.AddError(gf.IngestErrorMessage)
+					reader.Manifest.UntarResult.Finish()
 					return
 				}
 			} else {
@@ -114,10 +114,10 @@ func (reader *Reader) Untar() {
 					reader.Manifest.Object.IngestFilesIgnored, outputPath)
 				err = reader.saveFile(outputPath)
 				if err != nil {
-					reader.Manifest.Untar.AddError(
+					reader.Manifest.UntarResult.AddError(
 						"Error copying file from tar archive to '%s': %v",
 						outputPath, err)
-					reader.Manifest.Untar.Finish()
+					reader.Manifest.UntarResult.Finish()
 					return
 				}
 			}
@@ -129,45 +129,45 @@ func (reader *Reader) Untar() {
 				header.Name)
 		}
 	}
-	reader.Manifest.Untar.Finish()
+	reader.Manifest.UntarResult.Finish()
 }
 
 // Record that we're starting on this.
 func (reader *Reader) recordStartOfWork() {
-	reader.Manifest.Untar.Attempted = true
-	reader.Manifest.Untar.AttemptNumber += 1
-	reader.Manifest.Untar.FinishedAt = time.Time{}
-	reader.Manifest.Untar.Start()
+	reader.Manifest.UntarResult.Attempted = true
+	reader.Manifest.UntarResult.AttemptNumber += 1
+	reader.Manifest.UntarResult.FinishedAt = time.Time{}
+	reader.Manifest.UntarResult.Start()
 }
 
 // Make sure the manifest has enough information
 // for us to get started.
 func (reader *Reader) manifestInfoIsValid() (bool) {
 	if reader.Manifest.Object == nil {
-		reader.Manifest.Untar.AddError("IntellectualObject is missing from manifest.")
+		reader.Manifest.UntarResult.AddError("IntellectualObject is missing from manifest.")
 		return false
 	}
 	if reader.Manifest.Object.Identifier == "" {
-		reader.Manifest.Untar.AddError("IntellectualObject has no Identifier.")
+		reader.Manifest.UntarResult.AddError("IntellectualObject has no Identifier.")
 	}
 	if reader.Manifest.Object.BagName == "" {
-		reader.Manifest.Untar.AddError("IntellectualObject has no BagName.")
+		reader.Manifest.UntarResult.AddError("IntellectualObject has no BagName.")
 	}
 	if reader.Manifest.Object.Institution == "" {
-		reader.Manifest.Untar.AddError("IntellectualObject has no Institution.")
+		reader.Manifest.UntarResult.AddError("IntellectualObject has no Institution.")
 	}
 	tarFilePath := reader.Manifest.Object.IngestTarFilePath
 	if tarFilePath == "" {
-		reader.Manifest.Untar.AddError("IntellectualObject is missing IngestTarFilePath.")
+		reader.Manifest.UntarResult.AddError("IntellectualObject is missing IngestTarFilePath.")
 	} else if absPath, _ := filepath.Abs(tarFilePath); absPath != tarFilePath {
-		reader.Manifest.Untar.AddError("IntellectualObject IngestTarFilePath '%s' does not exist.", tarFilePath)
+		reader.Manifest.UntarResult.AddError("IntellectualObject IngestTarFilePath '%s' does not exist.", tarFilePath)
 	}
 	if fileStat, err := os.Stat(tarFilePath); os.IsNotExist(err) {
-		reader.Manifest.Untar.AddError("IngestTarFilePath '%s' does not exist.", tarFilePath)
+		reader.Manifest.UntarResult.AddError("IngestTarFilePath '%s' does not exist.", tarFilePath)
 	} else if fileStat.Mode().IsDir() {
-		reader.Manifest.Untar.AddError("IngestTarFilePath '%s' is a directory.", tarFilePath)
+		reader.Manifest.UntarResult.AddError("IngestTarFilePath '%s' is a directory.", tarFilePath)
 	}
-	return !reader.Manifest.Untar.HasErrors()
+	return !reader.Manifest.UntarResult.HasErrors()
 }
 
 // Saves the file to disk and returns a GenericFile object.
@@ -179,7 +179,7 @@ func (reader *Reader) createAndSaveGenericFile(fileName string, header *tar.Head
 	gf.IngestLocalPath, err = filepath.Abs(filepath.Join(fileDir, header.Name))
 	if err != nil {
 		gf.IngestErrorMessage = fmt.Sprintf("Path error: %v", err)
-		reader.Manifest.Untar.AddError(gf.IngestErrorMessage)
+		reader.Manifest.UntarResult.AddError(gf.IngestErrorMessage)
 		return gf
 	}
 	gf.IntellectualObjectIdentifier = reader.Manifest.Object.Identifier

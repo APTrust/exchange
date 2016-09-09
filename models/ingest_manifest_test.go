@@ -8,12 +8,12 @@ import (
 
 func TestNewIngestManifest(t *testing.T) {
 	manifest := models.NewIngestManifest()
-	assert.NotNil(t, manifest.Fetch)
-	assert.NotNil(t, manifest.Untar)
-	assert.NotNil(t, manifest.Validate)
-	assert.NotNil(t, manifest.Store)
-	assert.NotNil(t, manifest.Record)
-	assert.NotNil(t, manifest.Replicate)
-	assert.NotNil(t, manifest.Cleanup)
+	assert.NotNil(t, manifest.FetchResult)
+	assert.NotNil(t, manifest.UntarResult)
+	assert.NotNil(t, manifest.ValidateResult)
+	assert.NotNil(t, manifest.StoreResult)
+	assert.NotNil(t, manifest.RecordResult)
+	assert.NotNil(t, manifest.ReplicateResult)
+	assert.NotNil(t, manifest.CleanupResult)
 	assert.NotNil(t, manifest.Object)
 }

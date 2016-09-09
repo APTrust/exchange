@@ -5,25 +5,25 @@ type IngestManifest struct {
 	S3Bucket           string
 	S3Key              string
 	ETag               string
-	Fetch              *WorkSummary
-	Untar              *WorkSummary
-	Validate           *WorkSummary
-	Store              *WorkSummary
-	Record             *WorkSummary
-	Replicate          *WorkSummary
-	Cleanup            *WorkSummary
+	FetchResult        *WorkSummary
+	UntarResult        *WorkSummary
+	ValidateResult     *WorkSummary
+	StoreResult        *WorkSummary
+	RecordResult       *WorkSummary
+	ReplicateResult    *WorkSummary
+	CleanupResult      *WorkSummary
 	Object             *IntellectualObject
 }
 
 func NewIngestManifest() (*IngestManifest) {
 	return &IngestManifest{
-		Fetch: NewWorkSummary(),
-		Untar: NewWorkSummary(),
-		Validate: NewWorkSummary(),
-		Store: NewWorkSummary(),
-		Record: NewWorkSummary(),
-		Replicate: NewWorkSummary(),
-		Cleanup: NewWorkSummary(),
+		FetchResult: NewWorkSummary(),
+		UntarResult: NewWorkSummary(),
+		ValidateResult: NewWorkSummary(),
+		StoreResult: NewWorkSummary(),
+		RecordResult: NewWorkSummary(),
+		ReplicateResult: NewWorkSummary(),
+		CleanupResult: NewWorkSummary(),
 		Object: NewIntellectualObject(),
 	}
 }

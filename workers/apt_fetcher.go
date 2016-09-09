@@ -117,8 +117,8 @@ func (fetcher *APTFetcher) fetch() {
 		// Tell NSQ we're working on this
 		fetchData.TouchNSQ()
 
-		fetchData.IngestManifest.Fetch.Start()
-		fetchData.IngestManifest.Fetch.Attempted = true
+		fetchData.IngestManifest.FetchResult.Start()
+		fetchData.IngestManifest.FetchResult.Attempted = true
 
 		err := fetcher.downloadFile(fetchData)
 
@@ -127,9 +127,9 @@ func (fetcher *APTFetcher) fetch() {
 		fetchData.TouchNSQ()
 
 		if err != nil {
-			fetchData.IngestManifest.Fetch.AddError(err.Error())
+			fetchData.IngestManifest.FetchResult.AddError(err.Error())
 		}
-		fetchData.IngestManifest.Fetch.Finish()
+		fetchData.IngestManifest.FetchResult.Finish()
 		fetcher.ValidationChannel <- fetchData
 	}
 }
@@ -144,13 +144,13 @@ func (fetcher *APTFetcher) validate() {
 			fetcher.BagValidationConfig)
 		if err != nil {
 			// Should this be fatal?
-			fetchData.IngestManifest.Validate.AddError(err.Error())
+			fetchData.IngestManifest.ValidateResult.AddError(err.Error())
 		} else {
 			validationResult = validator.Validate()
 
 			// The validator creates its own WorkSummary, complete with
 			// Start/Finish timestamps, error messages and everything.
-			fetchData.IngestManifest.Validate = validationResult.ValidationSummary
+			fetchData.IngestManifest.ValidateResult = validationResult.ValidationSummary
 
 			// NOTE that we are OVERWRITING the IntellectualObject here
 			// with the much more complete version returned by the validator.
@@ -159,7 +159,7 @@ func (fetcher *APTFetcher) validate() {
 			// If the bag is invalid, that's a fatal error. We should not do
 			// any further processing on it.
 			if validationResult.HasErrors() {
-				fetchData.IngestManifest.Fetch.ErrorIsFatal = true
+				fetchData.IngestManifest.ValidateResult.ErrorIsFatal = true
 			}
 		}
 		fetchData.TouchNSQ()
@@ -172,7 +172,9 @@ func (fetcher *APTFetcher) validate() {
 func (fetcher *APTFetcher) cleanup() {
 	for fetchData := range fetcher.CleanupChannel {
 		tarFile := fetchData.IngestManifest.Object.IngestTarFilePath
-		if fetchData.IngestManifest.Fetch.HasErrors() && fileutil.FileExists(tarFile) {
+		hasErrors := (fetchData.IngestManifest.FetchResult.HasErrors() ||
+			fetchData.IngestManifest.ValidateResult.HasErrors())
+		if hasErrors && fileutil.FileExists(tarFile) {
 			// Most likely bad md5 digest, but perhaps also a partial download.
 			fetcher.Context.MessageLog.Info("Deleting due to download error: %s",
 				tarFile)
@@ -187,7 +189,7 @@ func (fetcher *APTFetcher) cleanup() {
 // if necessary.
 func (fetcher *APTFetcher) record() {
 //	for fetchData := range fetcher.RecordChannel {
-		// Call fetchData.IngestManifest.Fetch.Finish()
+		// Call fetchData.IngestManifest.FetchResult.Finish()
 
 		// Log WorkItemState
 		// Save WorkItemState to Pharos
@@ -400,9 +402,9 @@ func (fetcher *APTFetcher) downloadFile (fetchData *FetchData) (error) {
 
 	// If we got a bad checksum, note the error in the WorkSummary.
 	if obj.IngestMd5Verifiable && !obj.IngestMd5Verified {
-		fetchData.IngestManifest.Fetch.AddError("Our md5 '%s' does not match S3 md5 '%s'",
+		fetchData.IngestManifest.FetchResult.AddError("Our md5 '%s' does not match S3 md5 '%s'",
 			obj.IngestLocalMd5, obj.IngestRemoteMd5)
-		fetchData.IngestManifest.Fetch.ErrorIsFatal = true
+		fetchData.IngestManifest.FetchResult.ErrorIsFatal = true
 	}
 
 	return nil
