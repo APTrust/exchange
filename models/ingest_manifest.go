@@ -1,11 +1,6 @@
 package models
 
-import (
-	"github.com/nsqio/go-nsq"
-)
-
 type IngestManifest struct {
-	NSQMessage         *nsq.Message  `json:"-"`
 	WorkItemId         int
 	S3Bucket           string
 	S3Key              string
