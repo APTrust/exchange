@@ -88,7 +88,7 @@ func (fetcher *APTFetcher) HandleMessage(message *nsq.Message) (error) {
 	if resp.Error != nil {
 		return resp.Error
 	}
-	// Tell Pharos that we've started work on the item.
+	// Tell Pharos that we've started to fetch this item.
 	fetchData.WorkItem, err = fetcher.recordFetchStarted(fetchData.WorkItem)
 	if err != nil {
 		fetcher.Context.MessageLog.Error(err.Error())
@@ -137,19 +137,36 @@ func (fetcher *APTFetcher) fetch() {
 // Validate the bag.
 func (fetcher *APTFetcher) validate() {
 	for fetchData := range fetcher.ValidationChannel {
+		// Don't time us out, NSQ!
 		fetchData.TouchNSQ()
+
+		// Tell Pharos that we've started to validate item.
+		// Let's NOT quit if there's an error here. In that case, Pharos
+		// might not know that we're validating, but we can still proceed.
+		// Restarting the whole fetch process would be expensive.
+		fetchData.WorkItem, _ = fetcher.recordValidationStarted(fetchData.WorkItem)
+
+		// Set up a new validator to check this bag.
 		var validationResult *validation.ValidationResult
 		validator, err := validation.NewBagValidator(
 			fetchData.IngestManifest.Object.IngestTarFilePath,
 			fetcher.BagValidationConfig)
 		if err != nil {
-			// Should this be fatal?
+			// Could not create a BagValidator. Should this be fatal?
 			fetchData.IngestManifest.ValidateResult.AddError(err.Error())
 		} else {
+
+			// Here's where bag validation actually happens. There's a lot
+			// going on in this call, which can take anywhere from 2 seconds
+			// to 3 hours to complete, depending on the size of the bag.
+			// The most time-consuming part of the validation process is
+			// calculating md5 and sha256 checksums on every file in the bag.
+			// If the bag is 100GB+ in size, that takes a long time.
 			validationResult = validator.Validate()
 
 			// The validator creates its own WorkSummary, complete with
 			// Start/Finish timestamps, error messages and everything.
+			// Just copy that into our IngestManifest.
 			fetchData.IngestManifest.ValidateResult = validationResult.ValidationSummary
 
 			// NOTE that we are OVERWRITING the IntellectualObject here
@@ -189,8 +206,6 @@ func (fetcher *APTFetcher) cleanup() {
 // if necessary.
 func (fetcher *APTFetcher) record() {
 //	for fetchData := range fetcher.RecordChannel {
-		// Call fetchData.IngestManifest.FetchResult.Finish()
-
 		// Log WorkItemState
 		// Save WorkItemState to Pharos
 
@@ -255,7 +270,13 @@ func (fetcher *APTFetcher) initFetchData (message *nsq.Message) (*FetchData, err
 	// See IngestTarFilePath below.
 	instIdentifier := util.OwnerOf(fetchData.IngestManifest.S3Bucket)
 
-	// Set some basic info on our IntellectualObject
+	// Set some basic info on our IntellectualObject.
+	// Note that we only do this for a brand new bag that we have
+	// never before attempted to ingest. Also note that
+	// fetchData.IngestManifest.Object will be overwritten in the
+	// validate() function above. The BagValidator will construct a
+	// much more comprehensive IntellectualObject. For now, we're just
+	// adding in the data we need to get started.
 	fetchData.IngestManifest.Object.BagName = util.CleanBagName(fetchData.IngestManifest.S3Key)
 	fetchData.IngestManifest.Object.Institution = instIdentifier
 	// -----------------------------------------------------------
@@ -335,7 +356,7 @@ func (fetcher *APTFetcher) initWorkItemState (workItem *models.WorkItem) (*model
 	return workItemState, nil
 }
 
-// Tell Pharos we've started work on this item.
+// Tell Pharos we've started to fetch this item from S3.
 func (fetcher *APTFetcher) recordFetchStarted (workItem *models.WorkItem) (*models.WorkItem, error) {
 	hostname, _ := os.Hostname()
 	if hostname == "" { hostname = "apt_fetcher_host" }
@@ -350,6 +371,18 @@ func (fetcher *APTFetcher) recordFetchStarted (workItem *models.WorkItem) (*mode
 	}
 	return resp.WorkItem(), nil
 }
+
+// Tell Pharos we've started validation on this item.
+func (fetcher *APTFetcher) recordValidationStarted (workItem *models.WorkItem) (*models.WorkItem, error) {
+	workItem.Stage = constants.StageValidate
+	workItem.Note = "Validating bag."
+	resp := fetcher.Context.PharosClient.WorkItemSave(workItem)
+	if resp.Error != nil {
+		return nil, resp.Error
+	}
+	return resp.WorkItem(), nil
+}
+
 
 // Download the file, and update the IngestManifest while we're at it.
 func (fetcher *APTFetcher) downloadFile (fetchData *FetchData) (error) {
