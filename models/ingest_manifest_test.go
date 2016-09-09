@@ -17,3 +17,83 @@ func TestNewIngestManifest(t *testing.T) {
 	assert.NotNil(t, manifest.CleanupResult)
 	assert.NotNil(t, manifest.Object)
 }
+
+func TestIngestManifest_HasErrors(t *testing.T) {
+	manifest := models.NewIngestManifest()
+	assert.False(t, manifest.HasErrors())
+
+	manifest.FetchResult.AddError("error")
+	assert.True(t, manifest.HasErrors())
+	manifest.FetchResult.ClearErrors()
+	assert.False(t, manifest.HasErrors())
+
+	manifest.UntarResult.AddError("error")
+	assert.True(t, manifest.HasErrors())
+	manifest.UntarResult.ClearErrors()
+	assert.False(t, manifest.HasErrors())
+
+	manifest.ValidateResult.AddError("error")
+	assert.True(t, manifest.HasErrors())
+	manifest.ValidateResult.ClearErrors()
+	assert.False(t, manifest.HasErrors())
+
+	manifest.StoreResult.AddError("error")
+	assert.True(t, manifest.HasErrors())
+	manifest.StoreResult.ClearErrors()
+	assert.False(t, manifest.HasErrors())
+
+	manifest.RecordResult.AddError("error")
+	assert.True(t, manifest.HasErrors())
+	manifest.RecordResult.ClearErrors()
+	assert.False(t, manifest.HasErrors())
+
+	manifest.ReplicateResult.AddError("error")
+	assert.True(t, manifest.HasErrors())
+	manifest.ReplicateResult.ClearErrors()
+	assert.False(t, manifest.HasErrors())
+
+	manifest.CleanupResult.AddError("error")
+	assert.True(t, manifest.HasErrors())
+	manifest.CleanupResult.ClearErrors()
+	assert.False(t, manifest.HasErrors())
+}
+
+func TestIngestManifest_HasFatalErrors(t *testing.T) {
+	manifest := models.NewIngestManifest()
+	assert.False(t, manifest.HasFatalErrors())
+
+	manifest.FetchResult.ErrorIsFatal = true
+	assert.True(t, manifest.HasFatalErrors())
+	manifest.FetchResult.ClearErrors()
+	assert.False(t, manifest.HasFatalErrors())
+
+	manifest.UntarResult.ErrorIsFatal = true
+	assert.True(t, manifest.HasFatalErrors())
+	manifest.UntarResult.ClearErrors()
+	assert.False(t, manifest.HasFatalErrors())
+
+	manifest.ValidateResult.ErrorIsFatal = true
+	assert.True(t, manifest.HasFatalErrors())
+	manifest.ValidateResult.ClearErrors()
+	assert.False(t, manifest.HasFatalErrors())
+
+	manifest.StoreResult.ErrorIsFatal = true
+	assert.True(t, manifest.HasFatalErrors())
+	manifest.StoreResult.ClearErrors()
+	assert.False(t, manifest.HasFatalErrors())
+
+	manifest.RecordResult.ErrorIsFatal = true
+	assert.True(t, manifest.HasFatalErrors())
+	manifest.RecordResult.ClearErrors()
+	assert.False(t, manifest.HasFatalErrors())
+
+	manifest.ReplicateResult.ErrorIsFatal = true
+	assert.True(t, manifest.HasFatalErrors())
+	manifest.ReplicateResult.ClearErrors()
+	assert.False(t, manifest.HasFatalErrors())
+
+	manifest.CleanupResult.ErrorIsFatal = true
+	assert.True(t, manifest.HasFatalErrors())
+	manifest.CleanupResult.ClearErrors()
+	assert.False(t, manifest.HasFatalErrors())
+}

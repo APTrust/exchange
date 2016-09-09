@@ -48,6 +48,7 @@ func NewWorkSummary() *WorkSummary {
 	return &WorkSummary{
 		Attempted: false,
 		AttemptNumber: 0,
+		ErrorIsFatal: false,
 		Errors: make([]string, 0),
 		StartedAt: time.Time{},
 		FinishedAt: time.Time{},
@@ -93,6 +94,7 @@ func (summary *WorkSummary) AddError(format string, a ...interface{}) {
 
 func (summary *WorkSummary) ClearErrors() {
 	summary.Errors = nil
+	summary.ErrorIsFatal = false
 	summary.Errors = make([]string, 0)
 }
 

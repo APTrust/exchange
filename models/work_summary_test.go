@@ -92,9 +92,11 @@ func TestHasErrors(t *testing.T) {
 func TestClearErrors(t *testing.T) {
 	s := models.NewWorkSummary()
 	s.AddError("First error is number %d", 1)
+	s.ErrorIsFatal = true
 	assert.NotEmpty(t, s.Errors)
 	s.ClearErrors()
 	assert.Empty(t, s.Errors)
+	assert.False(t, s.ErrorIsFatal)
 }
 
 func TestFirstError(t *testing.T) {

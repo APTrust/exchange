@@ -29,3 +29,23 @@ func NewIngestManifest() (*IngestManifest) {
 }
 
 // TODO: Write method to get first error, all errors.
+
+func (manifest *IngestManifest) HasErrors() (bool) {
+	return (manifest.FetchResult.HasErrors() ||
+		manifest.UntarResult.HasErrors() ||
+		manifest.ValidateResult.HasErrors() ||
+		manifest.StoreResult.HasErrors() ||
+		manifest.RecordResult.HasErrors() ||
+		manifest.ReplicateResult.HasErrors() ||
+		manifest.CleanupResult.HasErrors())
+}
+
+func (manifest *IngestManifest) HasFatalErrors() (bool) {
+	return (manifest.FetchResult.ErrorIsFatal ||
+		manifest.UntarResult.ErrorIsFatal ||
+		manifest.ValidateResult.ErrorIsFatal ||
+		manifest.StoreResult.ErrorIsFatal ||
+		manifest.RecordResult.ErrorIsFatal ||
+		manifest.ReplicateResult.ErrorIsFatal ||
+		manifest.CleanupResult.ErrorIsFatal)
+}
