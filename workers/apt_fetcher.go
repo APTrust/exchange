@@ -52,7 +52,7 @@ func (fetchData *FetchData) FinishNSQ() {
 
 func (fetchData *FetchData) RequeueNSQ(milliseconds int) {
 	if fetchData.NSQMessage != nil {
-		fetchData.NSQMessage.Requeue(milliseconds * time.Millisecond))
+		fetchData.NSQMessage.Requeue(time.Duration(milliseconds) * time.Millisecond)
 	}
 }
 
@@ -269,21 +269,27 @@ func (fetcher *APTFetcher) cleanup() {
 // -------------------------------------------------------------------------
 func (fetcher *APTFetcher) record() {
 	for fetchData := range fetcher.RecordChannel {
+	    // Record the WorkItemState in Pharos. The next process (record)
+		// will need this info to do its work. If there's an error in this
+		// step, recordWorkItemState will log it and add it to the FetchResult.
+		// It will also dump a JSON representation of the IngestManifest to
+		// the JSON log.
 		fetcher.recordWorkItemState(fetchData)
 		if fetchData.IngestManifest.HasFatalErrors() {
 			// Set WorkItem node=nil, pid=0, retry=false, needs_admin_review=true
 			// Finish the NSQ message
 			fetchData.FinishNSQ()
-
+			fetcher.markWorkItemFailed(fetchData)
 		} else if fetchData.IngestManifest.HasErrors() {
 			// Set WorkItem node=nil, pid=0
 			// Requeue the NSQ message
 			fetchData.RequeueNSQ(1000)
-
+			fetcher.markWorkItemRequeued(fetchData)
 		} else {
 			// Set WorkItem stage to StageStore, status to StatusPending, node=nil, pid=0
 			// Finish the NSQ message
 			fetchData.FinishNSQ()
+			fetcher.markWorkItemSucceeded(fetchData)
 		}
 
 	}
@@ -460,6 +466,7 @@ func (fetcher *APTFetcher) initWorkItemState (workItem *models.WorkItem) (*model
 
 // Tell Pharos we've started to fetch this item from S3.
 func (fetcher *APTFetcher) recordFetchStarted (workItem *models.WorkItem) (*models.WorkItem, error) {
+    fetcher.Context.MessageLog.Info("Telling Pharos fetch started for %s/%s", workItem.Bucket, workItem.Name)
 	hostname, _ := os.Hostname()
 	if hostname == "" { hostname = "apt_fetcher_host" }
 	workItem.Node = hostname
@@ -476,6 +483,7 @@ func (fetcher *APTFetcher) recordFetchStarted (workItem *models.WorkItem) (*mode
 
 // Tell Pharos we've started validation on this item.
 func (fetcher *APTFetcher) recordValidationStarted (workItem *models.WorkItem) (*models.WorkItem, error) {
+    fetcher.Context.MessageLog.Info("Telling Pharos validation started for %s/%s", workItem.Bucket, workItem.Name)
 	workItem.Stage = constants.StageValidate
 	workItem.Note = "Validating bag."
 	resp := fetcher.Context.PharosClient.WorkItemSave(workItem)
@@ -485,6 +493,66 @@ func (fetcher *APTFetcher) recordValidationStarted (workItem *models.WorkItem) (
 	return resp.WorkItem(), nil
 }
 
+// Tell Pharos that this item cannot be ingested, due to a fatal error.
+func (fetcher *APTFetcher) markWorkItemFailed (fetchData *FetchData) (error) {
+    fetcher.Context.MessageLog.Info("Telling Pharos ingest failed for %s/%s",
+		fetchData.WorkItem.Bucket, fetchData.WorkItem.Name)
+	fetchData.WorkItem.Pid = 0
+	fetchData.WorkItem.Node = ""
+	fetchData.WorkItem.Retry = false
+	fetchData.WorkItem.NeedsAdminReview = true
+	fetchData.WorkItem.Status = constants.StatusFailed
+	fetchData.WorkItem.Note = fetchData.IngestManifest.FetchResult.AllErrorsAsString() + fetchData.IngestManifest.ValidateResult.AllErrorsAsString()
+	resp := fetcher.Context.PharosClient.WorkItemSave(fetchData.WorkItem)
+	if resp.Error != nil {
+		fetcher.Context.MessageLog.Error("Could not mark WorkItem failed for %s/%s: %v",
+			fetchData.WorkItem.Bucket, fetchData.WorkItem.Name, resp.Error)
+		return resp.Error
+	}
+	fetchData.WorkItem = resp.WorkItem()
+	return nil
+}
+
+// Tell Pharos that this item has been requeued due to transient errors.
+func (fetcher *APTFetcher) markWorkItemRequeued (fetchData *FetchData) (error) {
+    fetcher.Context.MessageLog.Info("Telling Pharos ingest requeued for %s/%s",
+		fetchData.WorkItem.Bucket, fetchData.WorkItem.Name)
+	fetchData.WorkItem.Pid = 0
+	fetchData.WorkItem.Node = ""
+	fetchData.WorkItem.Retry = true
+	fetchData.WorkItem.NeedsAdminReview = false
+	fetchData.WorkItem.Status = constants.StatusStarted
+	fetchData.WorkItem.Note = "Item has been requeued due to transient errors. " + fetchData.IngestManifest.FetchResult.AllErrorsAsString() + fetchData.IngestManifest.ValidateResult.AllErrorsAsString()
+	resp := fetcher.Context.PharosClient.WorkItemSave(fetchData.WorkItem)
+	if resp.Error != nil {
+		fetcher.Context.MessageLog.Error("Could not mark WorkItem requeued for %s/%s: %v",
+			fetchData.WorkItem.Bucket, fetchData.WorkItem.Name, resp.Error)
+		return resp.Error
+	}
+	fetchData.WorkItem = resp.WorkItem()
+	return nil
+}
+
+// Tell Pharos that this item was successfully downloaded and validated.
+func (fetcher *APTFetcher) markWorkItemSucceeded (fetchData *FetchData) (error) {
+    fetcher.Context.MessageLog.Info("Telling Pharos ingest can proceed for %s/%s",
+		fetchData.WorkItem.Bucket, fetchData.WorkItem.Name)
+	fetchData.WorkItem.Pid = 0
+	fetchData.WorkItem.Node = ""
+	fetchData.WorkItem.Retry = true
+	fetchData.WorkItem.NeedsAdminReview = false
+	fetchData.WorkItem.Stage = constants.StageRecord
+	fetchData.WorkItem.Status = constants.StatusPending
+	fetchData.WorkItem.Note = "Item passed validation and is ready for storage."
+	resp := fetcher.Context.PharosClient.WorkItemSave(fetchData.WorkItem)
+	if resp.Error != nil {
+		fetcher.Context.MessageLog.Error("Could not mark WorkItem ready for storage for %s/%s: %v",
+			fetchData.WorkItem.Bucket, fetchData.WorkItem.Name, resp.Error)
+		return resp.Error
+	}
+	fetchData.WorkItem = resp.WorkItem()
+	return nil
+}
 
 // Download the file, and update the IngestManifest while we're at it.
 func (fetcher *APTFetcher) downloadFile (fetchData *FetchData) (error) {
