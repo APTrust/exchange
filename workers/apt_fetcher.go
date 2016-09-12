@@ -23,9 +23,9 @@ type APTFetcher struct {
 	Context             *context.Context
 	BagValidationConfig *validation.BagValidationConfig
 	FetchChannel        chan *FetchData
-	RecordChannel       chan *FetchData
 	ValidationChannel   chan *FetchData
 	CleanupChannel      chan *FetchData
+	RecordChannel       chan *FetchData
 	WaitGroup           sync.WaitGroup
 }
 
@@ -43,6 +43,19 @@ func (fetchData *FetchData) TouchNSQ() {
 		fetchData.NSQMessage.Touch()
 	}
 }
+
+func (fetchData *FetchData) FinishNSQ() {
+	if fetchData.NSQMessage != nil {
+		fetchData.NSQMessage.Finish()
+	}
+}
+
+func (fetchData *FetchData) RequeueNSQ(milliseconds int) {
+	if fetchData.NSQMessage != nil {
+		fetchData.NSQMessage.Requeue(milliseconds * time.Millisecond))
+	}
+}
+
 
 
 func NewATPFetcher(_context *context.Context) (*APTFetcher) {
@@ -133,9 +146,13 @@ func (fetcher *APTFetcher) HandleMessage(message *nsq.Message) (error) {
 	return nil
 }
 
+// -------------------------------------------------------------------------
+// Step 1 of 4: Fetch
+//
 // fetch copies the file from S3 to our local staging area.
 // If all goes well, the file will wind up in
 // fetchData.IngestManifest.Object.IngestTarFilePath
+// -------------------------------------------------------------------------
 func (fetcher *APTFetcher) fetch() {
 	for fetchData := range fetcher.FetchChannel {
 		// Tell NSQ we're working on this
@@ -159,7 +176,11 @@ func (fetcher *APTFetcher) fetch() {
 	}
 }
 
-// Validate the bag.
+// -------------------------------------------------------------------------
+// Step 2 of 4: Validate
+//
+// Make sure the tar file is a valid bag.
+// -------------------------------------------------------------------------
 func (fetcher *APTFetcher) validate() {
 	for fetchData := range fetcher.ValidationChannel {
 		// Don't time us out, NSQ!
@@ -209,8 +230,14 @@ func (fetcher *APTFetcher) validate() {
 	}
 }
 
+// -------------------------------------------------------------------------
+// Step 3 of 4: Cleanup (conditional)
+//
 // cleanup deletes the tar file we just downloaded, if we determine that
 // something is wrong with it and there should be no further processing.
+// If the bag is valid, we leave it in the staging area. The next process
+// (store) will pick it up and copy files to S3 and Glacier.
+// -------------------------------------------------------------------------
 func (fetcher *APTFetcher) cleanup() {
 	for fetchData := range fetcher.CleanupChannel {
 		tarFile := fetchData.IngestManifest.Object.IngestTarFilePath
@@ -233,24 +260,30 @@ func (fetcher *APTFetcher) cleanup() {
 	}
 }
 
+// -------------------------------------------------------------------------
+// Step 4 of 4: Record updates the WorItem and WorkItemState in Pharos.
+//
 // record tells Pharos what's happened with this WorkItem,
 // and it pushes the item into the next queue (validation)
 // if necessary.
+// -------------------------------------------------------------------------
 func (fetcher *APTFetcher) record() {
 	for fetchData := range fetcher.RecordChannel {
 		fetcher.recordWorkItemState(fetchData)
 		if fetchData.IngestManifest.HasFatalErrors() {
 			// Set WorkItem node=nil, pid=0, retry=false, needs_admin_review=true
 			// Finish the NSQ message
+			fetchData.FinishNSQ()
 
 		} else if fetchData.IngestManifest.HasErrors() {
 			// Set WorkItem node=nil, pid=0
 			// Requeue the NSQ message
+			fetchData.RequeueNSQ(1000)
 
 		} else {
 			// Set WorkItem stage to StageStore, status to StatusPending, node=nil, pid=0
 			// Finish the NSQ message
-
+			fetchData.FinishNSQ()
 		}
 
 	}
