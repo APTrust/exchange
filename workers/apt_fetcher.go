@@ -56,9 +56,7 @@ func (fetchData *FetchData) RequeueNSQ(milliseconds int) {
 	}
 }
 
-
-
-func NewATPFetcher(_context *context.Context) (*APTFetcher) {
+func NewAPTFetcher(_context *context.Context) (*APTFetcher) {
 	fetcher := &APTFetcher{
 		Context: _context,
 	}
@@ -87,6 +85,7 @@ func NewATPFetcher(_context *context.Context) (*APTFetcher) {
 	return fetcher
 }
 
+// This is the callback that NSQ workers use to handle messages from NSQ.
 func (fetcher *APTFetcher) HandleMessage(message *nsq.Message) (error) {
 
 	// Set up our fetch data. Most of this comes from Pharos;
@@ -305,7 +304,7 @@ func (fetcher *APTFetcher) loadBagValidationConfig() {
 		msg := fmt.Sprintf("Could not load bag validation config from %s",
 			fetcher.Context.Config.BagValidationConfigFile)
 		for _, err := range errors {
-			msg += fmt.Sprintf("%s ... ", err.Error)
+			msg += fmt.Sprintf("%s ... ", err.Error())
 		}
 		fmt.Fprintln(os.Stderr, msg)
 		fetcher.Context.MessageLog.Fatal(msg)

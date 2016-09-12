@@ -141,26 +141,6 @@ type Config struct {
 	// handles ongoing fixity checks.
 	FixityWorker            WorkerConfig
 
-    // NsqdHttpAddress tells us where to find the NSQ server
-	// where we can read from and write to topics and channels.
-	// It's typically something like "http://localhost:4151"
-	NsqdHttpAddress         string
-
-    // NsqLookupd is the full HTTP(S) address of the NSQ Lookup
-	// daemon, which is where our worker processes look first to
-	// discover where they can find topics and channels. This is
-	// typically something like "localhost:4161"
-	NsqLookupd              string
-
-	// The version of the Pharos API we're using. This should
-	// start with a v, like v1, v2.2, etc.
-	PharosAPIVersion       string
-
-	// PharosURL is the URL of the Pharos server where
-	// we will be recording results and metadata. This should
-	// start with http:// or https://
-	PharosURL              string
-
 	// LogDirectory is where we'll write our log files.
 	LogDirectory            string
 
@@ -195,6 +175,26 @@ type Config struct {
 	// up pulling down a huge amount of data from the
 	// receiving buckets.
 	MaxFileSize             int64
+
+    // NsqdHttpAddress tells us where to find the NSQ server
+	// where we can read from and write to topics and channels.
+	// It's typically something like "http://localhost:4151"
+	NsqdHttpAddress         string
+
+    // NsqLookupd is the full HTTP(S) address of the NSQ Lookup
+	// daemon, which is where our worker processes look first to
+	// discover where they can find topics and channels. This is
+	// typically something like "localhost:4161"
+	NsqLookupd              string
+
+	// The version of the Pharos API we're using. This should
+	// start with a v, like v1, v2.2, etc.
+	PharosAPIVersion       string
+
+	// PharosURL is the URL of the Pharos server where
+	// we will be recording results and metadata. This should
+	// start with http:// or https://
+	PharosURL              string
 
 	// The name of the preservation bucket to which we should
 	// copy files for long-term storage.
@@ -254,9 +254,6 @@ type Config struct {
 
 	// Configuration options for apt_trouble
 	TroubleWorker           WorkerConfig
-
-	// Configuration options for apt_validate
-	ValidateWorker          WorkerConfig
 
 	// The port number, on localhost, where the HTTP
 	// VolumeService should run. This is always on
