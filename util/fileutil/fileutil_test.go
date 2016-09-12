@@ -77,6 +77,31 @@ func TestJsonFileToObject(t *testing.T) {
 	// }
 }
 
+func TestRelativeToAbsPath(t *testing.T) {
+	// If path is already absolute, it should come back unchanged
+	relPath, err := fileutil.RelativeToAbsPath("/usr/local/config/test.json")
+	if err != nil {
+		t.Errorf("RelativeToAbsPath() returned unexpected error %v", err)
+	} else if relPath != "/usr/local/config/test.json" {
+		t.Errorf("RelativeToAbsPath() altered a path that was already absolute")
+	}
+
+	// Otherwise, we should get an absolute path that assumes
+	// relPath is relative to ExchangeHome.
+	exHome, err := fileutil.ExchangeHome()
+	if err == nil {
+		relPath, err := fileutil.RelativeToAbsPath("config/test.json")
+		if err != nil {
+			t.Errorf("RelativeToAbsPath() returned unexpected error %v", err)
+			return
+		}
+		expected := filepath.Join(exHome, "config/test.json")
+		if relPath != expected {
+			t.Errorf("Expected path %s, got %s", expected, relPath)
+		}
+	}
+}
+
 func TestFileExists(t *testing.T) {
 	if fileutil.FileExists("fileutil_test.go") == false {
 		t.Errorf("FileExists returned false for fileutil_test.go")

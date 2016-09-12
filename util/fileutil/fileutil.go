@@ -65,6 +65,10 @@ func JsonFileToObject(absPath string, obj interface{}) error {
 // Converts a relative path within the exchange directory tree
 // to an absolute path.
 func RelativeToAbsPath(relativePath string) (string, error) {
+	absPath, _ := filepath.Abs(relativePath)
+	if absPath == relativePath {
+		return relativePath, nil // it already is absolute
+	}
 	exchangeHome, err := ExchangeHome()
 	if err != nil {
 		return "", err
