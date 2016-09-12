@@ -88,6 +88,10 @@ func NewAPTFetcher(_context *context.Context) (*APTFetcher) {
 // This is the callback that NSQ workers use to handle messages from NSQ.
 func (fetcher *APTFetcher) HandleMessage(message *nsq.Message) (error) {
 
+	// ---------------------------------------------------------
+	// TODO: Make sure no other worker is working on this item.
+	// ---------------------------------------------------------
+
 	// Set up our fetch data. Most of this comes from Pharos;
 	// some of it we have to build fresh.
 	fetchData, err := fetcher.initFetchData(message)
@@ -352,17 +356,18 @@ func (fetcher *APTFetcher) canSkipFetchAndValidate (fetchData *FetchData) (bool)
 func (fetcher *APTFetcher) initFetchData (message *nsq.Message) (*FetchData, error) {
 	workItem, err := fetcher.getWorkItem(message)
 	if err != nil {
-		fetcher.Context.MessageLog.Error(err.Error())
 		return nil, err
 	}
+
+	// TODO: Check WorkItem here. If another node or process owns it,
+	// let it go.
+
 	workItemState, err := fetcher.getWorkItemState(workItem)
 	if err != nil {
-		fetcher.Context.MessageLog.Error(err.Error())
 		return nil, err
 	}
 	ingestManifest, err := workItemState.IngestManifest()
 	if err != nil {
-		fetcher.Context.MessageLog.Error(err.Error())
 		return nil, err
 	}
 	fetchData := &FetchData{
@@ -640,9 +645,9 @@ func (fetcher *APTFetcher) recordWorkItemState(fetchData *FetchData) {
 			// That means subsequent workers won't have the info they
 			// need to work on this bag. We'll have to start processing
 			// all over again.
-			fetcher.Context.MessageLog.Error(err.Error())
+			fetcher.Context.MessageLog.Error(resp.Error.Error())
 			fetchData.IngestManifest.FetchResult.AddError("Could not save WorkItemState " +
-				"to Pharos. This item will have to be re-processed. Error was: %v", err)
+				"to Pharos. This item will have to be re-processed. Error was: %v", resp.Error)
 		} else {
 			// Saved to Pharos!
 			fetchData.WorkItemState = resp.WorkItemState()

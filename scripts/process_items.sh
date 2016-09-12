@@ -4,6 +4,10 @@
 # This script provides end-to-end testing for ingest functions.
 #
 
+echo "You can turn verbose output on and off by setting LogToStderr"
+echo "in the config file at config/integration.json"
+echo ""
+
 echo "Getting rid of old logs and data files"
 rm -r ~/tmp/*
 mkdir -p ~/tmp/logs
@@ -35,16 +39,25 @@ cd ~/go/src/github.com/APTrust/exchange/integration
 go test apt_bucket_reader_test.go
 RUN_EXCHANGE_INTEGRATION=true go test -v apt_bucket_reader_test.go
 
+echo "Starting apt_fetch"
+cd ~/go/src/github.com/APTrust/exchange/apps/apt_fetch
+go run apt_fetch.go -config=config/integration.json &
+FETCH_PID=$!
 
-echo "We're all done. Logs are in ~/tmp/logs. Control-C to quit."
+echo "Go ingest processes are running. Control-C to quit."
 
 kill_all()
 {
     echo "Shutting down NSQ"
-    kill -s SIGINT $NSQ_PID
+    kill -s SIGKILL $NSQ_PID
 
     echo "Shutting down Pharos Rails app"
-    kill -s SIGINT $RAILS_PID
+    kill -s SIGKILL $RAILS_PID
+
+    echo "Shutting down apt_fetch app"
+    kill -s SIGKILL $FETCH_PID
+
+    echo "We're all done. Logs are in ~/tmp/logs."
 }
 
 trap kill_all SIGINT

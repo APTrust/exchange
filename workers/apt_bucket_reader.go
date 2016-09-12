@@ -307,7 +307,7 @@ func (reader *APTBucketReader) createWorkItem(bucket string, s3Object *s3.Object
 
 func (reader *APTBucketReader) addToNSQ(workItem *models.WorkItem) {
 	client := network.NewNSQClient(reader.Context.Config.NsqdHttpAddress)
-	err := client.Enqueue("apt_ingest_fetch", workItem.Id)
+	err := client.Enqueue(reader.Context.Config.FetchWorker.NsqTopic, workItem.Id)
 	if err != nil {
 		msg := fmt.Sprintf("Error sending WorkItem %d to NSQ: %v", workItem.Id, err)
 		if reader.stats != nil {

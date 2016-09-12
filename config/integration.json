@@ -8,7 +8,7 @@
     "MaxFileSize": 100000000,
     "SkipAlreadyProcessed": true,
     "DeleteOnSuccess": false,
-    "LogToStderr": false,
+    "LogToStderr": true,
     "VolumeServicePort": 8898,
     "LogLevel": 4,
     "BucketReaderCacheHours": 240000,

@@ -32,7 +32,7 @@ func NewNSQClient(url string) (*NSQClient) {
 func (client *NSQClient)Enqueue(topic string, workItemId int) error {
 	url := fmt.Sprintf("%s/put?topic=%s", client.URL, topic)
 	idAsString := strconv.Itoa(workItemId)
-	resp, err := http.Post(url, "application/json", bytes.NewBuffer([]byte(idAsString)))
+	resp, err := http.Post(url, "text/html", bytes.NewBuffer([]byte(idAsString)))
 	if err != nil {
 		return fmt.Errorf("Nsqd returned an error when queuing data: %v", err)
 	}
