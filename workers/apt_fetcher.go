@@ -100,10 +100,8 @@ func (fetcher *APTFetcher) HandleMessage(message *nsq.Message) (error) {
 		return err
 	}
 	// Save the state of this item in Pharos.
-	resp := fetcher.Context.PharosClient.WorkItemStateSave(fetchData.WorkItemState)
-	if resp.Error != nil {
-		return resp.Error
-	}
+	fetcher.recordWorkItemState(fetchData)
+
 	// Tell Pharos that we've started to fetch this item.
 	fetchData.WorkItem, err = fetcher.recordFetchStarted(fetchData.WorkItem)
 	if err != nil {
