@@ -17,10 +17,10 @@ import (
 
 const testBucket string = "aptrust.receiving.test.test.edu"
 const testFile string = "virginia.edu.uva-lib_2278801.tar"
-const testFileSize int64 = 22528
-const testFileETag string = "\"da04d76f9dca11455297827426db35f2\""
-const testFileMd5 string = "da04d76f9dca11455297827426db35f2"
-const testFileSha256 string = "b917f05da9d9d513160a1aeb51a66065a64b8a51a741ef249060d562926a2365"
+const testFileSize int64 = 30720
+const testFileETag string = "\"036995504a5b07a865b62e1a7c0ea9c4\""
+const testFileMd5 string = "036995504a5b07a865b62e1a7c0ea9c4"
+const testFileSha256 string = "a909bbe46dedfc15918bfa94d0fd86bad9d9e1d2aa2afdedbfc11e7f52582eab"
 
 var s3TestMessagePrinted = false
 
