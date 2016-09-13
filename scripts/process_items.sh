@@ -26,6 +26,11 @@ RAILS_ENV=integration rails server &>~/tmp/logs/pharos.log &
 RAILS_PID=$!
 sleep 3
 
+echo "Starting Volume Service"
+cd ~/go/src/github.com/APTrust/exchange/apps/apt_volume_service
+go run apt_volume_service.go -config=config/integration.json &
+VOLUME_SERVICE_PID=$!
+
 # Wait for this one to finish
 # Note that ~/tmp/logs is set in config/integration.json
 # Our integration test in integration/apt_bucket_reader_test.go expects
@@ -50,6 +55,9 @@ kill_all()
 {
     echo "Shutting down NSQ"
     kill -s SIGKILL $NSQ_PID
+
+    echo "Shutting down Volume Service"
+    kill -s SIGKILL $VOLUME_SERVICE_PID
 
     echo "Shutting down Pharos Rails app"
     kill -s SIGKILL $RAILS_PID
