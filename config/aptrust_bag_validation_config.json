@@ -6,7 +6,7 @@
         "manifest-md5.txt": { "Presence": "required" },
         "manifest-sha256.txt": { "Presence": "optional" },
         "manifest-sha1.txt": { "Presence": "forbidden" },
-        "tagmanifest-md5.txt": { "Presence": "required" },
+        "tagmanifest-md5.txt": { "Presence": "optional" },
         "bagit.txt": { "Presence": "required", "ParseAsTagFile": true },
         "bag-info.txt": { "Presence": "required", "ParseAsTagFile": true },
         "aptrust-info.txt": { "Presence": "required", "ParseAsTagFile": true }
