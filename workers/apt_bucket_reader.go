@@ -11,6 +11,7 @@ import (
     "github.com/aws/aws-sdk-go/service/s3"
 	"net/url"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -267,7 +268,7 @@ func (reader *APTBucketReader) createWorkItem(bucket string, s3Object *s3.Object
 	workItem := &models.WorkItem{}
 	workItem.Name = *s3Object.Key
 	workItem.Bucket = bucket
-	workItem.ETag = *s3Object.ETag
+	workItem.ETag = strings.Replace(*s3Object.ETag, "\"", "", -1)
 	workItem.Size = *s3Object.Size
 	workItem.BagDate = *s3Object.LastModified
 	workItem.InstitutionId = institution.Id
