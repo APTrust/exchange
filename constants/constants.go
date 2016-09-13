@@ -13,7 +13,10 @@ var MultipartSuffix = regexp.MustCompile("\\.b\\d+\\.of\\d+$")
 
 // Regex for a valid APTrust file name, according to the spec at
 // https://sites.google.com/a/aptrust.org/member-wiki/basic-operations/bagging
-var APTrustFileNamePattern = regexp.MustCompile("^[A-Za-z0-9\\._][A-Za-z0-9\\.\\-_%]+$")
+// This regex says a valid file name can be exactly one alpha-numeric character,
+// or 2+ characters, beginning with alpha-numerics or dot or underscore,
+// followed by alphanumerics, dots, underscores, dashes and percent signs.
+var APTrustFileNamePattern = regexp.MustCompile("^([A-Za-z0-9])$|^([A-Za-z0-9\\._][A-Za-z0-9\\.\\-_%]+)$")
 
 // Regex for valid POSIX filenames.
 var PosixFileNamePattern = regexp.MustCompile("^[A-Za-z0-9\\._\\-]+$")
