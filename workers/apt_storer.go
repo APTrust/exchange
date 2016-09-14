@@ -2,19 +2,19 @@ package workers
 
 import (
 //	"fmt"
-	"github.com/APTrust/exchange/constants"
+//	"github.com/APTrust/exchange/constants"
 	"github.com/APTrust/exchange/context"
 	"github.com/APTrust/exchange/models"
 //	"github.com/APTrust/exchange/network"
 //	"github.com/APTrust/exchange/util"
-//	"github.com/APTrust/exchange/util/fileutil"
+	"github.com/APTrust/exchange/util/fileutil"
 //	"github.com/APTrust/exchange/validation"
 	"github.com/nsqio/go-nsq"
 //	"net/http"
-//	"os"
+	"os"
 //	"path/filepath"
 //	"strconv"
-//	"strings"
+	"strings"
 	"sync"
 //	"time"
 )
@@ -90,29 +90,8 @@ func (storer *APTStorer) HandleMessage(message *nsq.Message) (error) {
 // -------------------------------------------------------------------------
 func (storer *APTStorer) store () {
 	for ingestState := range storer.StorageChannel {
-		existingObj, err := storer.getExistingObject(ingestState.IngestManifest.Object.Identifier)
-		if err != nil {
-			ingestState.IngestManifest.StoreResult.AddError(err.Error())
-		} else {
-			for _, gf := range ingestState.IngestManifest.Object.GenericFiles {
-				if existingObj != nil {
-					existingFile := existingObj.FindGenericFile(gf.OriginalPath())
-					if existingFile != nil {
-						existingSha256 := existingFile.GetChecksum(constants.AlgSha256)
-						if existingSha256.Digest == gf.IngestSha256 {
-							gf.IngestNeedsSave = false
-						}
-					}
-				}
-				if gf.IngestNeedsSave {
-					if gf.IngestStoredAt.IsZero() {
-						storer.copyToPrimaryStorage(ingestState, gf)
-					}
-					if gf.IngestReplicatedAt.IsZero() {
-						storer.copyToSecondaryStorage(ingestState, gf)
-					}
-				}
-			}
+		for _, gf := range ingestState.IngestManifest.Object.GenericFiles {
+			storer.saveFile(ingestState, gf)
 		}
 		storer.CleanupChannel <- ingestState
 	}
@@ -123,9 +102,30 @@ func (storer *APTStorer) store () {
 //
 // -------------------------------------------------------------------------
 func (storer *APTStorer) cleanup () {
-//	for ingestState := range storer.CleanupChannel {
-
-//	}
+	for ingestState := range storer.CleanupChannel {
+		if (ingestState.IngestManifest.StoreResult.HasErrors() == false &&
+			ingestState.IngestManifest.Object.AllFilesSaved()) {
+			storer.Context.MessageLog.Info("Deleting tar file %s (%s/%s) " +
+				"because all files were stored successfully",
+				ingestState.IngestManifest.Object.IngestTarFilePath,
+				ingestState.IngestManifest.Object.IngestS3Bucket,
+				ingestState.IngestManifest.Object.IngestS3Key)
+			os.Remove(ingestState.IngestManifest.Object.IngestTarFilePath)
+		}
+		// If item was untarred, delete the untarred dir,
+		// but be sure what you pass to os.RemoveAll() is safe.
+		untarredPath := ingestState.IngestManifest.Object.IngestUntarredPath
+		if (untarredPath != "" &&
+			strings.HasPrefix(untarredPath, storer.Context.Config.TarDirectory) &&
+			fileutil.LooksSafeToDelete(untarredPath, 12, 3)) {
+			storer.Context.MessageLog.Info("Deleting untarred dir %s (%s/%s) " +
+				"because all files were stored successfully",
+				untarredPath,
+				ingestState.IngestManifest.Object.IngestS3Bucket,
+				ingestState.IngestManifest.Object.IngestS3Key)
+			os.RemoveAll(untarredPath)
+		}
+	}
 }
 
 // -------------------------------------------------------------------------
@@ -144,10 +144,39 @@ func (storer *APTStorer) loadIngestState (message *nsq.Message) (*models.IngestS
 	return nil, nil
 }
 
-func (storer *APTStorer) getExistingObject (objectIdentifier string) (*models.IntellectualObject, error) {
-	// Get the IntellectualObject from Pharos
-	// If it exists, get the GenericFiles and add them in
-	return nil, nil
+
+func (storer *APTStorer) saveFile (ingestState *models.IngestState, gf *models.GenericFile) {
+	existingSha256, err := storer.getExistingSha256(gf.Identifier)
+	if err != nil {
+		ingestState.IngestManifest.StoreResult.AddError(err.Error())
+		return
+	}
+	// Set this, for the record.
+	if existingSha256 == "" {
+		gf.IngestPreviousVersionExists = true
+		if existingSha256 != gf.IngestSha256 {
+			gf.IngestNeedsSave = false
+		}
+	}
+	// Now copy to storage only if the file has changed.
+	if gf.IngestNeedsSave {
+		if gf.IngestStoredAt.IsZero() {
+			storer.copyToPrimaryStorage(ingestState, gf)
+		}
+		if gf.IngestReplicatedAt.IsZero() {
+			storer.copyToSecondaryStorage(ingestState, gf)
+		}
+	}
+}
+
+// Get the existing sha256 checksum for the generic file, if there is one.
+// In some cases, depositors upload a new version of a bag that includes
+// unchanged versions of some files. So we check the sha256 of the
+// existing version against the sha256 of the one just uploaded. If they're
+// the same, we don't bother overwriting the existing file.
+func (storer *APTStorer) getExistingSha256 (gfIdentifier string) (string, error) {
+	// Waiting for new Pharos call to retrieve checksum list
+	return "", nil
 }
 
 // Copy the GenericFile to primary storage (S3)
