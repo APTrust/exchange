@@ -35,7 +35,7 @@ func InitLogger(config *models.Config) (*logging.Logger, string) {
 	}
 
 	log := logging.MustGetLogger(processName)
-	format := logging.MustStringFormatter("[%{level}] %{time} - %{message}")
+	format := logging.MustStringFormatter("[%{level}] %{message}")
 	logging.SetFormatter(format)
 	logging.SetLevel(config.LogLevel, processName)
 
