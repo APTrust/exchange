@@ -19,6 +19,7 @@ import (
 	"time"
 )
 
+// Fetches bags (tar files) from S3 receiving buckets and validates them.
 type APTFetcher struct {
 	Context             *context.Context
 	BagValidationConfig *validation.BagValidationConfig
@@ -65,7 +66,7 @@ func (fetcher *APTFetcher) HandleMessage(message *nsq.Message) (error) {
 	// TODO: Make sure no other worker is working on this item.
 	// ---------------------------------------------------------
 
-	// Set up our fetch data. Most of this comes from Pharos;
+	// Set up our IngestState. Most of this comes from Pharos;
 	// some of it we have to build fresh.
 	ingestState, err := fetcher.initIngestState(message)
 	if err != nil {
@@ -350,7 +351,11 @@ func (fetcher *APTFetcher) initIngestState (message *nsq.Message) (*models.Inges
 		IngestManifest: ingestManifest,
 	}
 
-	fetcher.setBasicObjectInfo(ingestState)
+	// If this is a new WorkItemState, we didn't load it from Pharos,
+	// and we have no IntelObj data. So set the basic IntelObj data now.
+	if workItemState.Id == 0 {
+		fetcher.setBasicObjectInfo(ingestState)
+	}
 
 	return ingestState, err
 }
