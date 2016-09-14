@@ -154,6 +154,8 @@ type GenericFile struct {
 	IngestPreviousVersionExists  bool           `json:"ingest_previous_version_exists,omitempty"`
 
 	// If true, this file needs to be saved to S3.
+	// We'll set this to false if a copy of the file already
+	// exists in long-term storage with the same sha-256 digest.
 	IngestNeedsSave              bool           `json:"ingest_needs_save,omitempty"`
 
 	// Error that occurred during ingest. If empty, there was no error.
