@@ -22,38 +22,11 @@ import (
 type APTFetcher struct {
 	Context             *context.Context
 	BagValidationConfig *validation.BagValidationConfig
-	FetchChannel        chan *FetchData
-	ValidationChannel   chan *FetchData
-	CleanupChannel      chan *FetchData
-	RecordChannel       chan *FetchData
+	FetchChannel        chan *models.IngestState
+	ValidationChannel   chan *models.IngestState
+	CleanupChannel      chan *models.IngestState
+	RecordChannel       chan *models.IngestState
 	WaitGroup           sync.WaitGroup
-}
-
-type FetchData struct {
-	NSQMessage      *nsq.Message
-	WorkItem        *models.WorkItem
-	WorkItemState   *models.WorkItemState
-	IngestManifest  *models.IngestManifest
-}
-
-// Tell NSQ we're still working on this item. NSQMessage will be nil if
-// we're doing one-off testing (see RunWithoutNSQ).
-func (fetchData *FetchData) TouchNSQ() {
-	if fetchData.NSQMessage != nil {
-		fetchData.NSQMessage.Touch()
-	}
-}
-
-func (fetchData *FetchData) FinishNSQ() {
-	if fetchData.NSQMessage != nil {
-		fetchData.NSQMessage.Finish()
-	}
-}
-
-func (fetchData *FetchData) RequeueNSQ(milliseconds int) {
-	if fetchData.NSQMessage != nil {
-		fetchData.NSQMessage.Requeue(time.Duration(milliseconds) * time.Millisecond)
-	}
 }
 
 func NewAPTFetcher(_context *context.Context) (*APTFetcher) {
@@ -69,10 +42,10 @@ func NewAPTFetcher(_context *context.Context) (*APTFetcher) {
 	// Set up buffered channels
 	fetcherBufferSize := _context.Config.FetchWorker.NetworkConnections * 4
 	workerBufferSize := _context.Config.FetchWorker.Workers * 10
-	fetcher.FetchChannel = make(chan *FetchData, fetcherBufferSize)
-	fetcher.ValidationChannel = make(chan *FetchData, workerBufferSize)
-	fetcher.RecordChannel = make(chan *FetchData, workerBufferSize)
-	fetcher.CleanupChannel = make(chan *FetchData, workerBufferSize)
+	fetcher.FetchChannel = make(chan *models.IngestState, fetcherBufferSize)
+	fetcher.ValidationChannel = make(chan *models.IngestState, workerBufferSize)
+	fetcher.RecordChannel = make(chan *models.IngestState, workerBufferSize)
+	fetcher.CleanupChannel = make(chan *models.IngestState, workerBufferSize)
 	// Set up a limited number of go routines
 	for i := 0; i < _context.Config.FetchWorker.NetworkConnections; i++ {
 		go fetcher.fetch()
@@ -94,16 +67,16 @@ func (fetcher *APTFetcher) HandleMessage(message *nsq.Message) (error) {
 
 	// Set up our fetch data. Most of this comes from Pharos;
 	// some of it we have to build fresh.
-	fetchData, err := fetcher.initFetchData(message)
+	ingestState, err := fetcher.initIngestState(message)
 	if err != nil {
 		fetcher.Context.MessageLog.Error(err.Error())
 		return err
 	}
 	// Save the state of this item in Pharos.
-	fetcher.recordWorkItemState(fetchData)
+	fetcher.recordWorkItemState(ingestState)
 
 	// Tell Pharos that we've started to fetch this item.
-	fetchData.WorkItem, err = fetcher.recordFetchStarted(fetchData.WorkItem)
+	ingestState.WorkItem, err = fetcher.recordFetchStarted(ingestState.WorkItem)
 	if err != nil {
 		fetcher.Context.MessageLog.Error(err.Error())
 		return err
@@ -118,15 +91,15 @@ func (fetcher *APTFetcher) HandleMessage(message *nsq.Message) (error) {
 	// the message to a new worker.
 	message.DisableAutoResponse()
 
-	if fetcher.canSkipFetchAndValidate(fetchData) {
+	if fetcher.canSkipFetchAndValidate(ingestState) {
 		fetcher.Context.MessageLog.Info("Sending %s/%s straight to record queue",
-			fetchData.IngestManifest.S3Bucket, fetchData.IngestManifest.S3Key)
-		fetcher.RecordChannel <- fetchData
+			ingestState.IngestManifest.S3Bucket, ingestState.IngestManifest.S3Key)
+		fetcher.RecordChannel <- ingestState
 	} else {
 
 		// Reserve disk space to download this item, or requeue it
 		// if we can't get the disk space.
-		if !fetcher.reserveSpaceForDownload(fetchData) {
+		if !fetcher.reserveSpaceForDownload(ingestState) {
 			message.Requeue(1 * time.Minute)
 			return nil
 		}
@@ -134,13 +107,13 @@ func (fetcher *APTFetcher) HandleMessage(message *nsq.Message) (error) {
 		// Start at fetch, which is the very beginning.
 		// This may be the second or third attempt to ingest this bag.
 		// If so, clear out old error message from previous attempts.
-		fetchData.IngestManifest.FetchResult.ClearErrors()
-		fetchData.IngestManifest.ValidateResult.ClearErrors()
+		ingestState.IngestManifest.FetchResult.ClearErrors()
+		ingestState.IngestManifest.ValidateResult.ClearErrors()
 
 		fetcher.Context.MessageLog.Info("Putting %s/%s straight to fetch queue",
-			fetchData.IngestManifest.S3Bucket, fetchData.IngestManifest.S3Key)
+			ingestState.IngestManifest.S3Bucket, ingestState.IngestManifest.S3Key)
 
-		fetcher.FetchChannel <- fetchData
+		fetcher.FetchChannel <- ingestState
 	}
 
 	// Return no error, so NSQ knows we're OK.
@@ -152,28 +125,28 @@ func (fetcher *APTFetcher) HandleMessage(message *nsq.Message) (error) {
 //
 // fetch copies the file from S3 to our local staging area.
 // If all goes well, the file will wind up in
-// fetchData.IngestManifest.Object.IngestTarFilePath
+// ingestState.IngestManifest.Object.IngestTarFilePath
 // -------------------------------------------------------------------------
 func (fetcher *APTFetcher) fetch() {
-	for fetchData := range fetcher.FetchChannel {
+	for ingestState := range fetcher.FetchChannel {
 		// Tell NSQ we're working on this
-		fetchData.TouchNSQ()
+		ingestState.TouchNSQ()
 
-		fetchData.IngestManifest.FetchResult.Start()
-		fetchData.IngestManifest.FetchResult.Attempted = true
-		fetchData.IngestManifest.FetchResult.AttemptNumber += 1
+		ingestState.IngestManifest.FetchResult.Start()
+		ingestState.IngestManifest.FetchResult.Attempted = true
+		ingestState.IngestManifest.FetchResult.AttemptNumber += 1
 
-		err := fetcher.downloadFile(fetchData)
+		err := fetcher.downloadFile(ingestState)
 
 		// Download may have taken 1 second or 3 hours.
 		// Remind NSQ that we're still on this.
-		fetchData.TouchNSQ()
+		ingestState.TouchNSQ()
 
 		if err != nil {
-			fetchData.IngestManifest.FetchResult.AddError(err.Error())
+			ingestState.IngestManifest.FetchResult.AddError(err.Error())
 		}
-		fetchData.IngestManifest.FetchResult.Finish()
-		fetcher.ValidationChannel <- fetchData
+		ingestState.IngestManifest.FetchResult.Finish()
+		fetcher.ValidationChannel <- ingestState
 	}
 }
 
@@ -183,24 +156,24 @@ func (fetcher *APTFetcher) fetch() {
 // Make sure the tar file is a valid bag.
 // -------------------------------------------------------------------------
 func (fetcher *APTFetcher) validate() {
-	for fetchData := range fetcher.ValidationChannel {
+	for ingestState := range fetcher.ValidationChannel {
 		// Don't time us out, NSQ!
-		fetchData.TouchNSQ()
+		ingestState.TouchNSQ()
 
 		// Tell Pharos that we've started to validate item.
 		// Let's NOT quit if there's an error here. In that case, Pharos
 		// might not know that we're validating, but we can still proceed.
 		// Restarting the whole fetch process would be expensive.
-		fetchData.WorkItem, _ = fetcher.recordValidationStarted(fetchData.WorkItem)
+		ingestState.WorkItem, _ = fetcher.recordValidationStarted(ingestState.WorkItem)
 
 		// Set up a new validator to check this bag.
 		var validationResult *validation.ValidationResult
 		validator, err := validation.NewBagValidator(
-			fetchData.IngestManifest.Object.IngestTarFilePath,
+			ingestState.IngestManifest.Object.IngestTarFilePath,
 			fetcher.BagValidationConfig)
 		if err != nil {
 			// Could not create a BagValidator. Should this be fatal?
-			fetchData.IngestManifest.ValidateResult.AddError(err.Error())
+			ingestState.IngestManifest.ValidateResult.AddError(err.Error())
 		} else {
 
 			// Here's where bag validation actually happens. There's a lot
@@ -214,23 +187,23 @@ func (fetcher *APTFetcher) validate() {
 			// The validator creates its own WorkSummary, complete with
 			// Start/Finish timestamps, error messages and everything.
 			// Just copy that into our IngestManifest.
-			fetchData.IngestManifest.ValidateResult = validationResult.ValidationSummary
+			ingestState.IngestManifest.ValidateResult = validationResult.ValidationSummary
 
 			// NOTE that we are OVERWRITING the IntellectualObject here
 			// with the much more complete version returned by the validator,
 			// but we have to reset some basic data that's only available
 			// in the current context.
-			fetchData.IngestManifest.Object = validationResult.IntellectualObject
-			fetcher.setBasicObjectInfo(fetchData)
+			ingestState.IngestManifest.Object = validationResult.IntellectualObject
+			fetcher.setBasicObjectInfo(ingestState)
 
 			// If the bag is invalid, that's a fatal error. We should not do
 			// any further processing on it.
 			if validationResult.HasErrors() {
-				fetchData.IngestManifest.ValidateResult.ErrorIsFatal = true
+				ingestState.IngestManifest.ValidateResult.ErrorIsFatal = true
 			}
 		}
-		fetchData.TouchNSQ()
-		fetcher.CleanupChannel <- fetchData
+		ingestState.TouchNSQ()
+		fetcher.CleanupChannel <- ingestState
 	}
 }
 
@@ -243,10 +216,10 @@ func (fetcher *APTFetcher) validate() {
 // (store) will pick it up and copy files to S3 and Glacier.
 // -------------------------------------------------------------------------
 func (fetcher *APTFetcher) cleanup() {
-	for fetchData := range fetcher.CleanupChannel {
-		tarFile := fetchData.IngestManifest.Object.IngestTarFilePath
-		hasErrors := (fetchData.IngestManifest.FetchResult.HasErrors() ||
-			fetchData.IngestManifest.ValidateResult.HasErrors())
+	for ingestState := range fetcher.CleanupChannel {
+		tarFile := ingestState.IngestManifest.Object.IngestTarFilePath
+		hasErrors := (ingestState.IngestManifest.FetchResult.HasErrors() ||
+			ingestState.IngestManifest.ValidateResult.HasErrors())
 		if hasErrors && fileutil.FileExists(tarFile) {
 			// Most likely bad md5 digest, but perhaps also a partial download.
 			fetcher.Context.MessageLog.Info("Deleting due to download error: %s",
@@ -255,12 +228,12 @@ func (fetcher *APTFetcher) cleanup() {
 			if err != nil {
 				fetcher.Context.MessageLog.Warning(err.Error())
 			}
-			err = fetcher.Context.VolumeClient.Release(fetchData.IngestManifest.Object.IngestTarFilePath)
+			err = fetcher.Context.VolumeClient.Release(ingestState.IngestManifest.Object.IngestTarFilePath)
 			if err != nil {
 				fetcher.Context.MessageLog.Warning(err.Error())
 			}
 		}
-		fetcher.RecordChannel <- fetchData
+		fetcher.RecordChannel <- ingestState
 	}
 }
 
@@ -272,28 +245,28 @@ func (fetcher *APTFetcher) cleanup() {
 // if necessary.
 // -------------------------------------------------------------------------
 func (fetcher *APTFetcher) record() {
-	for fetchData := range fetcher.RecordChannel {
+	for ingestState := range fetcher.RecordChannel {
 		// Record the WorkItemState in Pharos. The next process (record)
 		// will need this info to do its work. If there's an error in this
 		// step, recordWorkItemState will log it and add it to the FetchResult.
 		// It will also dump a JSON representation of the IngestManifest to
 		// the JSON log.
-		fetcher.recordWorkItemState(fetchData)
-		if fetchData.IngestManifest.HasFatalErrors() {
+		fetcher.recordWorkItemState(ingestState)
+		if ingestState.IngestManifest.HasFatalErrors() {
 			// Set WorkItem node=nil, pid=0, retry=false, needs_admin_review=true
 			// Finish the NSQ message
-			fetchData.FinishNSQ()
-			fetcher.markWorkItemFailed(fetchData)
-		} else if fetchData.IngestManifest.HasErrors() {
+			ingestState.FinishNSQ()
+			fetcher.markWorkItemFailed(ingestState)
+		} else if ingestState.IngestManifest.HasErrors() {
 			// Set WorkItem node=nil, pid=0
 			// Requeue the NSQ message
-			fetchData.RequeueNSQ(1000)
-			fetcher.markWorkItemRequeued(fetchData)
+			ingestState.RequeueNSQ(1000)
+			fetcher.markWorkItemRequeued(ingestState)
 		} else {
 			// Set WorkItem stage to StageStore, status to StatusPending, node=nil, pid=0
 			// Finish the NSQ message
-			fetchData.FinishNSQ()
-			fetcher.markWorkItemSucceeded(fetchData)
+			ingestState.FinishNSQ()
+			fetcher.markWorkItemSucceeded(ingestState)
 		}
 
 	}
@@ -318,16 +291,16 @@ func (fetcher *APTFetcher) loadBagValidationConfig() {
 }
 
 // Make sure we have space to download this item.
-func (fetcher *APTFetcher) reserveSpaceForDownload (fetchData *FetchData) (bool) {
+func (fetcher *APTFetcher) reserveSpaceForDownload (ingestState *models.IngestState) (bool) {
 	okToDownload := false
 	err := fetcher.Context.VolumeClient.Ping(500)
 	if err == nil {
-		path := fetchData.IngestManifest.Object.IngestTarFilePath
-		ok, err := fetcher.Context.VolumeClient.Reserve(path, uint64(fetchData.WorkItem.Size))
+		path := ingestState.IngestManifest.Object.IngestTarFilePath
+		ok, err := fetcher.Context.VolumeClient.Reserve(path, uint64(ingestState.WorkItem.Size))
 		if err != nil {
 			fetcher.Context.MessageLog.Warning("Volume service returned an error. " +
 				"Will requeue bag %s/%s because we may not have enough space to download %d bytes.",
-				fetchData.WorkItem.Bucket, fetchData.WorkItem.Name, fetchData.WorkItem.Size)
+				ingestState.WorkItem.Bucket, ingestState.WorkItem.Name, ingestState.WorkItem.Size)
 		} else if ok {
 			// VolumeService says we have enough space for this.
 			okToDownload = ok
@@ -335,7 +308,7 @@ func (fetcher *APTFetcher) reserveSpaceForDownload (fetchData *FetchData) (bool)
 	} else {
 		fetcher.Context.MessageLog.Warning("Volume service is not running or returned an error. " +
 			"Continuing as if we have enough space to download %d bytes.",
-			fetchData.WorkItem.Size)
+			ingestState.WorkItem.Size)
 		okToDownload = true
 	}
 	return okToDownload
@@ -346,15 +319,15 @@ func (fetcher *APTFetcher) reserveSpaceForDownload (fetchData *FetchData) (bool)
 // there in our working directory. This anticipates the case where
 // we did those steps but were not able to update the WorkItem record
 // in Pharos at the end of the fetch/validate process.
-func (fetcher *APTFetcher) canSkipFetchAndValidate (fetchData *FetchData) (bool) {
-	return (fetchData.WorkItem.Stage == constants.StageValidate &&
-		fetchData.IngestManifest.ValidateResult.Finished() &&
-		!fetchData.IngestManifest.HasFatalErrors() &&
-		fileutil.FileExists(fetchData.IngestManifest.Object.IngestTarFilePath))
+func (fetcher *APTFetcher) canSkipFetchAndValidate (ingestState *models.IngestState) (bool) {
+	return (ingestState.WorkItem.Stage == constants.StageValidate &&
+		ingestState.IngestManifest.ValidateResult.Finished() &&
+		!ingestState.IngestManifest.HasFatalErrors() &&
+		fileutil.FileExists(ingestState.IngestManifest.Object.IngestTarFilePath))
 }
 
 // Set up the basic pieces of data we'll need to process a fetch request.
-func (fetcher *APTFetcher) initFetchData (message *nsq.Message) (*FetchData, error) {
+func (fetcher *APTFetcher) initIngestState (message *nsq.Message) (*models.IngestState, error) {
 	workItem, err := fetcher.getWorkItem(message)
 	if err != nil {
 		return nil, err
@@ -371,38 +344,38 @@ func (fetcher *APTFetcher) initFetchData (message *nsq.Message) (*FetchData, err
 	if err != nil {
 		return nil, err
 	}
-	fetchData := &FetchData{
+	ingestState := &models.IngestState{
 		WorkItem: workItem,
 		WorkItemState: workItemState,
 		IngestManifest: ingestManifest,
 	}
 
-	fetcher.setBasicObjectInfo(fetchData)
+	fetcher.setBasicObjectInfo(ingestState)
 
-	return fetchData, err
+	return ingestState, err
 }
 
 // Set some basic info on our intellectual object. Note that this may be called
 // twice. First, when we're processing a brand new WorkItem and have to set the
 // basic IntellectualObject data for the first time. Second, after the BagValidator
 // returns its version of the IntellectualObject, which may not include this info.
-func (fetcher *APTFetcher) setBasicObjectInfo(fetchData *FetchData) {
+func (fetcher *APTFetcher) setBasicObjectInfo(ingestState *models.IngestState) {
 	// instIdentifier is, e.g., virginia.edu, ncsu.edu, etc.
 	// We'll download the tar file from the receiving bucket to
 	// something like /mnt/apt/data/virginia.edu/name_of_bag.tar
 	// See IngestTarFilePath below.
-	instIdentifier := util.OwnerOf(fetchData.IngestManifest.S3Bucket)
-	fetchData.IngestManifest.Object.BagName = util.CleanBagName(fetchData.IngestManifest.S3Key)
-	fetchData.IngestManifest.Object.Institution = instIdentifier
+	instIdentifier := util.OwnerOf(ingestState.IngestManifest.S3Bucket)
+	ingestState.IngestManifest.Object.BagName = util.CleanBagName(ingestState.IngestManifest.S3Key)
+	ingestState.IngestManifest.Object.Institution = instIdentifier
 	// -----------------------------------------------------------
 	// TODO: Get institution id! (Cache them?)
 	// -----------------------------------------------------------
-	//fetchData.IngestManifest.Object.InstitutionId =
-	fetchData.IngestManifest.Object.IngestS3Bucket = fetchData.IngestManifest.S3Bucket
-	fetchData.IngestManifest.Object.IngestS3Key = fetchData.IngestManifest.S3Key
-	fetchData.IngestManifest.Object.IngestTarFilePath = filepath.Join(
+	//ingestState.IngestManifest.Object.InstitutionId =
+	ingestState.IngestManifest.Object.IngestS3Bucket = ingestState.IngestManifest.S3Bucket
+	ingestState.IngestManifest.Object.IngestS3Key = ingestState.IngestManifest.S3Key
+	ingestState.IngestManifest.Object.IngestTarFilePath = filepath.Join(
 		fetcher.Context.Config.TarDirectory,
-		instIdentifier, fetchData.IngestManifest.S3Key)
+		instIdentifier, ingestState.IngestManifest.S3Key)
 
 }
 
@@ -499,73 +472,73 @@ func (fetcher *APTFetcher) recordValidationStarted (workItem *models.WorkItem) (
 }
 
 // Tell Pharos that this item cannot be ingested, due to a fatal error.
-func (fetcher *APTFetcher) markWorkItemFailed (fetchData *FetchData) (error) {
+func (fetcher *APTFetcher) markWorkItemFailed (ingestState *models.IngestState) (error) {
 	fetcher.Context.MessageLog.Info("Telling Pharos ingest failed for %s/%s",
-		fetchData.WorkItem.Bucket, fetchData.WorkItem.Name)
-	fetchData.WorkItem.Pid = 0
-	fetchData.WorkItem.Node = ""
-	fetchData.WorkItem.Retry = false
-	fetchData.WorkItem.NeedsAdminReview = true
-	fetchData.WorkItem.Status = constants.StatusFailed
-	fetchData.WorkItem.Note = fetchData.IngestManifest.FetchResult.AllErrorsAsString() + fetchData.IngestManifest.ValidateResult.AllErrorsAsString()
-	resp := fetcher.Context.PharosClient.WorkItemSave(fetchData.WorkItem)
+		ingestState.WorkItem.Bucket, ingestState.WorkItem.Name)
+	ingestState.WorkItem.Pid = 0
+	ingestState.WorkItem.Node = ""
+	ingestState.WorkItem.Retry = false
+	ingestState.WorkItem.NeedsAdminReview = true
+	ingestState.WorkItem.Status = constants.StatusFailed
+	ingestState.WorkItem.Note = ingestState.IngestManifest.FetchResult.AllErrorsAsString() + ingestState.IngestManifest.ValidateResult.AllErrorsAsString()
+	resp := fetcher.Context.PharosClient.WorkItemSave(ingestState.WorkItem)
 	if resp.Error != nil {
 		fetcher.Context.MessageLog.Error("Could not mark WorkItem failed for %s/%s: %v",
-			fetchData.WorkItem.Bucket, fetchData.WorkItem.Name, resp.Error)
+			ingestState.WorkItem.Bucket, ingestState.WorkItem.Name, resp.Error)
 		return resp.Error
 	}
-	fetchData.WorkItem = resp.WorkItem()
+	ingestState.WorkItem = resp.WorkItem()
 	return nil
 }
 
 // Tell Pharos that this item has been requeued due to transient errors.
-func (fetcher *APTFetcher) markWorkItemRequeued (fetchData *FetchData) (error) {
+func (fetcher *APTFetcher) markWorkItemRequeued (ingestState *models.IngestState) (error) {
 	fetcher.Context.MessageLog.Info("Telling Pharos ingest requeued for %s/%s",
-		fetchData.WorkItem.Bucket, fetchData.WorkItem.Name)
-	fetchData.WorkItem.Pid = 0
-	fetchData.WorkItem.Node = ""
-	fetchData.WorkItem.Retry = true
-	fetchData.WorkItem.NeedsAdminReview = false
-	fetchData.WorkItem.Status = constants.StatusStarted
-	fetchData.WorkItem.Note = "Item has been requeued due to transient errors. " + fetchData.IngestManifest.FetchResult.AllErrorsAsString() + fetchData.IngestManifest.ValidateResult.AllErrorsAsString()
-	resp := fetcher.Context.PharosClient.WorkItemSave(fetchData.WorkItem)
+		ingestState.WorkItem.Bucket, ingestState.WorkItem.Name)
+	ingestState.WorkItem.Pid = 0
+	ingestState.WorkItem.Node = ""
+	ingestState.WorkItem.Retry = true
+	ingestState.WorkItem.NeedsAdminReview = false
+	ingestState.WorkItem.Status = constants.StatusStarted
+	ingestState.WorkItem.Note = "Item has been requeued due to transient errors. " + ingestState.IngestManifest.FetchResult.AllErrorsAsString() + ingestState.IngestManifest.ValidateResult.AllErrorsAsString()
+	resp := fetcher.Context.PharosClient.WorkItemSave(ingestState.WorkItem)
 	if resp.Error != nil {
 		fetcher.Context.MessageLog.Error("Could not mark WorkItem requeued for %s/%s: %v",
-			fetchData.WorkItem.Bucket, fetchData.WorkItem.Name, resp.Error)
+			ingestState.WorkItem.Bucket, ingestState.WorkItem.Name, resp.Error)
 		return resp.Error
 	}
-	fetchData.WorkItem = resp.WorkItem()
+	ingestState.WorkItem = resp.WorkItem()
 	return nil
 }
 
 // Tell Pharos that this item was successfully downloaded and validated.
-func (fetcher *APTFetcher) markWorkItemSucceeded (fetchData *FetchData) (error) {
+func (fetcher *APTFetcher) markWorkItemSucceeded (ingestState *models.IngestState) (error) {
 	fetcher.Context.MessageLog.Info("Telling Pharos ingest can proceed for %s/%s",
-		fetchData.WorkItem.Bucket, fetchData.WorkItem.Name)
-	fetchData.WorkItem.Pid = 0
-	fetchData.WorkItem.Node = ""
-	fetchData.WorkItem.Retry = true
-	fetchData.WorkItem.NeedsAdminReview = false
-	fetchData.WorkItem.Stage = constants.StageRecord
-	fetchData.WorkItem.Status = constants.StatusPending
-	fetchData.WorkItem.Note = "Item passed validation and is ready for storage."
-	resp := fetcher.Context.PharosClient.WorkItemSave(fetchData.WorkItem)
+		ingestState.WorkItem.Bucket, ingestState.WorkItem.Name)
+	ingestState.WorkItem.Pid = 0
+	ingestState.WorkItem.Node = ""
+	ingestState.WorkItem.Retry = true
+	ingestState.WorkItem.NeedsAdminReview = false
+	ingestState.WorkItem.Stage = constants.StageRecord
+	ingestState.WorkItem.Status = constants.StatusPending
+	ingestState.WorkItem.Note = "Item passed validation and is ready for storage."
+	resp := fetcher.Context.PharosClient.WorkItemSave(ingestState.WorkItem)
 	if resp.Error != nil {
 		fetcher.Context.MessageLog.Error("Could not mark WorkItem ready for storage for %s/%s: %v",
-			fetchData.WorkItem.Bucket, fetchData.WorkItem.Name, resp.Error)
+			ingestState.WorkItem.Bucket, ingestState.WorkItem.Name, resp.Error)
 		return resp.Error
 	}
-	fetchData.WorkItem = resp.WorkItem()
+	ingestState.WorkItem = resp.WorkItem()
 	return nil
 }
 
 // Download the file, and update the IngestManifest while we're at it.
-func (fetcher *APTFetcher) downloadFile (fetchData *FetchData) (error) {
+func (fetcher *APTFetcher) downloadFile (ingestState *models.IngestState) (error) {
 	downloader := network.NewS3Download(
 		constants.AWSVirginia,
-		fetchData.IngestManifest.S3Bucket,
-		fetchData.IngestManifest.S3Key,
-		fetchData.IngestManifest.Object.IngestTarFilePath,
+		ingestState.IngestManifest.S3Bucket,
+		ingestState.IngestManifest.S3Key,
+		ingestState.IngestManifest.Object.IngestTarFilePath,
 		true,    // calculate md5 checksum on the entire tar file
 		false,   // calculate sha256 checksum on the entire tar file
 	)
@@ -577,8 +550,8 @@ func (fetcher *APTFetcher) downloadFile (fetchData *FetchData) (error) {
 		downloader.Fetch()
 		if downloader.ErrorMessage == "" {
 			fetcher.Context.MessageLog.Info("Fetched %s/%s after %d attempts",
-				fetchData.IngestManifest.S3Bucket,
-				fetchData.IngestManifest.S3Key,
+				ingestState.IngestManifest.S3Bucket,
+				ingestState.IngestManifest.S3Key,
 				i + 1)
 			break
 		}
@@ -587,12 +560,12 @@ func (fetcher *APTFetcher) downloadFile (fetchData *FetchData) (error) {
 	// Return now if we failed.
 	if downloader.ErrorMessage != "" {
 		return fmt.Errorf("Error fetching %s/%s: %v",
-			fetchData.IngestManifest.S3Bucket,
-			fetchData.IngestManifest.S3Key,
+			ingestState.IngestManifest.S3Bucket,
+			ingestState.IngestManifest.S3Key,
 			downloader.ErrorMessage)
 	}
 
-	obj := fetchData.IngestManifest.Object
+	obj := ingestState.IngestManifest.Object
 	obj.IngestSize = downloader.BytesCopied
 	obj.IngestRemoteMd5 = *downloader.Response.ETag
 	obj.IngestLocalMd5 = downloader.Md5Digest
@@ -610,9 +583,9 @@ func (fetcher *APTFetcher) downloadFile (fetchData *FetchData) (error) {
 
 	// If we got a bad checksum, note the error in the WorkSummary.
 	if obj.IngestMd5Verifiable && !obj.IngestMd5Verified {
-		fetchData.IngestManifest.FetchResult.AddError("Our md5 '%s' does not match S3 md5 '%s'",
+		ingestState.IngestManifest.FetchResult.AddError("Our md5 '%s' does not match S3 md5 '%s'",
 			obj.IngestLocalMd5, obj.IngestRemoteMd5)
-		fetchData.IngestManifest.FetchResult.ErrorIsFatal = true
+		ingestState.IngestManifest.FetchResult.ErrorIsFatal = true
 	}
 
 	return nil
@@ -621,60 +594,60 @@ func (fetcher *APTFetcher) downloadFile (fetchData *FetchData) (error) {
 // Record the WorkItemState for this task. We drop a copy into our
 // JSON log as a backup, and updated the WorkItemState in Pharos,
 // so the next worker knows what to do with this item.
-func (fetcher *APTFetcher) recordWorkItemState(fetchData *FetchData) {
+func (fetcher *APTFetcher) recordWorkItemState(ingestState *models.IngestState) {
 	// Serialize the IngestManifest to JSON, and stuff it into the
 	// WorkItemState.State. Subsequent workers need this info to
 	// store the object's files in S3 and Glacier, and to record
 	// results in Pharos.
-	err := fetchData.WorkItemState.SetStateFromIngestManifest(fetchData.IngestManifest)
+	err := ingestState.WorkItemState.SetStateFromIngestManifest(ingestState.IngestManifest)
 	if err != nil {
 		// If we couldn't serialize the IngestManifest, subsequent workers
 		// won't have the info they need to process this bag. We'll have to
 		// requeue this item and start all over.
 		fetcher.Context.MessageLog.Error(err.Error())
-		fetchData.IngestManifest.FetchResult.AddError("Could not convert Ingest Manifest " +
+		ingestState.IngestManifest.FetchResult.AddError("Could not convert Ingest Manifest " +
 			"to JSON. This item will have to be re-processed. Error was: %v", err)
 	} else {
 		// OK. We serialized the IngestManifest. Dump a copy into the
 		// file system for backup and troubleshooting, and send a copy
 		// over to Pharos, so the next worker in the chain (the save worker)
 		// can access it.
-		fetcher.logJson(fetchData)
-		resp := fetcher.Context.PharosClient.WorkItemStateSave(fetchData.WorkItemState)
+		fetcher.logJson(ingestState)
+		resp := fetcher.Context.PharosClient.WorkItemStateSave(ingestState.WorkItemState)
 		if resp.Error != nil {
 			// Could not send a copy of the WorkItemState to Pharos.
 			// That means subsequent workers won't have the info they
 			// need to work on this bag. We'll have to start processing
 			// all over again.
 			fetcher.Context.MessageLog.Error(resp.Error.Error())
-			fetchData.IngestManifest.FetchResult.AddError("Could not save WorkItemState " +
+			ingestState.IngestManifest.FetchResult.AddError("Could not save WorkItemState " +
 				"to Pharos. This item will have to be re-processed. Error was: %v", resp.Error)
 		} else {
 			// Saved to Pharos!
-			fetchData.WorkItemState = resp.WorkItemState()
+			ingestState.WorkItemState = resp.WorkItemState()
 		}
 	}
 }
 
 // Dump the WorkItemState.State into the JSON log, surrounded my markers that
 // make it easy to find. This log gets big.
-func (fetcher *APTFetcher) logJson (fetchData *FetchData) {
+func (fetcher *APTFetcher) logJson (ingestState *models.IngestState) {
 	timestamp := time.Now().UTC().Format(time.RFC3339)
 	startMessage := fmt.Sprintf("-------- BEGIN %s/%s | Etag: %s | Time: %s --------",
-		fetchData.WorkItem.Bucket, fetchData.WorkItem.Name, fetchData.WorkItem.ETag,
+		ingestState.WorkItem.Bucket, ingestState.WorkItem.Name, ingestState.WorkItem.ETag,
 		timestamp)
 	endMessage := fmt.Sprintf("-------- END %s/%s | Etag: %s | Time: %s --------",
-		fetchData.WorkItem.Bucket, fetchData.WorkItem.Name, fetchData.WorkItem.ETag,
+		ingestState.WorkItem.Bucket, ingestState.WorkItem.Name, ingestState.WorkItem.ETag,
 		timestamp)
 	fetcher.Context.JsonLog.Println(startMessage, "\n",
-		fetchData.WorkItemState.State, "\n",
+		ingestState.WorkItemState.State, "\n",
 		endMessage, "\n")
 }
 
 // This is for direct testing without NSQ.
-func (fetcher *APTFetcher) RunWithoutNsq(fetchData *FetchData) {
+func (fetcher *APTFetcher) RunWithoutNsq(ingestState *models.IngestState) {
 	fetcher.WaitGroup.Add(1)
-	fetcher.FetchChannel <- fetchData
-	fetcher.Context.MessageLog.Debug("Put %s into Fluctus channel", fetchData.IngestManifest.S3Key)
+	fetcher.FetchChannel <- ingestState
+	fetcher.Context.MessageLog.Debug("Put %s into Fluctus channel", ingestState.IngestManifest.S3Key)
 	fetcher.WaitGroup.Wait()
 }
