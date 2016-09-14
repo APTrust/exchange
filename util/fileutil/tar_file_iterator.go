@@ -2,6 +2,7 @@ package fileutil
 
 import (
 	"archive/tar"
+	"fmt"
 	"io"
 	"os"
 	"strings"
@@ -60,6 +61,29 @@ func (iter *TarFileIterator) Next() (io.ReadCloser, *FileSummary, error) {
 		tarReader: iter.tarReader,
 	}
 	return tarReadCloser, fs, nil
+}
+
+// Returns an open reader for the file with the specified name,
+// or nil if that file cannot be found. Caller is responsible
+// for closing the reader. Note that the iterator is forward-only,
+// which makes it unsuitable for re-use. Create a new iterator each
+// time you want to call Find.
+func (iter *TarFileIterator) Find(filename string) (io.ReadCloser, error) {
+	for {
+		header, err := iter.tarReader.Next()
+		if err != nil {
+			// Error may be io.EOF, which just means we
+			// reached the end of the headers.
+			return nil, err
+		}
+		if header.Name == filename {
+			tarReadCloser := TarReadCloser{
+				tarReader: iter.tarReader,
+			}
+			return tarReadCloser, nil
+		}
+	}
+	return nil, fmt.Errorf("File '%s' not found in archive", filename)
 }
 
 // Keep track of any top-level directory names we encounter.
