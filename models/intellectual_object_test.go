@@ -8,6 +8,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"path/filepath"
 	"testing"
+	"time"
 )
 
 func TestNewIntellectualObject(t *testing.T) {
@@ -100,4 +101,23 @@ func TestFindTag(t *testing.T) {
 	assert.Equal(t, "value3.1", tags3[1].Value)
 	assert.Equal(t, "value3.2", tags3[2].Value)
 	assert.Nil(t, tagsx)
+}
+
+func TestAllFilesSave(t *testing.T) {
+	filepath := filepath.Join("testdata", "json_objects", "intel_obj.json")
+	obj, err := testutil.LoadIntelObjFixture(filepath)
+	if err != nil {
+		t.Errorf("Error loading test data file '%s': %v", filepath, err)
+	}
+	assert.True(t, obj.AllFilesSaved())
+
+	gf := obj.FindGenericFile("data/object.properties")
+	gf.IngestNeedsSave = true
+	assert.False(t, obj.AllFilesSaved())
+
+	gf.IngestStorageURL = "https://example.com/primary"
+	gf.IngestReplicationURL = "https://example.com/secondary"
+	gf.IngestStoredAt = time.Now().UTC()
+	gf.IngestReplicatedAt = time.Now().UTC()
+	assert.True(t, obj.AllFilesSaved())
 }

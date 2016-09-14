@@ -163,6 +163,25 @@ func (obj *IntellectualObject) FindTag(tagName string) ([]*Tag) {
 	return obj.tagMap[tagName]
 }
 
+// Returns true if all the GenericFiles that needed to be saved
+// were successfully saved to both primary and secondary storage.
+// Note that GenericFiles maked as IngestNeedsSave = false do
+// not need to be saved.
+func (obj *IntellectualObject) AllFilesSaved() (bool) {
+	allSaved := true
+	for _, gf := range obj.GenericFiles {
+		if gf.IngestNeedsSave {
+			if (gf.IngestStorageURL == "" ||
+				gf.IngestReplicationURL == "" ||
+				gf.IngestStoredAt.IsZero() ||
+				gf.IngestReplicatedAt.IsZero()) {
+				allSaved = false
+				break
+			}
+		}
+	}
+	return allSaved
+}
 
 // Serialize the subset of IntellectualObject data that Pharos
 // will accept. This is for post/put, where essential info, such
