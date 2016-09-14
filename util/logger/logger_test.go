@@ -35,8 +35,7 @@ func getLoggingTestConfig(t *testing.T) (*models.Config) {
 // Delete temp log dir after tests.
 func teardownLoggerTest(config *models.Config) {
 	absLogDir := config.AbsLogDirectory()
-	slashCount := (len(absLogDir) - len(strings.Replace(absLogDir, "/", "", -1)))
-	if len(absLogDir) > 12 || slashCount < 3 {
+	if fileutil.LooksSafeToDelete(absLogDir, 12, 3) {
 		// Don't call remove all on "/" or "/usr" or anything like that.
 		os.RemoveAll(absLogDir)
 	} else {

@@ -3,6 +3,7 @@ package fileutil_test
 import (
 	"fmt"
 	"github.com/APTrust/exchange/util/fileutil"
+	"github.com/stretchr/testify/assert"
 	"os"
 	"path/filepath"
 	"strings"
@@ -64,16 +65,16 @@ func TestJsonFileToObject(t *testing.T) {
 	// relativePath := filepath.Join("testdata", "ingest_result.json")
 	// absPath, err := fileutil.RelativeToAbsPath(relativePath)
 	// if err != nil {
-	// 	t.Errorf("Can't get AbsPath for %s: %v", relativePath, err)
+	//	t.Errorf("Can't get AbsPath for %s: %v", relativePath, err)
 	// }
-    // ingestResult := &results.IngestResult{}
-    // err = fileutil.JsonFileToObject(absPath, ingestResult)
+	// ingestResult := &results.IngestResult{}
+	// err = fileutil.JsonFileToObject(absPath, ingestResult)
 	// if err != nil {
-	// 	t.Errorf("JsonFileToObject returned error %v", err)
+	//	t.Errorf("JsonFileToObject returned error %v", err)
 	// }
 	// // Test one nested item in the struct to see if it parsed OK.
 	// if ingestResult.TarResult.LocalFiles[0].Uuid != "b21fdb34-1f79-4101-62c5-56918f4782fc" {
-	// 	t.Errorf("JSON parsing didn't get first file UUID.")
+	//	t.Errorf("JSON parsing didn't get first file UUID.")
 	// }
 }
 
@@ -162,4 +163,9 @@ func TestRecursiveFileList(t *testing.T) {
 			t.Errorf("File '%s' is missing from recursive file list", filePath)
 		}
 	}
+}
+
+func TestLooksSafeToDelete(t *testing.T) {
+	assert.True(t, fileutil.LooksSafeToDelete("/mnt/apt/data/some_dir", 15, 3))
+	assert.False(t, fileutil.LooksSafeToDelete("/usr/local", 12, 3))
 }

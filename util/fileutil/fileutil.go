@@ -105,12 +105,22 @@ func ExpandTilde(filePath string) (string, error) {
 // RecursiveFileList returns a list of all files in path dir
 // and its subfolders. It does not return directories.
 func RecursiveFileList(dir string) ([]string, error) {
-    files := make([]string, 0)
-    err := filepath.Walk(dir, func(filePath string, f os.FileInfo, err error) error {
+	files := make([]string, 0)
+	err := filepath.Walk(dir, func(filePath string, f os.FileInfo, err error) error {
 		if f.IsDir() == false {
 			files = append(files, filePath)
 		}
-        return nil
-    })
+		return nil
+	})
 	return files, err
+}
+
+// Returns true if the path specified by dir has at least minLength
+// characters and at least minSeparators path separators. This is
+// for testing paths you want pass into os.RemoveAll(), so you don't
+// wind up deleting "/" or "/etc" or something catastrophic like that.
+func LooksSafeToDelete(dir string, minLength, minSeparators int) (bool) {
+	separator := string(os.PathSeparator)
+	separatorCount := (len(dir) - len(strings.Replace(dir, separator, "", -1)))
+	return len(dir) >= minLength && separatorCount >= minSeparators
 }
