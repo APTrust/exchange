@@ -16,11 +16,21 @@ The first of these goals is the most important. The code must be clear and maint
 
 The existing bagman code will continue to run until this code is complete.
 
-## Testing
+## Unit Testing
 
 ```
 go test github.com/APTrust/exchange/...
 ```
+
+## Integration Testing
+
+To run integration tests, you'll need the following:
+
+- A copy of the Pharos repo
+- Environment variables AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY set to values that can access APTrust's test buckets
+- Environment variables PHAROS_API_USER=system@aptrust.org and PHAROS_API_KEY=c3958c7b09e40af1d065020484dafa9b2a35cea0
+
+Once you have all that, simple run `./scripts/process_items.sh` to run the integration tests.
 
 ## TODO
 
