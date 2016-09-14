@@ -217,8 +217,11 @@ func (fetcher *APTFetcher) validate() {
 			fetchData.IngestManifest.ValidateResult = validationResult.ValidationSummary
 
 			// NOTE that we are OVERWRITING the IntellectualObject here
-			// with the much more complete version returned by the validator.
+			// with the much more complete version returned by the validator,
+			// but we have to reset some basic data that's only available
+			// in the current context.
 			fetchData.IngestManifest.Object = validationResult.IntellectualObject
+			fetcher.setBasicObjectInfo(fetchData)
 
 			// If the bag is invalid, that's a fatal error. We should not do
 			// any further processing on it.
@@ -270,7 +273,7 @@ func (fetcher *APTFetcher) cleanup() {
 // -------------------------------------------------------------------------
 func (fetcher *APTFetcher) record() {
 	for fetchData := range fetcher.RecordChannel {
-	    // Record the WorkItemState in Pharos. The next process (record)
+		// Record the WorkItemState in Pharos. The next process (record)
 		// will need this info to do its work. If there's an error in this
 		// step, recordWorkItemState will log it and add it to the FetchResult.
 		// It will also dump a JSON representation of the IngestManifest to
@@ -344,10 +347,10 @@ func (fetcher *APTFetcher) reserveSpaceForDownload (fetchData *FetchData) (bool)
 // we did those steps but were not able to update the WorkItem record
 // in Pharos at the end of the fetch/validate process.
 func (fetcher *APTFetcher) canSkipFetchAndValidate (fetchData *FetchData) (bool) {
-		return (fetchData.WorkItem.Stage == constants.StageValidate &&
-			fetchData.IngestManifest.ValidateResult.Finished() &&
-			!fetchData.IngestManifest.HasFatalErrors() &&
-			fileutil.FileExists(fetchData.IngestManifest.Object.IngestTarFilePath))
+	return (fetchData.WorkItem.Stage == constants.StageValidate &&
+		fetchData.IngestManifest.ValidateResult.Finished() &&
+		!fetchData.IngestManifest.HasFatalErrors() &&
+		fileutil.FileExists(fetchData.IngestManifest.Object.IngestTarFilePath))
 }
 
 // Set up the basic pieces of data we'll need to process a fetch request.
@@ -374,19 +377,21 @@ func (fetcher *APTFetcher) initFetchData (message *nsq.Message) (*FetchData, err
 		IngestManifest: ingestManifest,
 	}
 
+	fetcher.setBasicObjectInfo(fetchData)
+
+	return fetchData, err
+}
+
+// Set some basic info on our intellectual object. Note that this may be called
+// twice. First, when we're processing a brand new WorkItem and have to set the
+// basic IntellectualObject data for the first time. Second, after the BagValidator
+// returns its version of the IntellectualObject, which may not include this info.
+func (fetcher *APTFetcher) setBasicObjectInfo(fetchData *FetchData) {
 	// instIdentifier is, e.g., virginia.edu, ncsu.edu, etc.
 	// We'll download the tar file from the receiving bucket to
 	// something like /mnt/apt/data/virginia.edu/name_of_bag.tar
 	// See IngestTarFilePath below.
 	instIdentifier := util.OwnerOf(fetchData.IngestManifest.S3Bucket)
-
-	// Set some basic info on our IntellectualObject.
-	// Note that we only do this for a brand new bag that we have
-	// never before attempted to ingest. Also note that
-	// fetchData.IngestManifest.Object will be overwritten in the
-	// validate() function above. The BagValidator will construct a
-	// much more comprehensive IntellectualObject. For now, we're just
-	// adding in the data we need to get started.
 	fetchData.IngestManifest.Object.BagName = util.CleanBagName(fetchData.IngestManifest.S3Key)
 	fetchData.IngestManifest.Object.Institution = instIdentifier
 	// -----------------------------------------------------------
@@ -399,9 +404,7 @@ func (fetcher *APTFetcher) initFetchData (message *nsq.Message) (*FetchData, err
 		fetcher.Context.Config.TarDirectory,
 		instIdentifier, fetchData.IngestManifest.S3Key)
 
-	return fetchData, err
 }
-
 
 // Returns the WorkItem record from Pharos that has the WorkItemId
 // specified in the NSQ message.
@@ -468,7 +471,7 @@ func (fetcher *APTFetcher) initWorkItemState (workItem *models.WorkItem) (*model
 
 // Tell Pharos we've started to fetch this item from S3.
 func (fetcher *APTFetcher) recordFetchStarted (workItem *models.WorkItem) (*models.WorkItem, error) {
-    fetcher.Context.MessageLog.Info("Telling Pharos fetch started for %s/%s", workItem.Bucket, workItem.Name)
+	fetcher.Context.MessageLog.Info("Telling Pharos fetch started for %s/%s", workItem.Bucket, workItem.Name)
 	hostname, _ := os.Hostname()
 	if hostname == "" { hostname = "apt_fetcher_host" }
 	workItem.Node = hostname
@@ -485,7 +488,7 @@ func (fetcher *APTFetcher) recordFetchStarted (workItem *models.WorkItem) (*mode
 
 // Tell Pharos we've started validation on this item.
 func (fetcher *APTFetcher) recordValidationStarted (workItem *models.WorkItem) (*models.WorkItem, error) {
-    fetcher.Context.MessageLog.Info("Telling Pharos validation started for %s/%s", workItem.Bucket, workItem.Name)
+	fetcher.Context.MessageLog.Info("Telling Pharos validation started for %s/%s", workItem.Bucket, workItem.Name)
 	workItem.Stage = constants.StageValidate
 	workItem.Note = "Validating bag."
 	resp := fetcher.Context.PharosClient.WorkItemSave(workItem)
@@ -497,7 +500,7 @@ func (fetcher *APTFetcher) recordValidationStarted (workItem *models.WorkItem) (
 
 // Tell Pharos that this item cannot be ingested, due to a fatal error.
 func (fetcher *APTFetcher) markWorkItemFailed (fetchData *FetchData) (error) {
-    fetcher.Context.MessageLog.Info("Telling Pharos ingest failed for %s/%s",
+	fetcher.Context.MessageLog.Info("Telling Pharos ingest failed for %s/%s",
 		fetchData.WorkItem.Bucket, fetchData.WorkItem.Name)
 	fetchData.WorkItem.Pid = 0
 	fetchData.WorkItem.Node = ""
@@ -517,7 +520,7 @@ func (fetcher *APTFetcher) markWorkItemFailed (fetchData *FetchData) (error) {
 
 // Tell Pharos that this item has been requeued due to transient errors.
 func (fetcher *APTFetcher) markWorkItemRequeued (fetchData *FetchData) (error) {
-    fetcher.Context.MessageLog.Info("Telling Pharos ingest requeued for %s/%s",
+	fetcher.Context.MessageLog.Info("Telling Pharos ingest requeued for %s/%s",
 		fetchData.WorkItem.Bucket, fetchData.WorkItem.Name)
 	fetchData.WorkItem.Pid = 0
 	fetchData.WorkItem.Node = ""
@@ -537,7 +540,7 @@ func (fetcher *APTFetcher) markWorkItemRequeued (fetchData *FetchData) (error) {
 
 // Tell Pharos that this item was successfully downloaded and validated.
 func (fetcher *APTFetcher) markWorkItemSucceeded (fetchData *FetchData) (error) {
-    fetcher.Context.MessageLog.Info("Telling Pharos ingest can proceed for %s/%s",
+	fetcher.Context.MessageLog.Info("Telling Pharos ingest can proceed for %s/%s",
 		fetchData.WorkItem.Bucket, fetchData.WorkItem.Name)
 	fetchData.WorkItem.Pid = 0
 	fetchData.WorkItem.Node = ""
