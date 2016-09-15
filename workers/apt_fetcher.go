@@ -479,7 +479,8 @@ func (fetcher *APTFetcher) recordValidationStarted (workItem *models.WorkItem) (
 func (fetcher *APTFetcher) markWorkItemFailed (ingestState *models.IngestState) (error) {
 	fetcher.Context.MessageLog.Info("Telling Pharos ingest failed for %s/%s",
 		ingestState.WorkItem.Bucket, ingestState.WorkItem.Name)
-	ingestState.WorkItem.SetNodeAndPid()
+	ingestState.WorkItem.Node = ""
+	ingestState.WorkItem.Pid = 0
 	ingestState.WorkItem.StageStartedAt = nil
 	ingestState.WorkItem.Retry = false
 	ingestState.WorkItem.NeedsAdminReview = true
@@ -497,9 +498,10 @@ func (fetcher *APTFetcher) markWorkItemFailed (ingestState *models.IngestState) 
 
 // Tell Pharos that this item has been requeued due to transient errors.
 func (fetcher *APTFetcher) markWorkItemRequeued (ingestState *models.IngestState) (error) {
-	fetcher.Context.MessageLog.Info("Telling Pharos ingest requeued for %s/%s",
+	fetcher.Context.MessageLog.Info("Telling Pharos ingest is being requeued for %s/%s",
 		ingestState.WorkItem.Bucket, ingestState.WorkItem.Name)
-	ingestState.WorkItem.SetNodeAndPid()
+	ingestState.WorkItem.Node = ""
+	ingestState.WorkItem.Pid = 0
 	ingestState.WorkItem.StageStartedAt = nil
 	ingestState.WorkItem.Retry = true
 	ingestState.WorkItem.NeedsAdminReview = false
@@ -519,11 +521,12 @@ func (fetcher *APTFetcher) markWorkItemRequeued (ingestState *models.IngestState
 func (fetcher *APTFetcher) markWorkItemSucceeded (ingestState *models.IngestState) (error) {
 	fetcher.Context.MessageLog.Info("Telling Pharos ingest can proceed for %s/%s",
 		ingestState.WorkItem.Bucket, ingestState.WorkItem.Name)
-	ingestState.WorkItem.SetNodeAndPid()
+	ingestState.WorkItem.Node = ""
+	ingestState.WorkItem.Pid = 0
 	ingestState.WorkItem.Retry = true
 	ingestState.WorkItem.StageStartedAt = nil
 	ingestState.WorkItem.NeedsAdminReview = false
-	ingestState.WorkItem.Stage = constants.StageRecord
+	ingestState.WorkItem.Stage = constants.StageStore
 	ingestState.WorkItem.Status = constants.StatusPending
 	ingestState.WorkItem.Note = "Item passed validation and is ready for storage."
 	resp := fetcher.Context.PharosClient.WorkItemSave(ingestState.WorkItem)

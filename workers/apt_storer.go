@@ -212,7 +212,7 @@ func (storer *APTStorer) markWorkItemStarted (ingestState *models.IngestState) (
 	utcNow := time.Now().UTC()
 	ingestState.WorkItem.SetNodeAndPid()
 	ingestState.WorkItem.Stage = constants.StageFetch
-	ingestState.WorkItem.StageStartedAt = utcNow
+	ingestState.WorkItem.StageStartedAt = &utcNow
 	ingestState.WorkItem.Status = constants.StatusStarted
 	ingestState.WorkItem.Note = "Copying files to long-term storage"
 	resp := storer.Context.PharosClient.WorkItemSave(ingestState.WorkItem)
@@ -224,18 +224,67 @@ func (storer *APTStorer) markWorkItemStarted (ingestState *models.IngestState) (
 
 // Tell Pharos we finished copying all files to long-term
 // storage (successfully).
-func (storer *APTStorer) markWorkItemSucceeded (ingestState *models.IngestState) (*models.WorkItem, error) {
-	return nil, nil
+func (storer *APTStorer) markWorkItemSucceeded (ingestState *models.IngestState) (error) {
+	storer.Context.MessageLog.Info("Telling Pharos storage succeeded for %s/%s",
+		ingestState.WorkItem.Bucket, ingestState.WorkItem.Name)
+	ingestState.WorkItem.Node = ""
+	ingestState.WorkItem.Pid = 0
+	ingestState.WorkItem.Retry = true
+	ingestState.WorkItem.StageStartedAt = nil
+	ingestState.WorkItem.NeedsAdminReview = false
+	ingestState.WorkItem.Stage = constants.StageRecord
+	ingestState.WorkItem.Status = constants.StatusPending
+	ingestState.WorkItem.Note = "All files copied to S3 and Glacier. Awaiting metadata recording in Pharos."
+	resp := storer.Context.PharosClient.WorkItemSave(ingestState.WorkItem)
+	if resp.Error != nil {
+		storer.Context.MessageLog.Error("Could not mark WorkItem ready for record for %s/%s: %v",
+			ingestState.WorkItem.Bucket, ingestState.WorkItem.Name, resp.Error)
+		return resp.Error
+	}
+	ingestState.WorkItem = resp.WorkItem()
+	return nil
 }
 
 // Tell Pharos that the storage attempt failed with a
 // fatal error, and should not be retried.
-func (storer *APTStorer) markWorkItemFailed (ingestState *models.IngestState) (*models.WorkItem, error) {
-	return nil, nil
+func (storer *APTStorer) markWorkItemFailed (ingestState *models.IngestState) (error) {
+	storer.Context.MessageLog.Info("Telling Pharos storage failed for %s/%s",
+		ingestState.WorkItem.Bucket, ingestState.WorkItem.Name)
+	ingestState.WorkItem.Node = ""
+	ingestState.WorkItem.Pid = 0
+	ingestState.WorkItem.StageStartedAt = nil
+	ingestState.WorkItem.Retry = false
+	ingestState.WorkItem.NeedsAdminReview = true
+	ingestState.WorkItem.Status = constants.StatusFailed
+	ingestState.WorkItem.Note = ingestState.IngestManifest.FetchResult.AllErrorsAsString() + ingestState.IngestManifest.ValidateResult.AllErrorsAsString()
+	resp := storer.Context.PharosClient.WorkItemSave(ingestState.WorkItem)
+	if resp.Error != nil {
+		storer.Context.MessageLog.Error("Could not mark WorkItem failed for %s/%s: %v",
+			ingestState.WorkItem.Bucket, ingestState.WorkItem.Name, resp.Error)
+		return resp.Error
+	}
+	ingestState.WorkItem = resp.WorkItem()
+	return nil
 }
 
 // Tell Pharos that storage failed with a transient
 // error, and we should try this item again later.
-func (storer *APTStorer) markWorkItemRequeued (ingestState *models.IngestState) (*models.WorkItem, error) {
-	return nil, nil
+func (storer *APTStorer) markWorkItemRequeued (ingestState *models.IngestState) (error) {
+	storer.Context.MessageLog.Info("Telling Pharos storage is being requeued for %s/%s",
+		ingestState.WorkItem.Bucket, ingestState.WorkItem.Name)
+	ingestState.WorkItem.Node = ""
+	ingestState.WorkItem.Pid = 0
+	ingestState.WorkItem.StageStartedAt = nil
+	ingestState.WorkItem.Retry = true
+	ingestState.WorkItem.NeedsAdminReview = false
+	ingestState.WorkItem.Status = constants.StatusStarted
+	ingestState.WorkItem.Note = "Item has been requeued due to transient errors. " + ingestState.IngestManifest.FetchResult.AllErrorsAsString() + ingestState.IngestManifest.ValidateResult.AllErrorsAsString()
+	resp := storer.Context.PharosClient.WorkItemSave(ingestState.WorkItem)
+	if resp.Error != nil {
+		storer.Context.MessageLog.Error("Could not mark WorkItem requeued for %s/%s: %v",
+			ingestState.WorkItem.Bucket, ingestState.WorkItem.Name, resp.Error)
+		return resp.Error
+	}
+	ingestState.WorkItem = resp.WorkItem()
+	return nil
 }
