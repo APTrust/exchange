@@ -10,7 +10,7 @@ import (
 	"github.com/APTrust/exchange/util/fileutil"
 //	"github.com/APTrust/exchange/validation"
 	"github.com/nsqio/go-nsq"
-//	"net/http"
+	"net/url"
 	"os"
 //	"path/filepath"
 //	"strconv"
@@ -190,8 +190,21 @@ func (storer *APTStorer) saveFile (ingestState *models.IngestState, gf *models.G
 // existing version against the sha256 of the one just uploaded. If they're
 // the same, we don't bother overwriting the existing file.
 func (storer *APTStorer) getExistingSha256 (gfIdentifier string) (string, error) {
-	// Waiting for new Pharos call to retrieve checksum list
-	return "", nil
+	storer.Context.MessageLog.Info("Checking Pharos for existing sha256 digest for %s",
+		gfIdentifier)
+	params := url.Values{}
+	params.Add("generic_file_identifier", gfIdentifier)
+	params.Add("algorithm", constants.AlgSha256)
+	params.Add("sort", "created_at DESC")
+	resp := storer.Context.PharosClient.ChecksumList(params)
+	if resp.Error != nil {
+		return "", resp.Error
+	}
+	existingChecksum := resp.Checksum()
+	if existingChecksum == nil {
+		return "", nil
+	}
+	return existingChecksum.Digest, nil
 }
 
 // Copy the GenericFile to primary storage (S3)
