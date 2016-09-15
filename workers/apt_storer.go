@@ -5,7 +5,7 @@ import (
 	"github.com/APTrust/exchange/constants"
 	"github.com/APTrust/exchange/context"
 	"github.com/APTrust/exchange/models"
-//	"github.com/APTrust/exchange/network"
+	"github.com/APTrust/exchange/network"
 //	"github.com/APTrust/exchange/util"
 	"github.com/APTrust/exchange/util/fileutil"
 //	"github.com/APTrust/exchange/validation"
@@ -209,7 +209,27 @@ func (storer *APTStorer) getExistingSha256 (gfIdentifier string) (string, error)
 
 // Copy the GenericFile to primary storage (S3)
 func (storer *APTStorer) copyToPrimaryStorage (ingestState *models.IngestState, gf *models.GenericFile) {
-
+	// 15 seemed to be the magic number in the first generation of the software.
+	for attemptNumber := 1; attemptNumber <= 15; attemptNumber++ {
+		upload := network.NewS3Upload(
+			storer.Context.Config.APTrustS3Region,
+			storer.Context.Config.PreservationBucket,
+			gf.IngestUUID, // TODO: Make sure this is not empty!
+			"",            // TODO: Pass in Reader instead of file!
+			gf.FileFormat,
+		)
+		upload.AddMetadata("institution", ingestState.IngestManifest.Object.Institution)
+		upload.AddMetadata("bag", ingestState.IngestManifest.Object.Identifier)
+		upload.AddMetadata("bagpath", gf.OriginalPath())
+		upload.AddMetadata("md5", gf.IngestMd5)        // TODO: Make sure this isn't empty
+		upload.AddMetadata("sha256", gf.IngestSha256)  // TODO: Make sure this isn't empty
+		upload.Send()
+		if upload.ErrorMessage != "" {
+			if attemptNumber == 15 {
+				ingestState.IngestManifest.StoreResult.AddError(upload.ErrorMessage)
+			}
+		}
+	}
 }
 
 // Copy the GenericFile to secondary storage (Glacier)
