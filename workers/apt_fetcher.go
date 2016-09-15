@@ -452,10 +452,10 @@ func (fetcher *APTFetcher) recordFetchStarted (workItem *models.WorkItem) (*mode
 	fetcher.Context.MessageLog.Info("Telling Pharos fetch started for %s/%s", workItem.Bucket, workItem.Name)
 	hostname, _ := os.Hostname()
 	if hostname == "" { hostname = "apt_fetcher_host" }
-	workItem.Node = hostname
+	workItem.SetNodeAndPid()
 	workItem.Stage = constants.StageFetch
+	*workItem.StageStartedAt = time.Now().UTC()
 	workItem.Status = constants.StatusStarted
-	workItem.Pid = os.Getpid()
 	workItem.Note = "Fetching bag from receiving bucket."
 	resp := fetcher.Context.PharosClient.WorkItemSave(workItem)
 	if resp.Error != nil {
@@ -480,8 +480,8 @@ func (fetcher *APTFetcher) recordValidationStarted (workItem *models.WorkItem) (
 func (fetcher *APTFetcher) markWorkItemFailed (ingestState *models.IngestState) (error) {
 	fetcher.Context.MessageLog.Info("Telling Pharos ingest failed for %s/%s",
 		ingestState.WorkItem.Bucket, ingestState.WorkItem.Name)
-	ingestState.WorkItem.Pid = 0
-	ingestState.WorkItem.Node = ""
+	ingestState.WorkItem.SetNodeAndPid()
+	ingestState.WorkItem.StageStartedAt = nil
 	ingestState.WorkItem.Retry = false
 	ingestState.WorkItem.NeedsAdminReview = true
 	ingestState.WorkItem.Status = constants.StatusFailed
@@ -500,8 +500,8 @@ func (fetcher *APTFetcher) markWorkItemFailed (ingestState *models.IngestState) 
 func (fetcher *APTFetcher) markWorkItemRequeued (ingestState *models.IngestState) (error) {
 	fetcher.Context.MessageLog.Info("Telling Pharos ingest requeued for %s/%s",
 		ingestState.WorkItem.Bucket, ingestState.WorkItem.Name)
-	ingestState.WorkItem.Pid = 0
-	ingestState.WorkItem.Node = ""
+	ingestState.WorkItem.SetNodeAndPid()
+	ingestState.WorkItem.StageStartedAt = nil
 	ingestState.WorkItem.Retry = true
 	ingestState.WorkItem.NeedsAdminReview = false
 	ingestState.WorkItem.Status = constants.StatusStarted
@@ -520,9 +520,9 @@ func (fetcher *APTFetcher) markWorkItemRequeued (ingestState *models.IngestState
 func (fetcher *APTFetcher) markWorkItemSucceeded (ingestState *models.IngestState) (error) {
 	fetcher.Context.MessageLog.Info("Telling Pharos ingest can proceed for %s/%s",
 		ingestState.WorkItem.Bucket, ingestState.WorkItem.Name)
-	ingestState.WorkItem.Pid = 0
-	ingestState.WorkItem.Node = ""
+	ingestState.WorkItem.SetNodeAndPid()
 	ingestState.WorkItem.Retry = true
+	ingestState.WorkItem.StageStartedAt = nil
 	ingestState.WorkItem.NeedsAdminReview = false
 	ingestState.WorkItem.Stage = constants.StageRecord
 	ingestState.WorkItem.Status = constants.StatusPending
