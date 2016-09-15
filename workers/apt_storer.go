@@ -209,9 +209,10 @@ func (storer *APTStorer) copyToSecondaryStorage (ingestState *models.IngestState
 func (storer *APTStorer) markWorkItemStarted (ingestState *models.IngestState) (*models.WorkItem, error) {
 	storer.Context.MessageLog.Info("Telling Pharos record started for %s/%s",
 		ingestState.WorkItem.Bucket, ingestState.WorkItem.Name)
+	utcNow := time.Now().UTC()
 	ingestState.WorkItem.SetNodeAndPid()
 	ingestState.WorkItem.Stage = constants.StageFetch
-	*ingestState.WorkItem.StageStartedAt = time.Now().UTC()
+	ingestState.WorkItem.StageStartedAt = utcNow
 	ingestState.WorkItem.Status = constants.StatusStarted
 	ingestState.WorkItem.Note = "Copying files to long-term storage"
 	resp := storer.Context.PharosClient.WorkItemSave(ingestState.WorkItem)

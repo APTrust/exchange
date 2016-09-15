@@ -450,11 +450,10 @@ func (fetcher *APTFetcher) initWorkItemState (workItem *models.WorkItem) (*model
 // Tell Pharos we've started to fetch this item from S3.
 func (fetcher *APTFetcher) recordFetchStarted (workItem *models.WorkItem) (*models.WorkItem, error) {
 	fetcher.Context.MessageLog.Info("Telling Pharos fetch started for %s/%s", workItem.Bucket, workItem.Name)
-	hostname, _ := os.Hostname()
-	if hostname == "" { hostname = "apt_fetcher_host" }
+	utcNow := time.Now().UTC()
 	workItem.SetNodeAndPid()
 	workItem.Stage = constants.StageFetch
-	*workItem.StageStartedAt = time.Now().UTC()
+	workItem.StageStartedAt = &utcNow
 	workItem.Status = constants.StatusStarted
 	workItem.Note = "Fetching bag from receiving bucket."
 	resp := fetcher.Context.PharosClient.WorkItemSave(workItem)
