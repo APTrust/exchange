@@ -43,6 +43,7 @@ type WorkItem struct {
 	Note                   string               `json:"note"`
 	Action                 string               `json:"action"`
 	Stage                  string               `json:"stage"`
+	StageStartedAt         *time.Time           `json:"stage_started_at"`
 	Status                 string               `json:"status"`
 	Outcome                string               `json:"outcome"`
 	Retry                  bool                 `json:"retry"`
@@ -72,6 +73,7 @@ func (item *WorkItem) SerializeForPharos() ([]byte, error) {
 		"note":                    item.Note,
 		"action":                  item.Action,
 		"stage":                   item.Stage,
+		"stage_started_at":        item.StageStartedAt,
 		"status":                  item.Status,
 		"outcome":                 item.Outcome,
 		"retry":                   item.Retry,
