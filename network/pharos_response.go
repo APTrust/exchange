@@ -55,6 +55,10 @@ type PharosResponse struct {
 	// objectType is not GenericFile.
 	files             []*models.GenericFile
 
+	// A slice of Checksum pointers. Will be nil if
+	// objectType is not Checksum.
+	checksums            []*models.Checksum
+
 	// A slice of PremisEvent pointers. Will be nil if
 	// objectType is not PremisEvent.
 	events            []*models.PremisEvent
@@ -88,6 +92,7 @@ const (
 	PharosIntellectualObject PharosObjectType = "IntellectualObject"
 	PharosInstitution                         = "Institution"
 	PharosGenericFile                         = "GenericFile"
+	PharosChecksum                            = "Checksum"
 	PharosPremisEvent                         = "PremisEvent"
 	PharosWorkItem                            = "WorkItem"
 	PharosWorkItemState                       = "WorkItemState"
@@ -216,6 +221,22 @@ func (resp *PharosResponse) GenericFiles() ([]*models.GenericFile) {
 	return resp.files
 }
 
+// Returns the Checksum parsed from the HTTP response body,  or nil.
+func (resp *PharosResponse) Checksum() (*models.Checksum) {
+	if resp.checksums != nil && len(resp.checksums) > 0 {
+		return resp.checksums[0]
+	}
+	return nil
+}
+
+// Returns a list of Checksums parsed from the HTTP response body.
+func (resp *PharosResponse) Checksums() ([]*models.Checksum) {
+	if resp.checksums == nil {
+		return make([]*models.Checksum, 0)
+	}
+	return resp.checksums
+}
+
 // Returns the PremisEvent parsed from the HTTP response body, or nil.
 func (resp *PharosResponse) PremisEvent() (*models.PremisEvent) {
 	if resp.events != nil && len(resp.events) > 0 {
@@ -282,6 +303,8 @@ func(resp *PharosResponse) UnmarshalJsonList() (error) {
 		return resp.decodeAsInstitutionList()
 	case PharosGenericFile:
 		return resp.decodeAsGenericFileList()
+	case PharosChecksum:
+		return resp.decodeAsChecksumList()
 	case PharosPremisEvent:
 		return resp.decodeAsPremisEventList()
 	case PharosWorkItem:
@@ -361,6 +384,30 @@ func(resp *PharosResponse) decodeAsGenericFileList() (error) {
 	resp.Next = temp.Next
 	resp.Previous = temp.Previous
 	resp.files = temp.Results
+	resp.listHasBeenParsed = true
+	return resp.Error
+}
+
+func(resp *PharosResponse) decodeAsChecksumList() (error) {
+	if resp.listHasBeenParsed {
+		return nil
+	}
+	temp := struct{
+		Count    int      `json:"count"`
+		Next     *string  `json:"next"`
+		Previous *string  `json:"previous"`
+		Results  []*models.Checksum `json:"results"`
+	}{ 0, nil, nil, nil }
+	data, err := resp.RawResponseData()
+	if err != nil {
+		resp.Error = err
+		return err
+	}
+	resp.Error = json.Unmarshal(data, &temp)
+	resp.Count = temp.Count
+	resp.Next = temp.Next
+	resp.Previous = temp.Previous
+	resp.checksums = temp.Results
 	resp.listHasBeenParsed = true
 	return resp.Error
 }

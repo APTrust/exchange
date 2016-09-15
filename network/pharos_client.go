@@ -285,6 +285,58 @@ func (client *PharosClient) GenericFileSave(obj *models.GenericFile) (*PharosRes
 	return resp
 }
 
+// Returns the checksum with the specified id
+func (client *PharosClient) ChecksumGet(id int) (*PharosResponse) {
+	// Set up the response object
+	resp := NewPharosResponse(PharosChecksum)
+	resp.checksums = make([]*models.Checksum, 1)
+
+	// Build the url and the request object
+	relativeUrl := fmt.Sprintf("/api/%s/checksums/%d/", client.apiVersion, id)
+	absoluteUrl := client.BuildUrl(relativeUrl)
+
+	// Run the request
+	client.DoRequest(resp, "GET", absoluteUrl, nil)
+	if resp.Error != nil {
+		return resp
+	}
+
+	// Parse the JSON from the response body
+	checksum := &models.Checksum{}
+	resp.Error = json.Unmarshal(resp.data, checksum)
+	if resp.Error == nil {
+		resp.checksums[0] = checksum
+	}
+	return resp
+}
+
+// Returns a list of checksums. Params include:
+//
+// * generic_file_identifier - The identifier of the file to which
+//   the checksum belongs.
+// * algorithm - The checksum algorithm (constants.AldMd5, constants.AlgSha256)
+func (client *PharosClient) ChecksumList(params url.Values) (*PharosResponse) {
+	// Set up the response object
+	resp := NewPharosResponse(PharosChecksum)
+	resp.checksums = make([]*models.Checksum, 0)
+
+	// Build the url and the request object
+	relativeUrl := fmt.Sprintf("/api/%s/checksums/?%s", client.apiVersion, encodeParams(params))
+	absoluteUrl := client.BuildUrl(relativeUrl)
+
+	// Run the request
+	client.DoRequest(resp, "GET", absoluteUrl, nil)
+	if resp.Error != nil {
+		return resp
+	}
+
+	// Parse the JSON from the response body.
+	// If there's an error, it will be recorded in resp.Error
+	resp.UnmarshalJsonList()
+	return resp
+}
+
+
 // Returns the PREMIS event with the specified identifier. The identifier
 // should be a UUID in string format, with dashes. E.g.
 // "49a7d6b5-cdc1-4912-812e-885c08e90c68"
@@ -600,14 +652,14 @@ func (client *PharosClient) NewJsonRequest(method, absoluteUrl string, requestDa
 	// the %2F. The Go URL library silently converts those
 	// to slashes, and we DON'T want that!
 	// See http://stackoverflow.com/questions/20847357/golang-http-client-always-escaped-the-url/
-    incorrectUrl, err := url.Parse(absoluteUrl)
-    if err != nil {
-        return nil, err
-    }
-    opaqueUrl := strings.Replace(absoluteUrl, client.hostUrl, "", 1)
+	incorrectUrl, err := url.Parse(absoluteUrl)
+	if err != nil {
+		return nil, err
+	}
+	opaqueUrl := strings.Replace(absoluteUrl, client.hostUrl, "", 1)
 
-    // This fixes an issue with GenericFile names that include spaces.
-    opaqueUrl = strings.Replace(opaqueUrl, " ", "%20", -1)
+	// This fixes an issue with GenericFile names that include spaces.
+	opaqueUrl = strings.Replace(opaqueUrl, " ", "%20", -1)
 
 	correctUrl := &url.URL{
 		Scheme: incorrectUrl.Scheme,

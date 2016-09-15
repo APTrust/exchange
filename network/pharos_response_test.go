@@ -165,6 +165,31 @@ func TestGenericFiles(t *testing.T) {
 	assert.NotEmpty(t, resp.GenericFiles())
 }
 
+func TestChecksum(t *testing.T) {
+	testServer := httptest.NewServer(http.HandlerFunc(checksumGetHandler))
+	defer testServer.Close()
+	client, err := network.NewPharosClient(testServer.URL, "v1", "user", "key")
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	resp := client.ChecksumGet(999)
+	assert.Nil(t, resp.Error)
+	assert.NotNil(t, resp.Checksum())
+}
+
+func TestChecksums(t *testing.T) {
+	testServer := httptest.NewServer(http.HandlerFunc(checksumListHandler))
+	defer testServer.Close()
+	client, err := network.NewPharosClient(testServer.URL, "v1", "user", "key")
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	resp := client.ChecksumList(nil)
+	assert.NotEmpty(t, resp.Checksums())
+}
+
 func TestPremisEvent(t *testing.T) {
 	testServer := httptest.NewServer(http.HandlerFunc(premisEventGetHandler))
 	defer testServer.Close()

@@ -771,8 +771,8 @@ func intellectualObjectListHandler(w http.ResponseWriter, r *http.Request) {
 
 func intellectualObjectSaveHandler(w http.ResponseWriter, r *http.Request) {
 	decoder := json.NewDecoder(r.Body)
-    data := make(map[string]interface{})
-    err := decoder.Decode(&data)
+	data := make(map[string]interface{})
+	err := decoder.Decode(&data)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error decoding JSON data: %v", err)
 		fmt.Fprintln(w, "")
@@ -813,8 +813,8 @@ func genericFileListHandler(w http.ResponseWriter, r *http.Request) {
 func genericFileSaveHandler(w http.ResponseWriter, r *http.Request) {
 	decoder := json.NewDecoder(r.Body)
 	decoder.UseNumber()
-    data := make(map[string]interface{})
-    err := decoder.Decode(&data)
+	data := make(map[string]interface{})
+	err := decoder.Decode(&data)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error decoding JSON data: %v", err)
 		fmt.Fprintln(w, "")
@@ -828,6 +828,29 @@ func genericFileSaveHandler(w http.ResponseWriter, r *http.Request) {
 	objJson, _ := json.Marshal(data)
 	w.Header().Set("Content-Type", "application/json")
 	fmt.Fprintln(w, string(objJson))
+}
+
+// -------------------------------------------------------------------------
+// Checksum handlers
+// -------------------------------------------------------------------------
+
+func checksumGetHandler(w http.ResponseWriter, r *http.Request) {
+	obj := testutil.MakeChecksum()
+	objJson, _ := json.Marshal(obj)
+	w.Header().Set("Content-Type", "application/json")
+	fmt.Fprintln(w, string(objJson))
+}
+
+func checksumListHandler(w http.ResponseWriter, r *http.Request) {
+	list := make([]*models.Checksum, 4)
+	for i := 0; i < 4; i++ {
+		list[i] = testutil.MakeChecksum()
+	}
+	data := listResponseData()
+	data["results"] = list
+	listJson, _ := json.Marshal(data)
+	w.Header().Set("Content-Type", "application/json")
+	fmt.Fprintln(w, string(listJson))
 }
 
 // -------------------------------------------------------------------------
@@ -857,8 +880,8 @@ func premisEventListHandler(w http.ResponseWriter, r *http.Request) {
 func premisEventSaveHandler(w http.ResponseWriter, r *http.Request) {
 	decoder := json.NewDecoder(r.Body)
 	decoder.UseNumber()
-    data := make(map[string]interface{})
-    err := decoder.Decode(&data)
+	data := make(map[string]interface{})
+	err := decoder.Decode(&data)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error decoding JSON data: %v", err)
 		fmt.Fprintln(w, "")
@@ -900,8 +923,8 @@ func workItemListHandler(w http.ResponseWriter, r *http.Request) {
 func workItemSaveHandler(w http.ResponseWriter, r *http.Request) {
 	decoder := json.NewDecoder(r.Body)
 	decoder.UseNumber()
-    data := make(map[string]interface{})
-    err := decoder.Decode(&data)
+	data := make(map[string]interface{})
+	err := decoder.Decode(&data)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error decoding JSON data: %v", err)
 		fmt.Fprintln(w, "")
@@ -931,8 +954,8 @@ func workItemStateGetHandler(w http.ResponseWriter, r *http.Request) {
 func workItemStateSaveHandler(w http.ResponseWriter, r *http.Request) {
 	decoder := json.NewDecoder(r.Body)
 	decoder.UseNumber()
-    data := make(map[string]interface{})
-    err := decoder.Decode(&data)
+	data := make(map[string]interface{})
+	err := decoder.Decode(&data)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error decoding JSON data: %v", err)
 		fmt.Fprintln(w, "")
