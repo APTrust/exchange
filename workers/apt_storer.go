@@ -2,7 +2,7 @@ package workers
 
 import (
 //	"fmt"
-//	"github.com/APTrust/exchange/constants"
+	"github.com/APTrust/exchange/constants"
 	"github.com/APTrust/exchange/context"
 	"github.com/APTrust/exchange/models"
 //	"github.com/APTrust/exchange/network"
@@ -16,7 +16,7 @@ import (
 //	"strconv"
 	"strings"
 	"sync"
-//	"time"
+	"time"
 )
 
 // Stores GenericFiles in long-term storage (S3 and Glacier).
@@ -60,13 +60,6 @@ func (storer *APTStorer) HandleMessage(message *nsq.Message) (error) {
 		return err
 	}
 
-	// Tell Pharos that we've started to store this item.
-	ingestState.WorkItem, err = storer.markWorkItemStarted(ingestState)
-	if err != nil {
-		storer.Context.MessageLog.Error(err.Error())
-		return err
-	}
-
 	// Disable auto response, so we can tell NSQ when we need to
 	// that we're still working on this item.
 	message.DisableAutoResponse()
@@ -74,6 +67,13 @@ func (storer *APTStorer) HandleMessage(message *nsq.Message) (error) {
 	// Clear out any old errors, because we're going to retry
 	// whatever may have failed on the last run.
 	ingestState.IngestManifest.StoreResult.ClearErrors()
+
+	// Tell Pharos that we've started to store this item.
+	ingestState.WorkItem, err = storer.markWorkItemStarted(ingestState)
+	if err != nil {
+		storer.Context.MessageLog.Error(err.Error())
+		return err
+	}
 
 	storer.Context.MessageLog.Info("Putting %s/%s into record queue",
 		ingestState.IngestManifest.S3Bucket, ingestState.IngestManifest.S3Key)
@@ -133,9 +133,24 @@ func (storer *APTStorer) cleanup () {
 //
 // -------------------------------------------------------------------------
 func (storer *APTStorer) record () {
-//	for ingestState := range storer.RecordChannel {
-
-//	}
+	for ingestState := range storer.RecordChannel {
+		if ingestState.IngestManifest.HasFatalErrors() {
+			// Set WorkItem node=nil, pid=0, retry=false, needs_admin_review=true
+			// Finish the NSQ message
+			ingestState.FinishNSQ()
+			storer.markWorkItemFailed(ingestState)
+		} else if ingestState.IngestManifest.HasErrors() {
+			// Set WorkItem node=nil, pid=0
+			// Requeue the NSQ message
+			ingestState.RequeueNSQ(1000)
+			storer.markWorkItemRequeued(ingestState)
+		} else {
+			// Set WorkItem stage to StageStore, status to StatusPending, node=nil, pid=0
+			// Finish the NSQ message
+			ingestState.FinishNSQ()
+			storer.markWorkItemSucceeded(ingestState)
+		}
+	}
 }
 
 func (storer *APTStorer) loadIngestState (message *nsq.Message) (*models.IngestState, error) {
@@ -192,7 +207,18 @@ func (storer *APTStorer) copyToSecondaryStorage (ingestState *models.IngestState
 // Tell Pharos we've started copying this item's files to
 // long-term storage.
 func (storer *APTStorer) markWorkItemStarted (ingestState *models.IngestState) (*models.WorkItem, error) {
-	return nil, nil
+	storer.Context.MessageLog.Info("Telling Pharos record started for %s/%s",
+		ingestState.WorkItem.Bucket, ingestState.WorkItem.Name)
+	ingestState.WorkItem.SetNodeAndPid()
+	ingestState.WorkItem.Stage = constants.StageFetch
+	*ingestState.WorkItem.StageStartedAt = time.Now().UTC()
+	ingestState.WorkItem.Status = constants.StatusStarted
+	ingestState.WorkItem.Note = "Copying files to long-term storage"
+	resp := storer.Context.PharosClient.WorkItemSave(ingestState.WorkItem)
+	if resp.Error != nil {
+		return nil, resp.Error
+	}
+	return resp.WorkItem(), nil
 }
 
 // Tell Pharos we finished copying all files to long-term
