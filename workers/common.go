@@ -65,7 +65,7 @@ func RecordWorkItemState(ingestState *models.IngestState, _context *context.Cont
 }
 
 // Tell Pharos that this item failed processing due to a fatal error.
-func MarkWorkItemFailed (ingestState *models.IngestState, _context *context.Context, currentResult *models.WorkSummary) (error) {
+func MarkWorkItemFailed (ingestState *models.IngestState, _context *context.Context) (error) {
 	_context.MessageLog.Info("Telling Pharos processing failed for %s/%s",
 		ingestState.WorkItem.Bucket, ingestState.WorkItem.Name)
 	ingestState.WorkItem.Node = ""
@@ -74,7 +74,7 @@ func MarkWorkItemFailed (ingestState *models.IngestState, _context *context.Cont
 	ingestState.WorkItem.Retry = false
 	ingestState.WorkItem.NeedsAdminReview = true
 	ingestState.WorkItem.Status = constants.StatusFailed
-	ingestState.WorkItem.Note = currentResult.AllErrorsAsString()
+	ingestState.WorkItem.Note = "Processing failed. " + ingestState.IngestManifest.AllErrorsAsString()
 	resp := _context.PharosClient.WorkItemSave(ingestState.WorkItem)
 	if resp.Error != nil {
 		_context.MessageLog.Error("Could not mark WorkItem failed for %s/%s: %v",
@@ -86,7 +86,7 @@ func MarkWorkItemFailed (ingestState *models.IngestState, _context *context.Cont
 }
 
 // Tell Pharos that this item has been requeued due to transient errors.
-func MarkWorkItemRequeued (ingestState *models.IngestState, _context *context.Context, currentResult *models.WorkSummary) (error) {
+func MarkWorkItemRequeued (ingestState *models.IngestState, _context *context.Context) (error) {
 	_context.MessageLog.Info("Telling Pharos we are requeueing %s/%s",
 		ingestState.WorkItem.Bucket, ingestState.WorkItem.Name)
 	ingestState.WorkItem.Node = ""
@@ -95,7 +95,8 @@ func MarkWorkItemRequeued (ingestState *models.IngestState, _context *context.Co
 	ingestState.WorkItem.Retry = true
 	ingestState.WorkItem.NeedsAdminReview = false
 	ingestState.WorkItem.Status = constants.StatusStarted
-	ingestState.WorkItem.Note = "Item has been requeued due to transient errors. " + currentResult.AllErrorsAsString() + currentResult.AllErrorsAsString()
+	ingestState.WorkItem.Note = "Item has been requeued due to transient errors. " +
+		ingestState.IngestManifest.AllErrorsAsString()
 	resp := _context.PharosClient.WorkItemSave(ingestState.WorkItem)
 	if resp.Error != nil {
 		_context.MessageLog.Error("Could not mark WorkItem requeued for %s/%s: %v",
@@ -107,7 +108,7 @@ func MarkWorkItemRequeued (ingestState *models.IngestState, _context *context.Co
 }
 
 // Tell Pharos that this item was processed successfully.
-func MarkWorkItemSucceeded (ingestState *models.IngestState, _context *context.Context, currentResult *models.WorkSummary, nextStage string) (error) {
+func MarkWorkItemSucceeded (ingestState *models.IngestState, _context *context.Context, nextStage string) (error) {
 	_context.MessageLog.Info("Telling Pharos processing can proceed for %s/%s",
 		ingestState.WorkItem.Bucket, ingestState.WorkItem.Name)
 	ingestState.WorkItem.Node = ""

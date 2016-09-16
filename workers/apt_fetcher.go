@@ -254,14 +254,13 @@ func (fetcher *APTFetcher) record() {
 
 		if ingestState.IngestManifest.HasFatalErrors() {
 			ingestState.FinishNSQ()
-			MarkWorkItemFailed(ingestState, fetcher.Context, ingestState.IngestManifest.FetchResult)
+			MarkWorkItemFailed(ingestState, fetcher.Context)
 		} else if ingestState.IngestManifest.HasErrors() {
 			ingestState.RequeueNSQ(30000)
-			MarkWorkItemRequeued(ingestState, fetcher.Context, ingestState.IngestManifest.FetchResult)
+			MarkWorkItemRequeued(ingestState, fetcher.Context)
 		} else {
 			ingestState.FinishNSQ()
-			MarkWorkItemSucceeded(ingestState, fetcher.Context,
-				ingestState.IngestManifest.FetchResult, constants.StageStore)
+			MarkWorkItemSucceeded(ingestState, fetcher.Context, constants.StageStore)
 			PushToQueue(ingestState, fetcher.Context, fetcher.Context.Config.StoreWorker.NsqTopic)
 		}
 	}
