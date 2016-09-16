@@ -69,6 +69,8 @@ func (fetcher *APTFetcher) HandleMessage(message *nsq.Message) (error) {
 		fetcher.Context.MessageLog.Error(err.Error())
 		return err
 	}
+	ingestState.NSQMessage = message
+
 	// Save the state of this item in Pharos.
 	RecordWorkItemState(ingestState, fetcher.Context, ingestState.IngestManifest.FetchResult)
 

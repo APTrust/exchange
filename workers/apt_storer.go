@@ -60,6 +60,7 @@ func (storer *APTStorer) HandleMessage(message *nsq.Message) (error) {
 		storer.Context.MessageLog.Error(err.Error())
 		return err
 	}
+	ingestState.NSQMessage = message
 
 	// Disable auto response, so we can tell NSQ when we need to
 	// that we're still working on this item.
