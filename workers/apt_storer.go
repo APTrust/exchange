@@ -176,10 +176,10 @@ func (storer *APTStorer) saveFile (ingestState *models.IngestState, gf *models.G
 	}
 	// Now copy to storage only if the file has changed.
 	if gf.IngestNeedsSave {
-		if gf.IngestStoredAt.IsZero() {
+		if gf.IngestStoredAt.IsZero() || gf.IngestStorageURL == "" {
 			storer.copyToLongTermStorage(ingestState, gf, "s3")
 		}
-		if gf.IngestReplicatedAt.IsZero() {
+		if gf.IngestReplicatedAt.IsZero() || gf.IngestReplicationURL == "" {
 			storer.copyToLongTermStorage(ingestState, gf, "glacier")
 		}
 	}
@@ -224,6 +224,7 @@ func (storer *APTStorer) copyToLongTermStorage (ingestState *models.IngestState,
 				defer readCloser.Close()
 				uploader.Send(readCloser)
 				if uploader.ErrorMessage == "" {
+					storer.markFileAsStored(gf, sendWhere, uploader.Response.Location)
 					return // Upload succeeded
 				} else {
 					if attemptNumber == MAX_UPLOAD_ATTEMPTS {
@@ -319,6 +320,15 @@ func (storer *APTStorer) assertRequiredMetadata (ingestState *models.IngestState
 	return allKeysPresent
 }
 
+func (storer *APTStorer) markFileAsStored (gf *models.GenericFile, sendWhere, storageUrl string) {
+	if sendWhere == "s3" {
+		gf.IngestStoredAt = time.Now().UTC()
+		gf.IngestStorageURL = storageUrl
+	} else if sendWhere == "glacier" {
+		gf.IngestReplicatedAt = time.Now().UTC()
+		gf.IngestReplicationURL = storageUrl
+	}
+}
 // Tell Pharos we've started copying this item's files to
 // long-term storage.
 func (storer *APTStorer) markWorkItemStarted (ingestState *models.IngestState) (*models.WorkItem, error) {

@@ -239,7 +239,7 @@ func (fetcher *APTFetcher) cleanup() {
 }
 
 // -------------------------------------------------------------------------
-// Step 4 of 4: Record updates the WorItem and WorkItemState in Pharos.
+// Step 4 of 4: Record updates the WorkItem and WorkItemState in Pharos.
 //
 // record tells Pharos what's happened with this WorkItem,
 // and it pushes the item into the next queue (validation)
@@ -269,7 +269,6 @@ func (fetcher *APTFetcher) record() {
 			ingestState.FinishNSQ()
 			fetcher.markWorkItemSucceeded(ingestState)
 		}
-
 	}
 }
 
