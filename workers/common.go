@@ -5,8 +5,12 @@ import (
 	"github.com/APTrust/exchange/constants"
 	"github.com/APTrust/exchange/context"
 	"github.com/APTrust/exchange/models"
+	"github.com/APTrust/exchange/util"
 	"github.com/nsqio/go-nsq"
 	"log"
+	"net/http"
+	"path/filepath"
+	"strconv"
 	"time"
 )
 
@@ -21,6 +25,141 @@ func CreateNsqConsumer(config *models.Config, workerConfig *models.WorkerConfig)
 	nsqConfig.Set("msg_timeout", workerConfig.MessageTimeout)
 	return nsq.NewConsumer(workerConfig.NsqTopic, workerConfig.NsqChannel, nsqConfig)
 }
+
+// Set up the basic pieces of data we'll need to process a request.
+// Param initIfEmpty says we should initialize an IntellectualObject
+// if we can't find one in the IngestManifest. That should only happen
+// in apt_fetcher, where we're often fetching new bags that Pharos has
+// never seen before. All other workers should pass in false for initIfEmpty.
+func GetIngestState (message *nsq.Message, _context *context.Context, initIfEmpty bool) (*models.IngestState, error) {
+	workItem, err := GetWorkItem(message, _context)
+	if err != nil {
+		return nil, err
+	}
+
+	// TODO: Check WorkItem here. If another node or process owns it,
+	// let it go.
+
+	workItemState, err := GetWorkItemState(workItem, _context, initIfEmpty)
+	if err != nil {
+		return nil, err
+	}
+	ingestManifest, err := workItemState.IngestManifest()
+	if err != nil {
+		return nil, err
+	}
+	ingestState := &models.IngestState{
+		WorkItem: workItem,
+		WorkItemState: workItemState,
+		IngestManifest: ingestManifest,
+	}
+
+	// If this is a new WorkItemState, we didn't load it from Pharos,
+	// and we have no IntelObj data. So set the basic IntelObj data now.
+	// This should ONLY happen in the apt_fetcher. All other processes
+	// MUST have an IntellectualObject to proceed.
+	if workItemState.Id == 0 {
+		if initIfEmpty {
+			SetBasicObjectInfo(ingestState, _context)
+		} else {
+			return ingestState, fmt.Errorf("IngestState is missing IntellectualObject.")
+		}
+	}
+
+	return ingestState, err
+}
+
+// Gets the WorkItem with the specified Id from Pharos.
+func GetWorkItem(message *nsq.Message, _context *context.Context) (*models.WorkItem, error) {
+	workItemId, err := strconv.Atoi(string(message.Body))
+	if err != nil {
+		return nil, fmt.Errorf("Could not get WorkItemId from NSQ message body: %v", err)
+	}
+	resp := _context.PharosClient.WorkItemGet(workItemId)
+	if resp.Error != nil {
+		return nil, fmt.Errorf("Error getting WorkItem %d from Pharos: %v", err)
+	}
+	workItem := resp.WorkItem()
+	if workItem == nil {
+		return nil, fmt.Errorf("Pharos returned nil for WorkItem %d", workItemId)
+	}
+	return workItem, nil
+}
+
+// Gets the WorkItemState associated with the specified WorkItem from Pharos.
+// Param initIfEmpty should be true ONLY when calling from apt_fetcher, which
+// is working with objects that are not yet in the system.
+func GetWorkItemState(workItem *models.WorkItem, _context *context.Context, initIfEmpty bool) (*models.WorkItemState, error) {
+	var workItemState *models.WorkItemState
+	var err error
+	resp := _context.PharosClient.WorkItemStateGet(workItem.Id)
+	if resp.Response.StatusCode == http.StatusNotFound {
+		if initIfEmpty {
+			// Record has not been created yet, so build a new one now.
+			workItemState, err = InitWorkItemState(workItem)
+			if err != nil {
+				return nil, err
+			}
+		} else {
+			// Not found and we're not supposed to init. That's trouble.
+			// It means we're being called from some worker other than
+			// apt_fetcher, and those workers require that a WorkItemState
+			// record exist.
+			return nil, fmt.Errorf("HTTP 404. Pharos has no WorkItemState with WorkItem id %d", workItem.Id)
+		}
+	} else if resp.Error != nil {
+		// We got some other 4xx/5xx error from the Pharos REST service.
+		return nil, fmt.Errorf("Error getting WorkItemState for WorkItem %d from Pharos: %v", resp.Error)
+	} else {
+		// We didn't get a 404 or any other error. The WorkItemState should be in
+		// the response.
+		workItemState = resp.WorkItemState()
+		if workItemState == nil {
+			return nil, fmt.Errorf("Pharos returned nil for WorkItemState with WorkItem id %d", workItem.Id)
+		}
+	}
+	return workItemState, nil
+}
+
+// This is used only by apt_fetcher, when we're working on a brand new
+// ingest bag that doesn't yet have a WorkItemState record.
+func InitWorkItemState (workItem *models.WorkItem) (*models.WorkItemState, error) {
+	ingestManifest := models.NewIngestManifest()
+	ingestManifest.WorkItemId = workItem.Id
+	ingestManifest.S3Bucket = workItem.Bucket
+	ingestManifest.S3Key = workItem.Name
+	ingestManifest.ETag = workItem.ETag
+	workItemState := models.NewWorkItemState(workItem.Id, constants.ActionIngest, "")
+	err := workItemState.SetStateFromIngestManifest(ingestManifest)
+	if err != nil {
+		return nil, err
+	}
+	return workItemState, nil
+}
+
+
+// This is really only used by apt_fetcher to initialize some barebones data on
+// an empty IntellectualObject.
+func SetBasicObjectInfo(ingestState *models.IngestState, _context *context.Context) {
+	// instIdentifier is, e.g., virginia.edu, ncsu.edu, etc.
+	// We'll download the tar file from the receiving bucket to
+	// something like /mnt/apt/data/virginia.edu/name_of_bag.tar
+	// See IngestTarFilePath below.
+	instIdentifier := util.OwnerOf(ingestState.IngestManifest.S3Bucket)
+	ingestState.IngestManifest.Object.BagName = util.CleanBagName(ingestState.IngestManifest.S3Key)
+	ingestState.IngestManifest.Object.Institution = instIdentifier
+	// -----------------------------------------------------------
+	// TODO: Get institution id! (Cache them?)
+	// -----------------------------------------------------------
+	//ingestState.IngestManifest.Object.InstitutionId =
+	ingestState.IngestManifest.Object.IngestS3Bucket = ingestState.IngestManifest.S3Bucket
+	ingestState.IngestManifest.Object.IngestS3Key = ingestState.IngestManifest.S3Key
+	ingestState.IngestManifest.Object.IngestTarFilePath = filepath.Join(
+		_context.Config.TarDirectory,
+		instIdentifier, ingestState.IngestManifest.S3Key)
+
+}
+
 
 // Record the WorkItemState for this task. We drop a copy into our
 // JSON log as a backup, and updated the WorkItemState in Pharos,
@@ -149,7 +288,6 @@ func MarkWorkItemSucceeded (ingestState *models.IngestState, _context *context.C
 	return nil
 }
 
-
 // Push this item into the specified NSQ topic.
 func PushToQueue (ingestState *models.IngestState, _context *context.Context, queueTopic string) {
 	err := _context.NSQClient.Enqueue(
@@ -166,7 +304,6 @@ func PushToQueue (ingestState *models.IngestState, _context *context.Context, qu
 		RecordWorkItemState(ingestState, _context, ingestState.IngestManifest.FetchResult)
 	}
 }
-
 
 // Dump the WorkItemState.State into the JSON log, surrounded my markers that
 // make it easy to find. This log gets big.

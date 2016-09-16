@@ -6,14 +6,10 @@ import (
 	"github.com/APTrust/exchange/context"
 	"github.com/APTrust/exchange/models"
 	"github.com/APTrust/exchange/network"
-	"github.com/APTrust/exchange/util"
 	"github.com/APTrust/exchange/util/fileutil"
 	"github.com/APTrust/exchange/validation"
 	"github.com/nsqio/go-nsq"
-	"net/http"
 	"os"
-	"path/filepath"
-	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -68,7 +64,7 @@ func (fetcher *APTFetcher) HandleMessage(message *nsq.Message) (error) {
 
 	// Set up our IngestState. Most of this comes from Pharos;
 	// some of it we have to build fresh.
-	ingestState, err := fetcher.initIngestState(message)
+	ingestState, err := GetIngestState(message, fetcher.Context, true)
 	if err != nil {
 		fetcher.Context.MessageLog.Error(err.Error())
 		return err
@@ -197,7 +193,7 @@ func (fetcher *APTFetcher) validate() {
 			// but we have to reset some basic data that's only available
 			// in the current context.
 			ingestState.IngestManifest.Object = validationResult.IntellectualObject
-			fetcher.setBasicObjectInfo(ingestState)
+			SetBasicObjectInfo(ingestState, fetcher.Context)
 
 			// If the bag is invalid, that's a fatal error. We should not do
 			// any further processing on it.
@@ -320,126 +316,6 @@ func (fetcher *APTFetcher) canSkipFetchAndValidate (ingestState *models.IngestSt
 		ingestState.IngestManifest.ValidateResult.Finished() &&
 		!ingestState.IngestManifest.HasFatalErrors() &&
 		fileutil.FileExists(ingestState.IngestManifest.Object.IngestTarFilePath))
-}
-
-// Set up the basic pieces of data we'll need to process a fetch request.
-func (fetcher *APTFetcher) initIngestState (message *nsq.Message) (*models.IngestState, error) {
-	workItem, err := fetcher.getWorkItem(message)
-	if err != nil {
-		return nil, err
-	}
-
-	// TODO: Check WorkItem here. If another node or process owns it,
-	// let it go.
-
-	workItemState, err := fetcher.getWorkItemState(workItem)
-	if err != nil {
-		return nil, err
-	}
-	ingestManifest, err := workItemState.IngestManifest()
-	if err != nil {
-		return nil, err
-	}
-	ingestState := &models.IngestState{
-		WorkItem: workItem,
-		WorkItemState: workItemState,
-		IngestManifest: ingestManifest,
-	}
-
-	// If this is a new WorkItemState, we didn't load it from Pharos,
-	// and we have no IntelObj data. So set the basic IntelObj data now.
-	if workItemState.Id == 0 {
-		fetcher.setBasicObjectInfo(ingestState)
-	}
-
-	return ingestState, err
-}
-
-// Set some basic info on our intellectual object. Note that this may be called
-// twice. First, when we're processing a brand new WorkItem and have to set the
-// basic IntellectualObject data for the first time. Second, after the BagValidator
-// returns its version of the IntellectualObject, which may not include this info.
-func (fetcher *APTFetcher) setBasicObjectInfo(ingestState *models.IngestState) {
-	// instIdentifier is, e.g., virginia.edu, ncsu.edu, etc.
-	// We'll download the tar file from the receiving bucket to
-	// something like /mnt/apt/data/virginia.edu/name_of_bag.tar
-	// See IngestTarFilePath below.
-	instIdentifier := util.OwnerOf(ingestState.IngestManifest.S3Bucket)
-	ingestState.IngestManifest.Object.BagName = util.CleanBagName(ingestState.IngestManifest.S3Key)
-	ingestState.IngestManifest.Object.Institution = instIdentifier
-	// -----------------------------------------------------------
-	// TODO: Get institution id! (Cache them?)
-	// -----------------------------------------------------------
-	//ingestState.IngestManifest.Object.InstitutionId =
-	ingestState.IngestManifest.Object.IngestS3Bucket = ingestState.IngestManifest.S3Bucket
-	ingestState.IngestManifest.Object.IngestS3Key = ingestState.IngestManifest.S3Key
-	ingestState.IngestManifest.Object.IngestTarFilePath = filepath.Join(
-		fetcher.Context.Config.TarDirectory,
-		instIdentifier, ingestState.IngestManifest.S3Key)
-
-}
-
-// Returns the WorkItem record from Pharos that has the WorkItemId
-// specified in the NSQ message.
-func (fetcher *APTFetcher) getWorkItem(message *nsq.Message) (*models.WorkItem, error) {
-	workItemId, err := strconv.Atoi(string(message.Body))
-	if err != nil {
-		return nil, fmt.Errorf("Could not get WorkItemId from NSQ message body: %v", err)
-	}
-	resp := fetcher.Context.PharosClient.WorkItemGet(workItemId)
-	if resp.Error != nil {
-		return nil, fmt.Errorf("Error getting WorkItem %d from Pharos: %v", err)
-	}
-	workItem := resp.WorkItem()
-	if workItem == nil {
-		return nil, fmt.Errorf("Pharos returned nil for WorkItem %d", workItemId)
-	}
-	return workItem, nil
-}
-
-// Returns the WorkItemState record from Pharos with the specified workItem.Id,
-// or creates a new WorkItemState (if necessary) and returns that. If this is
-// the first time we've attempted to ingest this item, we'll have to crate a
-// new WorkItemState.
-func (fetcher *APTFetcher) getWorkItemState(workItem *models.WorkItem) (*models.WorkItemState, error) {
-	var workItemState *models.WorkItemState
-	var err error
-	resp := fetcher.Context.PharosClient.WorkItemStateGet(workItem.Id)
-	if resp.Response.StatusCode == http.StatusNotFound {
-		// Record has not been created yet, so build a new one now.
-		workItemState, err = fetcher.initWorkItemState(workItem)
-		if err != nil {
-			return nil, err
-		}
-	} else if resp.Error != nil {
-		// We got some other 4xx/5xx error from the Pharos REST service.
-		return nil, fmt.Errorf("Error getting WorkItemState for WorkItem %d from Pharos: %v", resp.Error)
-	} else {
-		// We didn't get a 404 or any other error. The WorkItemState should be in
-		// the response.
-		workItemState = resp.WorkItemState()
-		if workItemState == nil {
-			return nil, fmt.Errorf("Pharos returned nil for WorkItemState with WorkItem id %d", workItem.Id)
-		}
-	}
-	return workItemState, nil
-}
-
-// Create a new WorkItemState object for this WorkItem.
-// We do this only when Pharos doesn't already have a WorkItemState
-// object, which is often the case when ingesting new bags.
-func (fetcher *APTFetcher) initWorkItemState (workItem *models.WorkItem) (*models.WorkItemState, error) {
-	ingestManifest := models.NewIngestManifest()
-	ingestManifest.WorkItemId = workItem.Id
-	ingestManifest.S3Bucket = workItem.Bucket
-	ingestManifest.S3Key = workItem.Name
-	ingestManifest.ETag = workItem.ETag
-	workItemState := models.NewWorkItemState(workItem.Id, constants.ActionIngest, "")
-	err := workItemState.SetStateFromIngestManifest(ingestManifest)
-	if err != nil {
-		return nil, err
-	}
-	return workItemState, nil
 }
 
 // Download the file, and update the IngestManifest while we're at it.
