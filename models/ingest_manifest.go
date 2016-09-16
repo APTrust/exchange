@@ -6,6 +6,7 @@ type IngestManifest struct {
 	S3Key              string
 	ETag               string
 	FetchResult        *WorkSummary
+	UntarResult        *WorkSummary
 	ValidateResult     *WorkSummary
 	StoreResult        *WorkSummary
 	RecordResult       *WorkSummary
@@ -16,6 +17,7 @@ type IngestManifest struct {
 func NewIngestManifest() (*IngestManifest) {
 	return &IngestManifest{
 		FetchResult: NewWorkSummary(),
+		UntarResult: NewWorkSummary(),
 		ValidateResult: NewWorkSummary(),
 		StoreResult: NewWorkSummary(),
 		RecordResult: NewWorkSummary(),
@@ -28,6 +30,7 @@ func NewIngestManifest() (*IngestManifest) {
 
 func (manifest *IngestManifest) HasErrors() (bool) {
 	return (manifest.FetchResult.HasErrors() ||
+		manifest.UntarResult.HasErrors() ||
 		manifest.ValidateResult.HasErrors() ||
 		manifest.StoreResult.HasErrors() ||
 		manifest.RecordResult.HasErrors() ||
@@ -36,6 +39,7 @@ func (manifest *IngestManifest) HasErrors() (bool) {
 
 func (manifest *IngestManifest) HasFatalErrors() (bool) {
 	return (manifest.FetchResult.ErrorIsFatal ||
+		manifest.UntarResult.ErrorIsFatal ||
 		manifest.ValidateResult.ErrorIsFatal ||
 		manifest.StoreResult.ErrorIsFatal ||
 		manifest.RecordResult.ErrorIsFatal ||
@@ -45,6 +49,7 @@ func (manifest *IngestManifest) HasFatalErrors() (bool) {
 func (manifest *IngestManifest) AllErrorsAsString() (string) {
 	errors := []string {
 		manifest.FetchResult.AllErrorsAsString(),
+		manifest.UntarResult.AllErrorsAsString(),
 		manifest.ValidateResult.AllErrorsAsString(),
 		manifest.StoreResult.AllErrorsAsString(),
 		manifest.RecordResult.AllErrorsAsString(),

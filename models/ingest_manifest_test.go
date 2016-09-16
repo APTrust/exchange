@@ -25,6 +25,11 @@ func TestIngestManifest_HasErrors(t *testing.T) {
 	manifest.FetchResult.ClearErrors()
 	assert.False(t, manifest.HasErrors())
 
+	manifest.UntarResult.AddError("error")
+	assert.True(t, manifest.HasErrors())
+	manifest.UntarResult.ClearErrors()
+	assert.False(t, manifest.HasErrors())
+
 	manifest.ValidateResult.AddError("error")
 	assert.True(t, manifest.HasErrors())
 	manifest.ValidateResult.ClearErrors()
@@ -55,6 +60,11 @@ func TestIngestManifest_HasFatalErrors(t *testing.T) {
 	manifest.FetchResult.ClearErrors()
 	assert.False(t, manifest.HasFatalErrors())
 
+	manifest.UntarResult.ErrorIsFatal = true
+	assert.True(t, manifest.HasFatalErrors())
+	manifest.UntarResult.ClearErrors()
+	assert.False(t, manifest.HasFatalErrors())
+
 	manifest.ValidateResult.ErrorIsFatal = true
 	assert.True(t, manifest.HasFatalErrors())
 	manifest.ValidateResult.ClearErrors()
@@ -81,11 +91,12 @@ func TestIngestManifest_AllErrorsAsString(t *testing.T) {
 	assert.False(t, manifest.HasErrors())
 
 	manifest.FetchResult.AddError("error 1")
-	manifest.ValidateResult.AddError("error 2")
-	manifest.StoreResult.AddError("error 3")
-	manifest.RecordResult.AddError("error 4")
-	manifest.CleanupResult.AddError("error 5")
+	manifest.FetchResult.AddError("error 2")
+	manifest.ValidateResult.AddError("error 3")
+	manifest.StoreResult.AddError("error 4")
+	manifest.RecordResult.AddError("error 5")
+	manifest.CleanupResult.AddError("error 6")
 
-	expected := "error 1\nerror 2\nerror 3\nerror 4\nerror 5\n"
+	expected := "error 1\nerror 2\nerror 3\nerror 4\nerror 5\nerror 6\n"
 	assert.Equal(t, expected, manifest.AllErrorsAsString())
 }
