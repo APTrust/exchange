@@ -80,6 +80,7 @@ func (client *S3Upload) AddMetadata(key, value string) {
 
 // Upload a file to S3. If ErrorMessage == "", the upload succeeded.
 // Check S3Upload.Response.Localtion for the item's S3 URL.
+// Caller is responsible for closing the reader.
 func (client *S3Upload) Send(reader io.Reader) {
 	_session := client.GetSession()
 	if _session == nil {

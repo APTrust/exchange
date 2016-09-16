@@ -19,6 +19,10 @@ import (
 	"time"
 )
 
+// 15 seemed to be the magic number in the first generation of the software.
+// On large uploads, network errors are common.
+const MAX_UPLOAD_ATTEMPTS = 15
+
 // Stores GenericFiles in long-term storage (S3 and Glacier).
 type APTStorer struct {
 	Context             *context.Context
@@ -176,10 +180,10 @@ func (storer *APTStorer) saveFile (ingestState *models.IngestState, gf *models.G
 	// Now copy to storage only if the file has changed.
 	if gf.IngestNeedsSave {
 		if gf.IngestStoredAt.IsZero() {
-			storer.copyToPrimaryStorage(ingestState, gf)
+			storer.copyToLongTermStorage(ingestState, gf, "s3")
 		}
 		if gf.IngestReplicatedAt.IsZero() {
-			storer.copyToSecondaryStorage(ingestState, gf)
+			storer.copyToLongTermStorage(ingestState, gf, "glacier")
 		}
 	}
 }
@@ -207,34 +211,84 @@ func (storer *APTStorer) getExistingSha256 (gfIdentifier string) (string, error)
 	return existingChecksum.Digest, nil
 }
 
-// Copy the GenericFile to primary storage (S3)
-func (storer *APTStorer) copyToPrimaryStorage (ingestState *models.IngestState, gf *models.GenericFile) {
-	// 15 seemed to be the magic number in the first generation of the software.
-	for attemptNumber := 1; attemptNumber <= 15; attemptNumber++ {
+// Copy the GenericFile to long-term storage in S3 or Glacier
+func (storer *APTStorer) copyToLongTermStorage (ingestState *models.IngestState, gf *models.GenericFile, sendWhere string) {
+	if gf.IngestUUID == "" {
+		ingestState.IngestManifest.StoreResult.AddError("Cannot save %s to %s because " +
+			"GenericFile.IngestUUID is missing", gf.Identifier, sendWhere)
+		ingestState.IngestManifest.StoreResult.ErrorIsFatal = true
+		return
+	}
+	var region string
+	var bucket string
+	if sendWhere == "s3" {
+		region = storer.Context.Config.APTrustS3Region
+		bucket = storer.Context.Config.PreservationBucket
+	} else if sendWhere == "glacier" {
+		region = storer.Context.Config.APTrustGlacierRegion
+		bucket = storer.Context.Config.ReplicationBucket
+	} else {
+		ingestState.IngestManifest.StoreResult.AddError("Cannot save %s to %s because " +
+			"storer doesn't know where %s is", gf.Identifier, sendWhere)
+		ingestState.IngestManifest.StoreResult.ErrorIsFatal = true
+		return
+	}
+	for attemptNumber := 1; attemptNumber <= MAX_UPLOAD_ATTEMPTS; attemptNumber++ {
 		upload := network.NewS3Upload(
-			storer.Context.Config.APTrustS3Region,
-			storer.Context.Config.PreservationBucket,
-			gf.IngestUUID, // TODO: Make sure this is not empty!
-			"",            // TODO: Pass in Reader instead of file!
+			region,
+			bucket,
+			gf.IngestUUID,
 			gf.FileFormat,
 		)
 		upload.AddMetadata("institution", ingestState.IngestManifest.Object.Institution)
 		upload.AddMetadata("bag", ingestState.IngestManifest.Object.Identifier)
 		upload.AddMetadata("bagpath", gf.OriginalPath())
-		upload.AddMetadata("md5", gf.IngestMd5)        // TODO: Make sure this isn't empty
-		upload.AddMetadata("sha256", gf.IngestSha256)  // TODO: Make sure this isn't empty
-		upload.Send()
-		if upload.ErrorMessage != "" {
-			if attemptNumber == 15 {
-				ingestState.IngestManifest.StoreResult.AddError(upload.ErrorMessage)
+		upload.AddMetadata("md5", gf.IngestMd5)
+		upload.AddMetadata("sha256", gf.IngestSha256)
+		if storer.assertRequiredMetadata(ingestState, upload) {
+			tarFilePath := ingestState.IngestManifest.Object.IngestTarFilePath
+			tfi, err := fileutil.NewTarFileIterator(tarFilePath)
+			if tfi != nil {
+				defer tfi.Close()
+			}
+			if err != nil {
+				ingestState.IngestManifest.StoreResult.AddError("Can't get TarFileIterator " +
+					"for %s: %v", tarFilePath, err)
+				return
+			}
+			readCloser, err := tfi.Find(gf.Identifier)
+			if readCloser != nil {
+				defer readCloser.Close()
+			}
+			if err != nil {
+				ingestState.IngestManifest.StoreResult.AddError("Can't get reader for " +
+					"%s: %v", gf.Identifier, err)
+				return
+			}
+			upload.Send(readCloser)
+			if upload.ErrorMessage != "" {
+				if attemptNumber == MAX_UPLOAD_ATTEMPTS {
+					ingestState.IngestManifest.StoreResult.AddError(upload.ErrorMessage)
+				}
 			}
 		}
 	}
 }
 
-// Copy the GenericFile to secondary storage (Glacier)
-func (storer *APTStorer) copyToSecondaryStorage (ingestState *models.IngestState, gf *models.GenericFile) {
-
+// Make sure we send data to S3/Glacier with all of the required metadata.
+func (storer *APTStorer) assertRequiredMetadata (ingestState *models.IngestState, s3Upload *network.S3Upload) (bool) {
+	allKeysPresent := true
+	keys := []string { "institution", "bag", "bagpath", "md5", "sha256" }
+	for _, key := range keys {
+		value := s3Upload.UploadInput.Metadata[key]
+		if value == nil || *value == "" {
+			ingestState.IngestManifest.StoreResult.AddError("S3Upload is missing required " +
+				"metadata key %s", key)
+			ingestState.IngestManifest.StoreResult.ErrorIsFatal = true
+			allKeysPresent = false
+		}
+	}
+	return allKeysPresent
 }
 
 // Tell Pharos we've started copying this item's files to
