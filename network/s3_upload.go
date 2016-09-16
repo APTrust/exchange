@@ -1,22 +1,26 @@
 package network
 
 import (
-    "github.com/aws/aws-sdk-go/service/s3/s3manager"
-    "github.com/aws/aws-sdk-go/aws/session"
-	"os"
+	"github.com/aws/aws-sdk-go/service/s3/s3manager"
+	"github.com/aws/aws-sdk-go/aws/session"
+	"io"
 )
 
 // Typical usage:
 //
 // upload := NewS3Upload(constants.AWSVirginia, config.PreservationBucket,
-//                       "some_uuid", "/mnt/apt/data/college.edu/bag/data/file.xml",
-//                       "application/xml")
+//                       "some_uuid", "application/xml")
 // upload.AddMetadata("institution", "college.edu")
 // upload.AddMetadata("bag", "college.edu/bag")
 // upload.AddMetadata("bagpath", "data/file.xml")
 // upload.AddMetadata("md5", "12345678")
 // upload.AddMetadata("sha256", "87654321")
-// upload.Send()
+// reader, err := os.Open("/path/to/file.txt")
+// if err != nil {
+//    ... whatever ...
+// }
+// defer reader.Close()
+// upload.Send(reader)
 // if upload.ErrorMessage != "" {
 //    ... do something ...
 // }
@@ -24,11 +28,9 @@ import (
 //
 type S3Upload struct {
 	AWSRegion       string
-	LocalPath       string
 	ErrorMessage    string
 	UploadInput     *s3manager.UploadInput
 	Response        *s3manager.UploadOutput
-
 	session         *session.Session
 }
 
@@ -39,11 +41,8 @@ type S3Upload struct {
 //              constants.AWSVirginia, constants.AWSOregon
 // bucket     - The name of the bucket to download from.
 // key        - The name of the file to download.
-// localPath  - Path to which to save the downloaded file.
-//              This may be /dev/null in cases where we're
-//              just running a fixity check.
 // contentType - A standard Content-Type header, like text/html.
-func NewS3Upload(region, bucket, key, localPath, contentType string) (*S3Upload) {
+func NewS3Upload(region, bucket, key, contentType string) (*S3Upload) {
 	uploadInput := &s3manager.UploadInput{
 		Bucket: &bucket,
 		Key: &key,
@@ -52,7 +51,6 @@ func NewS3Upload(region, bucket, key, localPath, contentType string) (*S3Upload)
 	uploadInput.Metadata = make(map[string]*string)
 	return &S3Upload{
 		AWSRegion: region,
-		LocalPath: localPath,
 		UploadInput: uploadInput,
 	}
 }
@@ -82,22 +80,17 @@ func (client *S3Upload) AddMetadata(key, value string) {
 
 // Upload a file to S3. If ErrorMessage == "", the upload succeeded.
 // Check S3Upload.Response.Localtion for the item's S3 URL.
-func (client *S3Upload) Send() {
-	file, err := os.Open(client.LocalPath)
-    if err != nil {
-        client.ErrorMessage = err.Error()
-		return
-    }
-	defer file.Close()
+func (client *S3Upload) Send(reader io.Reader) {
 	_session := client.GetSession()
 	if _session == nil {
 		return
 	}
-	client.UploadInput.Body = file
-    uploader := s3manager.NewUploader(_session)
+	client.UploadInput.Body = reader
+	uploader := s3manager.NewUploader(_session)
 	uploader.LeavePartsOnError = false // we have to pay for abandoned parts
-    client.Response, err = uploader.Upload(client.UploadInput)
-    if err != nil {
-        client.ErrorMessage = err.Error()
-    }
+	var err error
+	client.Response, err = uploader.Upload(client.UploadInput)
+	if err != nil {
+		client.ErrorMessage = err.Error()
+	}
 }

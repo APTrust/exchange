@@ -5,6 +5,8 @@ import (
 	"github.com/APTrust/exchange/constants"
 	"github.com/APTrust/exchange/network"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"os"
 	"testing"
 )
 
@@ -29,11 +31,11 @@ func TestS3ObjectDelete(t *testing.T) {
 	}
 	// Hmmm... don't like having to upload objects first.
 	// But how else to test delete?
-	err := upload("test_obj_1.tar")
+	err := upload(t, "test_obj_1.tar")
 	if err != nil {
 		assert.FailNow(t, "Could not upload file 1 for delete test")
 	}
-	err = upload("test_obj_2.tar")
+	err = upload(t, "test_obj_2.tar")
 	if err != nil {
 		assert.FailNow(t, "Could not upload file 2 for delete test")
 	}
@@ -50,16 +52,17 @@ func TestS3ObjectDelete(t *testing.T) {
 	assert.Empty(t, s3ObjectDelete.Response.Errors)
 }
 
-func upload(key string) (error) {
+func upload(t *testing.T, key string) (error) {
 	upload := network.NewS3Upload(
 		constants.AWSVirginia,
 		testBucket,
 		key,
-		"../testdata/unit_test_bags/virginia.edu.uva-lib_2278801.tar",
 		"application/tar",
 	)
 	upload.AddMetadata("testdata", "THIS IS DELETABLE TEST DATA")
-	upload.Send()
+	file, err := os.Open("../testdata/unit_test_bags/virginia.edu.uva-lib_2278801.tar")
+	require.Nil(t, err)
+	upload.Send(file)
 	if upload.ErrorMessage != "" {
 		return fmt.Errorf(upload.ErrorMessage)
 	}

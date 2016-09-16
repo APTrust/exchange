@@ -4,6 +4,9 @@ import (
 	"github.com/APTrust/exchange/constants"
 	"github.com/APTrust/exchange/network"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"os"
+	"strings"
 	"testing"
 )
 
@@ -15,14 +18,12 @@ func TestNewS3Upload(t *testing.T) {
 		constants.AWSVirginia,
 		testBucket,
 		"s3_upload_test.tar",
-		"file/does/not/exist.tar",
 		"application/tar",
 	)
 	assert.Equal(t, testBucket, *upload.UploadInput.Bucket)
 	assert.Equal(t, "s3_upload_test.tar", *upload.UploadInput.Key)
 	assert.Equal(t, "application/tar", *upload.UploadInput.ContentType)
 	assert.Equal(t, constants.AWSVirginia, upload.AWSRegion)
-	assert.Equal(t, "file/does/not/exist.tar", upload.LocalPath)
 }
 
 func TestS3UploadAddMetadata(t *testing.T) {
@@ -33,7 +34,6 @@ func TestS3UploadAddMetadata(t *testing.T) {
 		constants.AWSVirginia,
 		testBucket,
 		"s3_upload_test.tar",
-		"file/does/not/exist.tar",
 		"application/tar",
 	)
 	upload.AddMetadata("institution", "test.edu")
@@ -56,11 +56,11 @@ func TestS3UploadBadFile(t *testing.T) {
 		constants.AWSVirginia,
 		testBucket,
 		"s3_upload_test.tar",
-		"file/does/not/exist.tar",
 		"application/tar",
 	)
-	upload.Send()
-	assert.Equal(t, "open file/does/not/exist.tar: no such file or directory", upload.ErrorMessage)
+	file, _ := os.Open("file/does/not/exist.tar")
+	upload.Send(file)
+	assert.True(t, strings.Contains(upload.ErrorMessage, "invalid argument"))
 }
 
 func TestS3UploadGoodFile(t *testing.T) {
@@ -71,7 +71,6 @@ func TestS3UploadGoodFile(t *testing.T) {
 		constants.AWSVirginia,
 		testBucket,
 		"s3_upload_test.tar",
-		"../testdata/unit_test_bags/virginia.edu.uva-lib_2278801.tar",
 		"application/tar",
 	)
 	upload.AddMetadata("institution", "test.edu")
@@ -79,6 +78,8 @@ func TestS3UploadGoodFile(t *testing.T) {
 	upload.AddMetadata("bagpath", "data/test/path.xml")
 	upload.AddMetadata("md5", "FAKE-TEST-MD5")
 	upload.AddMetadata("sha256", "FAKE-TEST-SHA256")
-	upload.Send()
+	file, err := os.Open("../testdata/unit_test_bags/virginia.edu.uva-lib_2278801.tar")
+	require.Nil(t, err)
+	upload.Send(file)
 	assert.Equal(t, "", upload.ErrorMessage)
 }
