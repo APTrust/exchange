@@ -247,6 +247,11 @@ func (fetcher *APTFetcher) cleanup() {
 // -------------------------------------------------------------------------
 func (fetcher *APTFetcher) record() {
 	for ingestState := range fetcher.RecordChannel {
+
+		// Copy JSON representation of the IngestManifest to Pharos
+		// and to the JSON log.
+		RecordWorkItemState(ingestState, fetcher.Context, ingestState.IngestManifest.FetchResult)
+
 		// Record the WorkItemState in Pharos. The next process (record)
 		// will need this info to do its work. If there's an error in this
 		// step, RecordWorkItemState will log it and add it to the FetchResult.
@@ -265,21 +270,8 @@ func (fetcher *APTFetcher) record() {
 			// Finish the NSQ message
 			ingestState.FinishNSQ()
 			fetcher.markWorkItemSucceeded(ingestState)
-
-			// Send this item on to the next queue
-			err := fetcher.Context.NSQClient.Enqueue(
-				fetcher.Context.Config.StoreWorker.NsqTopic,
-				ingestState.WorkItem.Id)
-			if err != nil {
-				msg := fmt.Sprintf("Error adding WorkItem %d (%s/%s) to NSQ record topic: %v",
-					ingestState.WorkItem.Id, ingestState.WorkItem.Bucket,
-					ingestState.WorkItem.Name, err)
-				ingestState.IngestManifest.FetchResult.AddError(msg)
-				fetcher.Context.MessageLog.Error(msg)
-			}
+			PushToQueue(ingestState, fetcher.Context, fetcher.Context.Config.StoreWorker.NsqTopic)
 		}
-		// Dump a JSON representation of the IngestManifest to the JSON log.
-		RecordWorkItemState(ingestState, fetcher.Context, ingestState.IngestManifest.FetchResult)
 	}
 }
 

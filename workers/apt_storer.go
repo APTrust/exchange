@@ -135,21 +135,21 @@ func (storer *APTStorer) cleanup () {
 // -------------------------------------------------------------------------
 func (storer *APTStorer) record () {
 	for ingestState := range storer.RecordChannel {
+		// Copy JSON representation of the IngestManifest to Pharos
+		// and to the JSON log.
+		RecordWorkItemState(ingestState, storer.Context, ingestState.IngestManifest.FetchResult)
+
 		if ingestState.IngestManifest.HasFatalErrors() {
-			// Set WorkItem node=nil, pid=0, retry=false, needs_admin_review=true
-			// Finish the NSQ message
 			ingestState.FinishNSQ()
 			storer.markWorkItemFailed(ingestState)
 		} else if ingestState.IngestManifest.HasErrors() {
-			// Set WorkItem node=nil, pid=0
-			// Requeue the NSQ message
 			ingestState.RequeueNSQ(1000)
 			storer.markWorkItemRequeued(ingestState)
 		} else {
-			// Set WorkItem stage to StageStore, status to StatusPending, node=nil, pid=0
-			// Finish the NSQ message
 			ingestState.FinishNSQ()
 			storer.markWorkItemSucceeded(ingestState)
+			// Move to next queue
+			// If item can't be queued, RecordWorkItemState again
 		}
 	}
 }
@@ -168,7 +168,7 @@ func (storer *APTStorer) saveFile (ingestState *models.IngestState, gf *models.G
 		return
 	}
 	// Set this, for the record.
-	if existingSha256 == "" {
+	if existingSha256 != "" {
 		gf.IngestPreviousVersionExists = true
 		if existingSha256 != gf.IngestSha256 {
 			gf.IngestNeedsSave = false

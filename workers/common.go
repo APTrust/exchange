@@ -64,6 +64,24 @@ func RecordWorkItemState(ingestState *models.IngestState, _context *context.Cont
 }
 
 
+// Push this item into the specified NSQ topic.
+func PushToQueue (ingestState *models.IngestState, _context *context.Context, queueTopic string) {
+	err := _context.NSQClient.Enqueue(
+		queueTopic,
+		ingestState.WorkItem.Id)
+	if err != nil {
+		msg := fmt.Sprintf("Error adding WorkItem %d (%s/%s) to NSQ record topic: %v",
+			ingestState.WorkItem.Id, ingestState.WorkItem.Bucket,
+			ingestState.WorkItem.Name, err)
+		ingestState.IngestManifest.FetchResult.AddError(msg)
+		_context.MessageLog.Error(msg)
+		// Record work item state again, to capture the
+		// cannot-be-queued error.
+		RecordWorkItemState(ingestState, _context, ingestState.IngestManifest.FetchResult)
+	}
+}
+
+
 // Dump the WorkItemState.State into the JSON log, surrounded my markers that
 // make it easy to find. This log gets big.
 func LogJson (ingestState *models.IngestState, jsonLog *log.Logger) {
