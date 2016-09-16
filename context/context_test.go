@@ -27,6 +27,7 @@ func TestNewContext(t *testing.T) {
 	expectedPathToJsonLog := filepath.Join(_context.Config.AbsLogDirectory(), path.Base(os.Args[0])+".json")
 
 	assert.NotNil(t, _context.Config)
+	assert.NotNil(t, _context.NSQClient)
 	assert.NotNil(t, _context.PharosClient)
 	assert.NotNil(t, _context.MessageLog)
 	assert.NotNil(t, _context.JsonLog)

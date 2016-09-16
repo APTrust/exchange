@@ -21,6 +21,7 @@ type Context struct {
 	Config          *models.Config
 	MessageLog      *logging.Logger
 	JsonLog         *stdlog.Logger
+	NSQClient       *network.NSQClient
 	PharosClient    *network.PharosClient
 	VolumeClient    *network.VolumeClient
 	pathToLogFile   string
@@ -49,6 +50,7 @@ func NewContext(config *models.Config) (context *Context) {
 	context.MessageLog, context.pathToLogFile = logger.InitLogger(config)
 	context.JsonLog, context.pathToJsonLog = logger.InitJsonLogger(config)
 	context.VolumeClient = network.NewVolumeClient(context.Config.VolumeServicePort)
+	context.NSQClient = network.NewNSQClient(context.Config.NsqdHttpAddress)
 	context.initPharosClient()
 	return context
 }
