@@ -252,24 +252,16 @@ func (fetcher *APTFetcher) record() {
 		// and to the JSON log.
 		RecordWorkItemState(ingestState, fetcher.Context, ingestState.IngestManifest.FetchResult)
 
-		// Record the WorkItemState in Pharos. The next process (record)
-		// will need this info to do its work. If there's an error in this
-		// step, RecordWorkItemState will log it and add it to the FetchResult.
 		if ingestState.IngestManifest.HasFatalErrors() {
-			// Set WorkItem node=nil, pid=0, retry=false, needs_admin_review=true
-			// Finish the NSQ message
 			ingestState.FinishNSQ()
-			fetcher.markWorkItemFailed(ingestState)
+			MarkWorkItemFailed(ingestState, fetcher.Context, ingestState.IngestManifest.FetchResult)
 		} else if ingestState.IngestManifest.HasErrors() {
-			// Set WorkItem node=nil, pid=0
-			// Requeue the NSQ message
-			ingestState.RequeueNSQ(1000)
-			fetcher.markWorkItemRequeued(ingestState)
+			ingestState.RequeueNSQ(30000)
+			MarkWorkItemRequeued(ingestState, fetcher.Context, ingestState.IngestManifest.FetchResult)
 		} else {
-			// Set WorkItem stage to StageStore, status to StatusPending, node=nil, pid=0
-			// Finish the NSQ message
 			ingestState.FinishNSQ()
-			fetcher.markWorkItemSucceeded(ingestState)
+			MarkWorkItemSucceeded(ingestState, fetcher.Context,
+				ingestState.IngestManifest.FetchResult, constants.StageStore)
 			PushToQueue(ingestState, fetcher.Context, fetcher.Context.Config.StoreWorker.NsqTopic)
 		}
 	}
@@ -475,70 +467,6 @@ func (fetcher *APTFetcher) recordValidationStarted (workItem *models.WorkItem) (
 		return nil, resp.Error
 	}
 	return resp.WorkItem(), nil
-}
-
-// Tell Pharos that this item cannot be ingested, due to a fatal error.
-func (fetcher *APTFetcher) markWorkItemFailed (ingestState *models.IngestState) (error) {
-	fetcher.Context.MessageLog.Info("Telling Pharos ingest failed for %s/%s",
-		ingestState.WorkItem.Bucket, ingestState.WorkItem.Name)
-	ingestState.WorkItem.Node = ""
-	ingestState.WorkItem.Pid = 0
-	ingestState.WorkItem.StageStartedAt = nil
-	ingestState.WorkItem.Retry = false
-	ingestState.WorkItem.NeedsAdminReview = true
-	ingestState.WorkItem.Status = constants.StatusFailed
-	ingestState.WorkItem.Note = ingestState.IngestManifest.FetchResult.AllErrorsAsString() + ingestState.IngestManifest.ValidateResult.AllErrorsAsString()
-	resp := fetcher.Context.PharosClient.WorkItemSave(ingestState.WorkItem)
-	if resp.Error != nil {
-		fetcher.Context.MessageLog.Error("Could not mark WorkItem failed for %s/%s: %v",
-			ingestState.WorkItem.Bucket, ingestState.WorkItem.Name, resp.Error)
-		return resp.Error
-	}
-	ingestState.WorkItem = resp.WorkItem()
-	return nil
-}
-
-// Tell Pharos that this item has been requeued due to transient errors.
-func (fetcher *APTFetcher) markWorkItemRequeued (ingestState *models.IngestState) (error) {
-	fetcher.Context.MessageLog.Info("Telling Pharos ingest is being requeued for %s/%s",
-		ingestState.WorkItem.Bucket, ingestState.WorkItem.Name)
-	ingestState.WorkItem.Node = ""
-	ingestState.WorkItem.Pid = 0
-	ingestState.WorkItem.StageStartedAt = nil
-	ingestState.WorkItem.Retry = true
-	ingestState.WorkItem.NeedsAdminReview = false
-	ingestState.WorkItem.Status = constants.StatusStarted
-	ingestState.WorkItem.Note = "Item has been requeued due to transient errors. " + ingestState.IngestManifest.FetchResult.AllErrorsAsString() + ingestState.IngestManifest.ValidateResult.AllErrorsAsString()
-	resp := fetcher.Context.PharosClient.WorkItemSave(ingestState.WorkItem)
-	if resp.Error != nil {
-		fetcher.Context.MessageLog.Error("Could not mark WorkItem requeued for %s/%s: %v",
-			ingestState.WorkItem.Bucket, ingestState.WorkItem.Name, resp.Error)
-		return resp.Error
-	}
-	ingestState.WorkItem = resp.WorkItem()
-	return nil
-}
-
-// Tell Pharos that this item was successfully downloaded and validated.
-func (fetcher *APTFetcher) markWorkItemSucceeded (ingestState *models.IngestState) (error) {
-	fetcher.Context.MessageLog.Info("Telling Pharos ingest can proceed for %s/%s",
-		ingestState.WorkItem.Bucket, ingestState.WorkItem.Name)
-	ingestState.WorkItem.Node = ""
-	ingestState.WorkItem.Pid = 0
-	ingestState.WorkItem.Retry = true
-	ingestState.WorkItem.StageStartedAt = nil
-	ingestState.WorkItem.NeedsAdminReview = false
-	ingestState.WorkItem.Stage = constants.StageStore
-	ingestState.WorkItem.Status = constants.StatusPending
-	ingestState.WorkItem.Note = "Item passed validation and is ready for storage."
-	resp := fetcher.Context.PharosClient.WorkItemSave(ingestState.WorkItem)
-	if resp.Error != nil {
-		fetcher.Context.MessageLog.Error("Could not mark WorkItem ready for storage for %s/%s: %v",
-			ingestState.WorkItem.Bucket, ingestState.WorkItem.Name, resp.Error)
-		return resp.Error
-	}
-	ingestState.WorkItem = resp.WorkItem()
-	return nil
 }
 
 // Download the file, and update the IngestManifest while we're at it.

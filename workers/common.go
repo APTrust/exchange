@@ -2,6 +2,7 @@ package workers
 
 import (
 	"fmt"
+	"github.com/APTrust/exchange/constants"
 	"github.com/APTrust/exchange/context"
 	"github.com/APTrust/exchange/models"
 	"github.com/nsqio/go-nsq"
@@ -61,6 +62,70 @@ func RecordWorkItemState(ingestState *models.IngestState, _context *context.Cont
 			ingestState.WorkItemState = resp.WorkItemState()
 		}
 	}
+}
+
+// Tell Pharos that this item failed processing due to a fatal error.
+func MarkWorkItemFailed (ingestState *models.IngestState, _context *context.Context, currentResult *models.WorkSummary) (error) {
+	_context.MessageLog.Info("Telling Pharos processing failed for %s/%s",
+		ingestState.WorkItem.Bucket, ingestState.WorkItem.Name)
+	ingestState.WorkItem.Node = ""
+	ingestState.WorkItem.Pid = 0
+	ingestState.WorkItem.StageStartedAt = nil
+	ingestState.WorkItem.Retry = false
+	ingestState.WorkItem.NeedsAdminReview = true
+	ingestState.WorkItem.Status = constants.StatusFailed
+	ingestState.WorkItem.Note = currentResult.AllErrorsAsString()
+	resp := _context.PharosClient.WorkItemSave(ingestState.WorkItem)
+	if resp.Error != nil {
+		_context.MessageLog.Error("Could not mark WorkItem failed for %s/%s: %v",
+			ingestState.WorkItem.Bucket, ingestState.WorkItem.Name, resp.Error)
+		return resp.Error
+	}
+	ingestState.WorkItem = resp.WorkItem()
+	return nil
+}
+
+// Tell Pharos that this item has been requeued due to transient errors.
+func MarkWorkItemRequeued (ingestState *models.IngestState, _context *context.Context, currentResult *models.WorkSummary) (error) {
+	_context.MessageLog.Info("Telling Pharos we are requeueing %s/%s",
+		ingestState.WorkItem.Bucket, ingestState.WorkItem.Name)
+	ingestState.WorkItem.Node = ""
+	ingestState.WorkItem.Pid = 0
+	ingestState.WorkItem.StageStartedAt = nil
+	ingestState.WorkItem.Retry = true
+	ingestState.WorkItem.NeedsAdminReview = false
+	ingestState.WorkItem.Status = constants.StatusStarted
+	ingestState.WorkItem.Note = "Item has been requeued due to transient errors. " + currentResult.AllErrorsAsString() + currentResult.AllErrorsAsString()
+	resp := _context.PharosClient.WorkItemSave(ingestState.WorkItem)
+	if resp.Error != nil {
+		_context.MessageLog.Error("Could not mark WorkItem requeued for %s/%s: %v",
+			ingestState.WorkItem.Bucket, ingestState.WorkItem.Name, resp.Error)
+		return resp.Error
+	}
+	ingestState.WorkItem = resp.WorkItem()
+	return nil
+}
+
+// Tell Pharos that this item was processed successfully.
+func MarkWorkItemSucceeded (ingestState *models.IngestState, _context *context.Context, currentResult *models.WorkSummary, nextStage string) (error) {
+	_context.MessageLog.Info("Telling Pharos processing can proceed for %s/%s",
+		ingestState.WorkItem.Bucket, ingestState.WorkItem.Name)
+	ingestState.WorkItem.Node = ""
+	ingestState.WorkItem.Pid = 0
+	ingestState.WorkItem.Retry = true
+	ingestState.WorkItem.StageStartedAt = nil
+	ingestState.WorkItem.NeedsAdminReview = false
+	ingestState.WorkItem.Stage = nextStage
+	ingestState.WorkItem.Status = constants.StatusPending
+	ingestState.WorkItem.Note = fmt.Sprintf("Item is ready for %s", nextStage)
+	resp := _context.PharosClient.WorkItemSave(ingestState.WorkItem)
+	if resp.Error != nil {
+		_context.MessageLog.Error("Could not mark WorkItem ready for %s for %s/%s: %v",
+			nextStage, ingestState.WorkItem.Bucket, ingestState.WorkItem.Name, resp.Error)
+		return resp.Error
+	}
+	ingestState.WorkItem = resp.WorkItem()
+	return nil
 }
 
 
