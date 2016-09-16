@@ -38,7 +38,7 @@ func GetIngestState (message *nsq.Message, _context *context.Context, initIfEmpt
 	}
 
 	// TODO: Check WorkItem here. If another node or process owns it,
-	// let it go.
+	// let it go. Create a method on WorkItem like "BelongsToOtherWorker"
 
 	workItemState, err := GetWorkItemState(workItem, _context, initIfEmpty)
 	if err != nil {
