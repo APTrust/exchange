@@ -77,7 +77,8 @@ func (fetcher *APTFetcher) HandleMessage(message *nsq.Message) (error) {
 	RecordWorkItemState(ingestState, fetcher.Context, ingestState.IngestManifest.FetchResult)
 
 	// Tell Pharos that we've started to fetch this item.
-	ingestState.WorkItem, err = fetcher.recordFetchStarted(ingestState.WorkItem)
+	err = MarkWorkItemStarted(ingestState, fetcher.Context, constants.StageFetch,
+		"Fetching bag from receiving bucket.")
 	if err != nil {
 		fetcher.Context.MessageLog.Error(err.Error())
 		return err
@@ -165,7 +166,8 @@ func (fetcher *APTFetcher) validate() {
 		// Let's NOT quit if there's an error here. In that case, Pharos
 		// might not know that we're validating, but we can still proceed.
 		// Restarting the whole fetch process would be expensive.
-		ingestState.WorkItem, _ = fetcher.recordValidationStarted(ingestState.WorkItem)
+		MarkWorkItemStarted(ingestState, fetcher.Context, constants.StageValidate,
+			"Validating bag.")
 
 		// Set up a new validator to check this bag.
 		var validationResult *validation.ValidationResult
@@ -438,34 +440,6 @@ func (fetcher *APTFetcher) initWorkItemState (workItem *models.WorkItem) (*model
 		return nil, err
 	}
 	return workItemState, nil
-}
-
-// Tell Pharos we've started to fetch this item from S3.
-func (fetcher *APTFetcher) recordFetchStarted (workItem *models.WorkItem) (*models.WorkItem, error) {
-	fetcher.Context.MessageLog.Info("Telling Pharos fetch started for %s/%s", workItem.Bucket, workItem.Name)
-	utcNow := time.Now().UTC()
-	workItem.SetNodeAndPid()
-	workItem.Stage = constants.StageFetch
-	workItem.StageStartedAt = &utcNow
-	workItem.Status = constants.StatusStarted
-	workItem.Note = "Fetching bag from receiving bucket."
-	resp := fetcher.Context.PharosClient.WorkItemSave(workItem)
-	if resp.Error != nil {
-		return nil, resp.Error
-	}
-	return resp.WorkItem(), nil
-}
-
-// Tell Pharos we've started validation on this item.
-func (fetcher *APTFetcher) recordValidationStarted (workItem *models.WorkItem) (*models.WorkItem, error) {
-	fetcher.Context.MessageLog.Info("Telling Pharos validation started for %s/%s", workItem.Bucket, workItem.Name)
-	workItem.Stage = constants.StageValidate
-	workItem.Note = "Validating bag."
-	resp := fetcher.Context.PharosClient.WorkItemSave(workItem)
-	if resp.Error != nil {
-		return nil, resp.Error
-	}
-	return resp.WorkItem(), nil
 }
 
 // Download the file, and update the IngestManifest while we're at it.

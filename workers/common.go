@@ -107,6 +107,26 @@ func MarkWorkItemRequeued (ingestState *models.IngestState, _context *context.Co
 	return nil
 }
 
+// Tell Pharos that we've started work on this item.
+func MarkWorkItemStarted (ingestState *models.IngestState, _context *context.Context, stage, message string) (error) {
+	_context.MessageLog.Info("Telling Pharos we're starting %s for %s/%s",
+		stage, ingestState.WorkItem.Bucket, ingestState.WorkItem.Name)
+	utcNow := time.Now().UTC()
+	ingestState.WorkItem.SetNodeAndPid()
+	ingestState.WorkItem.Stage = stage
+	ingestState.WorkItem.StageStartedAt = &utcNow
+	ingestState.WorkItem.Status = constants.StatusStarted
+	ingestState.WorkItem.Note = message
+	resp := _context.PharosClient.WorkItemSave(ingestState.WorkItem)
+	if resp.Error != nil {
+		_context.MessageLog.Error("Could not mark WorkItem started for %s for %s/%s: %v",
+			stage, ingestState.WorkItem.Bucket, ingestState.WorkItem.Name, resp.Error)
+		return resp.Error
+	}
+	ingestState.WorkItem = resp.WorkItem()
+	return nil
+}
+
 // Tell Pharos that this item was processed successfully.
 func MarkWorkItemSucceeded (ingestState *models.IngestState, _context *context.Context, nextStage string) (error) {
 	_context.MessageLog.Info("Telling Pharos processing can proceed for %s/%s",
