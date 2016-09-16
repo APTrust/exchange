@@ -74,7 +74,7 @@ func (fetcher *APTFetcher) HandleMessage(message *nsq.Message) (error) {
 		return err
 	}
 	// Save the state of this item in Pharos.
-	fetcher.recordWorkItemState(ingestState)
+	RecordWorkItemState(ingestState, fetcher.Context, ingestState.IngestManifest.FetchResult)
 
 	// Tell Pharos that we've started to fetch this item.
 	ingestState.WorkItem, err = fetcher.recordFetchStarted(ingestState.WorkItem)
@@ -249,10 +249,10 @@ func (fetcher *APTFetcher) record() {
 	for ingestState := range fetcher.RecordChannel {
 		// Record the WorkItemState in Pharos. The next process (record)
 		// will need this info to do its work. If there's an error in this
-		// step, recordWorkItemState will log it and add it to the FetchResult.
+		// step, RecordWorkItemState will log it and add it to the FetchResult.
 		// It will also dump a JSON representation of the IngestManifest to
 		// the JSON log.
-		fetcher.recordWorkItemState(ingestState)
+		RecordWorkItemState(ingestState, fetcher.Context, ingestState.IngestManifest.FetchResult)
 		if ingestState.IngestManifest.HasFatalErrors() {
 			// Set WorkItem node=nil, pid=0, retry=false, needs_admin_review=true
 			// Finish the NSQ message
@@ -595,59 +595,6 @@ func (fetcher *APTFetcher) downloadFile (ingestState *models.IngestState) (error
 	}
 
 	return nil
-}
-
-// Record the WorkItemState for this task. We drop a copy into our
-// JSON log as a backup, and updated the WorkItemState in Pharos,
-// so the next worker knows what to do with this item.
-func (fetcher *APTFetcher) recordWorkItemState(ingestState *models.IngestState) {
-	// Serialize the IngestManifest to JSON, and stuff it into the
-	// WorkItemState.State. Subsequent workers need this info to
-	// store the object's files in S3 and Glacier, and to record
-	// results in Pharos.
-	err := ingestState.WorkItemState.SetStateFromIngestManifest(ingestState.IngestManifest)
-	if err != nil {
-		// If we couldn't serialize the IngestManifest, subsequent workers
-		// won't have the info they need to process this bag. We'll have to
-		// requeue this item and start all over.
-		fetcher.Context.MessageLog.Error(err.Error())
-		ingestState.IngestManifest.FetchResult.AddError("Could not convert Ingest Manifest " +
-			"to JSON. This item will have to be re-processed. Error was: %v", err)
-	} else {
-		// OK. We serialized the IngestManifest. Dump a copy into the
-		// file system for backup and troubleshooting, and send a copy
-		// over to Pharos, so the next worker in the chain (the save worker)
-		// can access it.
-		fetcher.logJson(ingestState)
-		resp := fetcher.Context.PharosClient.WorkItemStateSave(ingestState.WorkItemState)
-		if resp.Error != nil {
-			// Could not send a copy of the WorkItemState to Pharos.
-			// That means subsequent workers won't have the info they
-			// need to work on this bag. We'll have to start processing
-			// all over again.
-			fetcher.Context.MessageLog.Error(resp.Error.Error())
-			ingestState.IngestManifest.FetchResult.AddError("Could not save WorkItemState " +
-				"to Pharos. This item will have to be re-processed. Error was: %v", resp.Error)
-		} else {
-			// Saved to Pharos!
-			ingestState.WorkItemState = resp.WorkItemState()
-		}
-	}
-}
-
-// Dump the WorkItemState.State into the JSON log, surrounded my markers that
-// make it easy to find. This log gets big.
-func (fetcher *APTFetcher) logJson (ingestState *models.IngestState) {
-	timestamp := time.Now().UTC().Format(time.RFC3339)
-	startMessage := fmt.Sprintf("-------- BEGIN %s/%s | Etag: %s | Time: %s --------",
-		ingestState.WorkItem.Bucket, ingestState.WorkItem.Name, ingestState.WorkItem.ETag,
-		timestamp)
-	endMessage := fmt.Sprintf("-------- END %s/%s | Etag: %s | Time: %s --------",
-		ingestState.WorkItem.Bucket, ingestState.WorkItem.Name, ingestState.WorkItem.ETag,
-		timestamp)
-	fetcher.Context.JsonLog.Println(startMessage, "\n",
-		ingestState.WorkItemState.State, "\n",
-		endMessage, "\n")
 }
 
 // This is for direct testing without NSQ.
