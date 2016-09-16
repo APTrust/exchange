@@ -1,19 +1,16 @@
 package workers
 
 import (
-//	"fmt"
 	"github.com/APTrust/exchange/constants"
 	"github.com/APTrust/exchange/context"
 	"github.com/APTrust/exchange/models"
 	"github.com/APTrust/exchange/network"
-//	"github.com/APTrust/exchange/util"
+	"github.com/APTrust/exchange/util"
 	"github.com/APTrust/exchange/util/fileutil"
-//	"github.com/APTrust/exchange/validation"
 	"github.com/nsqio/go-nsq"
+	"io"
 	"net/url"
 	"os"
-//	"path/filepath"
-//	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -213,12 +210,46 @@ func (storer *APTStorer) getExistingSha256 (gfIdentifier string) (string, error)
 
 // Copy the GenericFile to long-term storage in S3 or Glacier
 func (storer *APTStorer) copyToLongTermStorage (ingestState *models.IngestState, gf *models.GenericFile, sendWhere string) {
-	if gf.IngestUUID == "" {
-		ingestState.IngestManifest.StoreResult.AddError("Cannot save %s to %s because " +
-			"GenericFile.IngestUUID is missing", gf.Identifier, sendWhere)
-		ingestState.IngestManifest.StoreResult.ErrorIsFatal = true
+	if !storer.uuidPresent(ingestState, gf) {
 		return
 	}
+	for attemptNumber := 1; attemptNumber <= MAX_UPLOAD_ATTEMPTS; attemptNumber++ {
+		uploader := storer.initUploader(ingestState, gf, sendWhere)
+		if uploader == nil {
+			return  // We have some config problem here. Stop trying.
+		}
+		if storer.assertRequiredMetadata(ingestState, uploader) {
+			readCloser := storer.getReadCloser(ingestState, gf)
+			if readCloser != nil {
+				defer readCloser.Close()
+				uploader.Send(readCloser)
+				if uploader.ErrorMessage == "" {
+					return // Upload succeeded
+				} else {
+					if attemptNumber == MAX_UPLOAD_ATTEMPTS {
+						ingestState.IngestManifest.StoreResult.AddError(uploader.ErrorMessage)
+					}
+				}
+			}
+		}
+	}
+}
+
+// Returns true if the GenericFile IngestUUID is present and looks good.
+func (storer *APTStorer) uuidPresent (ingestState *models.IngestState, gf *models.GenericFile) (bool) {
+	if !util.LooksLikeUUID(gf.IngestUUID) {
+		ingestState.IngestManifest.StoreResult.AddError("Cannot save %s to S3/Glacier because " +
+			"GenericFile.IngestUUID (%s) is missing or invalid",
+			gf.Identifier, gf.IngestUUID)
+		ingestState.IngestManifest.StoreResult.ErrorIsFatal = true
+		return false
+	}
+	return true
+}
+
+// Initializes the uploader object with connection data and metadata
+// for this specific GenericFile.
+func (storer *APTStorer) initUploader(ingestState *models.IngestState, gf *models.GenericFile, sendWhere string) (*network.S3Upload) {
 	var region string
 	var bucket string
 	if sendWhere == "s3" {
@@ -231,48 +262,45 @@ func (storer *APTStorer) copyToLongTermStorage (ingestState *models.IngestState,
 		ingestState.IngestManifest.StoreResult.AddError("Cannot save %s to %s because " +
 			"storer doesn't know where %s is", gf.Identifier, sendWhere)
 		ingestState.IngestManifest.StoreResult.ErrorIsFatal = true
-		return
+		return nil
 	}
-	for attemptNumber := 1; attemptNumber <= MAX_UPLOAD_ATTEMPTS; attemptNumber++ {
-		upload := network.NewS3Upload(
-			region,
-			bucket,
-			gf.IngestUUID,
-			gf.FileFormat,
-		)
-		upload.AddMetadata("institution", ingestState.IngestManifest.Object.Institution)
-		upload.AddMetadata("bag", ingestState.IngestManifest.Object.Identifier)
-		upload.AddMetadata("bagpath", gf.OriginalPath())
-		upload.AddMetadata("md5", gf.IngestMd5)
-		upload.AddMetadata("sha256", gf.IngestSha256)
-		if storer.assertRequiredMetadata(ingestState, upload) {
-			tarFilePath := ingestState.IngestManifest.Object.IngestTarFilePath
-			tfi, err := fileutil.NewTarFileIterator(tarFilePath)
-			if tfi != nil {
-				defer tfi.Close()
-			}
-			if err != nil {
-				ingestState.IngestManifest.StoreResult.AddError("Can't get TarFileIterator " +
-					"for %s: %v", tarFilePath, err)
-				return
-			}
-			readCloser, err := tfi.Find(gf.Identifier)
-			if readCloser != nil {
-				defer readCloser.Close()
-			}
-			if err != nil {
-				ingestState.IngestManifest.StoreResult.AddError("Can't get reader for " +
-					"%s: %v", gf.Identifier, err)
-				return
-			}
-			upload.Send(readCloser)
-			if upload.ErrorMessage != "" {
-				if attemptNumber == MAX_UPLOAD_ATTEMPTS {
-					ingestState.IngestManifest.StoreResult.AddError(upload.ErrorMessage)
-				}
-			}
+	uploader := network.NewS3Upload(
+		region,
+		bucket,
+		gf.IngestUUID,
+		gf.FileFormat,
+	)
+	uploader.AddMetadata("institution", ingestState.IngestManifest.Object.Institution)
+	uploader.AddMetadata("bag", ingestState.IngestManifest.Object.Identifier)
+	uploader.AddMetadata("bagpath", gf.OriginalPath())
+	uploader.AddMetadata("md5", gf.IngestMd5)
+	uploader.AddMetadata("sha256", gf.IngestSha256)
+	return uploader
+}
+
+// Returns a reader that can read the file from within the tar archive.
+// The S3 uploader uses this reader to stream data to S3 and Glacier.
+func (storer *APTStorer) getReadCloser(ingestState *models.IngestState, gf *models.GenericFile) (io.ReadCloser) {
+	tarFilePath := ingestState.IngestManifest.Object.IngestTarFilePath
+	tfi, err := fileutil.NewTarFileIterator(tarFilePath)
+	if tfi != nil {
+		defer tfi.Close()
+	}
+	if err != nil {
+		ingestState.IngestManifest.StoreResult.AddError("Can't get TarFileIterator " +
+			"for %s: %v", tarFilePath, err)
+		return nil
+	}
+	readCloser, err := tfi.Find(gf.Identifier)
+	if err != nil {
+		ingestState.IngestManifest.StoreResult.AddError("Can't get reader for " +
+			"%s: %v", gf.Identifier, err)
+		if readCloser != nil {
+			readCloser.Close()
 		}
+		return nil
 	}
+	return readCloser
 }
 
 // Make sure we send data to S3/Glacier with all of the required metadata.
