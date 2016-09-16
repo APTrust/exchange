@@ -6,11 +6,9 @@ type IngestManifest struct {
 	S3Key              string
 	ETag               string
 	FetchResult        *WorkSummary
-	UntarResult        *WorkSummary
 	ValidateResult     *WorkSummary
 	StoreResult        *WorkSummary
 	RecordResult       *WorkSummary
-	ReplicateResult    *WorkSummary
 	CleanupResult      *WorkSummary
 	Object             *IntellectualObject
 }
@@ -18,11 +16,9 @@ type IngestManifest struct {
 func NewIngestManifest() (*IngestManifest) {
 	return &IngestManifest{
 		FetchResult: NewWorkSummary(),
-		UntarResult: NewWorkSummary(),
 		ValidateResult: NewWorkSummary(),
 		StoreResult: NewWorkSummary(),
 		RecordResult: NewWorkSummary(),
-		ReplicateResult: NewWorkSummary(),
 		CleanupResult: NewWorkSummary(),
 		Object: NewIntellectualObject(),
 	}
@@ -32,20 +28,33 @@ func NewIngestManifest() (*IngestManifest) {
 
 func (manifest *IngestManifest) HasErrors() (bool) {
 	return (manifest.FetchResult.HasErrors() ||
-		manifest.UntarResult.HasErrors() ||
 		manifest.ValidateResult.HasErrors() ||
 		manifest.StoreResult.HasErrors() ||
 		manifest.RecordResult.HasErrors() ||
-		manifest.ReplicateResult.HasErrors() ||
 		manifest.CleanupResult.HasErrors())
 }
 
 func (manifest *IngestManifest) HasFatalErrors() (bool) {
 	return (manifest.FetchResult.ErrorIsFatal ||
-		manifest.UntarResult.ErrorIsFatal ||
 		manifest.ValidateResult.ErrorIsFatal ||
 		manifest.StoreResult.ErrorIsFatal ||
 		manifest.RecordResult.ErrorIsFatal ||
-		manifest.ReplicateResult.ErrorIsFatal ||
 		manifest.CleanupResult.ErrorIsFatal)
+}
+
+func (manifest *IngestManifest) AllErrorsAsString() (string) {
+	errors := []string {
+		manifest.FetchResult.AllErrorsAsString(),
+		manifest.ValidateResult.AllErrorsAsString(),
+		manifest.StoreResult.AllErrorsAsString(),
+		manifest.RecordResult.AllErrorsAsString(),
+		manifest.CleanupResult.AllErrorsAsString(),
+	}
+	allErrors := ""
+	for _, err := range errors {
+		if err != "" {
+			allErrors += err + "\n"
+		}
+	}
+	return allErrors
 }
