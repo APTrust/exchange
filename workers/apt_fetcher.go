@@ -53,8 +53,8 @@ func NewAPTFetcher(_context *context.Context) (*APTFetcher) {
 	}
 	for i := 0; i < _context.Config.FetchWorker.Workers; i++ {
 		go fetcher.validate()
-		go fetcher.record()
 		go fetcher.cleanup()
+		go fetcher.record()
 	}
 	return fetcher
 }
@@ -250,9 +250,6 @@ func (fetcher *APTFetcher) record() {
 		// Record the WorkItemState in Pharos. The next process (record)
 		// will need this info to do its work. If there's an error in this
 		// step, RecordWorkItemState will log it and add it to the FetchResult.
-		// It will also dump a JSON representation of the IngestManifest to
-		// the JSON log.
-		RecordWorkItemState(ingestState, fetcher.Context, ingestState.IngestManifest.FetchResult)
 		if ingestState.IngestManifest.HasFatalErrors() {
 			// Set WorkItem node=nil, pid=0, retry=false, needs_admin_review=true
 			// Finish the NSQ message
@@ -268,7 +265,21 @@ func (fetcher *APTFetcher) record() {
 			// Finish the NSQ message
 			ingestState.FinishNSQ()
 			fetcher.markWorkItemSucceeded(ingestState)
+
+			// Send this item on to the next queue
+			err := fetcher.Context.NSQClient.Enqueue(
+				fetcher.Context.Config.StoreWorker.NsqTopic,
+				ingestState.WorkItem.Id)
+			if err != nil {
+				msg := fmt.Sprintf("Error adding WorkItem %d (%s/%s) to NSQ record topic: %v",
+					ingestState.WorkItem.Id, ingestState.WorkItem.Bucket,
+					ingestState.WorkItem.Name, err)
+				ingestState.IngestManifest.FetchResult.AddError(msg)
+				fetcher.Context.MessageLog.Error(msg)
+			}
 		}
+		// Dump a JSON representation of the IngestManifest to the JSON log.
+		RecordWorkItemState(ingestState, fetcher.Context, ingestState.IngestManifest.FetchResult)
 	}
 }
 
