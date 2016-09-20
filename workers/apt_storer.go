@@ -51,16 +51,26 @@ func NewAPTStorer(_context *context.Context) (*APTStorer) {
 // This is the callback that NSQ workers use to handle messages from NSQ.
 func (storer *APTStorer) HandleMessage(message *nsq.Message) (error) {
 
-	// ---------------------------------------------------------
-	// TODO: Make sure no other worker is working on this item.
-	// ---------------------------------------------------------
-
 	ingestState, err := storer.loadIngestState(message)
 	if err != nil {
 		storer.Context.MessageLog.Error(err.Error())
 		return err
 	}
 	ingestState.NSQMessage = message
+
+	// If this item was queued more than once, and this process or any
+	// other is currently working on it, just finish the message and
+	// assume that the in-progress worker will take care of the original.
+	if ingestState.WorkItem.Node != "" && ingestState.WorkItem.Pid != 0 {
+		storer.Context.MessageLog.Info("Marking WorkItem %d (%s/%s) as finished " +
+			"without doing any work, because this item is currently in process by " +
+			"node %s, pid %s. WorkItem was last updated at %s.",
+			ingestState.WorkItem.Id, ingestState.WorkItem.Bucket,
+			ingestState.WorkItem.Name, ingestState.WorkItem.Node,
+			ingestState.WorkItem.Pid, ingestState.WorkItem.UpdatedAt)
+		message.Finish()
+		return nil
+	}
 
 	// Disable auto response, so we can tell NSQ when we need to
 	// that we're still working on this item.

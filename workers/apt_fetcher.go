@@ -57,11 +57,6 @@ func NewAPTFetcher(_context *context.Context) (*APTFetcher) {
 
 // This is the callback that NSQ workers use to handle messages from NSQ.
 func (fetcher *APTFetcher) HandleMessage(message *nsq.Message) (error) {
-
-	// ---------------------------------------------------------
-	// TODO: Make sure no other worker is working on this item.
-	// ---------------------------------------------------------
-
 	// Set up our IngestState. Most of this comes from Pharos;
 	// some of it we have to build fresh.
 	ingestState, err := GetIngestState(message, fetcher.Context, true)
@@ -70,6 +65,20 @@ func (fetcher *APTFetcher) HandleMessage(message *nsq.Message) (error) {
 		return err
 	}
 	ingestState.NSQMessage = message
+
+	// If this item was queued more than once, and this process or any
+	// other is currently working on it, just finish the message and
+	// assume that the in-progress worker will take care of the original.
+	if ingestState.WorkItem.Node != "" && ingestState.WorkItem.Pid != 0 {
+		fetcher.Context.MessageLog.Info("Marking WorkItem %d (%s/%s) as finished " +
+			"without doing any work, because this item is currently in process by " +
+			"node %s, pid %s. WorkItem was last updated at %s.",
+			ingestState.WorkItem.Id, ingestState.WorkItem.Bucket,
+			ingestState.WorkItem.Name, ingestState.WorkItem.Node,
+			ingestState.WorkItem.Pid, ingestState.WorkItem.UpdatedAt)
+		message.Finish()
+		return nil
+	}
 
 	// Save the state of this item in Pharos.
 	RecordWorkItemState(ingestState, fetcher.Context, ingestState.IngestManifest.FetchResult)
