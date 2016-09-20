@@ -1,6 +1,7 @@
 package workers
 
 import (
+	"fmt"
 	"github.com/APTrust/exchange/constants"
 	"github.com/APTrust/exchange/context"
 	"github.com/APTrust/exchange/models"
@@ -56,7 +57,6 @@ func (storer *APTStorer) HandleMessage(message *nsq.Message) (error) {
 		storer.Context.MessageLog.Error(err.Error())
 		return err
 	}
-	ingestState.NSQMessage = message
 
 	// If this item was queued more than once, and this process or any
 	// other is currently working on it, just finish the message and
@@ -88,10 +88,10 @@ func (storer *APTStorer) HandleMessage(message *nsq.Message) (error) {
 		return err
 	}
 
-	storer.Context.MessageLog.Info("Putting %s/%s into record queue",
+	storer.Context.MessageLog.Info("Putting %s/%s into storage channel",
 		ingestState.IngestManifest.S3Bucket, ingestState.IngestManifest.S3Key)
 
-	storer.RecordChannel <- ingestState
+	storer.StorageChannel <- ingestState
 
 	// Return no error, so NSQ knows we're OK.
 	return nil
@@ -138,6 +138,7 @@ func (storer *APTStorer) cleanup () {
 				ingestState.IngestManifest.Object.IngestS3Key)
 			os.RemoveAll(untarredPath)
 		}
+		storer.RecordChannel <- ingestState
 	}
 }
 
@@ -152,12 +153,22 @@ func (storer *APTStorer) record () {
 		RecordWorkItemState(ingestState, storer.Context, ingestState.IngestManifest.FetchResult)
 
 		if ingestState.IngestManifest.HasFatalErrors() {
+			storer.Context.MessageLog.Error("Failed to store WorkItem %d (%s/%s).",
+				ingestState.WorkItem.Id, ingestState.WorkItem.Bucket,
+				ingestState.WorkItem.Name)
 			ingestState.FinishNSQ()
 			MarkWorkItemFailed(ingestState, storer.Context)
 		} else if ingestState.IngestManifest.HasErrors() {
+			storer.Context.MessageLog.Info("Requeueing WorkItem %d (%s/%s) due to transient errors. %s",
+				ingestState.WorkItem.Id, ingestState.WorkItem.Bucket,
+				ingestState.WorkItem.Name,
+				ingestState.IngestManifest.AllErrorsAsString())
 			ingestState.RequeueNSQ(1000)
 			MarkWorkItemRequeued(ingestState, storer.Context)
 		} else {
+			storer.Context.MessageLog.Info("Finished storing WorkItem %d (%s/%s).",
+				ingestState.WorkItem.Id, ingestState.WorkItem.Bucket,
+				ingestState.WorkItem.Name)
 			ingestState.FinishNSQ()
 			MarkWorkItemSucceeded(ingestState, storer.Context, constants.StageRecord)
 			PushToQueue(ingestState, storer.Context, storer.Context.Config.RecordWorker.NsqTopic)
@@ -166,15 +177,41 @@ func (storer *APTStorer) record () {
 }
 
 func (storer *APTStorer) loadIngestState (message *nsq.Message) (*models.IngestState, error) {
-	// Load WorkItem and WorkItemState
-	// Get IngestManifest from WorkItemState
-	return nil, nil
+	workItem, err := GetWorkItem(message, storer.Context)
+	if err != nil {
+		return nil, err
+	}
+	storer.Context.MessageLog.Info("Loaded WorkItem %d (%s/%s)",
+		workItem.Id, workItem.Bucket, workItem.Name)
+	workItemState, err := GetWorkItemState(workItem, storer.Context, false)
+	if err != nil {
+		return nil, err
+	}
+	storer.Context.MessageLog.Info("Loaded WorkItemState for WorkItem %d (%s/%s)",
+		workItem.Id, workItem.Bucket, workItem.Name)
+	ingestManifest, err := workItemState.IngestManifest()
+	if err != nil {
+		storer.Context.MessageLog.Error(
+			"Error unmarshalling IngestState for WorkItem %d (%s/%s): %v",
+			workItem.Id, workItem.Bucket, workItem.Name)
+		return nil, err
+	}
+	ingestState := &models.IngestState{
+		NSQMessage: message,
+		WorkItem: workItem,
+		WorkItemState: workItemState,
+		IngestManifest: ingestManifest,
+	}
+	storer.Context.MessageLog.Info("Loaded IngestState for WorkItem %d (%s/%s)",
+		workItem.Id, workItem.Bucket, workItem.Name)
+	return ingestState, nil
 }
 
 
 func (storer *APTStorer) saveFile (ingestState *models.IngestState, gf *models.GenericFile) {
 	existingSha256, err := storer.getExistingSha256(gf.Identifier)
 	if err != nil {
+		storer.Context.MessageLog.Error(err.Error())
 		ingestState.IngestManifest.StoreResult.AddError(err.Error())
 		return
 	}
@@ -182,11 +219,14 @@ func (storer *APTStorer) saveFile (ingestState *models.IngestState, gf *models.G
 	if existingSha256 != "" {
 		gf.IngestPreviousVersionExists = true
 		if existingSha256 != gf.IngestSha256 {
+			storer.Context.MessageLog.Info(
+				"GenericFile %s has same sha256. Does not need save.", gf.Identifier)
 			gf.IngestNeedsSave = false
 		}
 	}
 	// Now copy to storage only if the file has changed.
 	if gf.IngestNeedsSave {
+		storer.Context.MessageLog.Info("File %s needs save", gf.Identifier)
 		if gf.IngestStoredAt.IsZero() || gf.IngestStorageURL == "" {
 			storer.copyToLongTermStorage(ingestState, gf, "s3")
 		}
@@ -222,11 +262,19 @@ func (storer *APTStorer) getExistingSha256 (gfIdentifier string) (string, error)
 // Copy the GenericFile to long-term storage in S3 or Glacier
 func (storer *APTStorer) copyToLongTermStorage (ingestState *models.IngestState, gf *models.GenericFile, sendWhere string) {
 	if !storer.uuidPresent(ingestState, gf) {
+		msg := fmt.Sprintf("Cannot copy GenericFile %s to long-term storage because UUID is missing",
+			gf.Identifier)
+		ingestState.IngestManifest.StoreResult.AddError(msg)
+		storer.Context.MessageLog.Error(msg)
 		return
 	}
+	storer.Context.MessageLog.Info("Sending %s to %s", gf.Identifier, sendWhere)
 	for attemptNumber := 1; attemptNumber <= MAX_UPLOAD_ATTEMPTS; attemptNumber++ {
 		uploader := storer.initUploader(ingestState, gf, sendWhere)
 		if uploader == nil {
+			msg := "S3 uploader is nil. Cannot proceed."
+			ingestState.IngestManifest.StoreResult.AddError(msg)
+			storer.Context.MessageLog.Error(msg)
 			return  // We have some config problem here. Stop trying.
 		}
 		if storer.assertRequiredMetadata(ingestState, uploader) {
@@ -235,9 +283,13 @@ func (storer *APTStorer) copyToLongTermStorage (ingestState *models.IngestState,
 				defer readCloser.Close()
 				uploader.Send(readCloser)
 				if uploader.ErrorMessage == "" {
+					storer.Context.MessageLog.Info("Stored %s in %s after %d attempts",
+						gf.Identifier, sendWhere, attemptNumber)
 					storer.markFileAsStored(gf, sendWhere, uploader.Response.Location)
 					return // Upload succeeded
 				} else {
+					storer.Context.MessageLog.Error("Upload error for %s: %s",
+						gf.Identifier, uploader.ErrorMessage)
 					if attemptNumber == MAX_UPLOAD_ATTEMPTS {
 						ingestState.IngestManifest.StoreResult.AddError(uploader.ErrorMessage)
 					}

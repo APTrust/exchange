@@ -195,6 +195,9 @@ func RecordWorkItemState(ingestState *models.IngestState, _context *context.Cont
 				"to Pharos. This item will have to be re-processed. Error was: %v", resp.Error)
 		} else {
 			// Saved to Pharos!
+			_context.MessageLog.Info("Saved WorkItemState for WorkItem %d (%s/%s) to Pharos",
+				ingestState.WorkItem.Id, ingestState.WorkItem.Bucket,
+				ingestState.WorkItem.Name)
 			ingestState.WorkItemState = resp.WorkItemState()
 		}
 	}
