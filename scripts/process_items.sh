@@ -10,7 +10,7 @@ echo ""
 
 echo "Getting rid of old logs and data files"
 rm -r ~/tmp/*
-mkdir -p ~/tmp/logs
+mkdir -p ~/tmp/test_logs
 
 echo "Starting NSQ"
 cd ~/go/src/github.com/APTrust/exchange/apps/nsq_service
@@ -22,7 +22,7 @@ cd ~/aptrust/pharos
 RAILS_ENV=integration bundle exec rake db:fixtures:load
 
 echo "Starting Pharos server"
-RAILS_ENV=integration rails server &>~/tmp/logs/pharos.log &
+RAILS_ENV=integration rails server &>~/tmp/test_logs/pharos.log &
 RAILS_PID=$!
 sleep 3
 
@@ -49,6 +49,11 @@ cd ~/go/src/github.com/APTrust/exchange/apps/apt_fetch
 go run apt_fetch.go -config=config/integration.json &
 FETCH_PID=$!
 
+echo "Starting apt_store"
+cd ~/go/src/github.com/APTrust/exchange/apps/apt_store
+go run apt_store.go -config=config/integration.json &
+STORE_PID=$!
+
 echo "Go ingest processes are running. Control-C to quit."
 
 kill_all()
@@ -62,8 +67,11 @@ kill_all()
     echo "Shutting down Pharos Rails app"
     kill -s SIGKILL $RAILS_PID
 
-    echo "Shutting down apt_fetch app"
+    echo "Shutting down apt_fetch"
     kill -s SIGKILL $FETCH_PID
+
+    echo "Shutting down apt_store"
+    kill -s SIGKILL $STORE_PID
 
     echo "We're all done. Logs are in ~/tmp/logs."
 }
