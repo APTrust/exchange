@@ -152,3 +152,13 @@ func (item *WorkItem) SetNodeAndPid() {
 	item.Node = hostname
 	item.Pid = os.Getpid()
 }
+
+// Returns true if this item is currently being processed
+// by another worker.
+func (item *WorkItem) BelongsToAnotherWorker() (bool) {
+	if item.Node == "" {
+		return false
+	}
+	hostname, _ := os.Hostname()
+	return item.Node != hostname || item.Pid != os.Getpid()
+}

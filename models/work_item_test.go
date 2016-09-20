@@ -209,3 +209,16 @@ func TestSetNodeAndPid(t *testing.T) {
 	}
 	assert.EqualValues(t, os.Getpid(), item.Pid)
 }
+
+func TestBelogsToOtherWorker(t *testing.T) {
+	item := SampleWorkItem()
+	assert.False(t, item.BelongsToAnotherWorker())
+	item.SetNodeAndPid()
+	assert.False(t, item.BelongsToAnotherWorker())
+	item.Pid = item.Pid + 1
+	assert.True(t, item.BelongsToAnotherWorker())
+	item.Pid = item.Pid - 1
+	assert.False(t, item.BelongsToAnotherWorker())
+	item.Node = "some.other.host.kom"
+	assert.True(t, item.BelongsToAnotherWorker())
+}
