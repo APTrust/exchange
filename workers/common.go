@@ -36,16 +36,31 @@ func GetIngestState (message *nsq.Message, _context *context.Context, initIfEmpt
 	if err != nil {
 		return nil, err
 	}
+	_context.MessageLog.Info("Loaded WorkItem %d (%s/%s)",
+		workItem.Id, workItem.Bucket, workItem.Name)
 
 	workItemState, err := GetWorkItemState(workItem, _context, initIfEmpty)
 	if err != nil {
 		return nil, err
 	}
+
+	_context.MessageLog.Info("Loaded WorkItemState for WorkItem %d (%s/%s)",
+		workItem.Id, workItem.Bucket, workItem.Name)
+
+	// We expect an empty IngestManifest when we are making the
+	// first attempt to ingest a new bag, so let's not throw an
+	// error below if we happen to run into this condition.
+	expectingEmptyManifest := (workItemState.Id == 0 && initIfEmpty == false)
+
 	ingestManifest, err := workItemState.IngestManifest()
-	if err != nil {
+	if err != nil && !expectingEmptyManifest {
+		_context.MessageLog.Error(
+			"Error unmarshalling IngestManifest for WorkItem %d (%s/%s): %v",
+			workItem.Id, workItem.Bucket, workItem.Name)
 		return nil, err
 	}
 	ingestState := &models.IngestState{
+		NSQMessage: message,
 		WorkItem: workItem,
 		WorkItemState: workItemState,
 		IngestManifest: ingestManifest,
@@ -62,6 +77,9 @@ func GetIngestState (message *nsq.Message, _context *context.Context, initIfEmpt
 			return ingestState, fmt.Errorf("IngestState is missing IntellectualObject.")
 		}
 	}
+
+	_context.MessageLog.Info("Loaded IngestState for WorkItem %d (%s/%s)",
+		workItem.Id, workItem.Bucket, workItem.Name)
 
 	return ingestState, err
 }

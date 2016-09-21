@@ -36,7 +36,7 @@ func NewAPTStorer(_context *context.Context) (*APTStorer) {
 	}
 
 	// Set up buffered channels
-	workerBufferSize := _context.Config.FetchWorker.Workers * 10
+	workerBufferSize := _context.Config.StoreWorker.Workers * 10
 	storer.StorageChannel = make(chan *models.IngestState, workerBufferSize)
 	storer.CleanupChannel = make(chan *models.IngestState, workerBufferSize)
 	storer.RecordChannel = make(chan *models.IngestState, workerBufferSize)
@@ -51,8 +51,7 @@ func NewAPTStorer(_context *context.Context) (*APTStorer) {
 
 // This is the callback that NSQ workers use to handle messages from NSQ.
 func (storer *APTStorer) HandleMessage(message *nsq.Message) (error) {
-
-	ingestState, err := storer.loadIngestState(message)
+	ingestState, err := GetIngestState(message, storer.Context, false)
 	if err != nil {
 		storer.Context.MessageLog.Error(err.Error())
 		return err
@@ -176,36 +175,36 @@ func (storer *APTStorer) record () {
 	}
 }
 
-func (storer *APTStorer) loadIngestState (message *nsq.Message) (*models.IngestState, error) {
-	workItem, err := GetWorkItem(message, storer.Context)
-	if err != nil {
-		return nil, err
-	}
-	storer.Context.MessageLog.Info("Loaded WorkItem %d (%s/%s)",
-		workItem.Id, workItem.Bucket, workItem.Name)
-	workItemState, err := GetWorkItemState(workItem, storer.Context, false)
-	if err != nil {
-		return nil, err
-	}
-	storer.Context.MessageLog.Info("Loaded WorkItemState for WorkItem %d (%s/%s)",
-		workItem.Id, workItem.Bucket, workItem.Name)
-	ingestManifest, err := workItemState.IngestManifest()
-	if err != nil {
-		storer.Context.MessageLog.Error(
-			"Error unmarshalling IngestState for WorkItem %d (%s/%s): %v",
-			workItem.Id, workItem.Bucket, workItem.Name)
-		return nil, err
-	}
-	ingestState := &models.IngestState{
-		NSQMessage: message,
-		WorkItem: workItem,
-		WorkItemState: workItemState,
-		IngestManifest: ingestManifest,
-	}
-	storer.Context.MessageLog.Info("Loaded IngestState for WorkItem %d (%s/%s)",
-		workItem.Id, workItem.Bucket, workItem.Name)
-	return ingestState, nil
-}
+// func (storer *APTStorer) loadIngestState (message *nsq.Message) (*models.IngestState, error) {
+// 	workItem, err := GetWorkItem(message, storer.Context)
+// 	if err != nil {
+// 		return nil, err
+// 	}
+// 	storer.Context.MessageLog.Info("Loaded WorkItem %d (%s/%s)",
+// 		workItem.Id, workItem.Bucket, workItem.Name)
+// 	workItemState, err := GetWorkItemState(workItem, storer.Context, false)
+// 	if err != nil {
+// 		return nil, err
+// 	}
+// 	storer.Context.MessageLog.Info("Loaded WorkItemState for WorkItem %d (%s/%s)",
+// 		workItem.Id, workItem.Bucket, workItem.Name)
+// 	ingestManifest, err := workItemState.IngestManifest()
+// 	if err != nil {
+// 		storer.Context.MessageLog.Error(
+// 			"Error unmarshalling IngestState for WorkItem %d (%s/%s): %v",
+// 			workItem.Id, workItem.Bucket, workItem.Name)
+// 		return nil, err
+// 	}
+// 	ingestState := &models.IngestState{
+// 		NSQMessage: message,
+// 		WorkItem: workItem,
+// 		WorkItemState: workItemState,
+// 		IngestManifest: ingestManifest,
+// 	}
+// 	storer.Context.MessageLog.Info("Loaded IngestState for WorkItem %d (%s/%s)",
+// 		workItem.Id, workItem.Bucket, workItem.Name)
+// 	return ingestState, nil
+// }
 
 
 func (storer *APTStorer) saveFile (ingestState *models.IngestState, gf *models.GenericFile) {
