@@ -278,9 +278,10 @@ func (storer *APTStorer) copyToLongTermStorage (ingestState *models.IngestState,
 			return  // We have some config problem here. Stop trying.
 		}
 		if storer.assertRequiredMetadata(ingestState, uploader) {
-			readCloser := storer.getReadCloser(ingestState, gf)
-			if readCloser != nil {
+			tarFileIterator, readCloser := storer.getReadCloser(ingestState, gf)
+			if readCloser != nil && tarFileIterator != nil {
 				defer readCloser.Close()
+				defer tarFileIterator.Close()
 				uploader.Send(readCloser)
 				if uploader.ErrorMessage == "" {
 					storer.Context.MessageLog.Info("Stored %s in %s after %d attempts",
@@ -294,6 +295,8 @@ func (storer *APTStorer) copyToLongTermStorage (ingestState *models.IngestState,
 						ingestState.IngestManifest.StoreResult.AddError(uploader.ErrorMessage)
 					}
 				}
+			} else {
+				storer.Context.MessageLog.Error("Could not get reader from tar file.")
 			}
 		}
 	}
@@ -344,16 +347,13 @@ func (storer *APTStorer) initUploader(ingestState *models.IngestState, gf *model
 
 // Returns a reader that can read the file from within the tar archive.
 // The S3 uploader uses this reader to stream data to S3 and Glacier.
-func (storer *APTStorer) getReadCloser(ingestState *models.IngestState, gf *models.GenericFile) (io.ReadCloser) {
+func (storer *APTStorer) getReadCloser(ingestState *models.IngestState, gf *models.GenericFile) (*fileutil.TarFileIterator, io.ReadCloser) {
 	tarFilePath := ingestState.IngestManifest.Object.IngestTarFilePath
 	tfi, err := fileutil.NewTarFileIterator(tarFilePath)
-	if tfi != nil {
-		defer tfi.Close()
-	}
 	if err != nil {
 		ingestState.IngestManifest.StoreResult.AddError("Can't get TarFileIterator " +
 			"for %s: %v", tarFilePath, err)
-		return nil
+		return nil, nil
 	}
 	readCloser, err := tfi.Find(gf.Identifier)
 	if err != nil {
@@ -362,9 +362,9 @@ func (storer *APTStorer) getReadCloser(ingestState *models.IngestState, gf *mode
 		if readCloser != nil {
 			readCloser.Close()
 		}
-		return nil
+		return nil, nil
 	}
-	return readCloser
+	return tfi, readCloser
 }
 
 // Make sure we send data to S3/Glacier with all of the required metadata.
