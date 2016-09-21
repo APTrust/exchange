@@ -175,38 +175,6 @@ func (storer *APTStorer) record () {
 	}
 }
 
-// func (storer *APTStorer) loadIngestState (message *nsq.Message) (*models.IngestState, error) {
-// 	workItem, err := GetWorkItem(message, storer.Context)
-// 	if err != nil {
-// 		return nil, err
-// 	}
-// 	storer.Context.MessageLog.Info("Loaded WorkItem %d (%s/%s)",
-// 		workItem.Id, workItem.Bucket, workItem.Name)
-// 	workItemState, err := GetWorkItemState(workItem, storer.Context, false)
-// 	if err != nil {
-// 		return nil, err
-// 	}
-// 	storer.Context.MessageLog.Info("Loaded WorkItemState for WorkItem %d (%s/%s)",
-// 		workItem.Id, workItem.Bucket, workItem.Name)
-// 	ingestManifest, err := workItemState.IngestManifest()
-// 	if err != nil {
-// 		storer.Context.MessageLog.Error(
-// 			"Error unmarshalling IngestState for WorkItem %d (%s/%s): %v",
-// 			workItem.Id, workItem.Bucket, workItem.Name)
-// 		return nil, err
-// 	}
-// 	ingestState := &models.IngestState{
-// 		NSQMessage: message,
-// 		WorkItem: workItem,
-// 		WorkItemState: workItemState,
-// 		IngestManifest: ingestManifest,
-// 	}
-// 	storer.Context.MessageLog.Info("Loaded IngestState for WorkItem %d (%s/%s)",
-// 		workItem.Id, workItem.Bucket, workItem.Name)
-// 	return ingestState, nil
-// }
-
-
 func (storer *APTStorer) saveFile (ingestState *models.IngestState, gf *models.GenericFile) {
 	existingSha256, err := storer.getExistingSha256(gf.Identifier)
 	if err != nil {
