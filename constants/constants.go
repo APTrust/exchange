@@ -116,18 +116,7 @@ var AccessRights []string = []string{
 	"restricted",
 }
 
-// List of valid Premis Event types.
-var EventTypes []string = []string{
-	"ingest",
-	"validation",
-	"fixity_generation",
-	"fixity_check",
-	"identifier_assignment",
-	"quarentine",
-	"delete_action",
-	"replication",
-}
-
+// AWS Regions (the ones we're using for storage)
 const (
 	AWSVirginia = "us-east-1"
 	AWSOregon = "us-west-2"
@@ -140,3 +129,74 @@ const (
 	TAG_MANIFEST     = "tag_manifest"
 	TAG_FILE         = "tag_file"
 )
+
+// PREMIS Event types as defined by the Library of Congress at
+// http://id.loc.gov/search/?q=&q=cs%3Ahttp%3A%2F%2Fid.loc.gov%2Fvocabulary%2Fpreservation%2FeventType#
+const(
+	// The process whereby a repository actively obtains an object.
+	EventCapture = "capture"
+
+	// The process of coding data to save storage space or transmission time.
+	EventCompression = "compression"
+
+	// The act of creating a new object.
+	EventCreation = "creation"
+
+	// The process of removing an object from the inventory of a repository.
+	EventDeaccession = "deaccession"
+
+	// The process of reversing the effects of compression.
+	EventDecompression = "decompression"
+
+	//The process of converting encrypted data to plain text.
+	EventDecryption = "decryption"
+
+	// The process of removing an object from repository storage.
+	EventDeletion = "deletion"
+
+	// The process by which a message digest ("hash") is created.
+	EventDigestCalculation = "message digest calculation"
+
+	// The process of verifying that an object has not been changed in a given period.
+	EventFixityCheck = "fixity check"
+
+	// The process of adding objects to a preservation repository.
+	EventIngestion = "ingestion"
+
+	// A transformation of an object creating a version in a more contemporary format.
+	EventMigration = "migration"
+
+	// A transformation of an object creating a version more conducive to preservation.
+	EventNormalization = "normalization"
+
+	// The process of creating a copy of an object that is, bit-wise, identical to the original.
+	EventReplication = "replication"
+
+	// The process of determining that a decrypted digital signature matches an expected value.
+	EventSignatureValidation = "digital signature validation"
+
+	// The process of comparing an object with a standard and noting compliance or exceptions.
+	EventValidation = "validation"
+
+	// The process of scanning a file for malicious programs.
+	EventVirusCheck = "virus check"
+)
+
+var EventTypes []string = []string{
+	EventCapture,
+	EventCompression,
+	EventCreation,
+	EventDeaccession,
+	EventDecompression,
+	EventDecryption,
+	EventDeletion,
+	EventDigestCalculation,
+	EventFixityCheck,
+	EventIngestion,
+	EventMigration,
+	EventNormalization,
+	EventReplication,
+	EventSignatureValidation,
+	EventValidation,
+	EventVirusCheck,
+}
