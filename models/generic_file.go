@@ -302,3 +302,36 @@ func (gf *GenericFile) PreservationStorageFileName() (string, error) {
 	parts := strings.Split(gf.URI, "/")
 	return parts[len(parts) - 1], nil
 }
+
+// BuildIngestEvents creates all of the ingest events for
+// this GenericFile. See the notes for IntellectualObject.BuildIngestEvents,
+// as they all apply here. This call is idempotent, so
+// calling it multiple times will not mess up our data.
+func (gf *GenericFile) BuildIngestEvents() (error) {
+
+	// See https://github.com/APTrust/bagman/blob/d4894638c1a6552e42d8a621824c25b2faddfcb7/bagman/file.go
+	//
+	// Use FindEventsByType
+	//
+	// fixity_check
+	// fixity_generation
+	// ingest
+	// identifier_assignment (for file identifier)
+	// identifier_assignment (for S3 URL)
+	// replication
+
+	return nil
+}
+
+// BuildIngestChecksums creates all of the ingest checksums for
+// this GenericFile. See the notes for IntellectualObject.BuildIngestEvents,
+// as they all apply here. This call is idempotent, so
+// calling it multiple times will not mess up our data.
+func (gf *GenericFile) BuildIngestChecksums() (error) {
+
+	// Use GetChecksum
+	// md5
+	// sha256
+
+	return nil
+}

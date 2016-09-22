@@ -197,3 +197,50 @@ func (obj *IntellectualObject) SerializeForPharos() ([]byte, error) {
 		"access":         obj.Access,
 	})
 }
+
+// BuildIngestEvents creates all of the PremisEvents required
+// for ingest for this IntellectualObject and all of its
+// GenericFiles. This call works only when the Ingest data fields
+// on the IntellectualObject are populated, which means it will
+// not work on the barebones IntellectualObject we get back from
+// Pharos. It will work on the IntellectualObject we build during
+// the ingest process, the one that apt_fetch builds and passes
+// along to apt_store and apt_record. That fully-fleshed object
+// is preserved in JSON format in WorkItemState.State.
+//
+// We want to build all of the ingest PremisEvents before saving
+// them to avoid a problem that showed up in the old system. In
+// that system, we created PremisEvents when we were ready to
+// save them. Ingest often took 2 or 3 attempts in the old system
+// due to problems with Fluctus/Fedora. That resulted in 2 or 3
+// ingest events for each object and file. Generating the events
+// beforehand, with uuids, allows us to check with Pharos first
+// to see if the event with the specific uuid is already in the
+// system. We can add it if it's not, and we won't duplicate it
+// if it is. This takes care of PT #113562325.
+//
+// This call is idempotent, so calling it multiple times will
+// not mess up our data.
+func (obj *IntellectualObject) BuildIngestEvents() (error) {
+
+	// For IntellectualObject:
+	//
+	// ingest
+	// identifier_assignment
+	// access_assignment
+	//
+	// call BuildIngestEvents on each GenericFile
+
+	return nil
+}
+
+// BuildIngestChecksums creates all of the ingest checksums for
+// this object's GenericFiles. See the notes for BuildIngestEvents
+// above, as they all apply here. This call is idempotent, so
+// calling it multiple times will not mess up our data.
+func (obj *IntellectualObject) BuildIngestChecksums() (error) {
+
+	// call BuildIngestChecksums on each GenericFile
+
+	return nil
+}

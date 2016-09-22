@@ -164,7 +164,8 @@ func SetBasicObjectInfo(ingestState *models.IngestState, _context *context.Conte
 	ingestState.IngestManifest.Object.BagName = util.CleanBagName(ingestState.IngestManifest.S3Key)
 	ingestState.IngestManifest.Object.Institution = instIdentifier
 	// -----------------------------------------------------------
-	// TODO: Get institution id! (Cache them?)
+	// TODO: Get institution id! Check the cache in the PharosClient
+	// HERE
 	// -----------------------------------------------------------
 	//ingestState.IngestManifest.Object.InstitutionId =
 	ingestState.IngestManifest.Object.IngestS3Bucket = ingestState.IngestManifest.S3Bucket

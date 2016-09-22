@@ -91,6 +91,7 @@ func (recorder *APTRecorder) HandleMessage(message *nsq.Message) (error) {
 // Step 1: Record data in Pharos
 func (recorder *APTRecorder) record () {
 	for ingestState := range recorder.RecordChannel {
+		// HERE
 		// Create all events locally
 		// Save IntellectualObject
 		// Save GenericFiles (batch)
