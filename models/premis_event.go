@@ -173,7 +173,7 @@ func NewEventGenericFileFixityCheck(checksumVerifiedAt time.Time, fixityAlg, dig
 }
 
 // We generated a sha256 checksum.
-func NewEventGenericFileFixityGeneration(checksumGeneratedAt time.Time, fixityAlg, digest string) (*PremisEvent, error) {
+func NewEventGenericFileDigestCalculation(checksumGeneratedAt time.Time, fixityAlg, digest string) (*PremisEvent, error) {
 	eventId, err := uuid.NewV4()
 	if err != nil {
 		return nil, fmt.Errorf("Error generating UUID for generic file ingest event: %v", err)

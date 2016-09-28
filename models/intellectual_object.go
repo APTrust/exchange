@@ -225,9 +225,10 @@ func (obj *IntellectualObject) BuildIngestEvents() (error) {
 
 	// For IntellectualObject:
 	//
-	// ingest
+	// creation
 	// identifier_assignment
 	// access_assignment
+	// ingest (only after all generic files & events are in)
 	//
 	// call BuildIngestEvents on each GenericFile
 

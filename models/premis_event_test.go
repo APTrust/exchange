@@ -125,8 +125,8 @@ func TestNewEventGenericFileFixityCheck(t *testing.T) {
 	assert.Equal(t, "Fixity did not match", event.OutcomeInformation)
 }
 
-func TestNewEventGenericFileFixityGeneration(t *testing.T) {
-	event, err := models.NewEventGenericFileFixityGeneration(testutil.TEST_TIMESTAMP, constants.AlgMd5, "123456789")
+func TestNewEventGenericFileDigestCalculation(t *testing.T) {
+	event, err := models.NewEventGenericFileDigestCalculation(testutil.TEST_TIMESTAMP, constants.AlgMd5, "123456789")
 	if err != nil {
 		t.Errorf("Error creating PremisEvent: %v", err)
 		return
@@ -141,7 +141,7 @@ func TestNewEventGenericFileFixityGeneration(t *testing.T) {
 	assert.Equal(t, "http://golang.org/pkg/crypto/md5/", event.Agent)
 	assert.Equal(t, "", event.OutcomeInformation)
 
-	event, err = models.NewEventGenericFileFixityGeneration(testutil.TEST_TIMESTAMP, constants.AlgSha256, "123456789")
+	event, err = models.NewEventGenericFileDigestCalculation(testutil.TEST_TIMESTAMP, constants.AlgSha256, "123456789")
 	if err != nil {
 		t.Errorf("Error creating PremisEvent: %v", err)
 		return

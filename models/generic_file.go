@@ -1,8 +1,9 @@
 package models
 
 import (
-	"fmt"
 	"encoding/json"
+	"fmt"
+	"github.com/APTrust/exchange/constants"
 	"strings"
 	"time"
 )
@@ -308,17 +309,98 @@ func (gf *GenericFile) PreservationStorageFileName() (string, error) {
 // as they all apply here. This call is idempotent, so
 // calling it multiple times will not mess up our data.
 func (gf *GenericFile) BuildIngestEvents() (error) {
+	// Fixity Check
+	// This is our initial fixity check of the file against
+	// the md5 checksum in the manifest-md5.txt file.
+	events := gf.FindEventsByType(constants.EventFixityCheck)
+	if len(events) == 0 {
+		fixityMatched := !gf.IngestMd5VerifiedAt.IsZero()
+		event, err := NewEventGenericFileFixityCheck(gf.IngestMd5VerifiedAt,
+			constants.AlgMd5, gf.IngestMd5, fixityMatched)
+		if err != nil {
+			return fmt.Errorf("Error building fixity check event for %s: %v",
+				gf.Identifier, err)
+		}
+		gf.PremisEvents = append(gf.PremisEvents, event)
+	}
 
-	// See https://github.com/APTrust/bagman/blob/d4894638c1a6552e42d8a621824c25b2faddfcb7/bagman/file.go
-	//
-	// Use FindEventsByType
-	//
-	// fixity_check
-	// fixity_generation
-	// ingest
-	// identifier_assignment (for file identifier)
-	// identifier_assignment (for S3 URL)
-	// replication
+	// Message Digest Calculation
+	// This is us calculating the object's SHA256 digest.
+	// was fixity_generation in the first-gen code.
+	events = gf.FindEventsByType(constants.EventDigestCalculation)
+	if len(events) == 0 {
+		event, err := NewEventGenericFileDigestCalculation(
+			gf.IngestSha256GeneratedAt, constants.AlgSha256, gf.IngestSha256)
+		if err != nil {
+			return fmt.Errorf("Error building digest calculation event for %s: %v",
+				gf.Identifier, err)
+		}
+		gf.PremisEvents = append(gf.PremisEvents, event)
+	}
+
+	// We assign a UUID to this file, which becomes
+	// its key in long-term storage.
+	events = gf.FindEventsByType(constants.EventIdentifierAssignment)
+	hasIdentifierAssignment := false
+	hasS3URLAssignment := false
+	for _, existing_event := range events {
+		if strings.HasPrefix(existing_event.Detail, "http://") ||
+			strings.HasPrefix(existing_event.Detail, "https://") {
+			hasS3URLAssignment = true
+		} else {
+			hasIdentifierAssignment = true
+		}
+	}
+	// Identifier Assignment (file identifier: school.edu/bag_name)
+	if !hasIdentifierAssignment {
+		event, err :=  NewEventGenericFileIdentifierAssignment(
+			gf.IngestUUIDGeneratedAt, constants.IdTypeBagAndPath,
+			gf.Identifier)
+		if err != nil {
+			return fmt.Errorf("Error building file identifier assignment event for %s: %v",
+				gf.Identifier, err)
+		}
+		gf.PremisEvents = append(gf.PremisEvents, event)
+	}
+
+	// The URL of this item in S3 (primary long-term storage)
+	if !hasS3URLAssignment {
+		event, err :=  NewEventGenericFileIdentifierAssignment(
+			gf.IngestStoredAt, constants.IdTypeStorageURL,
+			gf.IngestStorageURL)
+		if err != nil {
+			return fmt.Errorf("Error building S3 URL identifier assignment event for %s: %v",
+				gf.Identifier, err)
+		}
+		gf.PremisEvents = append(gf.PremisEvents, event)
+	}
+
+
+	// Replication
+	// The URL of this item in Glacier (secondard long-term storage,
+	// AKA replication)
+	events = gf.FindEventsByType(constants.EventReplication)
+	if len(events) == 0 {
+		event, err := NewEventGenericFileReplication(
+			gf.IngestReplicatedAt, gf.IngestReplicationURL)
+		if err != nil {
+			return fmt.Errorf("Error building replication event for %s: %v",
+				gf.Identifier, err)
+		}
+		gf.PremisEvents = append(gf.PremisEvents, event)
+	}
+
+	// Ingest
+	// This item has completed all steps of ingest.
+	events = gf.FindEventsByType(constants.EventIngestion)
+	if len(events) == 0 {
+		event, err := NewEventGenericFileIngest(gf.IngestStoredAt, gf.IngestMd5)
+		if err != nil {
+			return fmt.Errorf("Error building ingest event for %s: %v",
+				gf.Identifier, err)
+		}
+		gf.PremisEvents = append(gf.PremisEvents, event)
+	}
 
 	return nil
 }
