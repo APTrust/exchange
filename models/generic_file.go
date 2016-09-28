@@ -309,9 +309,44 @@ func (gf *GenericFile) PreservationStorageFileName() (string, error) {
 // as they all apply here. This call is idempotent, so
 // calling it multiple times will not mess up our data.
 func (gf *GenericFile) BuildIngestEvents() (error) {
-	// Fixity Check
-	// This is our initial fixity check of the file against
-	// the md5 checksum in the manifest-md5.txt file.
+
+	err := gf.buildIngestFixityCheck()
+	if err != nil {
+		return err
+	}
+
+	err = gf.buildDigestCalculationEvent()
+	if err != nil {
+		return err
+	}
+
+	err = gf.buildFileIdentifierAssignmentEvent()
+	if err != nil {
+		return err
+	}
+
+	err = gf.buildS3URLAssignmentEvent()
+	if err != nil {
+		return err
+	}
+
+	err = gf.buildReplicationEvent()
+	if err != nil {
+		return err
+	}
+
+	err = gf.buildFileIngestEvent()
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// Builds an event (if it does not already exist) saying
+// that we validated the md5 checksum in the manifest-md5.txt
+// file against the checksum of the file itself.
+func (gf *GenericFile) buildIngestFixityCheck() (error) {
 	events := gf.FindEventsByType(constants.EventFixityCheck)
 	if len(events) == 0 {
 		fixityMatched := !gf.IngestMd5VerifiedAt.IsZero()
@@ -323,31 +358,35 @@ func (gf *GenericFile) BuildIngestEvents() (error) {
 		}
 		gf.PremisEvents = append(gf.PremisEvents, event)
 	}
+	return nil
+}
 
-	// Message Digest Calculation
-	// This is us calculating the object's SHA256 digest.
-	// was fixity_generation in the first-gen code.
-	events = gf.FindEventsByType(constants.EventDigestCalculation)
+// Builds an event (if it doesn't already exist) describing
+// when we calculated the sha256 checksum for this file, and
+// what the digest was.
+func (gf *GenericFile) buildDigestCalculationEvent() (error) {
+	events := gf.FindEventsByType(constants.EventDigestCalculation)
 	if len(events) == 0 {
 		event, err := NewEventGenericFileDigestCalculation(
 			gf.IngestSha256GeneratedAt, constants.AlgSha256, gf.IngestSha256)
 		if err != nil {
-			return fmt.Errorf("Error building digest calculation event for %s: %v",
+			return fmt.Errorf("Error building replication event for %s: %v",
 				gf.Identifier, err)
 		}
 		gf.PremisEvents = append(gf.PremisEvents, event)
 	}
+	return nil
+}
 
-	// We assign a UUID to this file, which becomes
-	// its key in long-term storage.
-	events = gf.FindEventsByType(constants.EventIdentifierAssignment)
+// Builds the identifier assignment event saying we assigned a
+// GenericFile identifier (school.edu/bag_name), only if that
+// event does not already exist.
+func (gf *GenericFile) buildFileIdentifierAssignmentEvent() (error) {
+	events := gf.FindEventsByType(constants.EventIdentifierAssignment)
 	hasIdentifierAssignment := false
-	hasS3URLAssignment := false
 	for _, existing_event := range events {
-		if strings.HasPrefix(existing_event.Detail, "http://") ||
-			strings.HasPrefix(existing_event.Detail, "https://") {
-			hasS3URLAssignment = true
-		} else {
+		if !strings.HasPrefix(existing_event.Detail, "http://") ||
+			!strings.HasPrefix(existing_event.Detail, "https://") {
 			hasIdentifierAssignment = true
 		}
 	}
@@ -362,7 +401,20 @@ func (gf *GenericFile) BuildIngestEvents() (error) {
 		}
 		gf.PremisEvents = append(gf.PremisEvents, event)
 	}
+	return nil
+}
 
+// Builds the event (if it doesn't already exist) saying when
+// we assigned the S3 storage URL to this file.
+func (gf *GenericFile) buildS3URLAssignmentEvent() (error) {
+	events := gf.FindEventsByType(constants.EventIdentifierAssignment)
+	hasS3URLAssignment := false
+	for _, existing_event := range events {
+		if strings.HasPrefix(existing_event.Detail, "http://") ||
+			strings.HasPrefix(existing_event.Detail, "https://") {
+			hasS3URLAssignment = true
+		}
+	}
 	// The URL of this item in S3 (primary long-term storage)
 	if !hasS3URLAssignment {
 		event, err :=  NewEventGenericFileIdentifierAssignment(
@@ -374,12 +426,15 @@ func (gf *GenericFile) BuildIngestEvents() (error) {
 		}
 		gf.PremisEvents = append(gf.PremisEvents, event)
 	}
+	return nil
+}
 
-
-	// Replication
+// Builds the event (if it doesn't already exist) describing when
+// we replicated this file to Glacier.
+func (gf *GenericFile) buildReplicationEvent() (error) {
 	// The URL of this item in Glacier (secondard long-term storage,
 	// AKA replication)
-	events = gf.FindEventsByType(constants.EventReplication)
+	events := gf.FindEventsByType(constants.EventReplication)
 	if len(events) == 0 {
 		event, err := NewEventGenericFileReplication(
 			gf.IngestReplicatedAt, gf.IngestReplicationURL)
@@ -389,10 +444,14 @@ func (gf *GenericFile) BuildIngestEvents() (error) {
 		}
 		gf.PremisEvents = append(gf.PremisEvents, event)
 	}
+	return nil
+}
 
-	// Ingest
-	// This item has completed all steps of ingest.
-	events = gf.FindEventsByType(constants.EventIngestion)
+// Builds the event (if it doesn't already exist) describing when
+// this file was ingested.
+func (gf *GenericFile) buildFileIngestEvent() (error) {
+	// Item has completed all steps of ingest.
+	events := gf.FindEventsByType(constants.EventIngestion)
 	if len(events) == 0 {
 		event, err := NewEventGenericFileIngest(gf.IngestStoredAt, gf.IngestMd5)
 		if err != nil {
@@ -401,9 +460,9 @@ func (gf *GenericFile) BuildIngestEvents() (error) {
 		}
 		gf.PremisEvents = append(gf.PremisEvents, event)
 	}
-
 	return nil
 }
+
 
 // BuildIngestChecksums creates all of the ingest checksums for
 // this GenericFile. See the notes for IntellectualObject.BuildIngestEvents,
