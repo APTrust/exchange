@@ -32,7 +32,7 @@ func TestNewEventObjectIngest(t *testing.T) {
 		return
 	}
 	assert.Len(t, event.Identifier, 36)
-	assert.Equal(t, "ingest", event.EventType)
+	assert.Equal(t, "ingestion", event.EventType)
 	assert.False(t, event.DateTime.IsZero())
 	assert.Equal(t, "Copied all files to perservation bucket", event.Detail)
 	assert.Equal(t, "Success", event.Outcome)
@@ -49,7 +49,7 @@ func TestNewEventObjectIdentifierAssignment(t *testing.T) {
 		return
 	}
 	assert.Len(t, event.Identifier, 36)
-	assert.Equal(t, "identifier_assignment", event.EventType)
+	assert.Equal(t, "identifier assignment", event.EventType)
 	assert.False(t, event.DateTime.IsZero())
 	assert.Equal(t, "Assigned bag identifier", event.Detail)
 	assert.Equal(t, "Success", event.Outcome)
@@ -66,7 +66,7 @@ func TestNewEventObjectRights(t *testing.T) {
 		return
 	}
 	assert.Len(t, event.Identifier, 36)
-	assert.Equal(t, "access_assignment", event.EventType)
+	assert.Equal(t, "access assignment", event.EventType)
 	assert.False(t, event.DateTime.IsZero())
 	assert.Equal(t, "Assigned bag access rights", event.Detail)
 	assert.Equal(t, "Success", event.Outcome)
@@ -83,7 +83,7 @@ func TestNewEventGenericFileIngest(t *testing.T) {
 		return
 	}
 	assert.Len(t, event.Identifier, 36)
-	assert.Equal(t, "ingest", event.EventType)
+	assert.Equal(t, "ingestion", event.EventType)
 	assert.Equal(t, testutil.TEST_TIMESTAMP, event.DateTime)
 	assert.Equal(t, "Completed copy to S3", event.Detail)
 	assert.Equal(t, "Success", event.Outcome)
@@ -100,7 +100,7 @@ func TestNewEventGenericFileFixityCheck(t *testing.T) {
 		return
 	}
 	assert.Len(t, event.Identifier, 36)
-	assert.Equal(t, "fixity_check", event.EventType)
+	assert.Equal(t, "fixity check", event.EventType)
 	assert.Equal(t, testutil.TEST_TIMESTAMP, event.DateTime)
 	assert.Equal(t, "Fixity check against registered hash", event.Detail)
 	assert.Equal(t, "Success", event.Outcome)
@@ -115,7 +115,7 @@ func TestNewEventGenericFileFixityCheck(t *testing.T) {
 		return
 	}
 	assert.Len(t, event.Identifier, 36)
-	assert.Equal(t, "fixity_check", event.EventType)
+	assert.Equal(t, "fixity check", event.EventType)
 	assert.Equal(t, testutil.TEST_TIMESTAMP, event.DateTime)
 	assert.Equal(t, "Fixity check against registered hash", event.Detail)
 	assert.Equal(t, "Failed", event.Outcome)
@@ -132,9 +132,9 @@ func TestNewEventGenericFileFixityGeneration(t *testing.T) {
 		return
 	}
 	assert.Len(t, event.Identifier, 36)
-	assert.Equal(t, "fixity_generation", event.EventType)
+	assert.Equal(t, "message digest calculation", event.EventType)
 	assert.Equal(t, testutil.TEST_TIMESTAMP, event.DateTime)
-	assert.Equal(t, "Calculated new fixity value", event.Detail)
+	assert.Equal(t, "Calculated fixity value", event.Detail)
 	assert.Equal(t, "Success", event.Outcome)
 	assert.Equal(t, "md5:123456789", event.OutcomeDetail)
 	assert.Equal(t, "Go language crypto/md5", event.Object)
@@ -147,9 +147,9 @@ func TestNewEventGenericFileFixityGeneration(t *testing.T) {
 		return
 	}
 	assert.Len(t, event.Identifier, 36)
-	assert.Equal(t, "fixity_generation", event.EventType)
+	assert.Equal(t, "message digest calculation", event.EventType)
 	assert.Equal(t, testutil.TEST_TIMESTAMP, event.DateTime)
-	assert.Equal(t, "Calculated new fixity value", event.Detail)
+	assert.Equal(t, "Calculated fixity value", event.Detail)
 	assert.Equal(t, "Success", event.Outcome)
 	assert.Equal(t, "sha256:123456789", event.OutcomeDetail)
 	assert.Equal(t, "Go language crypto/sha256", event.Object)
@@ -164,7 +164,7 @@ func TestNewEventGenericFileIdentifierAssignment(t *testing.T) {
 		return
 	}
 	assert.Len(t, event.Identifier, 36)
-	assert.Equal(t, "identifier_assignment", event.EventType)
+	assert.Equal(t, "identifier assignment", event.EventType)
 	assert.Equal(t, testutil.TEST_TIMESTAMP, event.DateTime)
 	assert.Equal(t, "Assigned new institution.bag/path identifier", event.Detail)
 	assert.Equal(t, "Success", event.Outcome)
@@ -179,7 +179,7 @@ func TestNewEventGenericFileIdentifierAssignment(t *testing.T) {
 		return
 	}
 	assert.Len(t, event.Identifier, 36)
-	assert.Equal(t, "identifier_assignment", event.EventType)
+	assert.Equal(t, "identifier assignment", event.EventType)
 	assert.Equal(t, testutil.TEST_TIMESTAMP, event.DateTime)
 	assert.Equal(t, "Assigned new storage URL identifier", event.Detail)
 	assert.Equal(t, "Success", event.Outcome)

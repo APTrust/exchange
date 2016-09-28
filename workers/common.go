@@ -169,7 +169,6 @@ func SetBasicObjectInfo(ingestState *models.IngestState, _context *context.Conte
 	ingestState.IngestManifest.Object.IngestTarFilePath = filepath.Join(
 		_context.Config.TarDirectory,
 		instIdentifier, ingestState.IngestManifest.S3Key)
-
 }
 
 

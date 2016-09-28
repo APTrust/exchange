@@ -133,6 +133,13 @@ const (
 // PREMIS Event types as defined by the Library of Congress at
 // http://id.loc.gov/search/?q=&q=cs%3Ahttp%3A%2F%2Fid.loc.gov%2Fvocabulary%2Fpreservation%2FeventType#
 const(
+	// The process of assigning access rights.
+	// For APTrust, access can be "restricted", "institution" or "consortia".
+	// This is not part of the LOC standard, and LOC has no analog for
+	// this event. APTrust has been using this event since the repository's
+	// inception. In the old system, it was access_assignment.
+	EventAccessAssignment = "access assignment"
+
 	// The process whereby a repository actively obtains an object.
 	EventCapture = "capture"
 
@@ -155,12 +162,20 @@ const(
 	EventDeletion = "deletion"
 
 	// The process by which a message digest ("hash") is created.
+	// This was fixity_generation in the first iteration of APTrust's
+	// software.
 	EventDigestCalculation = "message digest calculation"
 
 	// The process of verifying that an object has not been changed in a given period.
 	EventFixityCheck = "fixity check"
 
+	// The process of assigning an identifier to an object or file.
+	// This one is not in the LOC spec, but APTrust has been using
+	// it since the repository's inception, and there is no LOC analog.
+	EventIdentifierAssignment = "identifier assignment"
+
 	// The process of adding objects to a preservation repository.
+	// Was "ingest" in the first iteration of the repository.
 	EventIngestion = "ingestion"
 
 	// A transformation of an object creating a version in a more contemporary format.
@@ -183,6 +198,7 @@ const(
 )
 
 var EventTypes []string = []string{
+	EventAccessAssignment,
 	EventCapture,
 	EventCompression,
 	EventCreation,
@@ -193,6 +209,7 @@ var EventTypes []string = []string{
 	EventDigestCalculation,
 	EventFixityCheck,
 	EventIngestion,
+	EventIdentifierAssignment,
 	EventMigration,
 	EventNormalization,
 	EventReplication,

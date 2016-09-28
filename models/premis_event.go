@@ -24,8 +24,8 @@ type PremisEvent struct {
 	// Identifier is a UUID string assigned by Pharos.
 	Identifier         string    `json:"identifier"`
 
-	// EventType is the type of Premis event we want to register: ingest,
-	// validation, fixity_generation, fixity_check or identifier_assignment.
+	// EventType is the type of Premis event we want to register.
+	// See constants.EventTypes.
 	EventType          string    `json:"type"`
 
 	// DateTime is when this event occurred in our system.
@@ -74,7 +74,7 @@ func NewEventObjectIngest(numberOfFilesIngested int) (*PremisEvent, error) {
 	}
 	return &PremisEvent{
 		Identifier:         eventId.String(),
-		EventType:          "ingest",
+		EventType:          constants.EventIngestion,
 		DateTime:           time.Now(),
 		Detail:             "Copied all files to perservation bucket",
 		Outcome:            string(constants.StatusSuccess),
@@ -92,7 +92,7 @@ func NewEventObjectIdentifierAssignment(objectIdentifier string) (*PremisEvent, 
 	}
 	return &PremisEvent{
 		Identifier:         eventId.String(),
-		EventType:          "identifier_assignment",
+		EventType:          constants.EventIdentifierAssignment,
 		DateTime:           time.Now(),
 		Detail:             "Assigned bag identifier",
 		Outcome:            string(constants.StatusSuccess),
@@ -110,7 +110,7 @@ func NewEventObjectRights(accessSetting string) (*PremisEvent, error) {
 	}
 	return &PremisEvent{
 		Identifier:         eventId.String(),
-		EventType:          "access_assignment",
+		EventType:          constants.EventAccessAssignment,
 		DateTime:           time.Now(),
 		Detail:             "Assigned bag access rights",
 		Outcome:            string(constants.StatusSuccess),
@@ -129,7 +129,7 @@ func NewEventGenericFileIngest(storedAt time.Time, md5Digest string) (*PremisEve
 	}
 	return &PremisEvent{
 		Identifier:         eventId.String(),
-		EventType:          "ingest",
+		EventType:          constants.EventIngestion,
 		DateTime:           storedAt,
 		Detail:             "Completed copy to S3",
 		Outcome:            string(constants.StatusSuccess),
@@ -161,7 +161,7 @@ func NewEventGenericFileFixityCheck(checksumVerifiedAt time.Time, fixityAlg, dig
 	}
 	return &PremisEvent{
 		Identifier:         eventId.String(),
-		EventType:          "fixity_check",
+		EventType:          constants.EventFixityCheck,
 		DateTime:           checksumVerifiedAt,
 		Detail:             "Fixity check against registered hash",
 		Outcome:            outcome,
@@ -186,9 +186,9 @@ func NewEventGenericFileFixityGeneration(checksumGeneratedAt time.Time, fixityAl
 	}
 	return &PremisEvent{
 		Identifier:         eventId.String(),
-		EventType:          "fixity_generation",
+		EventType:          constants.EventDigestCalculation,
 		DateTime:           checksumGeneratedAt,
-		Detail:             "Calculated new fixity value",
+		Detail:             "Calculated fixity value",
 		Outcome:            string(constants.StatusSuccess),
 		OutcomeDetail:      fmt.Sprintf("%s:%s", fixityAlg, digest),
 		Object:             object,
@@ -214,7 +214,7 @@ func NewEventGenericFileIdentifierAssignment(identifierGeneratedAt time.Time, id
 	}
 	return &PremisEvent{
 		Identifier:         eventId.String(),
-		EventType:          "identifier_assignment",
+		EventType:          constants.EventIdentifierAssignment,
 		DateTime:           identifierGeneratedAt,
 		Detail:             detail,
 		Outcome:            string(constants.StatusSuccess),
@@ -233,7 +233,7 @@ func NewEventGenericFileReplication(storedAt time.Time, replicationUrl string) (
 	}
 	return &PremisEvent{
 		Identifier:         eventId.String(),
-		EventType:          "replication",
+		EventType:          constants.EventReplication,
 		DateTime:           storedAt,
 		Detail:             "Copied to replication storage and assigned replication URL identifier",
 		Outcome:            string(constants.StatusSuccess),
