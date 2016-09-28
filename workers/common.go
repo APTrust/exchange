@@ -154,7 +154,7 @@ func InitWorkItemState (workItem *models.WorkItem) (*models.WorkItemState, error
 
 
 // This is really only used by apt_fetcher to initialize some barebones data on
-// an empty IntellectualObject.
+// an empty IntellectualObject. This is only ever called during the fetch stage.
 func SetBasicObjectInfo(ingestState *models.IngestState, _context *context.Context) {
 	// instIdentifier is, e.g., virginia.edu, ncsu.edu, etc.
 	// We'll download the tar file from the receiving bucket to
@@ -163,11 +163,19 @@ func SetBasicObjectInfo(ingestState *models.IngestState, _context *context.Conte
 	instIdentifier := util.OwnerOf(ingestState.IngestManifest.S3Bucket)
 	ingestState.IngestManifest.Object.BagName = util.CleanBagName(ingestState.IngestManifest.S3Key)
 	ingestState.IngestManifest.Object.Institution = instIdentifier
-	// -----------------------------------------------------------
-	// TODO: Get institution id! Check the cache in the PharosClient
-	// HERE
-	// -----------------------------------------------------------
-	//ingestState.IngestManifest.Object.InstitutionId =
+
+	resp := _context.PharosClient.InstitutionGet(instIdentifier)
+	if resp.Error != nil {
+		ingestState.IngestManifest.FetchResult.AddError(resp.Error.Error())
+		_context.MessageLog.Error(resp.Error.Error())
+	} else if resp.Institution() == nil {
+		msg := fmt.Sprintf("Pharos has no institution with identifier %s", instIdentifier)
+		ingestState.IngestManifest.FetchResult.AddError(msg)
+		_context.MessageLog.Error(resp.Error.Error())
+	} else {
+		ingestState.IngestManifest.Object.InstitutionId = resp.Institution().Id
+	}
+
 	ingestState.IngestManifest.Object.IngestS3Bucket = ingestState.IngestManifest.S3Bucket
 	ingestState.IngestManifest.Object.IngestS3Key = ingestState.IngestManifest.S3Key
 	ingestState.IngestManifest.Object.IngestTarFilePath = filepath.Join(
