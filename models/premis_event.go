@@ -3,6 +3,7 @@ package models
 import (
 	"fmt"
 	"github.com/APTrust/exchange/constants"
+	"github.com/APTrust/exchange/util"
 	"github.com/nu7hatch/gouuid"
 	"strings"
 	"time"
@@ -68,6 +69,9 @@ func (premisEvent *PremisEvent) EventTypeValid() bool {
 
 
 func NewEventObjectIngest(numberOfFilesIngested int) (*PremisEvent, error) {
+	if numberOfFilesIngested <= 0 {
+		return nil, fmt.Errorf("Param numberOfFilesIngested must be greater than zero.")
+	}
 	eventId, err := uuid.NewV4()
 	if err != nil {
 		return nil, fmt.Errorf("Error generating UUID for ingest event: %v", err)
@@ -86,6 +90,9 @@ func NewEventObjectIngest(numberOfFilesIngested int) (*PremisEvent, error) {
 }
 
 func NewEventObjectIdentifierAssignment(objectIdentifier string) (*PremisEvent, error) {
+	if objectIdentifier == "" {
+		return nil, fmt.Errorf("Param objectIdentifier cannot be empty.")
+	}
 	eventId, err := uuid.NewV4()
 	if err != nil {
 		return nil, fmt.Errorf("Error generating UUID for ingest event: %v", err)
@@ -104,6 +111,9 @@ func NewEventObjectIdentifierAssignment(objectIdentifier string) (*PremisEvent, 
 }
 
 func NewEventObjectRights(accessSetting string) (*PremisEvent, error) {
+	if !util.StringListContains(constants.AccessRights, strings.ToLower(accessSetting)) {
+		return nil, fmt.Errorf("Param accessSetting '%s' is not valid.", accessSetting)
+	}
 	eventId, err := uuid.NewV4()
 	if err != nil {
 		return nil, fmt.Errorf("Error generating UUID for ingest access/rights event: %v", err)
@@ -123,6 +133,13 @@ func NewEventObjectRights(accessSetting string) (*PremisEvent, error) {
 
 // We ingested a generic file into primary long-term storage.
 func NewEventGenericFileIngest(storedAt time.Time, md5Digest string) (*PremisEvent, error) {
+	if storedAt.IsZero() {
+		return nil, fmt.Errorf("Param storedAt cannot be empty.")
+	}
+	if len(md5Digest) != 32 {
+		return nil, fmt.Errorf("Param md5Digest must have 32 characters. '%s' doesn't.",
+			md5Digest)
+	}
 	eventId, err := uuid.NewV4()
 	if err != nil {
 		return nil, fmt.Errorf("Error generating UUID for generic file ingest event: %v", err)
@@ -143,6 +160,16 @@ func NewEventGenericFileIngest(storedAt time.Time, md5Digest string) (*PremisEve
 // We checked fixity against the manifest.
 // If fixity didn't match, we wouldn't be ingesting this.
 func NewEventGenericFileFixityCheck(checksumVerifiedAt time.Time, fixityAlg, digest string, fixityMatched bool) (*PremisEvent, error) {
+	if checksumVerifiedAt.IsZero() {
+		return nil, fmt.Errorf("Param checksumVerifiedAt cannot be empty.")
+	}
+	if !util.StringListContains(constants.ChecksumAlgorithms, fixityAlg) {
+		return nil, fmt.Errorf("Param fixityAlg '%s' is not valid.", fixityAlg)
+	}
+	if len(digest) != 32 && len(digest) != 64 {
+		return nil, fmt.Errorf("Param digest must have 32 or 64 characters. '%s' doesn't.",
+			digest)
+	}
 	eventId, err := uuid.NewV4()
 	if err != nil {
 		return nil, fmt.Errorf("Error generating UUID for generic file fixity check: %v", err)
@@ -174,6 +201,16 @@ func NewEventGenericFileFixityCheck(checksumVerifiedAt time.Time, fixityAlg, dig
 
 // We generated a sha256 checksum.
 func NewEventGenericFileDigestCalculation(checksumGeneratedAt time.Time, fixityAlg, digest string) (*PremisEvent, error) {
+	if checksumGeneratedAt.IsZero() {
+		return nil, fmt.Errorf("Param checksumVerifiedAt cannot be empty.")
+	}
+	if !util.StringListContains(constants.ChecksumAlgorithms, fixityAlg) {
+		return nil, fmt.Errorf("Param fixityAlg '%s' is not valid.", fixityAlg)
+	}
+	if len(digest) != 32 && len(digest) != 64 {
+		return nil, fmt.Errorf("Param digest must have 32 or 64 characters. '%s' doesn't.",
+			digest)
+	}
 	eventId, err := uuid.NewV4()
 	if err != nil {
 		return nil, fmt.Errorf("Error generating UUID for generic file ingest event: %v", err)
@@ -198,8 +235,19 @@ func NewEventGenericFileDigestCalculation(checksumGeneratedAt time.Time, fixityA
 }
 
 // We assigned an identifier: either a generic file identifier
-// or a new storage URL.
+// or a new storage URL. Note that when identifierType is
+// constants.IdTypeStorageURL, identifierGeneratedAt is the
+// timestamp at which the file was stored in S3.
 func NewEventGenericFileIdentifierAssignment(identifierGeneratedAt time.Time, identifierType, identifier string) (*PremisEvent, error) {
+	if identifierGeneratedAt.IsZero() {
+		return nil, fmt.Errorf("Param identifierGeneratedAt cannot be empty.")
+	}
+	if identifierType != constants.IdTypeStorageURL && identifierType != constants.IdTypeBagAndPath {
+		return nil, fmt.Errorf("Param identifierType '%s' is not valid.", identifierType)
+	}
+	if identifier == "" {
+		return nil, fmt.Errorf("Param identifier cannot be empty.")
+	}
 	eventId, err := uuid.NewV4()
 	if err != nil {
 		return nil, fmt.Errorf("Error generating UUID for generic file ingest event: %v", err)
@@ -210,7 +258,8 @@ func NewEventGenericFileIdentifierAssignment(identifierGeneratedAt time.Time, id
 	if identifierType == constants.IdTypeStorageURL {
 		object = "Go uuid library + goamz S3 library"
 		agent = "http://github.com/nu7hatch/gouuid"
-		detail = "Assigned new storage URL identifier"
+		detail = fmt.Sprintf("Assigned new storage URL identifier, and item was stored at %s",
+			identifierGeneratedAt.Format(time.RFC3339))
 	}
 	return &PremisEvent{
 		Identifier:         eventId.String(),
@@ -226,7 +275,14 @@ func NewEventGenericFileIdentifierAssignment(identifierGeneratedAt time.Time, id
 }
 
 // We saved the file to replication storage.
-func NewEventGenericFileReplication(storedAt time.Time, replicationUrl string) (*PremisEvent, error) {
+func NewEventGenericFileReplication(replicatedAt time.Time, replicationUrl string) (*PremisEvent, error) {
+	if replicatedAt.IsZero() {
+		return nil, fmt.Errorf("Param replicatedAt cannot be empty.")
+	}
+	if replicationUrl == "" {
+		return nil, fmt.Errorf("Param identifier cannot be empty.")
+	}
+
 	eventId, err := uuid.NewV4()
 	if err != nil {
 		return nil, fmt.Errorf("Error generating UUID for generic file replication event: %v", err)
@@ -234,7 +290,7 @@ func NewEventGenericFileReplication(storedAt time.Time, replicationUrl string) (
 	return &PremisEvent{
 		Identifier:         eventId.String(),
 		EventType:          constants.EventReplication,
-		DateTime:           storedAt,
+		DateTime:           replicatedAt,
 		Detail:             "Copied to replication storage and assigned replication URL identifier",
 		Outcome:            string(constants.StatusSuccess),
 		OutcomeDetail:      replicationUrl,

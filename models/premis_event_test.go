@@ -5,8 +5,13 @@ import (
 	"github.com/APTrust/exchange/models"
 	"github.com/APTrust/exchange/util/testutil"
 	"github.com/stretchr/testify/assert"
+	"strings"
 	"testing"
 )
+
+const digest = "12345678901234567890123456789012"
+const md5_digest = "md5:12345678901234567890123456789012"
+const sha256_digest = "sha256:12345678901234567890123456789012"
 
 func TestEventTypeValid(t *testing.T) {
 	for _, eventType := range constants.EventTypes {
@@ -77,7 +82,7 @@ func TestNewEventObjectRights(t *testing.T) {
 }
 
 func TestNewEventGenericFileIngest(t *testing.T) {
-	event, err := models.NewEventGenericFileIngest(testutil.TEST_TIMESTAMP, "123456789")
+	event, err := models.NewEventGenericFileIngest(testutil.TEST_TIMESTAMP, digest)
 	if err != nil {
 		t.Errorf("Error creating PremisEvent: %v", err)
 		return
@@ -87,14 +92,15 @@ func TestNewEventGenericFileIngest(t *testing.T) {
 	assert.Equal(t, testutil.TEST_TIMESTAMP, event.DateTime)
 	assert.Equal(t, "Completed copy to S3", event.Detail)
 	assert.Equal(t, "Success", event.Outcome)
-	assert.Equal(t, "md5:123456789", event.OutcomeDetail)
+	assert.Equal(t, md5_digest, event.OutcomeDetail)
 	assert.Equal(t, "exchange + goamz S3 client", event.Object)
 	assert.Equal(t, "https://github.com/APTrust/exchange", event.Agent)
 	assert.Equal(t, "Put using md5 checksum", event.OutcomeInformation)
 }
 
 func TestNewEventGenericFileFixityCheck(t *testing.T) {
-	event, err := models.NewEventGenericFileFixityCheck(testutil.TEST_TIMESTAMP, constants.AlgMd5, "123456789", true)
+	event, err := models.NewEventGenericFileFixityCheck(testutil.TEST_TIMESTAMP, constants.AlgMd5,
+		digest, true)
 	if err != nil {
 		t.Errorf("Error creating PremisEvent: %v", err)
 		return
@@ -104,12 +110,13 @@ func TestNewEventGenericFileFixityCheck(t *testing.T) {
 	assert.Equal(t, testutil.TEST_TIMESTAMP, event.DateTime)
 	assert.Equal(t, "Fixity check against registered hash", event.Detail)
 	assert.Equal(t, "Success", event.Outcome)
-	assert.Equal(t, "md5:123456789", event.OutcomeDetail)
+	assert.Equal(t, md5_digest, event.OutcomeDetail)
 	assert.Equal(t, "Go language crypto/md5", event.Object)
 	assert.Equal(t, "http://golang.org/pkg/crypto/md5/", event.Agent)
 	assert.Equal(t, "Fixity matches", event.OutcomeInformation)
 
-	event, err = models.NewEventGenericFileFixityCheck(testutil.TEST_TIMESTAMP, constants.AlgSha256, "123456789", false)
+	event, err = models.NewEventGenericFileFixityCheck(testutil.TEST_TIMESTAMP, constants.AlgSha256,
+		digest, false)
 	if err != nil {
 		t.Errorf("Error creating PremisEvent: %v", err)
 		return
@@ -119,14 +126,15 @@ func TestNewEventGenericFileFixityCheck(t *testing.T) {
 	assert.Equal(t, testutil.TEST_TIMESTAMP, event.DateTime)
 	assert.Equal(t, "Fixity check against registered hash", event.Detail)
 	assert.Equal(t, "Failed", event.Outcome)
-	assert.Equal(t, "sha256:123456789", event.OutcomeDetail)
+	assert.Equal(t, sha256_digest, event.OutcomeDetail)
 	assert.Equal(t, "Go language crypto/sha256", event.Object)
 	assert.Equal(t, "http://golang.org/pkg/crypto/sha256/", event.Agent)
 	assert.Equal(t, "Fixity did not match", event.OutcomeInformation)
 }
 
 func TestNewEventGenericFileDigestCalculation(t *testing.T) {
-	event, err := models.NewEventGenericFileDigestCalculation(testutil.TEST_TIMESTAMP, constants.AlgMd5, "123456789")
+	event, err := models.NewEventGenericFileDigestCalculation(testutil.TEST_TIMESTAMP,
+		constants.AlgMd5, digest)
 	if err != nil {
 		t.Errorf("Error creating PremisEvent: %v", err)
 		return
@@ -136,12 +144,12 @@ func TestNewEventGenericFileDigestCalculation(t *testing.T) {
 	assert.Equal(t, testutil.TEST_TIMESTAMP, event.DateTime)
 	assert.Equal(t, "Calculated fixity value", event.Detail)
 	assert.Equal(t, "Success", event.Outcome)
-	assert.Equal(t, "md5:123456789", event.OutcomeDetail)
+	assert.Equal(t, md5_digest, event.OutcomeDetail)
 	assert.Equal(t, "Go language crypto/md5", event.Object)
 	assert.Equal(t, "http://golang.org/pkg/crypto/md5/", event.Agent)
 	assert.Equal(t, "", event.OutcomeInformation)
 
-	event, err = models.NewEventGenericFileDigestCalculation(testutil.TEST_TIMESTAMP, constants.AlgSha256, "123456789")
+	event, err = models.NewEventGenericFileDigestCalculation(testutil.TEST_TIMESTAMP, constants.AlgSha256, digest)
 	if err != nil {
 		t.Errorf("Error creating PremisEvent: %v", err)
 		return
@@ -151,7 +159,7 @@ func TestNewEventGenericFileDigestCalculation(t *testing.T) {
 	assert.Equal(t, testutil.TEST_TIMESTAMP, event.DateTime)
 	assert.Equal(t, "Calculated fixity value", event.Detail)
 	assert.Equal(t, "Success", event.Outcome)
-	assert.Equal(t, "sha256:123456789", event.OutcomeDetail)
+	assert.Equal(t, sha256_digest, event.OutcomeDetail)
 	assert.Equal(t, "Go language crypto/sha256", event.Object)
 	assert.Equal(t, "http://golang.org/pkg/crypto/sha256/", event.Agent)
 	assert.Equal(t, "", event.OutcomeInformation)
@@ -181,7 +189,7 @@ func TestNewEventGenericFileIdentifierAssignment(t *testing.T) {
 	assert.Len(t, event.Identifier, 36)
 	assert.Equal(t, "identifier assignment", event.EventType)
 	assert.Equal(t, testutil.TEST_TIMESTAMP, event.DateTime)
-	assert.Equal(t, "Assigned new storage URL identifier", event.Detail)
+	assert.True(t, strings.HasPrefix(event.Detail, "Assigned new storage URL identifier"))
 	assert.Equal(t, "Success", event.Outcome)
 	assert.Equal(t, "https://example.com/000-000-999", event.OutcomeDetail)
 	assert.Equal(t, "Go uuid library + goamz S3 library", event.Object)
