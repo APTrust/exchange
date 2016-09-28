@@ -163,19 +163,7 @@ func SetBasicObjectInfo(ingestState *models.IngestState, _context *context.Conte
 	instIdentifier := util.OwnerOf(ingestState.IngestManifest.S3Bucket)
 	ingestState.IngestManifest.Object.BagName = util.CleanBagName(ingestState.IngestManifest.S3Key)
 	ingestState.IngestManifest.Object.Institution = instIdentifier
-
-	resp := _context.PharosClient.InstitutionGet(instIdentifier)
-	if resp.Error != nil {
-		ingestState.IngestManifest.FetchResult.AddError(resp.Error.Error())
-		_context.MessageLog.Error(resp.Error.Error())
-	} else if resp.Institution() == nil {
-		msg := fmt.Sprintf("Pharos has no institution with identifier %s", instIdentifier)
-		ingestState.IngestManifest.FetchResult.AddError(msg)
-		_context.MessageLog.Error(resp.Error.Error())
-	} else {
-		ingestState.IngestManifest.Object.InstitutionId = resp.Institution().Id
-	}
-
+	ingestState.IngestManifest.Object.InstitutionId = ingestState.WorkItem.InstitutionId
 	ingestState.IngestManifest.Object.IngestS3Bucket = ingestState.IngestManifest.S3Bucket
 	ingestState.IngestManifest.Object.IngestS3Key = ingestState.IngestManifest.S3Key
 	ingestState.IngestManifest.Object.IngestTarFilePath = filepath.Join(
