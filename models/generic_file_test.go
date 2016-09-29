@@ -6,6 +6,7 @@ import (
 	"github.com/APTrust/exchange/models"
 	"github.com/APTrust/exchange/util/testutil"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"path/filepath"
 	"testing"
 )
@@ -169,4 +170,30 @@ func TestBuildIngestEvents(t *testing.T) {
 	err = gf.BuildIngestEvents()
 	assert.Nil(t, err)
 	assert.Equal(t, 6, len(gf.PremisEvents))
+}
+
+func TestBuildIngestChecksums(t *testing.T) {
+	gf := testutil.MakeGenericFile(0, 0, "test.edu/test_bag/file.txt")
+	assert.Equal(t, 0, len(gf.Checksums))
+	err := gf.BuildIngestChecksums()
+	assert.Nil(t, err)
+	assert.Equal(t, 2, len(gf.Checksums))
+	md5 := gf.GetChecksum(constants.AlgMd5)
+	sha256 := gf.GetChecksum(constants.AlgSha256)
+	require.NotNil(t, md5)
+	require.NotNil(t, sha256)
+
+	assert.Equal(t, constants.AlgMd5, md5.Algorithm)
+	assert.False(t, md5.DateTime.IsZero())
+	assert.Equal(t, 32, len(md5.Digest))
+
+	assert.Equal(t, constants.AlgSha256, sha256.Algorithm)
+	assert.False(t, sha256.DateTime.IsZero())
+	assert.Equal(t, 64, len(sha256.Digest))
+
+	// Calling this function again should not generate new events
+	// if all the events are there.
+	err = gf.BuildIngestChecksums()
+	assert.Nil(t, err)
+	assert.Equal(t, 2, len(gf.Checksums))
 }

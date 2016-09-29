@@ -470,10 +470,59 @@ func (gf *GenericFile) buildFileIngestEvent() (error) {
 // as they all apply here. This call is idempotent, so
 // calling it multiple times will not mess up our data.
 func (gf *GenericFile) BuildIngestChecksums() (error) {
+	err := gf.buildIngestMd5()
+	if err != nil {
+		return err
+	}
+	err = gf.buildIngestSha256()
+	if err != nil {
+		return err
+	}
+	return nil
+}
 
-	// Use GetChecksum
-	// md5
-	// sha256
+// Creates the initial md5 Checksum record for this file, if
+// it does not already exist.
+func (gf *GenericFile) buildIngestMd5() (error) {
+	md5 := gf.GetChecksum(constants.AlgMd5)
+	if md5 == nil {
+		if len(gf.IngestMd5) != 32 {
+			return fmt.Errorf("Cannot create md5 Checksum object: " +
+				"IngestMd5 '%s' is missing or invalid.", gf.IngestMd5)
+		}
+		if gf.IngestMd5GeneratedAt.IsZero() {
+			return fmt.Errorf("Cannot create md5 Checksum object: " +
+				"IngestMd5GeneratedAt is missing.")
+		}
+		md5 = &Checksum{
+			Algorithm: constants.AlgMd5,
+			DateTime: gf.IngestMd5GeneratedAt,
+			Digest: gf.IngestMd5,
+		}
+		gf.Checksums = append(gf.Checksums, md5)
+	}
+	return nil
+}
 
+// Creates the initial sha256 Checksum record for this file, if
+// it does not already exist.
+func (gf *GenericFile) buildIngestSha256() (error) {
+	sha256 := gf.GetChecksum(constants.AlgSha256)
+	if sha256 == nil {
+		if len(gf.IngestSha256) != 64 {
+			return fmt.Errorf("Cannot create sha256 Checksum object: " +
+				"IngestSha256 '%s' is missing or invalid.", gf.IngestSha256)
+		}
+		if gf.IngestSha256GeneratedAt.IsZero() {
+			return fmt.Errorf("Cannot create sha256 Checksum object: " +
+				"IngestSha256GeneratedAt is missing.")
+		}
+		sha256 = &Checksum{
+			Algorithm: constants.AlgSha256,
+			DateTime: gf.IngestSha256GeneratedAt,
+			Digest: gf.IngestSha256,
+		}
+		gf.Checksums = append(gf.Checksums, sha256)
+	}
 	return nil
 }
