@@ -526,3 +526,14 @@ func (gf *GenericFile) buildIngestSha256() (error) {
 	}
 	return nil
 }
+
+// Copy this GenericFile's Id to the GenericFileId
+// property of all child objects, if Id is non-zero.
+// Child objects include Checksums and Premis Events.
+func (gf *GenericFile) PropagateIdToChildren() {
+
+	if gf.Id > 0 {
+		// Set GenericFileId on all PREMIS events
+		// Set GenericFileId on all Checksums
+	}
+}

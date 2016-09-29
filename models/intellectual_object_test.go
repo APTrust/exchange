@@ -2,6 +2,7 @@ package models_test
 
 import (
 	"encoding/json"
+	"github.com/APTrust/exchange/constants"
 	"github.com/APTrust/exchange/models"
 	"github.com/APTrust/exchange/util/testutil"
 	"github.com/stretchr/testify/assert"
@@ -103,7 +104,7 @@ func TestFindTag(t *testing.T) {
 	assert.Nil(t, tagsx)
 }
 
-func TestAllFilesSave(t *testing.T) {
+func TestAllFilesSaved(t *testing.T) {
 	filepath := filepath.Join("testdata", "json_objects", "intel_obj.json")
 	obj, err := testutil.LoadIntelObjFixture(filepath)
 	if err != nil {
@@ -120,4 +121,35 @@ func TestAllFilesSave(t *testing.T) {
 	gf.IngestStoredAt = time.Now().UTC()
 	gf.IngestReplicatedAt = time.Now().UTC()
 	assert.True(t, obj.AllFilesSaved())
+}
+
+func TestObjFindEventsByType(t *testing.T) {
+	obj := models.NewIntellectualObject()
+
+	// Add a creation event
+	creationEvent := testutil.MakePremisEvent()
+	creationEvent.EventType = constants.EventCreation
+	obj.PremisEvents = append(obj.PremisEvents, creationEvent)
+
+	// Add identifier assignment event
+	idEvent := testutil.MakePremisEvent()
+	idEvent.EventType = constants.EventIdentifierAssignment
+	obj.PremisEvents = append(obj.PremisEvents, idEvent)
+
+	// Add an ingest event
+	ingestEvent := testutil.MakePremisEvent()
+	ingestEvent.EventType = constants.EventIngestion
+	obj.PremisEvents = append(obj.PremisEvents, ingestEvent)
+
+	creationEvents := obj.FindEventsByType(constants.EventCreation)
+	idEvents := obj.FindEventsByType(constants.EventIdentifierAssignment)
+	ingestEvents := obj.FindEventsByType(constants.EventIngestion)
+
+	require.Equal(t, 1, len(creationEvents))
+	require.Equal(t, 1, len(idEvents))
+	require.Equal(t, 1, len(ingestEvents))
+
+	assert.Equal(t, creationEvent.Identifier, creationEvents[0].Identifier)
+	assert.Equal(t, idEvent.Identifier, idEvents[0].Identifier)
+	assert.Equal(t, ingestEvent.Identifier, ingestEvents[0].Identifier)
 }

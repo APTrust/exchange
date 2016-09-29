@@ -198,6 +198,18 @@ func (obj *IntellectualObject) SerializeForPharos() ([]byte, error) {
 	})
 }
 
+// Returns events of the specified type
+func (obj *IntellectualObject) FindEventsByType(eventType string) ([]PremisEvent) {
+	events := make([]PremisEvent, 0)
+	for _, event := range obj.PremisEvents {
+		if event != nil && event.EventType == eventType {
+			events = append(events, *event)
+		}
+	}
+	return events
+}
+
+
 // BuildIngestEvents creates all of the PremisEvents required
 // for ingest for this IntellectualObject and all of its
 // GenericFiles. This call works only when the Ingest data fields
@@ -235,6 +247,22 @@ func (obj *IntellectualObject) BuildIngestEvents() (error) {
 	return nil
 }
 
+func (obj *IntellectualObject) buildEventCreation() (error) {
+	return nil
+}
+
+func (obj *IntellectualObject) buildEventIdentifierAssignment() (error) {
+	return nil
+}
+
+func (obj *IntellectualObject) buildEventAccessAssignment() (error) {
+	return nil
+}
+
+func (obj *IntellectualObject) buildEventIngest() (error) {
+	return nil
+}
+
 // BuildIngestChecksums creates all of the ingest checksums for
 // this object's GenericFiles. See the notes for BuildIngestEvents
 // above, as they all apply here. This call is idempotent, so
@@ -244,4 +272,14 @@ func (obj *IntellectualObject) BuildIngestChecksums() (error) {
 	// call BuildIngestChecksums on each GenericFile
 
 	return nil
+}
+
+// Copy this IntellectualObject's Id to the IntellectualObjectId
+// property of all child objects, if Id is non-zero.
+func (obj *IntellectualObject) PropagateIdToChildren() {
+
+	if obj.Id > 0 {
+		// Set IntelObjId on all object-level PREMIS events
+		// Set IntelObjId on all GenericFiles
+	}
 }
