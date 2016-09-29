@@ -7,6 +7,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"strings"
 	"testing"
+	"time"
 )
 
 const digest = "12345678901234567890123456789012"
@@ -31,6 +32,13 @@ func TestEventTypeValid(t *testing.T) {
 }
 
 func TestNewEventObjectIngest(t *testing.T) {
+	// Test with required params missing
+	_, err := models.NewEventObjectIngest(0)
+	assert.NotNil(t, err)
+	if err != nil {
+		assert.True(t, strings.HasPrefix(err.Error(), "Param"))
+	}
+
 	event, err := models.NewEventObjectIngest(300)
 	if err != nil {
 		t.Errorf("Error creating PremisEvent: %v", err)
@@ -48,6 +56,13 @@ func TestNewEventObjectIngest(t *testing.T) {
 }
 
 func TestNewEventObjectIdentifierAssignment(t *testing.T) {
+	// Test with required params missing
+	_, err := models.NewEventObjectIdentifierAssignment("")
+	assert.NotNil(t, err)
+	if err != nil {
+		assert.True(t, strings.HasPrefix(err.Error(), "Param"))
+	}
+
 	event, err := models.NewEventObjectIdentifierAssignment("test.edu/object001")
 	if err != nil {
 		t.Errorf("Error creating PremisEvent: %v", err)
@@ -65,6 +80,13 @@ func TestNewEventObjectIdentifierAssignment(t *testing.T) {
 }
 
 func TestNewEventObjectRights(t *testing.T) {
+	// Test with required params missing
+	_, err := models.NewEventObjectRights("")
+	assert.NotNil(t, err)
+	if err != nil {
+		assert.True(t, strings.HasPrefix(err.Error(), "Param"))
+	}
+
 	event, err := models.NewEventObjectRights("institution")
 	if err != nil {
 		t.Errorf("Error creating PremisEvent: %v", err)
@@ -82,6 +104,18 @@ func TestNewEventObjectRights(t *testing.T) {
 }
 
 func TestNewEventGenericFileIngest(t *testing.T) {
+	// Test with required params missing
+	_, err := models.NewEventGenericFileIngest(time.Time{}, digest)
+	assert.NotNil(t, err)
+	if err != nil {
+		assert.True(t, strings.HasPrefix(err.Error(), "Param"))
+	}
+	_, err = models.NewEventGenericFileIngest(testutil.TEST_TIMESTAMP, "")
+	assert.NotNil(t, err)
+	if err != nil {
+		assert.True(t, strings.HasPrefix(err.Error(), "Param"))
+	}
+
 	event, err := models.NewEventGenericFileIngest(testutil.TEST_TIMESTAMP, digest)
 	if err != nil {
 		t.Errorf("Error creating PremisEvent: %v", err)
@@ -99,6 +133,23 @@ func TestNewEventGenericFileIngest(t *testing.T) {
 }
 
 func TestNewEventGenericFileFixityCheck(t *testing.T) {
+	// Test with required params missing
+	_, err := models.NewEventGenericFileFixityCheck(time.Time{}, constants.AlgMd5, digest, true)
+	assert.NotNil(t, err)
+	if err != nil {
+		assert.True(t, strings.HasPrefix(err.Error(), "Param"))
+	}
+	_, err = models.NewEventGenericFileFixityCheck(testutil.TEST_TIMESTAMP, "", digest, true)
+	assert.NotNil(t, err)
+	if err != nil {
+		assert.True(t, strings.HasPrefix(err.Error(), "Param"))
+	}
+	_, err = models.NewEventGenericFileFixityCheck(testutil.TEST_TIMESTAMP, constants.AlgMd5, "", true)
+	assert.NotNil(t, err)
+	if err != nil {
+		assert.True(t, strings.HasPrefix(err.Error(), "Param"))
+	}
+
 	event, err := models.NewEventGenericFileFixityCheck(testutil.TEST_TIMESTAMP, constants.AlgMd5,
 		digest, true)
 	if err != nil {
@@ -133,6 +184,23 @@ func TestNewEventGenericFileFixityCheck(t *testing.T) {
 }
 
 func TestNewEventGenericFileDigestCalculation(t *testing.T) {
+	// Test with required params missing
+	_, err := models.NewEventGenericFileDigestCalculation(time.Time{}, constants.AlgMd5, digest)
+	assert.NotNil(t, err)
+	if err != nil {
+		assert.True(t, strings.HasPrefix(err.Error(), "Param"))
+	}
+	_, err = models.NewEventGenericFileDigestCalculation(testutil.TEST_TIMESTAMP, "", digest)
+	assert.NotNil(t, err)
+	if err != nil {
+		assert.True(t, strings.HasPrefix(err.Error(), "Param"))
+	}
+	_, err = models.NewEventGenericFileDigestCalculation(testutil.TEST_TIMESTAMP, constants.AlgMd5, "")
+	assert.NotNil(t, err)
+	if err != nil {
+		assert.True(t, strings.HasPrefix(err.Error(), "Param"))
+	}
+
 	event, err := models.NewEventGenericFileDigestCalculation(testutil.TEST_TIMESTAMP,
 		constants.AlgMd5, digest)
 	if err != nil {
@@ -166,6 +234,23 @@ func TestNewEventGenericFileDigestCalculation(t *testing.T) {
 }
 
 func TestNewEventGenericFileIdentifierAssignment(t *testing.T) {
+	// Test with required params missing
+	_, err := models.NewEventGenericFileIdentifierAssignment(time.Time{}, constants.AlgMd5, "abc/123")
+	assert.NotNil(t, err)
+	if err != nil {
+		assert.True(t, strings.HasPrefix(err.Error(), "Param"))
+	}
+	_, err = models.NewEventGenericFileIdentifierAssignment(testutil.TEST_TIMESTAMP, "", "abc/123")
+	assert.NotNil(t, err)
+	if err != nil {
+		assert.True(t, strings.HasPrefix(err.Error(), "Param"))
+	}
+	_, err = models.NewEventGenericFileIdentifierAssignment(testutil.TEST_TIMESTAMP, constants.AlgMd5, "")
+	assert.NotNil(t, err)
+	if err != nil {
+		assert.True(t, strings.HasPrefix(err.Error(), "Param"))
+	}
+
 	event, err := models.NewEventGenericFileIdentifierAssignment(testutil.TEST_TIMESTAMP, constants.IdTypeBagAndPath, "blah.edu/blah/blah.txt")
 	if err != nil {
 		t.Errorf("Error creating PremisEvent: %v", err)
@@ -199,6 +284,18 @@ func TestNewEventGenericFileIdentifierAssignment(t *testing.T) {
 }
 
 func TestNewEventGenericFileReplication(t *testing.T) {
+	// Test with required params missing
+	_, err := models.NewEventGenericFileReplication(time.Time{}, "https://example.com/123456789")
+	assert.NotNil(t, err)
+	if err != nil {
+		assert.True(t, strings.HasPrefix(err.Error(), "Param"))
+	}
+	_, err = models.NewEventGenericFileReplication(testutil.TEST_TIMESTAMP, "")
+	assert.NotNil(t, err)
+	if err != nil {
+		assert.True(t, strings.HasPrefix(err.Error(), "Param"))
+	}
+
 	event, err := models.NewEventGenericFileReplication(testutil.TEST_TIMESTAMP, "https://example.com/123456789")
 	if err != nil {
 		t.Errorf("Error creating PremisEvent: %v", err)
