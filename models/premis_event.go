@@ -52,6 +52,23 @@ type PremisEvent struct {
 	// OutcomeInformation contains the text of an error message, if
 	// Outcome was failure.
 	OutcomeInformation string    `json:"outcome_information"`
+
+	// Id of the IntellectualObject with which this event is
+	// associated.
+	IntellectualObjectId int     `json:"intellectual_object_id"`
+
+	// Identifier of the IntellectualObject with which this
+	// event is associated.
+	IntellectualObjectIdentifier string `json:"intellectual_object_identifier"`
+
+	// Id of the GenericFile with which this event is
+	// associated. This will be zero for object-level events.
+	GenericFileId int            `json:"generic_file_id"`
+
+	// Identifier of the GenericFile with which this
+	// event is associated. This will be an empty string
+	// for object-level events.
+	GenericFileIdentifier string `json:"generic_file_identifier"`
 }
 
 // EventTypeValid returns true/false, indicating whether the
@@ -67,6 +84,23 @@ func (premisEvent *PremisEvent) EventTypeValid() bool {
 	return false
 }
 
+func NewEventObjectCreation() (*PremisEvent, error) {
+	eventId, err := uuid.NewV4()
+	if err != nil {
+		return nil, fmt.Errorf("Error generating UUID for ingest event: %v", err)
+	}
+	return &PremisEvent{
+		Identifier:         eventId.String(),
+		EventType:          constants.EventCreation,
+		DateTime:           time.Now(),
+		Detail:             "Object created.",
+		Outcome:            string(constants.StatusSuccess),
+		OutcomeDetail:      "Intellectual object created.",
+		Object:             "APTrust Exchange ingest services",
+		Agent:              "https://github.com/APTrust/exchange",
+		OutcomeInformation: "Object created, files stored and replicated, awaiting recording of all files and events in Pharos.",
+	}, nil
+}
 
 func NewEventObjectIngest(numberOfFilesIngested int) (*PremisEvent, error) {
 	if numberOfFilesIngested <= 0 {

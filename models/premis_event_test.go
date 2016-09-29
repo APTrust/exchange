@@ -31,6 +31,21 @@ func TestEventTypeValid(t *testing.T) {
 	}
 }
 
+func TestNewEventObjectCreation(t *testing.T) {
+	event, err := models.NewEventObjectCreation()
+	assert.Nil(t, err)
+	assert.Len(t, event.Identifier, 36)
+	assert.Equal(t, "creation", event.EventType)
+	assert.False(t, event.DateTime.IsZero())
+	assert.Equal(t, "Object created.", event.Detail)
+	assert.Equal(t, "Success", event.Outcome)
+	assert.Equal(t, "Intellectual object created.", event.OutcomeDetail)
+	assert.Equal(t, "APTrust Exchange ingest services", event.Object)
+	assert.Equal(t, "https://github.com/APTrust/exchange", event.Agent)
+	assert.True(t, strings.HasPrefix(event.OutcomeInformation, "Object created, files stored and replicated"))
+}
+
+
 func TestNewEventObjectIngest(t *testing.T) {
 	// Test with required params missing
 	_, err := models.NewEventObjectIngest(0)
