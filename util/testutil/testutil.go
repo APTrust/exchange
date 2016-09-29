@@ -60,6 +60,7 @@ func MakeGenericFile(eventCount, checksumCount int, objIdentifier string) (*mode
 		PremisEvents: events,
 		IngestLocalPath: fmt.Sprintf("/mnt/aptrust/data/%s", fileIdentifier),
 		IngestMd5: fake.CharactersN(32),
+		IngestMd5GeneratedAt: RandomDateTime(),
 		IngestMd5VerifiedAt: RandomDateTime(),
 		IngestSha256: fake.CharactersN(64),
 		IngestSha256GeneratedAt: RandomDateTime(),
