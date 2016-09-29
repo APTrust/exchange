@@ -2,6 +2,7 @@ package models_test
 
 import (
 	"encoding/json"
+	"github.com/APTrust/exchange/constants"
 	"github.com/APTrust/exchange/models"
 	"github.com/APTrust/exchange/util/testutil"
 	"github.com/stretchr/testify/assert"
@@ -110,7 +111,6 @@ func TestFindEventsByType(t *testing.T) {
 	if len(genericFile.FindEventsByType("identifier_assignment")) != 4 {
 		t.Errorf("Should have found 2 identifier assignment events")
 	}
-
 }
 
 func TestSerializeFileForPharos(t *testing.T) {
@@ -150,5 +150,23 @@ func TestSerializeFileForPharos(t *testing.T) {
 	assert.Equal(t, "sha256", checksum1["algorithm"])
 	assert.Equal(t, "2014-08-12T20:51:20Z", checksum1["datetime"])
 	assert.Equal(t, "a418d61067718141d7254d7376d5499369706e3ade27cb84c4d5519f7cfed790", checksum1["digest"])
+}
 
+func TestBuildIngestEvents(t *testing.T) {
+	gf := testutil.MakeGenericFile(0, 0, "test.edu/test_bag/file.txt")
+	assert.Equal(t, 0, len(gf.PremisEvents))
+	err := gf.BuildIngestEvents()
+	assert.Nil(t, err)
+	assert.Equal(t, 6, len(gf.PremisEvents))
+	assert.Equal(t, 1, len(gf.FindEventsByType(constants.EventFixityCheck)))
+	assert.Equal(t, 1, len(gf.FindEventsByType(constants.EventDigestCalculation)))
+	assert.Equal(t, 2, len(gf.FindEventsByType(constants.EventIdentifierAssignment)))
+	assert.Equal(t, 1, len(gf.FindEventsByType(constants.EventReplication)))
+	assert.Equal(t, 1, len(gf.FindEventsByType(constants.EventIngestion)))
+
+	// Calling this function again should not generate new events
+	// if all the events are there.
+	err = gf.BuildIngestEvents()
+	assert.Nil(t, err)
+	assert.Equal(t, 6, len(gf.PremisEvents))
 }

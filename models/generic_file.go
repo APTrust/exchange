@@ -385,7 +385,8 @@ func (gf *GenericFile) buildFileIdentifierAssignmentEvent() (error) {
 	events := gf.FindEventsByType(constants.EventIdentifierAssignment)
 	hasIdentifierAssignment := false
 	for _, existing_event := range events {
-		if !strings.HasPrefix(existing_event.Detail, "http://") ||
+		// If the identifier is not a URL, it's the file identifier
+		if !strings.HasPrefix(existing_event.Detail, "http://") &&
 			!strings.HasPrefix(existing_event.Detail, "https://") {
 			hasIdentifierAssignment = true
 		}
@@ -410,8 +411,8 @@ func (gf *GenericFile) buildS3URLAssignmentEvent() (error) {
 	events := gf.FindEventsByType(constants.EventIdentifierAssignment)
 	hasS3URLAssignment := false
 	for _, existing_event := range events {
-		if strings.HasPrefix(existing_event.Detail, "http://") ||
-			strings.HasPrefix(existing_event.Detail, "https://") {
+		if strings.HasPrefix(existing_event.OutcomeDetail, "http://") ||
+			strings.HasPrefix(existing_event.OutcomeDetail, "https://") {
 			hasS3URLAssignment = true
 		}
 	}
