@@ -336,23 +336,29 @@ func (obj *IntellectualObject) buildEventIngest() (error) {
 // above, as they all apply here. This call is idempotent, so
 // calling it multiple times will not mess up our data.
 func (obj *IntellectualObject) BuildIngestChecksums() (error) {
-
 	for _, gf := range obj.GenericFiles {
 		err := gf.BuildIngestChecksums()
 		if err != nil {
 			return err
 		}
 	}
-
 	return nil
 }
 
-// Copy this IntellectualObject's Id to the IntellectualObjectId
-// property of all child objects, if Id is non-zero.
-func (obj *IntellectualObject) PropagateIdToChildren() {
-
-	if obj.Id > 0 {
-		// Set IntelObjId on all object-level PREMIS events
-		// Set IntelObjId on all GenericFiles
+// Copy this IntellectualObject's Id and Identifier to the
+// IntellectualObjectId and IntellectualObjectIdentifier
+// properties of all child objects. Also propagates GenericFile
+// Ids and Identifiers to sub-objects, if they are avialable.
+// This call exists because objects don't have Ids until after
+// they're saved in Pharos
+func (obj *IntellectualObject) PropagateIdsToChildren() {
+	for _, event := range obj.PremisEvents {
+		event.IntellectualObjectId = obj.Id
+		event.IntellectualObjectIdentifier = obj.Identifier
+	}
+	for _, gf := range obj.GenericFiles {
+		gf.IntellectualObjectId = obj.Id
+		gf.IntellectualObjectIdentifier = obj.Identifier
+		gf.PropagateIdsToChildren()
 	}
 }

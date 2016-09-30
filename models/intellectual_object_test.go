@@ -239,3 +239,32 @@ func TestObjBuildIngestChecksums(t *testing.T) {
 		assert.Equal(t, 2, len(gf.Checksums))
 	}
 }
+
+func TestObjPropagateIdsToChildren(t *testing.T) {
+	// Make intel obj with 5 files, 5 events, 2 checksums, 0 tags
+	// Obj will have 5 events, as will all GenericFiles
+	obj := testutil.MakeIntellectualObject(5, 5, 2, 0)
+	assert.Equal(t, 5, len(obj.GenericFiles))
+	assert.Equal(t, 5, len(obj.PremisEvents))
+
+	obj.PropagateIdsToChildren()
+
+	for _, event := range obj.PremisEvents {
+		assert.Equal(t, obj.Id, event.IntellectualObjectId)
+		assert.Equal(t, obj.Identifier, event.IntellectualObjectIdentifier)
+	}
+
+	for _, gf := range obj.GenericFiles {
+		assert.Equal(t, obj.Id, gf.IntellectualObjectId)
+		assert.Equal(t, obj.Identifier, gf.IntellectualObjectIdentifier)
+		for _, event := range gf.PremisEvents {
+			assert.Equal(t, gf.Id, event.GenericFileId)
+			assert.Equal(t, gf.Identifier, event.GenericFileIdentifier)
+			assert.Equal(t, gf.IntellectualObjectId, event.IntellectualObjectId)
+			assert.Equal(t, gf.IntellectualObjectIdentifier, event.IntellectualObjectIdentifier)
+		}
+		for _, checksum := range gf.Checksums {
+			assert.Equal(t, gf.Id, checksum.GenericFileId)
+		}
+	}
+}

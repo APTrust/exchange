@@ -206,3 +206,32 @@ func TestBuildIngestChecksums(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, 2, len(gf.Checksums))
 }
+
+func TestPropagateIdsToChildren(t *testing.T) {
+	// Make a generic file with 6 events and 2 checksums
+	gf := testutil.MakeGenericFile(6, 2, "test.edu/test_bag/file.txt")
+	assert.Equal(t, 6, len(gf.PremisEvents))
+	assert.Equal(t, 2, len(gf.Checksums))
+
+	// Check pre-condition before actual test.
+	for _, event := range gf.PremisEvents {
+		assert.NotEqual(t, gf.Id, event.GenericFileId)
+		assert.NotEqual(t, gf.Identifier, event.GenericFileIdentifier)
+		assert.NotEqual(t, gf.IntellectualObjectId, event.IntellectualObjectId)
+		assert.NotEqual(t, gf.IntellectualObjectIdentifier, event.IntellectualObjectIdentifier)
+	}
+	for _, checksum := range gf.Checksums {
+		assert.NotEqual(t, gf.Id, checksum.GenericFileId)
+	}
+
+	gf.PropagateIdsToChildren()
+	for _, event := range gf.PremisEvents {
+		assert.Equal(t, gf.Id, event.GenericFileId)
+		assert.Equal(t, gf.Identifier, event.GenericFileIdentifier)
+		assert.Equal(t, gf.IntellectualObjectId, event.IntellectualObjectId)
+		assert.Equal(t, gf.IntellectualObjectIdentifier, event.IntellectualObjectIdentifier)
+	}
+	for _, checksum := range gf.Checksums {
+		assert.Equal(t, gf.Id, checksum.GenericFileId)
+	}
+}

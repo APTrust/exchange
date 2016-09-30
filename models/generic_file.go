@@ -553,13 +553,19 @@ func (gf *GenericFile) buildIngestSha256() (error) {
 	return nil
 }
 
-// Copy this GenericFile's Id to the GenericFileId
-// property of all child objects, if Id is non-zero.
-// Child objects include Checksums and Premis Events.
-func (gf *GenericFile) PropagateIdToChildren() {
-
-	if gf.Id > 0 {
-		// Set GenericFileId on all PREMIS events
-		// Set GenericFileId on all Checksums
+// Copy this GenericFile's Id and Identifier to the GenericFileId
+// and GenericFileIdentifier properties of all child objects,
+// including Checksums and Premis Events. This call exists because
+// GenericFiles don't have Ids until after they're saved in
+// Pharos.
+func (gf *GenericFile) PropagateIdsToChildren() {
+	for _, event := range gf.PremisEvents {
+		event.GenericFileId = gf.Id
+		event.GenericFileIdentifier = gf.Identifier
+		event.IntellectualObjectId = gf.IntellectualObjectId
+		event.IntellectualObjectIdentifier = gf.IntellectualObjectIdentifier
+	}
+	for _, checksum := range gf.Checksums {
+		checksum.GenericFileId = gf.Id
 	}
 }
