@@ -87,7 +87,7 @@ func (premisEvent *PremisEvent) EventTypeValid() bool {
 func NewEventObjectCreation() (*PremisEvent, error) {
 	eventId, err := uuid.NewV4()
 	if err != nil {
-		return nil, fmt.Errorf("Error generating UUID for ingest event: %v", err)
+		return nil, fmt.Errorf("Error generating UUID for creation event: %v", err)
 	}
 	return &PremisEvent{
 		Identifier:         eventId.String(),
