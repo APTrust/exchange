@@ -200,8 +200,8 @@ func TestBuildIngestChecksums(t *testing.T) {
 	assert.False(t, sha256.DateTime.IsZero())
 	assert.Equal(t, 64, len(sha256.Digest))
 
-	// Calling this function again should not generate new events
-	// if all the events are there.
+	// Calling this function again should not generate new checksums
+	// when all the checksums are already present.
 	err = gf.BuildIngestChecksums()
 	assert.Nil(t, err)
 	assert.Equal(t, 2, len(gf.Checksums))

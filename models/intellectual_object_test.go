@@ -203,3 +203,39 @@ func TestObjBuildIngestEvents(t *testing.T) {
 		assert.Equal(t, 6, len(gf.PremisEvents))
 	}
 }
+
+func TestObjBuildIngestChecksums(t *testing.T) {
+	// Make intel obj with 5 files, no events, checksums or tags
+	obj := testutil.MakeIntellectualObject(5, 0, 0, 0)
+	assert.Equal(t, 5, len(obj.GenericFiles))
+	assert.Equal(t, 0, len(obj.PremisEvents))
+
+	err := obj.BuildIngestChecksums()
+	assert.Nil(t, err)
+
+	for _, gf := range obj.GenericFiles {
+		assert.Equal(t, 2, len(gf.Checksums))
+		md5 := gf.GetChecksum(constants.AlgMd5)
+		sha256 := gf.GetChecksum(constants.AlgSha256)
+		require.NotNil(t, md5)
+		require.NotNil(t, sha256)
+
+		assert.Equal(t, md5.GenericFileId, gf.Id)
+		assert.Equal(t, constants.AlgMd5, md5.Algorithm)
+		assert.False(t, md5.DateTime.IsZero())
+		assert.Equal(t, 32, len(md5.Digest))
+
+		assert.Equal(t, sha256.GenericFileId, gf.Id)
+		assert.Equal(t, constants.AlgSha256, sha256.Algorithm)
+		assert.False(t, sha256.DateTime.IsZero())
+		assert.Equal(t, 64, len(sha256.Digest))
+	}
+
+	// Calling this function again should not generate new checksums
+	// when all the checksums are already present.
+	err = obj.BuildIngestChecksums()
+	assert.Nil(t, err)
+	for _, gf := range obj.GenericFiles {
+		assert.Equal(t, 2, len(gf.Checksums))
+	}
+}
