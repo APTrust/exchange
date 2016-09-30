@@ -356,6 +356,10 @@ func (gf *GenericFile) buildIngestFixityCheck() (error) {
 			return fmt.Errorf("Error building fixity check event for %s: %v",
 				gf.Identifier, err)
 		}
+		event.IntellectualObjectId = gf.IntellectualObjectId
+		event.IntellectualObjectIdentifier = gf.IntellectualObjectIdentifier
+		event.GenericFileId = gf.Id
+		event.GenericFileIdentifier = gf.Identifier
 		gf.PremisEvents = append(gf.PremisEvents, event)
 	}
 	return nil
@@ -373,6 +377,10 @@ func (gf *GenericFile) buildDigestCalculationEvent() (error) {
 			return fmt.Errorf("Error building replication event for %s: %v",
 				gf.Identifier, err)
 		}
+		event.IntellectualObjectId = gf.IntellectualObjectId
+		event.IntellectualObjectIdentifier = gf.IntellectualObjectIdentifier
+		event.GenericFileId = gf.Id
+		event.GenericFileIdentifier = gf.Identifier
 		gf.PremisEvents = append(gf.PremisEvents, event)
 	}
 	return nil
@@ -400,6 +408,10 @@ func (gf *GenericFile) buildFileIdentifierAssignmentEvent() (error) {
 			return fmt.Errorf("Error building file identifier assignment event for %s: %v",
 				gf.Identifier, err)
 		}
+		event.IntellectualObjectId = gf.IntellectualObjectId
+		event.IntellectualObjectIdentifier = gf.IntellectualObjectIdentifier
+		event.GenericFileId = gf.Id
+		event.GenericFileIdentifier = gf.Identifier
 		gf.PremisEvents = append(gf.PremisEvents, event)
 	}
 	return nil
@@ -425,6 +437,10 @@ func (gf *GenericFile) buildS3URLAssignmentEvent() (error) {
 			return fmt.Errorf("Error building S3 URL identifier assignment event for %s: %v",
 				gf.Identifier, err)
 		}
+		event.IntellectualObjectId = gf.IntellectualObjectId
+		event.IntellectualObjectIdentifier = gf.IntellectualObjectIdentifier
+		event.GenericFileId = gf.Id
+		event.GenericFileIdentifier = gf.Identifier
 		gf.PremisEvents = append(gf.PremisEvents, event)
 	}
 	return nil
@@ -443,6 +459,10 @@ func (gf *GenericFile) buildReplicationEvent() (error) {
 			return fmt.Errorf("Error building replication event for %s: %v",
 				gf.Identifier, err)
 		}
+		event.IntellectualObjectId = gf.IntellectualObjectId
+		event.IntellectualObjectIdentifier = gf.IntellectualObjectIdentifier
+		event.GenericFileId = gf.Id
+		event.GenericFileIdentifier = gf.Identifier
 		gf.PremisEvents = append(gf.PremisEvents, event)
 	}
 	return nil
@@ -459,6 +479,10 @@ func (gf *GenericFile) buildFileIngestEvent() (error) {
 			return fmt.Errorf("Error building ingest event for %s: %v",
 				gf.Identifier, err)
 		}
+		event.IntellectualObjectId = gf.IntellectualObjectId
+		event.IntellectualObjectIdentifier = gf.IntellectualObjectIdentifier
+		event.GenericFileId = gf.Id
+		event.GenericFileIdentifier = gf.Identifier
 		gf.PremisEvents = append(gf.PremisEvents, event)
 	}
 	return nil
@@ -498,6 +522,7 @@ func (gf *GenericFile) buildIngestMd5() (error) {
 			Algorithm: constants.AlgMd5,
 			DateTime: gf.IngestMd5GeneratedAt,
 			Digest: gf.IngestMd5,
+			GenericFileId: gf.Id,
 		}
 		gf.Checksums = append(gf.Checksums, md5)
 	}
@@ -521,6 +546,7 @@ func (gf *GenericFile) buildIngestSha256() (error) {
 			Algorithm: constants.AlgSha256,
 			DateTime: gf.IngestSha256GeneratedAt,
 			Digest: gf.IngestSha256,
+			GenericFileId: gf.Id,
 		}
 		gf.Checksums = append(gf.Checksums, sha256)
 	}

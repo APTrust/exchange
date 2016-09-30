@@ -165,6 +165,13 @@ func TestBuildIngestEvents(t *testing.T) {
 	assert.Equal(t, 1, len(gf.FindEventsByType(constants.EventReplication)))
 	assert.Equal(t, 1, len(gf.FindEventsByType(constants.EventIngestion)))
 
+	for _, event := range gf.PremisEvents {
+		assert.Equal(t, gf.IntellectualObjectId, event.IntellectualObjectId)
+		assert.Equal(t, gf.IntellectualObjectIdentifier, event.IntellectualObjectIdentifier)
+		assert.Equal(t, gf.Id, event.GenericFileId)
+		assert.Equal(t, gf.Identifier, event.GenericFileIdentifier)
+	}
+
 	// Calling this function again should not generate new events
 	// if all the events are there.
 	err = gf.BuildIngestEvents()
@@ -183,10 +190,12 @@ func TestBuildIngestChecksums(t *testing.T) {
 	require.NotNil(t, md5)
 	require.NotNil(t, sha256)
 
+	assert.Equal(t, md5.GenericFileId, gf.Id)
 	assert.Equal(t, constants.AlgMd5, md5.Algorithm)
 	assert.False(t, md5.DateTime.IsZero())
 	assert.Equal(t, 32, len(md5.Digest))
 
+	assert.Equal(t, sha256.GenericFileId, gf.Id)
 	assert.Equal(t, constants.AlgSha256, sha256.Algorithm)
 	assert.False(t, sha256.DateTime.IsZero())
 	assert.Equal(t, 64, len(sha256.Digest))
