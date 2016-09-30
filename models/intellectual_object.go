@@ -235,31 +235,99 @@ func (obj *IntellectualObject) FindEventsByType(eventType string) ([]PremisEvent
 // not mess up our data.
 func (obj *IntellectualObject) BuildIngestEvents() (error) {
 
-	// For IntellectualObject:
-	//
-	// creation
-	// identifier_assignment
-	// access_assignment
-	// ingest (only after all generic files & events are in)
-	//
-	// call BuildIngestEvents on each GenericFile
+	err := obj.buildEventCreation()
+	if err != nil {
+		return err
+	}
+
+	err = obj.buildEventIdentifierAssignment()
+	if err != nil {
+		return err
+	}
+
+	err = obj.buildEventAccessAssignment()
+	if err != nil {
+		return err
+	}
+
+	err = obj.buildEventIngest()
+	if err != nil {
+		return err
+	}
+
+	for _, gf := range obj.GenericFiles {
+		err = gf.BuildIngestEvents()
+		if err != nil {
+			return err
+		}
+	}
 
 	return nil
 }
 
+// Builds the event (if it doesn't already exist) describing when
+// this object was created. There will be some lag time between
+// when the object is created and when all of its ingest metadata
+// is recorded.
 func (obj *IntellectualObject) buildEventCreation() (error) {
+	events := obj.FindEventsByType(constants.EventCreation)
+	if len(events) == 0 {
+		event, err := NewEventObjectCreation()
+		if err != nil {
+			return err
+		}
+		event.IntellectualObjectId = obj.Id
+		event.IntellectualObjectIdentifier = obj.Identifier
+		obj.PremisEvents = append(obj.PremisEvents, event)
+	}
 	return nil
 }
 
+// Builds the event (if it doesn't already exist) describing when
+// this object was assigned an identifier, and what that identifier is.
 func (obj *IntellectualObject) buildEventIdentifierAssignment() (error) {
+	events := obj.FindEventsByType(constants.EventIdentifierAssignment)
+	if len(events) == 0 {
+		event, err := NewEventObjectIdentifierAssignment(obj.Identifier)
+		if err != nil {
+			return err
+		}
+		event.IntellectualObjectId = obj.Id
+		event.IntellectualObjectIdentifier = obj.Identifier
+		obj.PremisEvents = append(obj.PremisEvents, event)
+	}
 	return nil
 }
 
+// Builds the event (if it doesn't already exist) describing when
+// access permissions were set on this object.
 func (obj *IntellectualObject) buildEventAccessAssignment() (error) {
+	events := obj.FindEventsByType(constants.EventAccessAssignment)
+	if len(events) == 0 {
+		event, err := NewEventObjectRights(obj.Access)
+		if err != nil {
+			return err
+		}
+		event.IntellectualObjectId = obj.Id
+		event.IntellectualObjectIdentifier = obj.Identifier
+		obj.PremisEvents = append(obj.PremisEvents, event)
+	}
 	return nil
 }
 
+// Builds the event (if it doesn't already exist) describing when
+// this object was fully ingested.
 func (obj *IntellectualObject) buildEventIngest() (error) {
+	events := obj.FindEventsByType(constants.EventIngestion)
+	if len(events) == 0 {
+		event, err := NewEventObjectIngest(len(obj.GenericFiles))
+		if err != nil {
+			return err
+		}
+		event.IntellectualObjectId = obj.Id
+		event.IntellectualObjectIdentifier = obj.Identifier
+		obj.PremisEvents = append(obj.PremisEvents, event)
+	}
 	return nil
 }
 
@@ -269,7 +337,12 @@ func (obj *IntellectualObject) buildEventIngest() (error) {
 // calling it multiple times will not mess up our data.
 func (obj *IntellectualObject) BuildIngestChecksums() (error) {
 
-	// call BuildIngestChecksums on each GenericFile
+	for _, gf := range obj.GenericFiles {
+		err := gf.BuildIngestChecksums()
+		if err != nil {
+			return err
+		}
+	}
 
 	return nil
 }
