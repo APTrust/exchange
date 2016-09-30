@@ -153,3 +153,53 @@ func TestObjFindEventsByType(t *testing.T) {
 	assert.Equal(t, idEvent.Identifier, idEvents[0].Identifier)
 	assert.Equal(t, ingestEvent.Identifier, ingestEvents[0].Identifier)
 }
+
+func TestObjBuildIngestEvents(t *testing.T) {
+	// Make intel obj with 5 files, no events, checksums or tags
+	obj := testutil.MakeIntellectualObject(5, 0, 0, 0)
+	assert.Equal(t, 5, len(obj.GenericFiles))
+	assert.Equal(t, 0, len(obj.PremisEvents))
+
+	err := obj.BuildIngestEvents()
+	assert.Nil(t, err)
+
+	// Expecting four PREMIS events total for IntelObj, each with
+	// correct IntelObj.Id and IntelObj.Identifier.
+	assert.Equal(t, 4, len(obj.PremisEvents))
+	assert.Equal(t, 1, len(obj.FindEventsByType(constants.EventCreation)))
+	assert.Equal(t, 1, len(obj.FindEventsByType(constants.EventIdentifierAssignment)))
+	assert.Equal(t, 1, len(obj.FindEventsByType(constants.EventAccessAssignment)))
+	assert.Equal(t, 1, len(obj.FindEventsByType(constants.EventIngestion)))
+
+	for _, event := range obj.PremisEvents {
+		assert.Equal(t, obj.Id, event.IntellectualObjectId)
+		assert.Equal(t, obj.Identifier, event.IntellectualObjectIdentifier)
+	}
+
+	// PREMIS events should be set correctly for all of this
+	// object's GenericFiles
+	for _, gf := range obj.GenericFiles {
+		assert.Equal(t, 6, len(gf.PremisEvents))
+		assert.Equal(t, 1, len(gf.FindEventsByType(constants.EventFixityCheck)))
+		assert.Equal(t, 1, len(gf.FindEventsByType(constants.EventDigestCalculation)))
+		assert.Equal(t, 2, len(gf.FindEventsByType(constants.EventIdentifierAssignment)))
+		assert.Equal(t, 1, len(gf.FindEventsByType(constants.EventReplication)))
+		assert.Equal(t, 1, len(gf.FindEventsByType(constants.EventIngestion)))
+
+		for _, event := range gf.PremisEvents {
+			assert.Equal(t, gf.IntellectualObjectId, event.IntellectualObjectId)
+			assert.Equal(t, gf.IntellectualObjectIdentifier, event.IntellectualObjectIdentifier)
+			assert.Equal(t, gf.Id, event.GenericFileId)
+			assert.Equal(t, gf.Identifier, event.GenericFileIdentifier)
+		}
+	}
+
+	// Calling this function again should not generate new events
+	// if all the events are there.
+	err = obj.BuildIngestEvents()
+	assert.Nil(t, err)
+	assert.Equal(t, 4, len(obj.PremisEvents))
+	for _, gf := range obj.GenericFiles {
+		assert.Equal(t, 6, len(gf.PremisEvents))
+	}
+}
