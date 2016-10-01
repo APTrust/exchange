@@ -27,10 +27,10 @@ type PremisEvent struct {
 
 	// EventType is the type of Premis event we want to register.
 	// See constants.EventTypes.
-	EventType          string    `json:"type"`
+	EventType          string    `json:"event_type"`
 
 	// DateTime is when this event occurred in our system.
-	DateTime           time.Time `json:"date_time"`
+	DateTime           time.Time `json:"datetime"`
 
 	// Detail is a brief description of the event.
 	Detail             string    `json:"detail"`
