@@ -17,6 +17,11 @@ import (
 //	"time"
 )
 
+const (
+	GENERIC_FILE_BATCH_SIZE = 100
+	PREMIS_EVENT_BATCH_SIZE = 100
+)
+
 // Records ingest data (objects, files and events) in Pharos
 type APTRecorder struct {
 	Context             *context.Context
@@ -98,6 +103,10 @@ func (recorder *APTRecorder) record () {
 		// Save PremisEvents (batch)
 		// Change WorkItem state as cleanup/pending
 		// Save WorkItemState
+		recorder.buildEventsAndChecksums(ingestState)
+		if !ingestState.IngestManifest.RecordResult.HasErrors() {
+			recorder.saveAllPharosData(ingestState)
+		}
 		recorder.CleanupChannel <- ingestState
 	}
 }
@@ -112,16 +121,85 @@ func (recorder *APTRecorder) cleanup () {
 //	}
 }
 
-func (recorder *APTRecorder) saveAllPharosData (ingestState *models.IngestState) {
+// Make sure the IntellectualObject and its component files have
+// all of the checksums and PREMIS events we'll need to save.
+// We build these now so that the PREMIS events will have UUIDs,
+// and if we ever have to re-record this IntellectualObject after
+// a partial save, we'll know which events are already recorded
+// in Pharos and which were not. This was a problem in the old
+// system, where record failured were common, and PREMIS events
+// often wound up being recorded twice.
+func (recorder *APTRecorder) buildEventsAndChecksuks (ingestState *models.IngestState) {
+	obj := ingestState.IngestManifest.Object
+	err := obj.BuildIngestEvents()
+	if err != nil {
+		ingestState.IngestManifest.RecordResult.AddError(err.Error())
+	}
+	err := obj.BuildIngestChecksums()
+	if err != nil {
+		ingestState.IngestManifest.RecordResult.AddError(err.Error())
+	}
+}
 
+func (recorder *APTRecorder) saveAllPharosData (ingestState *models.IngestState) {
+	recorder.saveIntellectualObject(ingestState)
+	if ingestState.IngestManifest.RecordResult.HasErrors() {
+		return
+	}
+	recorder.saveGenericFiles(ingestState)
+	if ingestState.IngestManifest.RecordResult.HasErrors() {
+		return
+	}
+	recorder.savePremisEvents(ingestState)
+	if ingestState.IngestManifest.RecordResult.HasErrors() {
+		return
+	}
 }
 
 func (recorder *APTRecorder) saveIntellectualObject (ingestState *models.IngestState) {
-
+	obj := ingestState.IngestManifest.Object
+	resp := recorder.context.PharosClient.IntellectualObjectSave(obj)
+	if resp.Error != nil {
+		ingestState.IngestManifest.RecordResult.AddError(resp.Error.Error())
+		return
+	}
+	savedObject := resp.IntellectualObject()
+	if savedObject == nil {
+		ingestState.IngestManifest.RecordResult.AddError(
+			"Pharos returned nil IntellectualObject after save.")
+		return
+	}
+	obj.Id = savedObject.Id
+	obj.CreatedAt = savedObject.CreatedAt
+	obj.UpdatedAt = savedObject.UpdatedAt
+	obj.PropagateIdsToChildren()
 }
 
 func (recorder *APTRecorder) saveGenericFiles (ingestState *models.IngestState) {
+	files = make([]*models.GenericFile, 0)
+	for i, gf := range ingestState.IngestManifest.Object.GenericFiles {
+		if i % GENERIC_FILE_BATCH_SIZE == 0 {
+			if len(files) > 0 {
+				recorder.SaveBatchOfGenericFiles(ingestState, files)
+			}
+			if ingestState.IngestManifest.RecordResult.HasErrors() {
+				break
+			}
+			files = make([]*models.GenericFile, 0)
+		}
+		if gf.Id == 0 {
+			files = append(files, gf)
+		}
+	}
+	if !ingestState.IngestManifest.RecordResult.HasErrors() && len(files) > 0 {
+		recorder.SaveBatchOfGenericFiles(ingestState, files)
+	}
+}
 
+func (recorder *APTRecorder) saveBatchOfGenericFiles (ingestState *models.IngestState, files []*models.GenericFile) {
+	// HERE - call PharosClient.GenericFileSaveBatch()
+	// If response is good, call obj.PropagateIdsToChildren()
+	// else return
 }
 
 func (recorder *APTRecorder) savePremisEvents (ingestState *models.IngestState) {

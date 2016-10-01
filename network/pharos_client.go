@@ -285,6 +285,74 @@ func (client *PharosClient) GenericFileSave(obj *models.GenericFile) (*PharosRes
 	return resp
 }
 
+// Saves a batch of Generic File records to Pharos.
+// This performs a POST to create a new records, so all of the GenericFiles
+// passed in param objList should have Ids of zero. Each record
+// must also have an IntellectualObject ID. The response object will
+// be a list containing a new copy of each GenericFile that was saved.
+// The new copies have correct ids and timestamps. On the Pharos end,
+// the batch insert is run as a transaction, so either all inserts
+// succeed, or the whole transaction is rolled back and no inserts
+// occur.
+func (client *PharosClient) GenericFileSaveBatch(objList []*models.GenericFile) (*PharosResponse) {
+	// Set up the response object
+	resp := NewPharosResponse(PharosGenericFile)
+	resp.files = make([]*models.GenericFile, len(objList))
+
+	if len(objList) == 0 {
+		resp.Error = fmt.Errorf("GenericFileSaveBatch was asked to save an empty list.")
+		return resp
+	}
+	for _, gf := range objList {
+		if gf.Id != 0 {
+			resp.Error = fmt.Errorf("One or more GenericFiles in the list " +
+				"passed to GenericFileSaveBatch has a non-zero id. This call " +
+				"is for creating new GenericFiles only.")
+			return resp
+		}
+	}
+
+	// URL and method
+	relativeUrl := fmt.Sprintf("/api/%s/files/?save_batch=true", client.apiVersion)
+	httpMethod := "POST"
+	absoluteUrl := client.BuildUrl(relativeUrl)
+
+	// Prepare the JSON data
+	// TODO: Define a PharosGenericFile object, and serialize a list of those.
+	listOfGenericFileMaps := make([]string, 0)
+	data := make(map[string][]string, 0)
+	for _, gf := range objList {
+		gfMap, err := gf.SerializeForPharos()
+		if err != nil {
+			resp.Error = err
+			return resp
+		}
+		listOfGenericFileMaps = append(listOfGenericFileMaps, string(gfMap))
+	}
+	data["generic_files"] = listOfGenericFileMaps
+	postData, err := json.Marshal(data)
+	if err != nil {
+		resp.Error = err
+		return resp
+	}
+
+	fmt.Println(string(postData))
+
+	// Run the request
+	client.DoRequest(resp, httpMethod, absoluteUrl, bytes.NewBuffer(postData))
+	if resp.Error != nil {
+		return resp
+	}
+
+	// Parse the JSON from the response body
+	gfList := make([]*models.GenericFile, 0)
+	resp.Error = json.Unmarshal(resp.data, gfList)
+	if resp.Error == nil {
+		resp.files = gfList
+	}
+	return resp
+}
+
 // Returns the checksum with the specified id
 func (client *PharosClient) ChecksumGet(id int) (*PharosResponse) {
 	// Set up the response object

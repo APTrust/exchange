@@ -355,6 +355,43 @@ func TestGenericFileSave(t *testing.T) {
 	assert.NotEqual(t, origModTime, obj.UpdatedAt)
 }
 
+func TestGenericFileSaveBatch(t *testing.T) {
+	testServer := httptest.NewServer(http.HandlerFunc(genericFileSaveBatchHandler))
+	defer testServer.Close()
+
+	client, err := network.NewPharosClient(testServer.URL, "v2", "user", "key")
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	// ---------------------------------------------
+	// Make an IntellectualObject with 5 GenericFiles
+	// ---------------------------------------------
+	obj := testutil.MakeIntellectualObject(5, 0, 0, 0)
+	for _, gf := range obj.GenericFiles {
+		gf.Id = 0
+	}
+	response := client.GenericFileSaveBatch(obj.GenericFiles)
+
+	// Check the request URL and method
+	assert.Equal(t, "POST", response.Request.Method)
+	assert.Equal(t, "/api/v2/files/?save_batch=true", response.Request.URL.Opaque)
+
+	// Basic sanity check on response values
+	assert.Nil(t, response.Error)
+
+	savedFiles := response.GenericFiles()
+	assert.EqualValues(t, "GenericFile", response.ObjectType())
+	assert.Equal(t, 5, len(savedFiles))
+
+	// Make sure the client returns the SAVED object,
+	// not the unsaved one we sent.
+	for _, gf := range savedFiles {
+		assert.NotEqual(t, 0, gf.Id)
+	}
+}
+
 func TestPremisEventGet(t *testing.T) {
 	testServer := httptest.NewServer(http.HandlerFunc(premisEventGetHandler))
 	defer testServer.Close()
@@ -828,6 +865,35 @@ func genericFileSaveHandler(w http.ResponseWriter, r *http.Request) {
 	objJson, _ := json.Marshal(data)
 	w.Header().Set("Content-Type", "application/json")
 	fmt.Fprintln(w, string(objJson))
+}
+
+func genericFileSaveBatchHandler(w http.ResponseWriter, r *http.Request) {
+	decoder := json.NewDecoder(r.Body)
+	decoder.UseNumber()
+	filesMap := make(map[string][]*models.GenericFile, 0)
+	err := decoder.Decode(&filesMap)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error decoding JSON data: %v", err)
+		fmt.Fprintln(w, "")
+		return
+	}
+
+	// Assign ID and timestamps, as if the object has been saved.
+	files := filesMap["generic_files"]
+	objJson := "["
+	for i, gf := range files {
+		gf.Id = 1000 + i
+		gf.CreatedAt = time.Now().UTC()
+		gf.UpdatedAt = time.Now().UTC()
+		json, _ := gf.SerializeForPharos()
+		objJson += string(json)
+		if i < len(files) {
+			objJson += ","
+		}
+	}
+	objJson += "]"
+	w.Header().Set("Content-Type", "application/json")
+	fmt.Fprintln(w, objJson)
 }
 
 // -------------------------------------------------------------------------
