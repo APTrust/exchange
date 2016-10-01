@@ -139,7 +139,8 @@ func TestSerializeFileForPharos(t *testing.T) {
 	assert.Equal(t, "application/xml", hash["file_format"])
 	assert.Equal(t, "uc.edu/cin.675812/data/metadata.xml", hash["identifier"])
 
-	checksums := hash["checksums"].([]interface{})
+	// Note the Rails 4 naming convention
+	checksums := hash["checksums_attributes"].([]interface{})
 	checksum0 := checksums[0].(map[string]interface{})
 	assert.EqualValues(t, 0, checksum0["id"])
 	assert.Equal(t, "md5", checksum0["algorithm"])
@@ -151,6 +152,21 @@ func TestSerializeFileForPharos(t *testing.T) {
 	assert.Equal(t, "sha256", checksum1["algorithm"])
 	assert.Equal(t, "2014-08-12T20:51:20Z", checksum1["datetime"])
 	assert.Equal(t, "a418d61067718141d7254d7376d5499369706e3ade27cb84c4d5519f7cfed790", checksum1["digest"])
+
+	// Note the Rails 4 naming convention
+	events := hash["premis_events_attributes"].([]interface{})
+	event0 := events[0].(map[string]interface{})
+	assert.EqualValues(t, 0, event0["id"])
+	assert.EqualValues(t, 0, event0["intellectual_object_id"])
+	assert.Equal(t, "Success", event0["outcome"])
+	assert.Equal(t, "http://golang.org/pkg/crypto/md5/", event0["agent"])
+	assert.Equal(t, "2014-08-13T11:04:41-04:00", event0["datetime"])
+	assert.Equal(t, "Go crypto/md5", event0["object"])
+	assert.Equal(t, "Fixity matches", event0["outcome_information"])
+	assert.Equal(t, "md5:c6d8080a39a0622f299750e13aa9c200", event0["outcome_detail"])
+	assert.Equal(t, "fixity_check", event0["event_type"])
+	assert.Equal(t, "Fixity check against registered hash", event0["detail"])
+	assert.Equal(t, "uc.edu/cin.675812", event0["intellectual_object_identifier"])
 }
 
 func TestBuildIngestEvents(t *testing.T) {

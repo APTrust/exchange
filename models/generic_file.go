@@ -225,34 +225,8 @@ func NewGenericFile() (*GenericFile) {
 // Serializes a version of GenericFile that Fluctus will accept as post/put input.
 // Note that we don't serialize the id or any of our internal housekeeping info.
 func (gf *GenericFile) SerializeForPharos() ([]byte, error) {
-	// We have to create a temporary structure to prevent json.Marshal
-	// from serializing Size (int64) with scientific notation.
-	// Without this step, Size will be serialized as something like
-	// 2.706525e+06, which is not valid JSON.
-	temp := struct{
-		Identifier                   string         `json:"identifier"`
-		IntellectualObjectId         int            `json:"intellectual_object_id"`
-		IntellectualObjectIdentifier string         `json:"intellectual_object_identifier"`
-		FileFormat                   string         `json:"file_format"`
-		URI                          string         `json:"uri"`
-		Size                         int64          `json:"size"`
-		FileCreated                  time.Time      `json:"file_created"`
-		FileModified                 time.Time      `json:"file_modified"`
-		CreatedAt                    time.Time      `json:"created_at"`
-		UpdatedAt                    time.Time      `json:"updated_at"`
-		Checksums                    []*Checksum    `json:"checksums"`
-	} {
-		Identifier:                     gf.Identifier,
-		IntellectualObjectId:           gf.IntellectualObjectId,
-		IntellectualObjectIdentifier:   gf.IntellectualObjectIdentifier,
-		FileFormat:                     gf.FileFormat,
-		URI:                            gf.URI,
-		Size:                           gf.Size,
-		FileCreated:                    gf.FileCreated,
-		FileModified:                   gf.FileModified,
-		Checksums:                      gf.Checksums,
-	}
-	return json.Marshal(temp)
+	genericFileForPharos := NewGenericFileForPharos(gf)
+	return json.Marshal(genericFileForPharos)
 }
 
 // Returns the original path of the file within the original bag.
