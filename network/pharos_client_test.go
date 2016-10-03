@@ -7,6 +7,7 @@ import (
 	"github.com/APTrust/exchange/network"
 	"github.com/APTrust/exchange/util/testutil"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -366,9 +367,10 @@ func TestGenericFileSaveBatch(t *testing.T) {
 	}
 
 	// ---------------------------------------------
-	// Make an IntellectualObject with 5 GenericFiles
+	// Make an IntellectualObject with 5 GenericFiles,
+	// each with 2 checksums and 2 events.
 	// ---------------------------------------------
-	obj := testutil.MakeIntellectualObject(5, 0, 0, 0)
+	obj := testutil.MakeIntellectualObject(5, 2, 2, 0)
 	for _, gf := range obj.GenericFiles {
 		gf.Id = 0
 	}
@@ -379,7 +381,7 @@ func TestGenericFileSaveBatch(t *testing.T) {
 	assert.Equal(t, "/api/v2/files/?save_batch=true", response.Request.URL.Opaque)
 
 	// Basic sanity check on response values
-	assert.Nil(t, response.Error)
+	require.Nil(t, response.Error)
 
 	savedFiles := response.GenericFiles()
 	assert.EqualValues(t, "GenericFile", response.ObjectType())
@@ -389,6 +391,8 @@ func TestGenericFileSaveBatch(t *testing.T) {
 	// not the unsaved one we sent.
 	for _, gf := range savedFiles {
 		assert.NotEqual(t, 0, gf.Id)
+		assert.Equal(t, 2, len(gf.Checksums))
+		assert.Equal(t, 2, len(gf.PremisEvents))
 	}
 }
 
@@ -870,8 +874,8 @@ func genericFileSaveHandler(w http.ResponseWriter, r *http.Request) {
 func genericFileSaveBatchHandler(w http.ResponseWriter, r *http.Request) {
 	decoder := json.NewDecoder(r.Body)
 	decoder.UseNumber()
-	filesMap := make(map[string][]*models.GenericFile, 0)
-	err := decoder.Decode(&filesMap)
+	batch := make([]*models.GenericFileForPharos, 0)
+	err := decoder.Decode(&batch)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error decoding JSON data: %v", err)
 		fmt.Fprintln(w, "")
@@ -879,21 +883,44 @@ func genericFileSaveBatchHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Assign ID and timestamps, as if the object has been saved.
-	files := filesMap["generic_files"]
-	objJson := "["
-	for i, gf := range files {
-		gf.Id = 1000 + i
-		gf.CreatedAt = time.Now().UTC()
-		gf.UpdatedAt = time.Now().UTC()
-		json, _ := gf.SerializeForPharos()
-		objJson += string(json)
-		if i < len(files) {
-			objJson += ","
+	files := make([]*models.GenericFile, 0)
+	for i, file := range batch {
+		gf := &models.GenericFile{
+			Id: 1000 + i,
+			Identifier: file.Identifier,
+			IntellectualObjectId: file.IntellectualObjectId,
+			IntellectualObjectIdentifier: file.IntellectualObjectIdentifier,
+			FileFormat: file.FileFormat,
+			URI: file.URI,
+			Size: file.Size,
+			FileCreated: file.FileCreated,
+			FileModified: file.FileModified,
+			Checksums: file.Checksums,
+			PremisEvents: file.PremisEvents,
+			CreatedAt: time.Now().UTC(),
+			UpdatedAt: time.Now().UTC(),
 		}
+		files = append(files, gf)
 	}
-	objJson += "]"
+	temp := struct {
+		Count int `json:"count"`
+		Next *string `json:"next"`
+		Previous *string `json:"previous"`
+		Results []*models.GenericFile `json:"results"`
+	} {
+		Count: 0,
+		Next: nil,
+		Previous: nil,
+		Results: files,
+	}
+	jsonData, err := json.Marshal(temp)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error encoding JSON data: %v", err)
+		fmt.Fprintln(w, "")
+		return
+	}
 	w.Header().Set("Content-Type", "application/json")
-	fmt.Fprintln(w, objJson)
+	fmt.Fprintln(w, string(jsonData))
 }
 
 // -------------------------------------------------------------------------

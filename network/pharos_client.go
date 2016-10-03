@@ -319,24 +319,17 @@ func (client *PharosClient) GenericFileSaveBatch(objList []*models.GenericFile) 
 
 	// Prepare the JSON data
 	// TODO: Define a PharosGenericFile object, and serialize a list of those.
-	listOfGenericFileMaps := make([]string, 0)
-	data := make(map[string][]string, 0)
-	for _, gf := range objList {
-		gfMap, err := gf.SerializeForPharos()
-		if err != nil {
-			resp.Error = err
-			return resp
-		}
-		listOfGenericFileMaps = append(listOfGenericFileMaps, string(gfMap))
-	}
-	data["generic_files"] = listOfGenericFileMaps
-	postData, err := json.Marshal(data)
+	batch := make([]*models.GenericFileForPharos, len(objList))
+	for i, gf := range objList {
+		batch[i] = models.NewGenericFileForPharos(gf)
+ 	}
+
+	// Prepare the JSON data
+	postData, err := json.Marshal(batch)
 	if err != nil {
-		resp.Error = err
+		resp.Error = fmt.Errorf("Error marshalling GenericFile batch to JSON: %v", err)
 		return resp
 	}
-
-	fmt.Println(string(postData))
 
 	// Run the request
 	client.DoRequest(resp, httpMethod, absoluteUrl, bytes.NewBuffer(postData))
@@ -344,12 +337,7 @@ func (client *PharosClient) GenericFileSaveBatch(objList []*models.GenericFile) 
 		return resp
 	}
 
-	// Parse the JSON from the response body
-	gfList := make([]*models.GenericFile, 0)
-	resp.Error = json.Unmarshal(resp.data, gfList)
-	if resp.Error == nil {
-		resp.files = gfList
-	}
+	resp.UnmarshalJsonList()
 	return resp
 }
 
