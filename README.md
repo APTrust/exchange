@@ -1,3 +1,5 @@
+[![Go Report Card](https://goreportcard.com/badge/github.com/APTrust/exchange)](https://goreportcard.com/report/github.com/APTrust/exchange)
+
 # Exchange
 
 Exchange is a suite of back-end services that handle bag ingest, restoration and deletion for APTrust, along with ingest, replication and restoration for DPN. Each of these services is in turn composed of a number of micro services that represent a single step in the overall process of a larger service. The micro services allow the larger services to recover from failure without having to re-do large amounts of work.
