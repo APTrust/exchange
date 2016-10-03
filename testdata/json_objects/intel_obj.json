@@ -24,7 +24,7 @@
 			"outcome_information": "Multipart put using md5 checksum"
 		},
 		{
-			"identifier": "7c4208bc-e71c-4e82-64e0-190d07280142",
+			"identifier": "4025c725-3dc3-440a-86a2-dd158e54697b",
 			"intellectual_object_identifier": "uc.edu/cin.675812",
 			"event_type": "identifier_assignment",
 			"datetime": "2014-08-13T11:13:18-04:00",
@@ -36,7 +36,7 @@
 			"outcome_information": "Institution domain + tar file name"
 		},
 		{
-			"identifier": "80f6c8ba-1e6d-4076-58d2-9cd3f10d8d63",
+			"identifier": "d2d3ec3f-c969-4669-aa69-babbce05f802",
 			"intellectual_object_identifier": "uc.edu/cin.675812",
 			"event_type": "ingest",
 			"datetime": "2014-08-14T15:37:06-04:00",

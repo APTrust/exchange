@@ -114,6 +114,25 @@ func TestFindEventsByType(t *testing.T) {
 	}
 }
 
+func TestFindEventByIdentifier(t *testing.T) {
+	filename := filepath.Join("testdata", "json_objects", "intel_obj.json")
+	intelObj, err := testutil.LoadIntelObjFixture(filename)
+	if err != nil {
+		t.Errorf("Error loading test data file '%s': %v", filename, err)
+	}
+	if intelObj == nil {
+		return
+	}
+
+	gf := intelObj.GenericFiles[0]
+	event1 := gf.FindEventByIdentifier("6c705682-73ed-4609-6c11-30cb0cd1dcd9")
+	event2 := gf.FindEventByIdentifier("bc78e9d9-a860-4ef1-5ae9-216151303c6a")
+	require.NotNil(t, event1)
+	require.NotNil(t, event2)
+	assert.Equal(t, "identifier_assignment", event1.EventType)
+	assert.Equal(t, "ingest", event2.EventType)
+}
+
 func TestSerializeFileForPharos(t *testing.T) {
 	filename := filepath.Join("testdata", "json_objects", "intel_obj.json")
 	intelObj, err := testutil.LoadIntelObjFixture(filename)

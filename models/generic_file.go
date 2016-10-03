@@ -267,6 +267,18 @@ func (gf *GenericFile) FindEventsByType(eventType string) ([]PremisEvent) {
 	return events
 }
 
+// Returns the event with the matching identifier (UUID)
+func (gf *GenericFile) FindEventByIdentifier(identifier string) (*PremisEvent) {
+	var matchingEvent *PremisEvent
+	for _, event := range gf.PremisEvents {
+		if event.Identifier == identifier {
+			matchingEvent = event
+			break
+		}
+	}
+	return matchingEvent
+}
+
 // Returns the name of this file in the preservation storage bucket
 // (that should be a UUID), or an error if the GenericFile does not
 // have a valid preservation storage URL.
