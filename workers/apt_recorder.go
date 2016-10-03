@@ -150,10 +150,6 @@ func (recorder *APTRecorder) saveAllPharosData (ingestState *models.IngestState)
 	if ingestState.IngestManifest.RecordResult.HasErrors() {
 		return
 	}
-	recorder.savePremisEvents(ingestState)
-	if ingestState.IngestManifest.RecordResult.HasErrors() {
-		return
-	}
 }
 
 func (recorder *APTRecorder) saveIntellectualObject (ingestState *models.IngestState) {
@@ -238,19 +234,31 @@ func (recorder *APTRecorder) updateGenericFiles (ingestState *models.IngestState
 	if len(files) == 0 {
 		return
 	}
-	// HERE - call PharosClient.GenericFileSaveBatch()
-	// If response is good, call obj.PropagateIdsToChildren()
+	// Call PharosClient.GenericFileSave() for each item
+	// If response is good, call obj.PropagateIdsToChildren(),
+	// followed by savePremisEvents and saveChecksums.
 	// else return
 }
 
-func (recorder *APTRecorder) savePremisEvents (ingestState *models.IngestState) {
+func (recorder *APTRecorder) savePremisEvents (ingestState *models.IngestState, events []*models.PremisEvent) {
+	// Call this only for files that need update.
+	// The batch create call creates all of the PremisEvents
+	// and checksums as well.
 
+	// Save new ingest event, fixity check and fixity generation.
+	// Do not save new identifier assignment, because there isn't one.
+}
+
+func (recorder *APTRecorder) saveChecksums (ingestState *models.IngestState, checksums []*models.Checksum) {
+	// Call this only for files that need update.
+	// The batch create call creates all of the PremisEvents
+	// and checksums as well.
 }
 
 func (recorder *APTRecorder) deleteBagFromStaging (ingestState *models.IngestState) {
-
+	// Remove the bag from our staging area
 }
 
 func (recorder *APTRecorder) deleteBagFromReceivingBucket (ingestState *models.IngestState) {
-
+	// Remove the bag from the receiving bucket, if ingest succeeded
 }

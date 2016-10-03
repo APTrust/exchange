@@ -360,11 +360,14 @@ func (gf *GenericFile) BuildIngestEvents() (error) {
 		return err
 	}
 
+	// TODO: This should not be built if file already exists.
 	err = gf.buildFileIdentifierAssignmentEvent()
 	if err != nil {
 		return err
 	}
 
+	// TODO: Should we assign a new UUID and create this
+	// event if we're updating an existing file?
 	err = gf.buildS3URLAssignmentEvent()
 	if err != nil {
 		return err
