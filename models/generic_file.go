@@ -247,9 +247,19 @@ func (gf *GenericFile) InstitutionIdentifier() (string, error) {
 }
 
 // Returns the checksum digest for the given algorithm for this file.
-func (gf *GenericFile) GetChecksum(algorithm string) (*Checksum) {
+func (gf *GenericFile) GetChecksumByAlgorithm(algorithm string) (*Checksum) {
 	for _, cs := range gf.Checksums {
 		if cs != nil && cs.Algorithm == algorithm {
+			return cs
+		}
+	}
+	return nil
+}
+
+// Returns the checksum with the given digest for this file.
+func (gf *GenericFile) GetChecksumByDigest(digest string) (*Checksum) {
+	for _, cs := range gf.Checksums {
+		if cs != nil && cs.Digest == digest {
 			return cs
 		}
 	}
@@ -277,6 +287,50 @@ func (gf *GenericFile) FindEventByIdentifier(identifier string) (*PremisEvent) {
 		}
 	}
 	return matchingEvent
+}
+
+// Merge attributes from a recently-saved GenericFile into this one.
+// When we save a GenericFile in Pharos, it assigns attributes Id,
+// CreatedAt, and UpdatedAt. This function will save those attributes
+// into the current object, and will also call MergeAttributes on
+// this file's child objects (PremisEvents and Checksums), if the
+// savedGenericFile has PremisEvents and Checksums. This also propagates
+// the new Id attribute to the GenericFile's children. Generally,
+// savedGenericFile is a disposable data structure that we throw away
+// after merging its attributes into this object.
+func (gf *GenericFile) MergeAttributes(savedFile *GenericFile) ([]error) {
+	errors := make([]error, 0)
+	gf.Id = savedFile.Id
+	gf.CreatedAt = savedFile.CreatedAt
+	gf.UpdatedAt = savedFile.UpdatedAt
+	gf.PropagateIdsToChildren()
+	for _, savedEvent := range savedFile.PremisEvents {
+		event := gf.FindEventByIdentifier(savedEvent.Identifier)
+		if event == nil {
+			err := fmt.Errorf("After save, could not find event '%s' " +
+				"in GenericFile.", savedEvent.Identifier, gf.Identifier)
+			errors = append(errors, err)
+			continue
+		}
+		err := event.MergeAttributes(savedEvent)
+		if err != nil {
+			errors = append(errors, err)
+		}
+	}
+	for _, savedChecksum := range savedFile.Checksums {
+		checksum := gf.GetChecksumByDigest(savedChecksum.Digest)
+		if checksum == nil {
+			err := fmt.Errorf("After save, could not find %s " +
+				"checksum in GenericFile.", savedChecksum.Algorithm, gf.Identifier)
+			errors = append(errors, err)
+			continue
+		}
+		err := checksum.MergeAttributes(savedChecksum)
+		if err != nil {
+			errors = append(errors, err)
+		}
+	}
+	return errors
 }
 
 // Returns the name of this file in the preservation storage bucket
@@ -494,7 +548,7 @@ func (gf *GenericFile) BuildIngestChecksums() (error) {
 // Creates the initial md5 Checksum record for this file, if
 // it does not already exist.
 func (gf *GenericFile) buildIngestMd5() (error) {
-	md5 := gf.GetChecksum(constants.AlgMd5)
+	md5 := gf.GetChecksumByAlgorithm(constants.AlgMd5)
 	if md5 == nil {
 		if len(gf.IngestMd5) != 32 {
 			return fmt.Errorf("Cannot create md5 Checksum object: " +
@@ -518,7 +572,7 @@ func (gf *GenericFile) buildIngestMd5() (error) {
 // Creates the initial sha256 Checksum record for this file, if
 // it does not already exist.
 func (gf *GenericFile) buildIngestSha256() (error) {
-	sha256 := gf.GetChecksum(constants.AlgSha256)
+	sha256 := gf.GetChecksumByAlgorithm(constants.AlgSha256)
 	if sha256 == nil {
 		if len(gf.IngestSha256) != 64 {
 			return fmt.Errorf("Cannot create sha256 Checksum object: " +

@@ -129,13 +129,13 @@ func (recorder *APTRecorder) cleanup () {
 // in Pharos and which were not. This was a problem in the old
 // system, where record failured were common, and PREMIS events
 // often wound up being recorded twice.
-func (recorder *APTRecorder) buildEventsAndChecksuks (ingestState *models.IngestState) {
+func (recorder *APTRecorder) buildEventsAndChecksums (ingestState *models.IngestState) {
 	obj := ingestState.IngestManifest.Object
 	err := obj.BuildIngestEvents()
 	if err != nil {
 		ingestState.IngestManifest.RecordResult.AddError(err.Error())
 	}
-	err := obj.BuildIngestChecksums()
+	err = obj.BuildIngestChecksums()
 	if err != nil {
 		ingestState.IngestManifest.RecordResult.AddError(err.Error())
 	}
@@ -158,7 +158,7 @@ func (recorder *APTRecorder) saveAllPharosData (ingestState *models.IngestState)
 
 func (recorder *APTRecorder) saveIntellectualObject (ingestState *models.IngestState) {
 	obj := ingestState.IngestManifest.Object
-	resp := recorder.context.PharosClient.IntellectualObjectSave(obj)
+	resp := recorder.Context.PharosClient.IntellectualObjectSave(obj)
 	if resp.Error != nil {
 		ingestState.IngestManifest.RecordResult.AddError(resp.Error.Error())
 		return
@@ -176,27 +176,68 @@ func (recorder *APTRecorder) saveIntellectualObject (ingestState *models.IngestS
 }
 
 func (recorder *APTRecorder) saveGenericFiles (ingestState *models.IngestState) {
-	files = make([]*models.GenericFile, 0)
+	filesToCreate := make([]*models.GenericFile, 0)
+	filesToUpdate := make([]*models.GenericFile, 0)
 	for i, gf := range ingestState.IngestManifest.Object.GenericFiles {
 		if i % GENERIC_FILE_BATCH_SIZE == 0 {
-			if len(files) > 0 {
-				recorder.SaveBatchOfGenericFiles(ingestState, files)
-			}
+			recorder.createGenericFiles(ingestState, filesToCreate)
 			if ingestState.IngestManifest.RecordResult.HasErrors() {
 				break
 			}
-			files = make([]*models.GenericFile, 0)
+			recorder.updateGenericFiles(ingestState, filesToUpdate)
+			if ingestState.IngestManifest.RecordResult.HasErrors() {
+				break
+			}
+			filesToCreate = make([]*models.GenericFile, 0)
+			filesToUpdate = make([]*models.GenericFile, 0)
 		}
-		if gf.Id == 0 {
-			files = append(files, gf)
+		if gf.IngestNeedsSave {
+			if gf.IngestPreviousVersionExists {
+				filesToUpdate = append(filesToUpdate, gf)
+			} else {
+				filesToCreate = append(filesToCreate, gf)
+			}
 		}
 	}
-	if !ingestState.IngestManifest.RecordResult.HasErrors() && len(files) > 0 {
-		recorder.SaveBatchOfGenericFiles(ingestState, files)
+	if !ingestState.IngestManifest.RecordResult.HasErrors() {
+		recorder.createGenericFiles(ingestState, filesToCreate)
+		recorder.updateGenericFiles(ingestState, filesToUpdate)
 	}
 }
 
-func (recorder *APTRecorder) saveBatchOfGenericFiles (ingestState *models.IngestState, files []*models.GenericFile) {
+func (recorder *APTRecorder) createGenericFiles (ingestState *models.IngestState, files []*models.GenericFile) {
+	if len(files) == 0 {
+		return
+	}
+	resp := recorder.Context.PharosClient.GenericFileSaveBatch(files)
+	if resp.Error != nil {
+		ingestState.IngestManifest.RecordResult.AddError(resp.Error.Error())
+	}
+	// We may have managed to save some files despite the error.
+	// If so, record what was saved.
+	for _, savedFile := range resp.GenericFiles() {
+		gf := ingestState.IngestManifest.Object.FindGenericFile(savedFile.OriginalPath())
+		if gf == nil {
+			ingestState.IngestManifest.RecordResult.AddError("After save, could not find file '%s' " +
+				"in IntellectualObject.", gf.OriginalPath())
+			continue
+		}
+		// Merge attributes set by Pharos into our GenericFile record.
+		// Attributes include Id, CreatedAt, UpdatedAt on GenericFile
+		// and all of its Checksums and PremisEvents. This also
+		// propagates the new GenericFile.Id down to the PremisEvents
+		// and Checksums.
+		errors := gf.MergeAttributes(savedFile)
+		for _, err := range errors {
+			ingestState.IngestManifest.RecordResult.AddError(err.Error())
+		}
+	}
+}
+
+func (recorder *APTRecorder) updateGenericFiles (ingestState *models.IngestState, files []*models.GenericFile) {
+	if len(files) == 0 {
+		return
+	}
 	// HERE - call PharosClient.GenericFileSaveBatch()
 	// If response is good, call obj.PropagateIdsToChildren()
 	// else return

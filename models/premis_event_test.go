@@ -5,6 +5,7 @@ import (
 	"github.com/APTrust/exchange/models"
 	"github.com/APTrust/exchange/util/testutil"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"strings"
 	"testing"
 	"time"
@@ -325,4 +326,18 @@ func TestNewEventGenericFileReplication(t *testing.T) {
 	assert.Equal(t, "Go uuid library + goamz S3 library", event.Object)
 	assert.Equal(t, "http://github.com/nu7hatch/gouuid", event.Agent)
 	assert.Equal(t, "", event.OutcomeInformation)
+}
+
+func TestPremisEventMergeAttributes (t *testing.T) {
+	event1 := testutil.MakePremisEvent()
+	event2 := testutil.MakePremisEvent()
+
+	err := event1.MergeAttributes(event2)
+	require.Nil(t, err)
+	assert.Equal(t, event1.Id, event2.Id)
+	assert.Equal(t, event1.CreatedAt, event2.CreatedAt)
+	assert.Equal(t, event1.UpdatedAt, event2.UpdatedAt)
+
+	err = event1.MergeAttributes(nil)
+	assert.NotNil(t, err)
 }

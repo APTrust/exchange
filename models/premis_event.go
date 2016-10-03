@@ -69,6 +69,12 @@ type PremisEvent struct {
 	// event is associated. This will be an empty string
 	// for object-level events.
 	GenericFileIdentifier string `json:"generic_file_identifier"`
+
+	// Rails timestamp for when this object was created.
+	CreatedAt     time.Time `json:"created_at"`
+
+	// Rails timestamp for when this object was last updated.
+	UpdatedAt     time.Time `json:"updated_at"`
 }
 
 // EventTypeValid returns true/false, indicating whether the
@@ -332,4 +338,20 @@ func NewEventGenericFileReplication(replicatedAt time.Time, replicationUrl strin
 		Agent:              "http://github.com/nu7hatch/gouuid",
 		OutcomeInformation: "",
 	}, nil
+}
+
+
+// Sets the Id, CreatedAt and UpdatedAt properties of this event to
+// match those os savedEvent. We call this after saving a record to
+// Pharos, which sets all of those properties. Generally, savedEvent
+// is a temporary event record returned from Pharos, while this event
+// is one we want to keep.
+func (event *PremisEvent) MergeAttributes(savedEvent *PremisEvent) (error) {
+	if savedEvent == nil {
+		return fmt.Errorf("Param savedEvent cannot be nil.")
+	}
+	event.Id = savedEvent.Id
+	event.CreatedAt = savedEvent.CreatedAt
+	event.UpdatedAt = savedEvent.UpdatedAt
+	return nil
 }

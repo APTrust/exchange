@@ -215,8 +215,8 @@ func TestObjBuildIngestChecksums(t *testing.T) {
 
 	for _, gf := range obj.GenericFiles {
 		assert.Equal(t, 2, len(gf.Checksums))
-		md5 := gf.GetChecksum(constants.AlgMd5)
-		sha256 := gf.GetChecksum(constants.AlgSha256)
+		md5 := gf.GetChecksumByAlgorithm(constants.AlgMd5)
+		sha256 := gf.GetChecksumByAlgorithm(constants.AlgSha256)
 		require.NotNil(t, md5)
 		require.NotNil(t, sha256)
 

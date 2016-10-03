@@ -50,7 +50,7 @@ func TestOriginalPath(t *testing.T) {
 	assert.Equal(t, "custom/tag/dir/special_info.xml", origPath)
 }
 
-func TestGetChecksum(t *testing.T) {
+func TestGetChecksumByAlgorithm(t *testing.T) {
 	filename := filepath.Join("testdata", "json_objects", "intel_obj.json")
 	intelObj, err := testutil.LoadIntelObjFixture(filename)
 	if err != nil {
@@ -62,15 +62,39 @@ func TestGetChecksum(t *testing.T) {
 	genericFile := intelObj.GenericFiles[1]
 
 	// MD5
-	md5Checksum := genericFile.GetChecksum("md5")
+	md5Checksum := genericFile.GetChecksumByAlgorithm("md5")
 	assert.Equal(t, "c6d8080a39a0622f299750e13aa9c200", md5Checksum.Digest)
 
 	// SHA256
-	sha256Checksum := genericFile.GetChecksum("sha256")
+	sha256Checksum := genericFile.GetChecksumByAlgorithm("sha256")
 	assert.Equal(t, "a418d61067718141d7254d7376d5499369706e3ade27cb84c4d5519f7cfed790", sha256Checksum.Digest)
 
 	// bogus checksum
-	bogusChecksum := genericFile.GetChecksum("bogus")
+	bogusChecksum := genericFile.GetChecksumByAlgorithm("bogus")
+	assert.Nil(t, bogusChecksum, "GetChecksum returned something it shouldn't have")
+}
+
+func TestGetChecksumByDigest(t *testing.T) {
+	filename := filepath.Join("testdata", "json_objects", "intel_obj.json")
+	intelObj, err := testutil.LoadIntelObjFixture(filename)
+	if err != nil {
+		t.Errorf("Error loading test data file '%s': %v", filename, err)
+	}
+	if intelObj == nil {
+		return
+	}
+	genericFile := intelObj.GenericFiles[1]
+
+	// MD5
+	md5Checksum := genericFile.GetChecksumByDigest("c6d8080a39a0622f299750e13aa9c200")
+	assert.Equal(t, "md5", md5Checksum.Algorithm)
+
+	// SHA256
+	sha256Checksum := genericFile.GetChecksumByDigest("a418d61067718141d7254d7376d5499369706e3ade27cb84c4d5519f7cfed790")
+	assert.Equal(t, "sha256", sha256Checksum.Algorithm)
+
+	// bogus checksum
+	bogusChecksum := genericFile.GetChecksumByDigest("bogus")
 	assert.Nil(t, bogusChecksum, "GetChecksum returned something it shouldn't have")
 }
 
@@ -220,8 +244,8 @@ func TestBuildIngestChecksums(t *testing.T) {
 	err := gf.BuildIngestChecksums()
 	assert.Nil(t, err)
 	assert.Equal(t, 2, len(gf.Checksums))
-	md5 := gf.GetChecksum(constants.AlgMd5)
-	sha256 := gf.GetChecksum(constants.AlgSha256)
+	md5 := gf.GetChecksumByAlgorithm(constants.AlgMd5)
+	sha256 := gf.GetChecksumByAlgorithm(constants.AlgSha256)
 	require.NotNil(t, md5)
 	require.NotNil(t, sha256)
 
@@ -269,4 +293,40 @@ func TestPropagateIdsToChildren(t *testing.T) {
 	for _, checksum := range gf.Checksums {
 		assert.Equal(t, gf.Id, checksum.GenericFileId)
 	}
+}
+
+func TestGenericFileMergeAttributes(t *testing.T) {
+	gf1 := testutil.MakeGenericFile(3, 3, "test.edu/file1.txt")
+	gf2 := testutil.MakeGenericFile(3, 3, "test.edu/file1.txt")
+
+	// Match up identifiers, so copy assignment will work.
+	for i, event := range gf1.PremisEvents {
+		gf2.PremisEvents[i].Identifier = event.Identifier
+	}
+	for i, cs := range gf1.Checksums {
+		gf2.Checksums[i].Algorithm = cs.Algorithm
+		gf2.Checksums[i].Digest = cs.Digest
+	}
+
+	errors := gf1.MergeAttributes(gf2)
+	require.Empty(t, errors)
+
+	for i, event := range gf1.PremisEvents {
+		assert.Equal(t, gf2.PremisEvents[i].Id, event.Id)
+		assert.Equal(t, gf2.PremisEvents[i].CreatedAt, event.CreatedAt)
+		assert.Equal(t, gf2.PremisEvents[i].UpdatedAt, event.UpdatedAt)
+		// Ids and identifiers should propagate
+		assert.Equal(t, gf1.Id, event.GenericFileId)
+		assert.Equal(t, gf1.Identifier, event.GenericFileIdentifier)
+		assert.Equal(t, gf1.IntellectualObjectId, event.IntellectualObjectId)
+		assert.Equal(t, gf1.IntellectualObjectIdentifier, event.IntellectualObjectIdentifier)
+	}
+	for i, cs := range gf1.Checksums {
+		assert.Equal(t, gf2.Checksums[i].Id, cs.Id)
+		assert.Equal(t, gf2.Checksums[i].CreatedAt, cs.CreatedAt)
+		assert.Equal(t, gf2.Checksums[i].UpdatedAt, cs.UpdatedAt)
+		// Ids should propagate too
+		assert.Equal(t, gf1.Id, cs.GenericFileId)
+	}
+
 }

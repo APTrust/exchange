@@ -61,7 +61,7 @@ func (result *FixityResult) GenericFileHasDigest() (bool) {
 
 // Returns the SHA256 checksum that Fedora has on record.
 func (result *FixityResult) FedoraSha256() (string) {
-	checksum := result.GenericFile.GetChecksum("sha256")
+	checksum := result.GenericFile.GetChecksumByAlgorithm("sha256")
 	if checksum == nil {
 		return ""
 	}
