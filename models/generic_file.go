@@ -267,11 +267,11 @@ func (gf *GenericFile) GetChecksumByDigest(digest string) (*Checksum) {
 }
 
 // Returns events of the specified type
-func (gf *GenericFile) FindEventsByType(eventType string) ([]PremisEvent) {
-	events := make([]PremisEvent, 0)
+func (gf *GenericFile) FindEventsByType(eventType string) ([]*PremisEvent) {
+	events := make([]*PremisEvent, 0)
 	for _, event := range gf.PremisEvents {
 		if event != nil && event.EventType == eventType {
-			events = append(events, *event)
+			events = append(events, event)
 		}
 	}
 	return events

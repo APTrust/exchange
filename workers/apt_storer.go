@@ -186,6 +186,9 @@ func (storer *APTStorer) saveFile (ingestState *models.IngestState, gf *models.G
 	if existingSha256 != nil {
 		gf.IngestPreviousVersionExists = true
 		gf.Id = existingSha256.GenericFileId
+
+		// ---> Get existing generic file, use existing UUID. <---
+
 		if existingSha256.Digest != gf.IngestSha256 {
 			storer.Context.MessageLog.Info(
 				"GenericFile %s has same sha256. Does not need save.", gf.Identifier)
@@ -355,8 +358,25 @@ func (storer *APTStorer) markFileAsStored (gf *models.GenericFile, sendWhere, st
 	if sendWhere == "s3" {
 		gf.IngestStoredAt = time.Now().UTC()
 		gf.IngestStorageURL = storageUrl
+		events := gf.FindEventsByType(constants.EventIdentifierAssignment)
+		var event *models.PremisEvent
+		for i := range events {
+			existingEvent := events[i]
+			if strings.HasPrefix(existingEvent.OutcomeDetail, "http://") ||
+				strings.HasPrefix(existingEvent.OutcomeDetail, "https://") {
+				event = existingEvent
+				break
+			}
+		}
+		if event != nil {
+			event.DateTime = time.Now().UTC()
+		}
 	} else if sendWhere == "glacier" {
 		gf.IngestReplicatedAt = time.Now().UTC()
 		gf.IngestReplicationURL = storageUrl
+		events := gf.FindEventsByType(constants.EventReplication)
+		if events != nil && len(events) > 0 {
+			events[0].DateTime = time.Now().UTC()
+		}
 	}
 }

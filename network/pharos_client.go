@@ -392,6 +392,41 @@ func (client *PharosClient) ChecksumList(params url.Values) (*PharosResponse) {
 	return resp
 }
 
+// Saves a Checksum to Pharos. The checksum Id should be zero, since
+// we can create but not update Checksums. Param gfIdentifier is
+// the identifier of the GenericFile to which the checksum belongs.
+// The response object will have a new copy of the Checksum if the
+// save was successful.
+func (client *PharosClient) ChecksumSave(obj *models.Checksum, gfIdentifier string) (*PharosResponse) {
+	// Set up the response object
+	resp := NewPharosResponse(PharosChecksum)
+	resp.checksums = make([]*models.Checksum, 1)
+
+	// URL and method
+	relativeUrl := fmt.Sprintf("/api/%s/checksums/%s", client.apiVersion, gfIdentifier)
+	httpMethod := "POST"
+	absoluteUrl := client.BuildUrl(relativeUrl)
+
+	// Prepare the JSON data
+	postData, err := json.Marshal(obj)
+	if err != nil {
+		resp.Error = err
+	}
+
+	// Run the request
+	client.DoRequest(resp, httpMethod, absoluteUrl, bytes.NewBuffer(postData))
+	if resp.Error != nil {
+		return resp
+	}
+
+	// Parse the JSON from the response body
+	cs := &models.Checksum{}
+	resp.Error = json.Unmarshal(resp.data, cs)
+	if resp.Error == nil {
+		resp.checksums[0] = cs
+	}
+	return resp
+}
 
 // Returns the PREMIS event with the specified identifier. The identifier
 // should be a UUID in string format, with dashes. E.g.
