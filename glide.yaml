@@ -1,0 +1,29 @@
+package: github.com/APTrust/exchange
+import:
+- package: github.com/APTrust/bagins
+- package: github.com/aws/aws-sdk-go
+  version: ^1.4.14
+  subpackages:
+  - aws
+  - aws/credentials
+  - aws/session
+  - service/s3
+  - service/s3/s3manager
+- package: github.com/crowdmob/goamz
+  subpackages:
+  - s3
+- package: github.com/icrowley/fake
+- package: github.com/nsqio/go-nsq
+  version: ^1.0.6
+- package: github.com/nu7hatch/gouuid
+- package: github.com/op/go-logging
+  version: ^1.0.0
+- package: github.com/rakyll/magicmime
+- package: github.com/satori/go.uuid
+  version: ^1.1.0
+testImport:
+- package: github.com/stretchr/testify
+  version: ^1.1.4
+  subpackages:
+  - assert
+  - require
