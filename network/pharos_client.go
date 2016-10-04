@@ -403,7 +403,8 @@ func (client *PharosClient) ChecksumSave(obj *models.Checksum, gfIdentifier stri
 	resp.checksums = make([]*models.Checksum, 1)
 
 	// URL and method
-	relativeUrl := fmt.Sprintf("/api/%s/checksums/%s", client.apiVersion, gfIdentifier)
+	relativeUrl := fmt.Sprintf("/api/%s/checksums/%s", client.apiVersion,
+		escapeSlashes(gfIdentifier))
 	httpMethod := "POST"
 	absoluteUrl := client.BuildUrl(relativeUrl)
 

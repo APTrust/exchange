@@ -453,6 +453,35 @@ func TestCheckumList(t *testing.T) {
 	assert.Equal(t, 4, len(list))
 }
 
+func TestCheckumSave(t *testing.T) {
+	testServer := httptest.NewServer(http.HandlerFunc(checksumSaveHandler))
+	defer testServer.Close()
+
+	client, err := network.NewPharosClient(testServer.URL, "v2", "user", "key")
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	checksum := testutil.MakeChecksum()
+	response := client.ChecksumSave(checksum, "test.edu/obj1/file.txt")
+
+	// Check the request URL and method
+	assert.Equal(t, "POST", response.Request.Method)
+	assert.Equal(t, "/api/v2/checksums/test.edu%2Fobj1%2Ffile.txt", response.Request.URL.Opaque)
+
+	// Basic sanity check on response values
+	assert.Nil(t, response.Error)
+
+	assert.EqualValues(t, "Checksum", response.ObjectType())
+	obj := response.Checksum()
+	if obj == nil {
+		t.Errorf("Checksum should not be nil")
+	}
+	assert.NotEqual(t, checksum.CreatedAt, obj.CreatedAt)
+	assert.Equal(t, checksum.Digest, obj.Digest)
+}
+
 func TestPremisEventGet(t *testing.T) {
 	testServer := httptest.NewServer(http.HandlerFunc(premisEventGetHandler))
 	defer testServer.Close()
