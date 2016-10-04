@@ -435,10 +435,9 @@ func (gf *GenericFile) buildDigestCalculationEvent() (error) {
 func (gf *GenericFile) buildFileIdentifierAssignmentEvent() (error) {
 	events := gf.FindEventsByType(constants.EventIdentifierAssignment)
 	hasIdentifierAssignment := false
-	for _, existing_event := range events {
+	for _, existingEvent := range events {
 		// If the identifier is not a URL, it's the file identifier
-		if !strings.HasPrefix(existing_event.Detail, "http://") &&
-			!strings.HasPrefix(existing_event.Detail, "https://") {
+		if !existingEvent.IsUrlAssignment() {
 			hasIdentifierAssignment = true
 		}
 	}
