@@ -298,6 +298,7 @@ func NewEventGenericFileIdentifierAssignment(identifierGeneratedAt time.Time, id
 	if identifierType == constants.IdTypeStorageURL {
 		object = "Go uuid library + goamz S3 library"
 		agent = "http://github.com/nu7hatch/gouuid"
+		// Don't change these words. They're used in IsUrlAssignment below.
 		detail = fmt.Sprintf("Assigned new storage URL identifier, and item was stored at %s",
 			identifierGeneratedAt.Format(time.RFC3339))
 	}
@@ -354,4 +355,10 @@ func (event *PremisEvent) MergeAttributes(savedEvent *PremisEvent) (error) {
 	event.CreatedAt = savedEvent.CreatedAt
 	event.UpdatedAt = savedEvent.UpdatedAt
 	return nil
+}
+
+// Returns true if this event is a URL assignment event.
+func (event *PremisEvent) IsUrlAssignment() (bool) {
+	return (event.EventType == constants.EventIdentifierAssignment &&
+		strings.HasPrefix(event.Detail, "Assigned new storage URL"))
 }

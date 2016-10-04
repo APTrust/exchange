@@ -341,3 +341,15 @@ func TestPremisEventMergeAttributes (t *testing.T) {
 	err = event1.MergeAttributes(nil)
 	assert.NotNil(t, err)
 }
+
+func TestIsUrlAssignment (t *testing.T) {
+	event := testutil.MakePremisEvent()
+	event.EventType = constants.EventIdentifierAssignment
+	event.Detail = "Assigned new storage URL blah blah blah THE INTERWEBZ!"
+	assert.True(t, event.IsUrlAssignment())
+	event.Detail = "What are you doing with that vat of sulfuric acid, Boris?"
+	assert.False(t, event.IsUrlAssignment())
+	event.EventType = constants.EventIngestion
+	event.Detail = "Assigned new storage URL blah blah blah THE INTERWEBZ!"
+	assert.False(t, event.IsUrlAssignment())
+}
