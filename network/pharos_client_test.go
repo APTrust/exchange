@@ -396,6 +396,63 @@ func TestGenericFileSaveBatch(t *testing.T) {
 	}
 }
 
+func TestCheckumGet(t *testing.T) {
+	testServer := httptest.NewServer(http.HandlerFunc(checksumGetHandler))
+	defer testServer.Close()
+
+	client, err := network.NewPharosClient(testServer.URL, "v2", "user", "key")
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	response := client.ChecksumGet(123)
+
+	// Check the request URL and method
+	assert.Equal(t, "GET", response.Request.Method)
+	assert.Equal(t, "/api/v2/checksums/123/", response.Request.URL.Opaque)
+
+	// Basic sanity check on response values
+	assert.Nil(t, response.Error)
+
+	assert.EqualValues(t, "Checksum", response.ObjectType())
+	obj := response.Checksum()
+	if obj == nil {
+		t.Errorf("Checksum should not be nil")
+	}
+	assert.NotEqual(t, "", obj.Digest)
+}
+
+func TestCheckumList(t *testing.T) {
+	testServer := httptest.NewServer(http.HandlerFunc(checksumListHandler))
+	defer testServer.Close()
+
+	client, err := network.NewPharosClient(testServer.URL, "v2", "user", "key")
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	params := url.Values{}
+	params.Add("generic_file_identifier", "test.edu/obj1/file.txt")
+	response := client.ChecksumList(params)
+
+	// Check the request URL and method
+	assert.Equal(t, "GET", response.Request.Method)
+	assert.Equal(t, "/api/v2/checksums/?generic_file_identifier=test.edu%2Fobj1%2Ffile.txt",
+		response.Request.URL.Opaque)
+
+	// Basic sanity check on response values
+	assert.Nil(t, response.Error)
+
+	assert.EqualValues(t, "Checksum", response.ObjectType())
+	list := response.Checksums()
+	if list == nil {
+		t.Errorf("Checksums should not be nil")
+	}
+	assert.Equal(t, 4, len(list))
+}
+
 func TestPremisEventGet(t *testing.T) {
 	testServer := httptest.NewServer(http.HandlerFunc(premisEventGetHandler))
 	defer testServer.Close()
@@ -945,6 +1002,26 @@ func checksumListHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	fmt.Fprintln(w, string(listJson))
 }
+
+func checksumSaveHandler(w http.ResponseWriter, r *http.Request) {
+	decoder := json.NewDecoder(r.Body)
+	decoder.UseNumber()
+	data := make(map[string]interface{})
+	err := decoder.Decode(&data)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error decoding JSON data: %v", err)
+		fmt.Fprintln(w, "")
+		return
+	}
+	// Assign ID and timestamps, as if the object has been saved.
+	data["id"] = 1000
+	data["created_at"] = time.Now().UTC()
+	data["updated_at"] = time.Now().UTC()
+	objJson, _ := json.Marshal(data)
+	w.Header().Set("Content-Type", "application/json")
+	fmt.Fprintln(w, string(objJson))
+}
+
 
 // -------------------------------------------------------------------------
 // PremisEvent handlers
