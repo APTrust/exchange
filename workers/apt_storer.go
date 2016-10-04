@@ -183,9 +183,10 @@ func (storer *APTStorer) saveFile (ingestState *models.IngestState, gf *models.G
 		return
 	}
 	// Set this, for the record.
-	if existingSha256 != "" {
+	if existingSha256 != nil {
 		gf.IngestPreviousVersionExists = true
-		if existingSha256 != gf.IngestSha256 {
+		gf.Id = existingSha256.GenericFileId
+		if existingSha256.Digest != gf.IngestSha256 {
 			storer.Context.MessageLog.Info(
 				"GenericFile %s has same sha256. Does not need save.", gf.Identifier)
 			gf.IngestNeedsSave = false
@@ -208,7 +209,7 @@ func (storer *APTStorer) saveFile (ingestState *models.IngestState, gf *models.G
 // unchanged versions of some files. So we check the sha256 of the
 // existing version against the sha256 of the one just uploaded. If they're
 // the same, we don't bother overwriting the existing file.
-func (storer *APTStorer) getExistingSha256 (gfIdentifier string) (string, error) {
+func (storer *APTStorer) getExistingSha256 (gfIdentifier string) (*models.Checksum, error) {
 	storer.Context.MessageLog.Info("Checking Pharos for existing sha256 digest for %s",
 		gfIdentifier)
 	params := url.Values{}
@@ -217,13 +218,13 @@ func (storer *APTStorer) getExistingSha256 (gfIdentifier string) (string, error)
 	params.Add("sort", "created_at DESC")
 	resp := storer.Context.PharosClient.ChecksumList(params)
 	if resp.Error != nil {
-		return "", resp.Error
+		return nil, resp.Error
 	}
 	existingChecksum := resp.Checksum()
 	if existingChecksum == nil {
-		return "", nil
+		return nil, nil
 	}
-	return existingChecksum.Digest, nil
+	return existingChecksum, nil
 }
 
 // Copy the GenericFile to long-term storage in S3 or Glacier
