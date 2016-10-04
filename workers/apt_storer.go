@@ -187,7 +187,40 @@ func (storer *APTStorer) saveFile (ingestState *models.IngestState, gf *models.G
 		gf.IngestPreviousVersionExists = true
 		gf.Id = existingSha256.GenericFileId
 
-		// ---> Get existing generic file, use existing UUID. <---
+		uuid, err := storer.getUuidOfExistingFile(gf.Identifier)
+		if err != nil {
+			message := fmt.Sprintf("Cannot find existing UUID for %s: %v", gf.Identifier, err.Error())
+			ingestState.IngestManifest.StoreResult.AddError(message)
+			storer.Context.MessageLog.Error(message)
+			// Probably not fatal, but treat it as such for now,
+			// because we don't want leave orphan objects in S3,
+			// or have the GenericFile.URL not match the actual
+			// storage URL. This should only happen if a depositor
+			// deletes the existing version of a GenericFile while
+			// we are processing this ingest. The window for that
+			// to happen is usually between a few seconds and a few
+			// hours.
+			ingestState.IngestManifest.StoreResult.ErrorIsFatal = true
+			return
+		}
+		if uuid == "" {
+			message := fmt.Sprintf("Cannot find existing UUID for %s.", gf.Identifier)
+			ingestState.IngestManifest.StoreResult.AddError(message)
+			storer.Context.MessageLog.Error(message)
+			// Probably not fatal, but treat it as such for now.
+			// Same note as in previous if statement above.
+			ingestState.IngestManifest.StoreResult.ErrorIsFatal = true
+			return
+		} else {
+			// OK. Set the GenericFile's UUID to match the existing file's
+			// UUID, so that we overwrite the existing file, and so the
+			// GenericFile record in Pharos still has the correct URL.
+			message := fmt.Sprintf("Resetting UUID for '%s' to '%s' so we can overwrite " +
+				"the currently stored version of the file.",
+				gf.Identifier, uuid)
+			storer.Context.MessageLog.Info(message)
+			gf.IngestUUID = uuid
+		}
 
 		if existingSha256.Digest != gf.IngestSha256 {
 			storer.Context.MessageLog.Info(
@@ -228,6 +261,30 @@ func (storer *APTStorer) getExistingSha256 (gfIdentifier string) (*models.Checks
 		return nil, nil
 	}
 	return existingChecksum, nil
+}
+
+// Returns the UUID of an existing GenericFile. The UUID is the last component
+// of the S3 storage URL. When we are updating an existing GenericFile, we want
+// to overwrite the object in S3/Glacier rather than writing a new one and
+// leaving the old one hanging around. To overwrite it, we must know its UUID.
+func (storer *APTStorer) getUuidOfExistingFile (gfIdentifier string) (string, error) {
+	storer.Context.MessageLog.Info("Checking Pharos for existing UUID for GenericFile %s",
+		gfIdentifier)
+	resp := storer.Context.PharosClient.GenericFileGet(gfIdentifier)
+	if resp.Error != nil {
+		return "", resp.Error
+	}
+	uuid := ""
+	existingGenericFile := resp.GenericFile()
+	if resp.Error != nil {
+		return "", fmt.Errorf("Pharos cannot find supposedly existing GenericFile '%s'", gfIdentifier)
+	}
+	parts := strings.Split(existingGenericFile.URI, "/")
+	uuid = parts[len(parts)-1]
+	if !util.LooksLikeUUID(uuid) {
+		return "", fmt.Errorf("Could not extract UUID from URI %s", existingGenericFile.URI)
+	}
+    return uuid, nil
 }
 
 // Copy the GenericFile to long-term storage in S3 or Glacier
