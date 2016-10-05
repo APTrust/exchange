@@ -161,10 +161,17 @@ func (recorder *APTRecorder) buildEventsAndChecksums (ingestState *models.Ingest
 func (recorder *APTRecorder) saveAllPharosData (ingestState *models.IngestState) {
 	recorder.saveIntellectualObject(ingestState)
 	if ingestState.IngestManifest.RecordResult.HasErrors() {
+		recorder.Context.MessageLog.Error("Error saving IntellectualObject %s/%s: %v",
+			ingestState.WorkItem.Bucket, ingestState.WorkItem.Name,
+			ingestState.IngestManifest.RecordResult.AllErrorsAsString())
 		return
 	}
 	recorder.saveGenericFiles(ingestState)
 	if ingestState.IngestManifest.RecordResult.HasErrors() {
+		recorder.Context.MessageLog.Error("Error saving one or more GenericFiles for " +
+			"IntellectualObject %s/%s: %v",
+			ingestState.WorkItem.Bucket, ingestState.WorkItem.Name,
+			ingestState.IngestManifest.RecordResult.AllErrorsAsString())
 		return
 	}
 }
