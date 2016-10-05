@@ -11,7 +11,6 @@ import (
 	"github.com/nsqio/go-nsq"
 	"io"
 	"net/url"
-	"os"
 	"strings"
 	"sync"
 	"time"
@@ -102,6 +101,11 @@ func (storer *APTStorer) HandleMessage(message *nsq.Message) (error) {
 // -------------------------------------------------------------------------
 func (storer *APTStorer) store () {
 	for ingestState := range storer.StorageChannel {
+
+		ingestState.IngestManifest.StoreResult.Start()
+		ingestState.IngestManifest.StoreResult.Attempted = true
+		ingestState.IngestManifest.StoreResult.AttemptNumber += 1
+
 		for _, gf := range ingestState.IngestManifest.Object.GenericFiles {
 			storer.saveFile(ingestState, gf)
 		}
@@ -122,20 +126,8 @@ func (storer *APTStorer) cleanup () {
 				ingestState.IngestManifest.Object.IngestTarFilePath,
 				ingestState.IngestManifest.Object.IngestS3Bucket,
 				ingestState.IngestManifest.Object.IngestS3Key)
-			os.Remove(ingestState.IngestManifest.Object.IngestTarFilePath)
-		}
-		// If item was untarred, delete the untarred dir,
-		// but be sure what you pass to os.RemoveAll() is safe.
-		untarredPath := ingestState.IngestManifest.Object.IngestUntarredPath
-		if (untarredPath != "" &&
-			strings.HasPrefix(untarredPath, storer.Context.Config.TarDirectory) &&
-			fileutil.LooksSafeToDelete(untarredPath, 12, 3)) {
-			storer.Context.MessageLog.Info("Deleting untarred dir %s (%s/%s) " +
-				"because all files were stored successfully",
-				untarredPath,
-				ingestState.IngestManifest.Object.IngestS3Bucket,
-				ingestState.IngestManifest.Object.IngestS3Key)
-			os.RemoveAll(untarredPath)
+			DeleteBagFromStaging(ingestState, storer.Context,
+				ingestState.IngestManifest.StoreResult)
 		}
 		storer.RecordChannel <- ingestState
 	}
@@ -147,11 +139,19 @@ func (storer *APTStorer) cleanup () {
 // -------------------------------------------------------------------------
 func (storer *APTStorer) record () {
 	for ingestState := range storer.RecordChannel {
+
 		// Copy JSON representation of the IngestManifest to Pharos
 		// and to the JSON log.
+		ingestState.IngestManifest.StoreResult.Finish()
 		RecordWorkItemState(ingestState, storer.Context, ingestState.IngestManifest.FetchResult)
 
-		if ingestState.IngestManifest.HasFatalErrors() {
+		// See if we have fatal errors, or too many recurring transient errors
+		attemptNumber := ingestState.IngestManifest.StoreResult.AttemptNumber
+		maxAttempts := int(storer.Context.Config.StoreWorker.MaxAttempts)
+		itsTimeToGiveUp := (ingestState.IngestManifest.HasFatalErrors() ||
+			(ingestState.IngestManifest.HasErrors() && attemptNumber >= maxAttempts))
+
+		if itsTimeToGiveUp {
 			storer.Context.MessageLog.Error("Failed to store WorkItem %d (%s/%s).",
 				ingestState.WorkItem.Id, ingestState.WorkItem.Bucket,
 				ingestState.WorkItem.Name)
@@ -219,6 +219,7 @@ func (storer *APTStorer) saveFile (ingestState *models.IngestState, gf *models.G
 				"the currently stored version of the file.",
 				gf.Identifier, uuid)
 			storer.Context.MessageLog.Info(message)
+			// TODO: Test this in integration post test.
 			gf.IngestUUID = uuid
 		}
 

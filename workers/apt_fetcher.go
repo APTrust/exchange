@@ -188,7 +188,7 @@ func (fetcher *APTFetcher) validate() {
 
 			// Here's where bag validation actually happens. There's a lot
 			// going on in this call, which can take anywhere from 2 seconds
-			// to 3 hours to complete, depending on the size of the bag.
+			// to several hours to complete, depending on the size of the bag.
 			// The most time-consuming part of the validation process is
 			// calculating md5 and sha256 checksums on every file in the bag.
 			// If the bag is 100GB+ in size, that takes a long time.
@@ -234,14 +234,7 @@ func (fetcher *APTFetcher) cleanup() {
 			// Most likely bad md5 digest, but perhaps also a partial download.
 			fetcher.Context.MessageLog.Info("Deleting due to download error: %s",
 				tarFile)
-			err := os.Remove(tarFile)
-			if err != nil {
-				fetcher.Context.MessageLog.Warning(err.Error())
-			}
-			err = fetcher.Context.VolumeClient.Release(ingestState.IngestManifest.Object.IngestTarFilePath)
-			if err != nil {
-				fetcher.Context.MessageLog.Warning(err.Error())
-			}
+			DeleteBagFromStaging(ingestState, fetcher.Context, ingestState.IngestManifest.FetchResult)
 		}
 		fetcher.RecordChannel <- ingestState
 	}
@@ -261,7 +254,13 @@ func (fetcher *APTFetcher) record() {
 		// and to the JSON log.
 		RecordWorkItemState(ingestState, fetcher.Context, ingestState.IngestManifest.FetchResult)
 
-		if ingestState.IngestManifest.HasFatalErrors() {
+		// Fatal errors, or too many recurring transient errors
+		attemptNumber := ingestState.IngestManifest.FetchResult.AttemptNumber
+		maxAttempts := int(fetcher.Context.Config.FetchWorker.MaxAttempts)
+		itsTimeToGiveUp := (ingestState.IngestManifest.HasFatalErrors() ||
+			(ingestState.IngestManifest.HasErrors() && attemptNumber >= maxAttempts))
+
+		if itsTimeToGiveUp {
 			ingestState.FinishNSQ()
 			MarkWorkItemFailed(ingestState, fetcher.Context)
 		} else if ingestState.IngestManifest.HasErrors() {

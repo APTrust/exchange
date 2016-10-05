@@ -1,25 +1,18 @@
 package workers
 
 import (
-//	"fmt"
+	"fmt"
 	"github.com/APTrust/exchange/constants"
 	"github.com/APTrust/exchange/context"
 	"github.com/APTrust/exchange/models"
-//	"github.com/APTrust/exchange/network"
-//	"github.com/APTrust/exchange/util"
-//	"github.com/APTrust/exchange/util/fileutil"
+	"github.com/APTrust/exchange/network"
 	"github.com/nsqio/go-nsq"
-//	"io"
-//	"net/url"
-//	"os"
-//	"strings"
 	"sync"
-//	"time"
+	"time"
 )
 
 const (
-	GENERIC_FILE_BATCH_SIZE = 100
-	PREMIS_EVENT_BATCH_SIZE = 100
+	GENERIC_FILE_BATCH_SIZE = 50
 )
 
 // Records ingest data (objects, files and events) in Pharos
@@ -96,13 +89,6 @@ func (recorder *APTRecorder) HandleMessage(message *nsq.Message) (error) {
 // Step 1: Record data in Pharos
 func (recorder *APTRecorder) record () {
 	for ingestState := range recorder.RecordChannel {
-		// HERE
-		// Create all events locally
-		// Save IntellectualObject
-		// Save GenericFiles (batch)
-		// Save PremisEvents (batch)
-		// Change WorkItem state as cleanup/pending
-		// Save WorkItemState
 		recorder.buildEventsAndChecksums(ingestState)
 		if !ingestState.IngestManifest.RecordResult.HasErrors() {
 			recorder.saveAllPharosData(ingestState)
@@ -113,12 +99,40 @@ func (recorder *APTRecorder) record () {
 
 // Step 2: Delete tar file from staging area and from receiving bucket.
 func (recorder *APTRecorder) cleanup () {
-//	for ingestState := range recorder.CleanupChannel {
-		// Delete local tar file (and untarred files)
-		// Delete tar file from receiving bucket
-		// Tell Pharos cleanup is complete (WorkItem complete)
-		// Save WorkItemState with full CleanupResult
-//	}
+	for ingestState := range recorder.CleanupChannel {
+		// See if we have fatal errors, or too many recurring transient errors
+		attemptNumber := ingestState.IngestManifest.RecordResult.AttemptNumber
+		maxAttempts := int(recorder.Context.Config.StoreWorker.MaxAttempts)
+		itsTimeToGiveUp := (ingestState.IngestManifest.HasFatalErrors() ||
+			(ingestState.IngestManifest.HasErrors() && attemptNumber >= maxAttempts))
+
+		if itsTimeToGiveUp {
+			recorder.Context.MessageLog.Error("Failed to record %s/%s. Errors: %s.",
+				ingestState.WorkItem.Bucket, ingestState.WorkItem.Name,
+				ingestState.IngestManifest.AllErrorsAsString())
+			ingestState.FinishNSQ()
+			MarkWorkItemFailed(ingestState, recorder.Context)
+		} else if ingestState.IngestManifest.RecordResult.HasErrors() {
+			recorder.Context.MessageLog.Info("Requeueing WorkItem %d (%s/%s) due to transient errors. %s",
+				ingestState.WorkItem.Id, ingestState.WorkItem.Bucket,
+				ingestState.WorkItem.Name,
+				ingestState.IngestManifest.AllErrorsAsString())
+			ingestState.RequeueNSQ(1000)
+			MarkWorkItemRequeued(ingestState, recorder.Context)
+		} else {
+			MarkWorkItemStarted(ingestState, recorder.Context, constants.StageCleanup,
+				"Bag has been stored and recorded. Deleting files from receiving bucket " +
+					"and staging area.")
+			DeleteBagFromStaging(ingestState, recorder.Context, ingestState.IngestManifest.RecordResult)
+			recorder.deleteBagFromReceivingBucket(ingestState)
+			MarkWorkItemSucceeded(ingestState, recorder.Context, constants.StageCleanup)
+			ingestState.FinishNSQ()
+		}
+
+		// Save our WorkItemState
+		ingestState.IngestManifest.RecordResult.Finish()
+		RecordWorkItemState(ingestState, recorder.Context, ingestState.IngestManifest.RecordResult)
+	}
 }
 
 // Make sure the IntellectualObject and its component files have
@@ -272,9 +286,6 @@ func (recorder *APTRecorder) savePremisEvents (ingestState *models.IngestState, 
 
 func (recorder *APTRecorder) saveChecksums (ingestState *models.IngestState, gf *models.GenericFile) {
 	// Call this only for files that need update.
-	// The batch create call creates all of the PremisEvents
-	// and checksums as well.
-
 	// The only cheksums we should have for this object are the
 	// ones we created during this ingest - not the ones that
 	// already exist in Pharos. Note that apt_storer.saveFile()
@@ -293,10 +304,24 @@ func (recorder *APTRecorder) saveChecksums (ingestState *models.IngestState, gf 
 	}
 }
 
-func (recorder *APTRecorder) deleteBagFromStaging (ingestState *models.IngestState) {
-	// Remove the bag from our staging area
-}
-
 func (recorder *APTRecorder) deleteBagFromReceivingBucket (ingestState *models.IngestState) {
 	// Remove the bag from the receiving bucket, if ingest succeeded
+	deleter := network.NewS3ObjectDelete(
+		constants.AWSVirginia,
+		ingestState.IngestManifest.S3Bucket,
+		[]string{ ingestState.IngestManifest.S3Key })
+	deleter.DeleteList()
+	if deleter.ErrorMessage != "" {
+		message := fmt.Sprintf("In cleanup, error deleting S3 item %s/%s: %s",
+			ingestState.IngestManifest.S3Bucket, ingestState.IngestManifest.S3Key,
+			deleter.ErrorMessage)
+		recorder.Context.MessageLog.Warning(message)
+		ingestState.IngestManifest.CleanupResult.AddError(message)
+	} else {
+		message := fmt.Sprintf("Deled S3 item %s/%s",
+			ingestState.IngestManifest.S3Bucket, ingestState.IngestManifest.S3Key)
+		recorder.Context.MessageLog.Info(message)
+		ingestState.IngestManifest.Object.IngestDeletedFromReceivingAt = time.Now().UTC()
+	}
+
 }

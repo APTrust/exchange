@@ -55,6 +55,7 @@ type IntellectualObject struct {
 	IngestMissingFiles     []*MissingFile `json:"ingest_missing_files"`
 	IngestTopLevelDirNames []string       `json:"ingest_top_level_dir_names"`
 	IngestErrorMessage     string         `json:"ingest_error_message"`
+	IngestDeletedFromReceivingAt time.Time `json:"ingest_deleted_from_receiving_at"`
 
 	genericFileMap         map[string]*GenericFile
 	tagMap                 map[string][]*Tag
