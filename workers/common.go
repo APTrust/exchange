@@ -13,6 +13,7 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -162,15 +163,26 @@ func SetBasicObjectInfo(ingestState *models.IngestState, _context *context.Conte
 	// We'll download the tar file from the receiving bucket to
 	// something like /mnt/apt/data/virginia.edu/name_of_bag.tar
 	// See IngestTarFilePath below.
+	obj := ingestState.IngestManifest.Object
 	instIdentifier := util.OwnerOf(ingestState.IngestManifest.S3Bucket)
-	ingestState.IngestManifest.Object.BagName = util.CleanBagName(ingestState.IngestManifest.S3Key)
-	ingestState.IngestManifest.Object.Institution = instIdentifier
-	ingestState.IngestManifest.Object.InstitutionId = ingestState.WorkItem.InstitutionId
-	ingestState.IngestManifest.Object.IngestS3Bucket = ingestState.IngestManifest.S3Bucket
-	ingestState.IngestManifest.Object.IngestS3Key = ingestState.IngestManifest.S3Key
-	ingestState.IngestManifest.Object.IngestTarFilePath = filepath.Join(
+	obj.BagName = util.CleanBagName(ingestState.IngestManifest.S3Key)
+	obj.Institution = instIdentifier
+	obj.InstitutionId = ingestState.WorkItem.InstitutionId
+	obj.IngestS3Bucket = ingestState.IngestManifest.S3Bucket
+	obj.IngestS3Key = ingestState.IngestManifest.S3Key
+	obj.IngestTarFilePath = filepath.Join(
 		_context.Config.TarDirectory,
 		instIdentifier, ingestState.IngestManifest.S3Key)
+
+	// If this IntellectualObject was created by our validator and VirtualBag,
+	// the identifier will be the bag name (minus the .tar extension).
+	// That's fine for cases where depositors or other organizations are
+	// using the validator outside of APTrust's repository environment, but
+	// APTrust requires that we add the Institution name and a slash to
+	// the beginning of the identifier. So make sure it's there.
+	if !strings.HasPrefix(obj.Identifier, obj.Institution + "/") {
+		obj.Identifier = fmt.Sprintf("%s/%s", obj.Institution, obj.Identifier)
+	}
 }
 
 
