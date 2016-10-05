@@ -54,6 +54,11 @@ cd ~/go/src/github.com/APTrust/exchange/apps/apt_store
 go run apt_store.go -config=config/integration.json &
 STORE_PID=$!
 
+echo "Starting apt_record"
+cd ~/go/src/github.com/APTrust/exchange/apps/apt_record
+go run apt_record.go -config=config/integration.json &
+RECORD_PID=$!
+
 echo "Go ingest processes are running. Control-C to quit."
 
 kill_all()
@@ -72,6 +77,9 @@ kill_all()
 
     echo "Shutting down apt_store"
     kill -s SIGKILL $STORE_PID
+
+    echo "Shutting down apt_record"
+    kill -s SIGKILL $RECORD_PID
 
     echo "We're all done. Logs are in ~/tmp/logs."
 }
