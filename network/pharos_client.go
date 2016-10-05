@@ -163,11 +163,13 @@ func (client *PharosClient) IntellectualObjectSave(obj *models.IntellectualObjec
 	resp.objects = make([]*models.IntellectualObject, 1)
 
 	// URL and method
-	relativeUrl := fmt.Sprintf("/api/%s/objects/", client.apiVersion)
+	// Note that POST URL takes an institution identifier, while
+	// the PUT URL takes an object identifier.
+	relativeUrl := fmt.Sprintf("/api/%s/objects/%s", client.apiVersion, obj.Institution)
 	httpMethod := "POST"
 	if obj.Id > 0 {
 		// PUT URL looks like /api/v2/objects/college.edu%2Fobject_name
-		relativeUrl = fmt.Sprintf("%s%s", relativeUrl, escapeSlashes(obj.Identifier))
+		relativeUrl = fmt.Sprintf("/api/%s/objects/%s", client.apiVersion, escapeSlashes(obj.Identifier))
 		httpMethod = "PUT"
 	}
 	absoluteUrl := client.BuildUrl(relativeUrl)

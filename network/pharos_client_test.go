@@ -181,7 +181,8 @@ func TestIntellectualObjectSave(t *testing.T) {
 
 	// Check the request URL and method
 	assert.Equal(t, "POST", response.Request.Method)
-	assert.Equal(t, "/api/v2/objects/", response.Request.URL.Opaque)
+	expectedUrl := fmt.Sprintf("/api/v2/objects/%s", obj.Institution)
+	assert.Equal(t, expectedUrl, response.Request.URL.Opaque)
 
 	// Basic sanity check on response values
 	assert.Nil(t, response.Error)
@@ -206,7 +207,7 @@ func TestIntellectualObjectSave(t *testing.T) {
 	response = client.IntellectualObjectSave(obj)
 
 	// Check the request URL and method
-	expectedUrl := fmt.Sprintf("/api/v2/objects/%s", strings.Replace(obj.Identifier, "/", "%2F", -1))
+	expectedUrl = fmt.Sprintf("/api/v2/objects/%s", strings.Replace(obj.Identifier, "/", "%2F", -1))
 	assert.Equal(t, "PUT", response.Request.Method)
 	assert.Equal(t, expectedUrl, response.Request.URL.Opaque)
 
