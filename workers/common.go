@@ -179,9 +179,16 @@ func SetBasicObjectInfo(ingestState *models.IngestState, _context *context.Conte
 	// That's fine for cases where depositors or other organizations are
 	// using the validator outside of APTrust's repository environment, but
 	// APTrust requires that we add the Institution name and a slash to
-	// the beginning of the identifier. So make sure it's there.
+	// the beginning of the identifier. So make sure it's there, and propagate
+	// the change all the way down to the GenericFiles.
 	if !strings.HasPrefix(obj.Identifier, obj.Institution + "/") {
 		obj.Identifier = fmt.Sprintf("%s/%s", obj.Institution, obj.Identifier)
+		for _, gf := range obj.GenericFiles {
+			if !strings.HasPrefix(gf.Identifier, obj.Identifier) {
+				gf.IntellectualObjectIdentifier = obj.Identifier
+				gf.Identifier = fmt.Sprintf("%s/%s", obj.Institution, gf.Identifier)
+			}
+		}
 	}
 }
 
