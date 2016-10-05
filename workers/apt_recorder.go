@@ -89,6 +89,9 @@ func (recorder *APTRecorder) HandleMessage(message *nsq.Message) (error) {
 // Step 1: Record data in Pharos
 func (recorder *APTRecorder) record () {
 	for ingestState := range recorder.RecordChannel {
+		ingestState.IngestManifest.RecordResult.Start()
+		ingestState.IngestManifest.RecordResult.Attempted = true
+		ingestState.IngestManifest.RecordResult.AttemptNumber += 1
 		recorder.buildEventsAndChecksums(ingestState)
 		if !ingestState.IngestManifest.RecordResult.HasErrors() {
 			recorder.saveAllPharosData(ingestState)
