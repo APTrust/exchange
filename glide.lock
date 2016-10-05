@@ -1,5 +1,5 @@
-hash: 7a8d08ed3677fef855eb60b519855f4bcba5f8ff064ab7da5e024bdfe2f9107b
-updated: 2016-10-05T16:05:47.093740973-04:00
+hash: 18549add655c3912f6956290a8ffc4fece8d1f59bb72469026779b11e58b066c
+updated: 2016-10-05T16:11:07.644553185-04:00
 imports:
 - name: github.com/APTrust/bagins
   version: 14b07b4f79dfe7c804c00db61df4ccec7d1c416a
@@ -37,11 +37,15 @@ imports:
   - service/sts
 - name: github.com/bitly/go-simplejson
   version: aabad6e819789e569bd6aabf444c935aa9ba1e44
+- name: github.com/bmizerany/assert
+  version: b7ed37b82869576c289d7d97fb2bbd8b64a0cb28
 - name: github.com/crowdmob/goamz
   version: 3a06871fe9fc0281ca90f3a7d97258d042ed64c0
   subpackages:
   - aws
   - s3
+- name: github.com/feyeleanor/lists
+  version: f43bdcae5e29b8de0f3df02d60d10f7b8c541aa9
 - name: github.com/feyeleanor/raw
   version: 724aedf6e1a5d8971aafec384b6bde3d5608fba4
 - name: github.com/feyeleanor/sets

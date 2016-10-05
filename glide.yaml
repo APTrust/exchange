@@ -31,6 +31,8 @@ import:
   version: ^1.6.2
   subpackages:
   - convey
+- package: github.com/bmizerany/assert
+- package: github.com/feyeleanor/lists
 testImport:
 - package: github.com/stretchr/testify
   version: ^1.1.4
