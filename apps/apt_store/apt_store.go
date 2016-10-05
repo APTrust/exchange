@@ -10,7 +10,8 @@ import (
 )
 
 // apt_store copies GenericFiles to long-term storage
-// in AWS S3 and Glacier.
+// in AWS S3 and Glacier. This is the second step in the
+// ingest process, after apt_fetch.
 func main() {
 	pathToConfigFile := parseCommandLine()
 	config, err := models.LoadConfigFile(pathToConfigFile)
