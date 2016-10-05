@@ -1,5 +1,5 @@
-hash: 18549add655c3912f6956290a8ffc4fece8d1f59bb72469026779b11e58b066c
-updated: 2016-10-05T16:11:07.644553185-04:00
+hash: 37b6705d51803b5dd02853ad6057f8b8ae84586e91f0149367fdd3f6e17b197c
+updated: 2016-10-05T16:23:54.871579084-04:00
 imports:
 - name: github.com/APTrust/bagins
   version: 14b07b4f79dfe7c804c00db61df4ccec7d1c416a
@@ -58,6 +58,10 @@ imports:
   version: 84bff6d01560fb0b5a396ba29534e93fd00d09c6
 - name: github.com/jmespath/go-jmespath
   version: bd40a432e4c76585ef6b72d3fd96fb9b6dc7b68d
+- name: github.com/jtolds/gls
+  version: 8ddce2a84170772b95dd5d576c48d517b22cac63
+- name: github.com/kr/pretty
+  version: cfb55aafdaf3ec08f0db22699ab822c50091b1c4
 - name: github.com/mreiferson/go-snappystream
   version: 028eae7ab5c4c9e2d1cb4c4ca1e53259bbe7e504
   subpackages:
@@ -72,6 +76,8 @@ imports:
   version: 672bd9146d1802abfd8a851fb428e6070d524e3d
 - name: github.com/satori/go.uuid
   version: 879c5887cd475cd7864858769793b2ceb0d44feb
+- name: github.com/smartystreets/assertions
+  version: e9a2f6771d97c709b2f7609fdf89ebde8b64c926
 - name: github.com/smartystreets/goconvey
   version: d4c757aa9afd1e2fc1832aaab209b5794eb336e1
   subpackages:
