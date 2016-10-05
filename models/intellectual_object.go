@@ -187,6 +187,8 @@ func (obj *IntellectualObject) AllFilesSaved() (bool) {
 // Serialize the subset of IntellectualObject data that Pharos
 // will accept. This is for post/put, where essential info, such
 // as institution id and/or object id will be in the URL.
+// This sets obj.Access to all lower case when it serializes,
+// because Pharos requires access values to be normalized that way.
 func (obj *IntellectualObject) SerializeForPharos() ([]byte, error) {
 	return json.Marshal(map[string]interface{}{
 		"identifier":     obj.Identifier,
@@ -195,7 +197,7 @@ func (obj *IntellectualObject) SerializeForPharos() ([]byte, error) {
 		"title":          obj.Title,
 		"description":    obj.Description,
 		"alt_identifier": obj.AltIdentifier,
-		"access":         obj.Access,
+		"access":         strings.ToLower(obj.Access),
 	})
 }
 

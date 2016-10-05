@@ -37,6 +37,7 @@ func TestSerializeObjectForPharos(t *testing.T) {
 	if err != nil {
 		t.Errorf("Error loading test data file '%s': %v", filename, err)
 	}
+	intelObj.Access = "Institution" // Make sure this is lower-cased below
 	data, err := intelObj.SerializeForPharos()
 	if err != nil {
 		t.Errorf("Error serializing for Pharos: %v", err)
