@@ -1,5 +1,5 @@
-hash: db9c6abe290b1724f02d078edbab3fa7456c276f45db7753967f6a9ac070348a
-updated: 2016-10-04T18:57:44.917996484-04:00
+hash: 7a8d08ed3677fef855eb60b519855f4bcba5f8ff064ab7da5e024bdfe2f9107b
+updated: 2016-10-05T16:05:47.093740973-04:00
 imports:
 - name: github.com/APTrust/bagins
   version: 14b07b4f79dfe7c804c00db61df4ccec7d1c416a
@@ -65,9 +65,13 @@ imports:
 - name: github.com/op/go-logging
   version: b2cb9fa56473e98db8caba80237377e83fe44db5
 - name: github.com/rakyll/magicmime
-  version: 672bd9146d1802abfd8a851fb428e6070d524e3
+  version: 672bd9146d1802abfd8a851fb428e6070d524e3d
 - name: github.com/satori/go.uuid
   version: 879c5887cd475cd7864858769793b2ceb0d44feb
+- name: github.com/smartystreets/goconvey
+  version: d4c757aa9afd1e2fc1832aaab209b5794eb336e1
+  subpackages:
+  - convey
 - name: gopkg.in/check.v1
   version: 4f90aeace3a26ad7021961c297b22c42160c7b25
 testImports:
