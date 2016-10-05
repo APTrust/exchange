@@ -237,6 +237,18 @@ func (gf *GenericFile) OriginalPath() (string) {
 	return strings.Replace(gf.Identifier, gf.IntellectualObjectIdentifier + "/", "", 1)
 }
 
+// Returns the original path of the file within the original bag,
+// including the bag name. This is just the identifier minus the institution id.
+// For example, if the identifier is "uc.edu/cin.675812/data/object.properties",
+// this returns "cin.675812/data/object.properties"
+func (gf *GenericFile) OriginalPathWithBagName() (string, error) {
+	instIdentifier, err := gf.InstitutionIdentifier()
+	if err != nil {
+		return "", err
+	}
+	return strings.Replace(gf.Identifier, instIdentifier + "/", "", 1), nil
+}
+
 // Returns the name of the institution that owns this file.
 func (gf *GenericFile) InstitutionIdentifier() (string, error) {
 	parts := strings.Split(gf.Identifier, "/")

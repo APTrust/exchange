@@ -50,6 +50,29 @@ func TestOriginalPath(t *testing.T) {
 	assert.Equal(t, "custom/tag/dir/special_info.xml", origPath)
 }
 
+func TestOriginalPathWithBagName(t *testing.T) {
+	genericFile := models.GenericFile{}
+	genericFile.IntellectualObjectIdentifier = "uc.edu/cin.675812"
+
+	// Top-level custom tag file
+	genericFile.Identifier = "uc.edu/cin.675812/tagmanifest-sha256.txt"
+	origPath, err := genericFile.OriginalPathWithBagName()
+	require.Nil(t, err)
+	assert.Equal(t, "cin.675812/tagmanifest-sha256.txt", origPath)
+
+	// Payload file
+	genericFile.Identifier = "uc.edu/cin.675812/data/object.properties"
+	origPath, err = genericFile.OriginalPathWithBagName()
+	require.Nil(t, err)
+	assert.Equal(t, "cin.675812/data/object.properties", origPath)
+
+	// Nested custom tag file
+	genericFile.Identifier = "uc.edu/cin.675812/custom/tag/dir/special_info.xml"
+	origPath, err = genericFile.OriginalPathWithBagName()
+	require.Nil(t, err)
+	assert.Equal(t, "cin.675812/custom/tag/dir/special_info.xml", origPath)
+}
+
 func TestGetChecksumByAlgorithm(t *testing.T) {
 	filename := filepath.Join("testdata", "json_objects", "intel_obj.json")
 	intelObj, err := testutil.LoadIntelObjFixture(filename)

@@ -380,14 +380,19 @@ func (storer *APTStorer) getReadCloser(ingestState *models.IngestState, gf *mode
 	tarFilePath := ingestState.IngestManifest.Object.IngestTarFilePath
 	tfi, err := fileutil.NewTarFileIterator(tarFilePath)
 	if err != nil {
-		ingestState.IngestManifest.StoreResult.AddError("Can't get TarFileIterator " +
-			"for %s: %v", tarFilePath, err)
+		msg := fmt.Sprintf("Can't get TarFileIterator for %s: %v", tarFilePath, err)
+		ingestState.IngestManifest.StoreResult.AddError(msg)
 		return nil, nil
 	}
-	readCloser, err := tfi.Find(gf.Identifier)
+	origPathWithBagName, err := gf.OriginalPathWithBagName()
 	if err != nil {
-		ingestState.IngestManifest.StoreResult.AddError("Can't get reader for " +
-			"%s: %v", gf.Identifier, err)
+		ingestState.IngestManifest.StoreResult.AddError(err.Error())
+		return nil, nil
+	}
+	readCloser, err := tfi.Find(origPathWithBagName)
+	if err != nil {
+		msg := fmt.Sprintf("Can't get reader for %s: %v", gf.Identifier, err)
+		ingestState.IngestManifest.StoreResult.AddError(msg)
 		if readCloser != nil {
 			readCloser.Close()
 		}
