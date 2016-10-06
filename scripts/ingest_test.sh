@@ -17,8 +17,11 @@ cd ~/go/src/github.com/APTrust/exchange/apps/nsq_service
 go run nsq_service.go -config ~/go/src/github.com/APTrust/exchange/config/nsq/integration.config &>/dev/null &
 NSQ_PID=$!
 
-echo "Loading Rails fixtures"
+echo "Deleting old Rails data"
 cd ~/aptrust/pharos
+RAILS_ENV=integration bundle exec rake pharos:empty_db
+
+echo "Loading Rails fixtures"
 RAILS_ENV=integration bundle exec rake db:fixtures:load
 
 echo "Starting Pharos server"
