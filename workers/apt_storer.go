@@ -421,6 +421,7 @@ func (storer *APTStorer) markFileAsStored (gf *models.GenericFile, sendWhere, st
 	if sendWhere == "s3" {
 		gf.IngestStoredAt = time.Now().UTC()
 		gf.IngestStorageURL = storageUrl
+		gf.URI = storageUrl
 		events := gf.FindEventsByType(constants.EventIdentifierAssignment)
 		var event *models.PremisEvent
 		for i := range events {
