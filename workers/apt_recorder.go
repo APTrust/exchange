@@ -159,12 +159,23 @@ func (recorder *APTRecorder) buildEventsAndChecksums (ingestState *models.Ingest
 }
 
 func (recorder *APTRecorder) saveAllPharosData (ingestState *models.IngestState) {
-	recorder.saveIntellectualObject(ingestState)
-	if ingestState.IngestManifest.RecordResult.HasErrors() {
-		recorder.Context.MessageLog.Error("Error saving IntellectualObject %s/%s: %v",
-			ingestState.WorkItem.Bucket, ingestState.WorkItem.Name,
-			ingestState.IngestManifest.RecordResult.AllErrorsAsString())
-		return
+	if (ingestState.IngestManifest.Object.Id == 0) {
+		recorder.saveIntellectualObject(ingestState)
+		if ingestState.IngestManifest.RecordResult.HasErrors() {
+			recorder.Context.MessageLog.Error("Error saving IntellectualObject %s/%s: %v",
+				ingestState.WorkItem.Bucket, ingestState.WorkItem.Name,
+				ingestState.IngestManifest.RecordResult.AllErrorsAsString())
+			return
+		} else {
+			recorder.Context.MessageLog.Info("Saved %s/%s with id %d",
+				ingestState.WorkItem.Bucket, ingestState.WorkItem.Name,
+				ingestState.IngestManifest.Object.Id)
+		}
+	} else {
+			recorder.Context.MessageLog.Info(
+				"No need to save %s/%s already has id %d",
+				ingestState.WorkItem.Bucket, ingestState.WorkItem.Name,
+				ingestState.IngestManifest.Object.Id)
 	}
 	recorder.saveGenericFiles(ingestState)
 	if ingestState.IngestManifest.RecordResult.HasErrors() {
@@ -213,8 +224,10 @@ func (recorder *APTRecorder) saveGenericFiles (ingestState *models.IngestState) 
 		}
 		if gf.IngestNeedsSave {
 			if gf.IngestPreviousVersionExists {
+				// Check for items with previous version and no Id?
+				// That would be a problem.
 				filesToUpdate = append(filesToUpdate, gf)
-			} else {
+			} else if gf.IngestNeedsSave && gf.Id == 0 {
 				filesToCreate = append(filesToCreate, gf)
 			}
 		}
