@@ -378,8 +378,9 @@ func TestGenericFileSaveBatch(t *testing.T) {
 	response := client.GenericFileSaveBatch(obj.GenericFiles)
 
 	// Check the request URL and method
+	expectedUrl := fmt.Sprintf("/api/v2/files/%d/create_batch", obj.GenericFiles[0].IntellectualObjectId)
 	assert.Equal(t, "POST", response.Request.Method)
-	assert.Equal(t, "/api/v2/files/?save_batch=true", response.Request.URL.Opaque)
+	assert.Equal(t, expectedUrl, response.Request.URL.Opaque)
 
 	// Basic sanity check on response values
 	require.Nil(t, response.Error)
@@ -899,13 +900,14 @@ func intellectualObjectListHandler(w http.ResponseWriter, r *http.Request) {
 
 func intellectualObjectSaveHandler(w http.ResponseWriter, r *http.Request) {
 	decoder := json.NewDecoder(r.Body)
-	data := make(map[string]interface{})
-	err := decoder.Decode(&data)
+	topLevelData := make(map[string]interface{})
+	err := decoder.Decode(&topLevelData)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error decoding JSON data: %v", err)
 		fmt.Fprintln(w, "")
 		return
 	}
+	data := topLevelData["intellectual_object"].(map[string]interface{})
 	// Assign ID and timestamps, as if the object has been saved.
 	data["id"] = 1000
 	data["created_at"] = time.Now().UTC()
@@ -941,13 +943,15 @@ func genericFileListHandler(w http.ResponseWriter, r *http.Request) {
 func genericFileSaveHandler(w http.ResponseWriter, r *http.Request) {
 	decoder := json.NewDecoder(r.Body)
 	decoder.UseNumber()
-	data := make(map[string]interface{})
-	err := decoder.Decode(&data)
+	topLevelData := make(map[string]interface{})
+	err := decoder.Decode(&topLevelData)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error decoding JSON data: %v", err)
 		fmt.Fprintln(w, "")
 		return
 	}
+
+	data := topLevelData["generic_file"].(map[string]interface{})
 
 	// Assign ID and timestamps, as if the object has been saved.
 	data["id"] = 1000
@@ -976,12 +980,12 @@ func genericFileSaveBatchHandler(w http.ResponseWriter, r *http.Request) {
 			Id: 1000 + i,
 			Identifier: file.Identifier,
 			IntellectualObjectId: file.IntellectualObjectId,
-			IntellectualObjectIdentifier: file.IntellectualObjectIdentifier,
 			FileFormat: file.FileFormat,
 			URI: file.URI,
 			Size: file.Size,
-			FileCreated: file.FileCreated,
-			FileModified: file.FileModified,
+			// TODO: Restore these when they are part of the Pharos model.
+			//FileCreated: file.FileCreated,
+			//FileModified: file.FileModified,
 			Checksums: file.Checksums,
 			PremisEvents: file.PremisEvents,
 			CreatedAt: time.Now().UTC(),

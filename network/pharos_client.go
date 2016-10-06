@@ -315,7 +315,8 @@ func (client *PharosClient) GenericFileSaveBatch(objList []*models.GenericFile) 
 	}
 
 	// URL and method
-	relativeUrl := fmt.Sprintf("/api/%s/files/?save_batch=true", client.apiVersion)
+	relativeUrl := fmt.Sprintf("/api/%s/files/%d/create_batch",
+		client.apiVersion, objList[0].IntellectualObjectId)
 	httpMethod := "POST"
 	absoluteUrl := client.BuildUrl(relativeUrl)
 
