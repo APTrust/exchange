@@ -11,12 +11,17 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/url"
+	"os"
 	"testing"
 )
 
 var port = 8818
 var serviceUrl = fmt.Sprintf("http://127.0.0.1:%d", port)
 var volumeService *service.VolumeService
+
+func runningInCI() (bool) {
+	return os.Getenv("TRAVIS_BUILD_DIR") != ""
+}
 
 func runService(t *testing.T) {
 	if volumeService == nil {
@@ -28,10 +33,16 @@ func runService(t *testing.T) {
 }
 
 func TestNewVolumeService(t *testing.T) {
+	if runningInCI() {
+		t.Skip("Skipping volume service test because it looks like we're in the CI environment.")
+	}
 	runService(t)
 }
 
 func TestReserve(t *testing.T) {
+	if runningInCI() {
+		t.Skip("Skipping volume service test because it looks like we're in the CI environment.")
+	}
 	runService(t)
 
 	reserveUrl := fmt.Sprintf("%s/reserve/", serviceUrl)
@@ -81,6 +92,9 @@ func TestReserve(t *testing.T) {
 }
 
 func TestRelease(t *testing.T) {
+	if runningInCI() {
+		t.Skip("Skipping volume service test because it looks like we're in the CI environment.")
+	}
 	runService(t)
 
 	reserveUrl := fmt.Sprintf("%s/release/", serviceUrl)
@@ -115,6 +129,9 @@ func TestRelease(t *testing.T) {
 }
 
 func TestReport(t *testing.T) {
+	if runningInCI() {
+		t.Skip("Skipping volume service test because it looks like we're in the CI environment.")
+	}
 	runService(t)
 
 	// Reserve a chunk of space with 8000 bytes
@@ -166,6 +183,9 @@ func TestReport(t *testing.T) {
 }
 
 func TestPing(t *testing.T) {
+	if runningInCI() {
+		t.Skip("Skipping volume service test because it looks like we're in the CI environment.")
+	}
 	runService(t)
 
 	pingUrl := fmt.Sprintf("%s/ping/", serviceUrl)
