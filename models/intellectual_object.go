@@ -190,15 +190,10 @@ func (obj *IntellectualObject) AllFilesSaved() (bool) {
 // This sets obj.Access to all lower case when it serializes,
 // because Pharos requires access values to be normalized that way.
 func (obj *IntellectualObject) SerializeForPharos() ([]byte, error) {
-	return json.Marshal(map[string]interface{}{
-		"identifier":     obj.Identifier,
-		"bag_name":       obj.BagName,
-		"institution":    obj.Institution,
-		"title":          obj.Title,
-		"description":    obj.Description,
-		"alt_identifier": obj.AltIdentifier,
-		"access":         strings.ToLower(obj.Access),
-	})
+	pharosObj := NewIntellectualObjectForPharos(obj)
+	dataStruct := make(map[string]interface{})
+	dataStruct["intellectual_object"] = pharosObj
+	return json.Marshal(dataStruct)
 }
 
 // Returns events of the specified type

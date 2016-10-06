@@ -48,14 +48,19 @@ func TestSerializeObjectForPharos(t *testing.T) {
 	if err != nil {
 		t.Errorf("Error unmarshalling data: %v", err)
 	}
+	objHash := hash["intellectual_object"]
+	assert.NotNil(t, objHash)
 
-	assert.Equal(t, "uc.edu/cin.675812", hash["identifier"])
-	assert.Equal(t, "cin.675812", hash["bag_name"])
-	assert.Equal(t, "uc.edu", hash["institution"])
-	assert.Equal(t, "Notes from the Oesper Collections", hash["title"])
-	assert.Equal(t, "A collection from Cincinnati", hash["description"])
-	assert.Equal(t, "Photo Collection", hash["alt_identifier"])
-	assert.Equal(t, "institution", hash["access"])
+	pharosObj := objHash.(map[string]interface{})
+
+	assert.EqualValues(t, 5842, pharosObj["id"])
+	assert.Equal(t, "uc.edu/cin.675812", pharosObj["identifier"])
+	assert.Equal(t, "cin.675812", pharosObj["bag_name"])
+	assert.EqualValues(t, 12, pharosObj["institution_id"])
+	assert.Equal(t, "Notes from the Oesper Collections", pharosObj["title"])
+	assert.Equal(t, "A collection from Cincinnati", pharosObj["description"])
+	assert.Equal(t, "Photo Collection", pharosObj["alt_identifier"])
+	assert.Equal(t, "institution", pharosObj["access"])
 }
 
 func TestFindGenericFile(t *testing.T) {

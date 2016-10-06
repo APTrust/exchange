@@ -1,8 +1,35 @@
 package models
 
 import (
+	"strings"
 	"time"
 )
+
+// IntellectualObject in the format that Pharos accepts for
+// POST/create.
+type IntellectualObjectForPharos struct {
+	Id             int    `json:"id"`
+	Identifier     string `json:"identifier"`
+	BagName        string `json:"bag_name"`
+	InstitutionId  int    `json:"institution_id"`
+	Title          string `json:"title"`
+	Description    string `json:"description"`
+	AltIdentifier  string `json:"alt_identifier"`
+	Access         string `json:"access"`
+}
+
+func NewIntellectualObjectForPharos(obj *IntellectualObject) (*IntellectualObjectForPharos) {
+	return &IntellectualObjectForPharos{
+		Id: obj.Id,
+		Identifier: obj.Identifier,
+		BagName: obj.BagName,
+		InstitutionId: obj.InstitutionId,
+		Title: obj.Title,
+		Description: obj.Description,
+		AltIdentifier: obj.AltIdentifier,
+		Access: strings.ToLower(obj.Access), // Note that Pharos wants lowercase
+	}
+}
 
 // This struct is a special subset of GenericFile, with special JSON
 // serialization rules that conform to Rails 4 nested strong paramaters
