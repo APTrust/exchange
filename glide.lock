@@ -1,0 +1,100 @@
+hash: 37b6705d51803b5dd02853ad6057f8b8ae84586e91f0149367fdd3f6e17b197c
+updated: 2016-10-05T16:23:54.871579084-04:00
+imports:
+- name: github.com/APTrust/bagins
+  version: 14b07b4f79dfe7c804c00db61df4ccec7d1c416a
+  subpackages:
+  - bagutil
+- name: github.com/aws/aws-sdk-go
+  version: 74a703abb31ea9faf7622930e5daba1559b01b37
+  subpackages:
+  - aws
+  - aws/awserr
+  - aws/awsutil
+  - aws/client
+  - aws/client/metadata
+  - aws/corehandlers
+  - aws/credentials
+  - aws/credentials/ec2rolecreds
+  - aws/credentials/endpointcreds
+  - aws/credentials/stscreds
+  - aws/defaults
+  - aws/ec2metadata
+  - aws/request
+  - aws/session
+  - aws/signer/v4
+  - private/endpoints
+  - private/protocol
+  - private/protocol/query
+  - private/protocol/query/queryutil
+  - private/protocol/rest
+  - private/protocol/restxml
+  - private/protocol/xml/xmlutil
+  - private/waiter
+  - service/s3
+  - service/s3/s3iface
+  - service/s3/s3manager
+  - service/sts
+- name: github.com/bitly/go-simplejson
+  version: aabad6e819789e569bd6aabf444c935aa9ba1e44
+- name: github.com/bmizerany/assert
+  version: b7ed37b82869576c289d7d97fb2bbd8b64a0cb28
+- name: github.com/crowdmob/goamz
+  version: 3a06871fe9fc0281ca90f3a7d97258d042ed64c0
+  subpackages:
+  - aws
+  - s3
+- name: github.com/feyeleanor/lists
+  version: f43bdcae5e29b8de0f3df02d60d10f7b8c541aa9
+- name: github.com/feyeleanor/raw
+  version: 724aedf6e1a5d8971aafec384b6bde3d5608fba4
+- name: github.com/feyeleanor/sets
+  version: 6c54cb57ea406ff6354256a4847e37298194478f
+- name: github.com/feyeleanor/slices
+  version: bb44bb2e4817fe71ba7082d351fd582e7d40e3ea
+- name: github.com/go-ini/ini
+  version: 6e4869b434bd001f6983749881c7ead3545887d8
+- name: github.com/icrowley/fake
+  version: 84bff6d01560fb0b5a396ba29534e93fd00d09c6
+- name: github.com/jmespath/go-jmespath
+  version: bd40a432e4c76585ef6b72d3fd96fb9b6dc7b68d
+- name: github.com/jtolds/gls
+  version: 8ddce2a84170772b95dd5d576c48d517b22cac63
+- name: github.com/kr/pretty
+  version: cfb55aafdaf3ec08f0db22699ab822c50091b1c4
+- name: github.com/mreiferson/go-snappystream
+  version: 028eae7ab5c4c9e2d1cb4c4ca1e53259bbe7e504
+  subpackages:
+  - snappy-go
+- name: github.com/nsqio/go-nsq
+  version: d71fb89c9e0263aaed89645b0b168e11ccf597b1
+- name: github.com/nu7hatch/gouuid
+  version: 179d4d0c4d8d407a32af483c2354df1d2c91e6c3
+- name: github.com/op/go-logging
+  version: b2cb9fa56473e98db8caba80237377e83fe44db5
+- name: github.com/rakyll/magicmime
+  version: 672bd9146d1802abfd8a851fb428e6070d524e3d
+- name: github.com/satori/go.uuid
+  version: 879c5887cd475cd7864858769793b2ceb0d44feb
+- name: github.com/smartystreets/assertions
+  version: e9a2f6771d97c709b2f7609fdf89ebde8b64c926
+- name: github.com/smartystreets/goconvey
+  version: d4c757aa9afd1e2fc1832aaab209b5794eb336e1
+  subpackages:
+  - convey
+- name: gopkg.in/check.v1
+  version: 4f90aeace3a26ad7021961c297b22c42160c7b25
+testImports:
+- name: github.com/davecgh/go-spew
+  version: 6d212800a42e8ab5c146b8ace3490ee17e5225f9
+  subpackages:
+  - spew
+- name: github.com/pmezard/go-difflib
+  version: d8ed2627bdf02c080bf22230dbb337003b7aba2d
+  subpackages:
+  - difflib
+- name: github.com/stretchr/testify
+  version: 69483b4bd14f5845b5a1e55bca19e954e827f1d0
+  subpackages:
+  - assert
+  - require
