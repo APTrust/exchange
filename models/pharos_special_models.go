@@ -36,12 +36,13 @@ func NewIntellectualObjectForPharos(obj *IntellectualObject) (*IntellectualObjec
 type GenericFileForPharos struct {
 	Identifier                   string         `json:"identifier"`
 	IntellectualObjectId         int            `json:"intellectual_object_id"`
-	IntellectualObjectIdentifier string         `json:"intellectual_object_identifier"`
 	FileFormat                   string         `json:"file_format"`
 	URI                          string         `json:"uri"`
 	Size                         int64          `json:"size"`
-	FileCreated                  time.Time      `json:"file_created"`
-	FileModified                 time.Time      `json:"file_modified"`
+	// TODO: Next two items are not part of Pharos model, but they should be.
+	// We need to add these to the Rails schema.
+//	FileCreated                  time.Time      `json:"file_created"`
+//	FileModified                 time.Time      `json:"file_modified"`
 	CreatedAt                    time.Time      `json:"created_at"`
 	UpdatedAt                    time.Time      `json:"updated_at"`
 	Checksums                    []*Checksum    `json:"checksums_attributes"`
@@ -52,12 +53,12 @@ func NewGenericFileForPharos(gf *GenericFile) (*GenericFileForPharos) {
 	return &GenericFileForPharos{
 		Identifier:                     gf.Identifier,
 		IntellectualObjectId:           gf.IntellectualObjectId,
-		IntellectualObjectIdentifier:   gf.IntellectualObjectIdentifier,
 		FileFormat:                     gf.FileFormat,
 		URI:                            gf.URI,
 		Size:                           gf.Size,
-		FileCreated:                    gf.FileCreated,
-		FileModified:                   gf.FileModified,
+		// TODO: See note above. Add these to Rails!
+//		FileCreated:                    gf.FileCreated,
+//		FileModified:                   gf.FileModified,
 		Checksums:                      gf.Checksums,
 		PremisEvents:                   gf.PremisEvents,
 	}

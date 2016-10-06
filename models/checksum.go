@@ -16,7 +16,7 @@ For example:
 1994-11-05T08:15:30Z          (UTC)
 */
 type Checksum struct {
-	Id            int       `json:"id"`
+	Id            int       `json:"id,omitempty"`  // Do not serialize zero to JSON!
 	GenericFileId int       `json:"generic_file_id"`
 	Algorithm     string    `json:"algorithm"`
 	DateTime      time.Time `json:"datetime"`

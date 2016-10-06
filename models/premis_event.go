@@ -19,8 +19,9 @@ Pharos API.
 type PremisEvent struct {
 	// The Pharos id for this event. Will be zero if the event
 	// is not yet in Pharos. If non-zero, it's been recorded
-	// in Pharos.
-	Id                 int       `json:"id"`
+	// in Pharos. Do not serialize zero values to JSON, or
+	// Pharos complains.
+	Id                 int       `json:"id,omitempty"`
 
 	// Identifier is a UUID string assigned by Pharos.
 	Identifier         string    `json:"identifier"`
@@ -30,7 +31,7 @@ type PremisEvent struct {
 	EventType          string    `json:"event_type"`
 
 	// DateTime is when this event occurred in our system.
-	DateTime           time.Time `json:"datetime"`
+	DateTime           time.Time `json:"date_time"`
 
 	// Detail is a brief description of the event.
 	Detail             string    `json:"detail"`

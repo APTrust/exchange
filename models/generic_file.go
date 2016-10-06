@@ -221,12 +221,13 @@ func NewGenericFile() (*GenericFile) {
 	}
 }
 
-
 // Serializes a version of GenericFile that Fluctus will accept as post/put input.
 // Note that we don't serialize the id or any of our internal housekeeping info.
 func (gf *GenericFile) SerializeForPharos() ([]byte, error) {
 	genericFileForPharos := NewGenericFileForPharos(gf)
-	return json.Marshal(genericFileForPharos)
+	data := make(map[string]interface{})
+	data["generic_file"] = genericFileForPharos
+	return json.Marshal(data)
 }
 
 // Returns the original path of the file within the original bag.

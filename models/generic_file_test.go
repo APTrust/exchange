@@ -189,18 +189,23 @@ func TestSerializeFileForPharos(t *testing.T) {
 		t.Errorf("Error serializing for Pharos: %v", err)
 		return
 	}
-	hash := make(map[string]interface{})
-	err = json.Unmarshal(data, &hash)
+	topLevelHash := make(map[string]interface{})
+	err = json.Unmarshal(data, &topLevelHash)
 	if err != nil {
 		t.Errorf("Error unmarshalling data: %v", err)
 	}
 
+	require.NotNil(t, topLevelHash["generic_file"])
+
+	hash := topLevelHash["generic_file"].(map[string]interface{})
+
 	// Convert int and int64 to float64, because that's what JSON uses
-	assert.Equal(t, "2014-04-25T18:05:51-05:00", hash["file_modified"])
+
+	// TODO: Add this back when it's part of the Rails model.
+	// assert.Equal(t, "2014-04-25T18:05:51-05:00", hash["file_modified"])
+	// assert.Equal(t, "2014-04-25T18:05:51-05:00", hash["file_created"])
 	assert.EqualValues(t, 606, hash["size"])
 	assert.Equal(t, "https://s3.amazonaws.com/aptrust.test.fixtures/restore_test/data/metadata.xml", hash["uri"])
-	assert.Equal(t, "2014-04-25T18:05:51-05:00", hash["file_created"])
-	assert.Equal(t, "uc.edu/cin.675812", hash["intellectual_object_identifier"])
 	assert.EqualValues(t, 741, hash["intellectual_object_id"])
 	assert.Equal(t, "application/xml", hash["file_format"])
 	assert.Equal(t, "uc.edu/cin.675812/data/metadata.xml", hash["identifier"])
@@ -208,13 +213,13 @@ func TestSerializeFileForPharos(t *testing.T) {
 	// Note the Rails 4 naming convention
 	checksums := hash["checksums_attributes"].([]interface{})
 	checksum0 := checksums[0].(map[string]interface{})
-	assert.EqualValues(t, 0, checksum0["id"])
+	assert.EqualValues(t, nil, checksum0["id"]) // Don't serialize 0 ids. Pharos pukes.
 	assert.Equal(t, "md5", checksum0["algorithm"])
 	assert.Equal(t, "2014-04-25T18:05:51-05:00", checksum0["datetime"])
 	assert.Equal(t, "c6d8080a39a0622f299750e13aa9c200", checksum0["digest"])
 
 	checksum1 := checksums[1].(map[string]interface{})
-	assert.EqualValues(t, 0, checksum1["id"])
+	assert.EqualValues(t, nil, checksum1["id"]) // Don't serialize 0 ids. Pharos pukes.
 	assert.Equal(t, "sha256", checksum1["algorithm"])
 	assert.Equal(t, "2014-08-12T20:51:20Z", checksum1["datetime"])
 	assert.Equal(t, "a418d61067718141d7254d7376d5499369706e3ade27cb84c4d5519f7cfed790", checksum1["digest"])
@@ -222,11 +227,11 @@ func TestSerializeFileForPharos(t *testing.T) {
 	// Note the Rails 4 naming convention
 	events := hash["premis_events_attributes"].([]interface{})
 	event0 := events[0].(map[string]interface{})
-	assert.EqualValues(t, 0, event0["id"])
+	assert.EqualValues(t, nil, event0["id"]) // Don't serialize 0 ids. Pharos pukes.
 	assert.EqualValues(t, 0, event0["intellectual_object_id"])
 	assert.Equal(t, "Success", event0["outcome"])
 	assert.Equal(t, "http://golang.org/pkg/crypto/md5/", event0["agent"])
-	assert.Equal(t, "2014-08-13T11:04:41-04:00", event0["datetime"])
+	assert.Equal(t, "2014-08-13T11:04:41-04:00", event0["date_time"])
 	assert.Equal(t, "Go crypto/md5", event0["object"])
 	assert.Equal(t, "Fixity matches", event0["outcome_information"])
 	assert.Equal(t, "md5:c6d8080a39a0622f299750e13aa9c200", event0["outcome_detail"])
