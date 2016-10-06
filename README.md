@@ -29,6 +29,27 @@ If you are using Go 1.5 ensure the environment variable GO15VENDOREXPERIMENT is 
 
 ### Usage
 
+For first time usage install glide as follows.
+
+The easiest way to install the latest release on Mac or Linux is with the following script:
+
+```
+curl https://glide.sh/get | sh
+```
+
+On Mac OS X you can also install the latest release via [Homebrew](https://github.com/Homebrew/homebrew):
+
+```
+$ brew install glide
+```
+
+On Ubuntu Precise(12.04), Trusty (14.04), Wily (15.10) or Xenial (16.04) you can install from our PPA:
+
+```
+sudo add-apt-repository ppa:masterminds/glide && sudo apt-get update
+sudo apt-get install glide
+```
+
 ```
 $ glide create                            # Start a new workspace
 $ open glide.yaml                         # and edit away!
