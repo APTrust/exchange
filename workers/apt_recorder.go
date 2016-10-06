@@ -224,9 +224,14 @@ func (recorder *APTRecorder) saveGenericFiles (ingestState *models.IngestState) 
 		}
 		if gf.IngestNeedsSave {
 			if gf.IngestPreviousVersionExists {
-				// Check for items with previous version and no Id?
-				// That would be a problem.
-				filesToUpdate = append(filesToUpdate, gf)
+				if gf.Id > 0 {
+					filesToUpdate = append(filesToUpdate, gf)
+				} else {
+					msg := fmt.Sprintf("GenericFile %s has a previous version, but its Id is missing.",
+						gf.Identifier)
+					recorder.Context.MessageLog.Error(msg)
+					ingestState.IngestManifest.RecordResult.AddError(msg)
+				}
 			} else if gf.IngestNeedsSave && gf.Id == 0 {
 				filesToCreate = append(filesToCreate, gf)
 			}
@@ -244,6 +249,10 @@ func (recorder *APTRecorder) createGenericFiles (ingestState *models.IngestState
 	}
 	resp := recorder.Context.PharosClient.GenericFileSaveBatch(files)
 	if resp.Error != nil {
+		body, _ := resp.RawResponseData()
+		recorder.Context.MessageLog.Error(
+			"Pharos returned this after attempt to save batch of GenericFiles:\n%s",
+			string(body))
 		ingestState.IngestManifest.RecordResult.AddError(resp.Error.Error())
 	}
 	// We may have managed to save some files despite the error.
@@ -252,7 +261,7 @@ func (recorder *APTRecorder) createGenericFiles (ingestState *models.IngestState
 		gf := ingestState.IngestManifest.Object.FindGenericFile(savedFile.OriginalPath())
 		if gf == nil {
 			ingestState.IngestManifest.RecordResult.AddError("After save, could not find file '%s' " +
-				"in IntellectualObject.", gf.OriginalPath())
+				"in IntellectualObject.", savedFile.OriginalPath())
 			continue
 		}
 		// Merge attributes set by Pharos into our GenericFile record.
@@ -281,8 +290,12 @@ func (recorder *APTRecorder) updateGenericFiles (ingestState *models.IngestState
 
 		// Shouldn't need to call this. Should already have Id?
 		gf.PropagateIdsToChildren()
-		recorder.savePremisEvents(ingestState, gf)
-		recorder.saveChecksums(ingestState, gf)
+
+		// ----------------------------------------------------------------------
+		// TODO: Make sure events an cheksums are correct, then delete these calls
+		// ----------------------------------------------------------------------
+		//recorder.savePremisEvents(ingestState, gf)
+		//recorder.saveChecksums(ingestState, gf)
 	}
 }
 
@@ -329,6 +342,13 @@ func (recorder *APTRecorder) saveChecksums (ingestState *models.IngestState, gf 
 
 func (recorder *APTRecorder) deleteBagFromReceivingBucket (ingestState *models.IngestState) {
 	// Remove the bag from the receiving bucket, if ingest succeeded
+	if recorder.Context.Config.DeleteOnSuccess == false {
+		// We don't actually delete files if config is dev, test, or integration.
+		recorder.Context.MessageLog.Info("Skipping deletion step because config.DeleteOnSuccess == false")
+		// Set deletion timestamp, so we know this method was called.
+		ingestState.IngestManifest.Object.IngestDeletedFromReceivingAt = time.Now().UTC()
+		return
+	}
 	deleter := network.NewS3ObjectDelete(
 		constants.AWSVirginia,
 		ingestState.IngestManifest.S3Bucket,
