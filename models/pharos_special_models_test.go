@@ -41,7 +41,6 @@ func TestNewIntellectualObjectForPharos(t *testing.T) {
 	require.Nil(t, err)
 	intelObj.Access = "INSTITUTION" // Just so we can test lowercase
 	pharosObj := models.NewIntellectualObjectForPharos(intelObj)
-	assert.Equal(t, intelObj.Id, pharosObj.Id)
 	assert.Equal(t, intelObj.Identifier, pharosObj.Identifier)
 	assert.Equal(t, intelObj.BagName, pharosObj.BagName)
 	assert.Equal(t, intelObj.InstitutionId, pharosObj.InstitutionId)

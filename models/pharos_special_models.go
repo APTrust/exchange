@@ -8,7 +8,6 @@ import (
 // IntellectualObject in the format that Pharos accepts for
 // POST/create.
 type IntellectualObjectForPharos struct {
-	Id             int    `json:"id"`
 	Identifier     string `json:"identifier"`
 	BagName        string `json:"bag_name"`
 	InstitutionId  int    `json:"institution_id"`
@@ -20,7 +19,6 @@ type IntellectualObjectForPharos struct {
 
 func NewIntellectualObjectForPharos(obj *IntellectualObject) (*IntellectualObjectForPharos) {
 	return &IntellectualObjectForPharos{
-		Id: obj.Id,
 		Identifier: obj.Identifier,
 		BagName: obj.BagName,
 		InstitutionId: obj.InstitutionId,

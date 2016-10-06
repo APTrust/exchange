@@ -53,7 +53,6 @@ func TestSerializeObjectForPharos(t *testing.T) {
 
 	pharosObj := objHash.(map[string]interface{})
 
-	assert.EqualValues(t, 5842, pharosObj["id"])
 	assert.Equal(t, "uc.edu/cin.675812", pharosObj["identifier"])
 	assert.Equal(t, "cin.675812", pharosObj["bag_name"])
 	assert.EqualValues(t, 12, pharosObj["institution_id"])
