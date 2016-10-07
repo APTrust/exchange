@@ -10,12 +10,39 @@ import (
 	"github.com/nu7hatch/gouuid"
 	"math"
 	"math/rand"
+	"os"
 	"strings"
 	"time"
 )
 
 // Bloomsday
 var TEST_TIMESTAMP time.Time = time.Date(2016, 6, 16, 10, 24, 16, 0, time.UTC)
+
+var INTEGRATION_GOOD_BAGS = []string {
+	"aptrust.receiving.test.test.edu/example.edu.tagsample_good.tar",
+	"aptrust.receiving.test.test.edu/ncsu.1840.16-10.tar",
+	"aptrust.receiving.test.test.edu/ncsu.1840.16-1004.tar",
+	"aptrust.receiving.test.test.edu/ncsu.1840.16-1005.tar",
+	"aptrust.receiving.test.test.edu/ncsu.1840.16-1013.tar",
+	"aptrust.receiving.test.test.edu/ncsu.1840.16-1028.tar",
+	"aptrust.receiving.test.test.edu/ncsu.1840.16-2928.tar",
+	"aptrust.receiving.test.test.edu/virginia.edu.uva-lib_2141114.tar",
+	"aptrust.receiving.test.test.edu/virginia.edu.uva-lib_2274642.tar",
+	"aptrust.receiving.test.test.edu/virginia.edu.uva-lib_2274765.tar",
+	"aptrust.receiving.test.test.edu/virginia.edu.uva-lib_2278801.tar",
+}
+
+var INTEGRATION_BAD_BAGS = []string {
+	"aptrust.receiving.test.test.edu/example.edu.tagsample_bad.tar",
+	"aptrust.receiving.test.test.edu/s3_upload_test.tar",
+	"aptrust.receiving.test.test.edu/TestBags.zip",
+	"aptrust.receiving.test.test.edu/test.edu.bag2.tar",
+	"aptrust.receiving.test.test.edu/test.edu.bag6.tar",
+}
+
+func ShouldRunIntegrationTests() (bool) {
+	return os.Getenv("RUN_EXCHANGE_INTEGRATION") == "true"
+}
 
 func MakeChecksum() (*models.Checksum) {
 	return &models.Checksum{

@@ -4,24 +4,20 @@ import (
 	"github.com/APTrust/exchange/models"
 	"github.com/APTrust/exchange/stats"
 	"github.com/APTrust/exchange/util/fileutil"
+	"github.com/APTrust/exchange/util/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"os"
 	"path/filepath"
 	"testing"
 )
 
 /*
 These tests check the results of the integration tests for
-the app apt_bucket_reader. See the process_items.sh script in
+the app apt_bucket_reader. See the ingest_test.sh script in
 the scripts folder, which sets up an integration context, runs
 the bucket reader, and then runs this program to check the
 stats output of the bucket reader to make sure all went well.
 */
-
-func shouldRunIntegrationTests() (bool) {
-	return os.Getenv("RUN_EXCHANGE_INTEGRATION") == "true"
-}
 
 
 // Returns two Stats objects: the expected stats, from our test data dir,
@@ -52,7 +48,7 @@ func getBucketReaderOutputs(t *testing.T) (expected *stats.APTBucketReaderStats,
 }
 
 func TestInstutionsCached(t *testing.T) {
-	if !shouldRunIntegrationTests() {
+	if !testutil.ShouldRunIntegrationTests() {
 		t.Skip("Skipping integration test. Set ENV var RUN_EXCHANGE_INTEGRATION=true if you want to run them.")
 	}
 	expected, actual := getBucketReaderOutputs(t)
