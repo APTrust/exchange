@@ -5,6 +5,7 @@ import (
 	"github.com/APTrust/exchange/network"
 	"github.com/APTrust/exchange/service"
 	"github.com/APTrust/exchange/util/logger"
+	"github.com/APTrust/exchange/util/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"testing"
