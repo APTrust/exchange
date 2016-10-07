@@ -44,14 +44,6 @@ imports:
   subpackages:
   - aws
   - s3
-- name: github.com/feyeleanor/lists
-  version: f43bdcae5e29b8de0f3df02d60d10f7b8c541aa9
-- name: github.com/feyeleanor/raw
-  version: 724aedf6e1a5d8971aafec384b6bde3d5608fba4
-- name: github.com/feyeleanor/sets
-  version: 6c54cb57ea406ff6354256a4847e37298194478f
-- name: github.com/feyeleanor/slices
-  version: bb44bb2e4817fe71ba7082d351fd582e7d40e3ea
 - name: github.com/go-ini/ini
   version: 6e4869b434bd001f6983749881c7ead3545887d8
 - name: github.com/icrowley/fake
