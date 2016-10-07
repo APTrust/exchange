@@ -27,7 +27,8 @@ func main() {
 	if err != nil {
 		_context.MessageLog.Fatalf(err.Error())
 	}
-	_context.MessageLog.Info("apt_record started")
+	_context.MessageLog.Info("apt_record started with config %s", _context.Config.ActiveConfig)
+	_context.MessageLog.Info("DeleteOnSuccess is set to %t", _context.Config.DeleteOnSuccess)
 
 	recorder := workers.NewAPTRecorder(_context)
 	consumer.AddHandler(recorder)
