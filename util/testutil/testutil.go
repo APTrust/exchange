@@ -44,6 +44,10 @@ func ShouldRunIntegrationTests() (bool) {
 	return os.Getenv("RUN_EXCHANGE_INTEGRATION") == "true"
 }
 
+func RunningInCI() (bool) {
+	return os.Getenv("TRAVIS_BUILD_DIR") != ""
+}
+
 func MakeChecksum() (*models.Checksum) {
 	return &models.Checksum{
 		Id: rand.Intn(50000) + 1,

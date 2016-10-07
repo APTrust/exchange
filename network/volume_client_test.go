@@ -30,6 +30,9 @@ func TestNewVolumeClient(t *testing.T) {
 }
 
 func TestVolumeReserve(t *testing.T) {
+	if testutil.RunningInCI() {
+		t.Skip("Skipping volume client test because it looks like we're in the CI environment.")
+	}
 	runService(t)
 	client := network.NewVolumeClient(volTestPort)
 	require.NotNil(t, client)
@@ -48,6 +51,9 @@ func TestVolumeReserve(t *testing.T) {
 }
 
 func TestVolumeRelease(t *testing.T) {
+	if testutil.RunningInCI() {
+		t.Skip("Skipping volume client test because it looks like we're in the CI environment.")
+	}
 	runService(t)
 	client := network.NewVolumeClient(volTestPort)
 	require.NotNil(t, client)
@@ -60,6 +66,9 @@ func TestVolumeRelease(t *testing.T) {
 }
 
 func TestVolumeReport(t *testing.T) {
+	if testutil.RunningInCI() {
+		t.Skip("Skipping volume client test because it looks like we're in the CI environment.")
+	}
 	runService(t)
 	client := network.NewVolumeClient(volTestPort)
 	require.NotNil(t, client)
@@ -74,6 +83,9 @@ func TestVolumeReport(t *testing.T) {
 }
 
 func TestPing(t *testing.T) {
+	if testutil.RunningInCI() {
+		t.Skip("Skipping volume client test because it looks like we're in the CI environment.")
+	}
 	runService(t)
 	client := network.NewVolumeClient(volTestPort)
 	require.NotNil(t, client)
