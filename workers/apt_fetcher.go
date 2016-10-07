@@ -210,6 +210,7 @@ func (fetcher *APTFetcher) validate() {
 			// any further processing on it.
 			if validationResult.HasErrors() {
 				ingestState.IngestManifest.ValidateResult.ErrorIsFatal = true
+				ingestState.IngestManifest.ValidateResult.Retry = false
 			}
 		}
 		ingestState.TouchNSQ()
