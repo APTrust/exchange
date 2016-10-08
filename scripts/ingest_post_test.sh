@@ -19,7 +19,10 @@
 cd ~/go/src/github.com/APTrust/exchange/integration
 
 echo "Testing bucket reader output"
-RUN_EXCHANGE_INTEGRATION=true go test -v apt_bucket_reader_test.go
+RUN_EXCHANGE_INTEGRATION=true go test apt_bucket_reader_test.go
 
 echo "Testing apt_fetch output"
-RUN_EXCHANGE_INTEGRATION=true go test -v apt_fetch_test.go
+RUN_EXCHANGE_INTEGRATION=true go test apt_fetch_test.go
+
+echo "Testing apt_store output"
+RUN_EXCHANGE_INTEGRATION=true go test apt_store_test.go
