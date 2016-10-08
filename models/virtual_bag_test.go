@@ -235,7 +235,7 @@ func runAssertions(t *testing.T, obj *models.IntellectualObject, summary *models
 	for _, gf := range obj.GenericFiles {
 		assert.NotEmpty(t, gf.Identifier, caller)
 		assert.NotEmpty(t, gf.IntellectualObjectIdentifier, caller)
-		assert.NotEmpty(t, gf.FileFormat, caller)
+		assert.NotEmpty(t, gf.FileFormat, caller, gf.Identifier)
 		assert.NotEmpty(t, gf.IngestFileType, caller)
 		assert.NotEmpty(t, gf.IngestMd5, caller)
 		assert.NotEmpty(t, gf.IngestSha256, caller)
@@ -271,7 +271,7 @@ func runAssertions(t *testing.T, obj *models.IntellectualObject, summary *models
 	assert.Equal(t, "example.edu.tagsample_good/aptrust-info.txt", gf.Identifier, caller)
 	assert.Equal(t, 0, gf.IntellectualObjectId, caller)
 	assert.Equal(t, "example.edu.tagsample_good", gf.IntellectualObjectIdentifier, caller)
-	assert.Equal(t, "application/binary", gf.FileFormat, caller)
+	assert.Equal(t, "text/plain", gf.FileFormat, caller)
 	assert.Empty(t, gf.URI, caller)
 	assert.EqualValues(t, 67, gf.Size, caller)
 	assert.False(t, gf.FileModified.IsZero(), caller)

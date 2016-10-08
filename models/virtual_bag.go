@@ -97,7 +97,7 @@ func (vbag *VirtualBag) Read() (*IntellectualObject, *WorkSummary) {
 	if err != nil {
 		vbag.summary.AddError("Could not read bag: %v", err)
 	} else {
-		vbag.parseManifestsAndTagFiles()
+		vbag.parseManifestsTagFilesAndMimeTypes()
 	}
 	vbag.summary.Finish()
 	return vbag.obj, vbag.summary
@@ -147,9 +147,11 @@ func (vbag *VirtualBag) addGenericFile() (error) {
 func (vbag *VirtualBag) setIngestFileType(gf *GenericFile, fileSummary *fileutil.FileSummary) {
 	if strings.HasPrefix(fileSummary.RelPath, "tagmanifest-") {
 		gf.IngestFileType = constants.TAG_MANIFEST
+		gf.FileFormat = "text/plain"
 		vbag.obj.IngestTagManifests = append(vbag.obj.IngestTagManifests, fileSummary.RelPath)
 	} else if strings.HasPrefix(fileSummary.RelPath, "manifest-") {
 		gf.IngestFileType = constants.PAYLOAD_MANIFEST
+		gf.FileFormat = "text/plain"
 		vbag.obj.IngestManifests = append(vbag.obj.IngestManifests, fileSummary.RelPath)
 	} else if strings.HasPrefix(fileSummary.RelPath, "data/") {
 		gf.IngestFileType = constants.PAYLOAD_FILE
@@ -184,14 +186,23 @@ func (vbag *VirtualBag) calculateChecksums(reader io.Reader, gf *GenericFile) (e
 			gf.IngestSha256GeneratedAt = utcNow
 		}
 	}
-	// on err, defaults to application/binary
-	buf := make([]byte, 1024)
-	_, _ = reader.Read(buf)
-	gf.FileFormat, _ = platform.GuessMimeTypeByBuffer(buf)
 	return nil
 }
 
-func (vbag *VirtualBag) parseManifestsAndTagFiles() {
+func (vbag *VirtualBag) setMimeType(reader io.Reader, gf *GenericFile)  {
+	// on err, defaults to application/binary
+	buf := make([]byte, 128)
+	_, err := reader.Read(buf)
+	if err != nil {
+		vbag.summary.AddError(err.Error())
+	}
+	gf.FileFormat, err = platform.GuessMimeTypeByBuffer(buf)
+	if err != nil {
+		vbag.summary.AddError(err.Error())
+	}
+}
+
+func (vbag *VirtualBag) parseManifestsTagFilesAndMimeTypes() {
 	for {
 		reader, fileSummary, err := vbag.readIterator.Next()
 		if reader != nil {
@@ -204,11 +215,27 @@ func (vbag *VirtualBag) parseManifestsAndTagFiles() {
 			vbag.summary.AddError(err.Error())
 			continue
 		}
+		// genericFile will sometimes be nil because the iterator
+		// returns directory names as well as file names
+		genericFile := vbag.obj.FindGenericFile(fileSummary.RelPath)
 		if util.StringListContains(vbag.tagFilesToParse, fileSummary.RelPath) {
 			vbag.parseTags(reader, fileSummary.RelPath)
+			if genericFile != nil {
+				// Our vbag library can only parse text files, so this
+				// should be a plain text file.
+				if strings.HasSuffix(genericFile.Identifier, ".txt") {
+					genericFile.FileFormat = "text/plain"
+				} else {
+					genericFile.FileFormat = "application/binary"
+				}
+			}
 		} else if util.StringListContains(vbag.obj.IngestManifests, fileSummary.RelPath) ||
 			util.StringListContains(vbag.obj.IngestTagManifests, fileSummary.RelPath) {
 			vbag.parseManifest(reader, fileSummary.RelPath)
+		} else {
+			if genericFile != nil {
+				vbag.setMimeType(reader, genericFile)
+			}
 		}
 	}
 }
