@@ -49,3 +49,32 @@ func TestNewIntellectualObjectForPharos(t *testing.T) {
 	assert.Equal(t, intelObj.AltIdentifier, pharosObj.AltIdentifier)
 	assert.Equal(t, strings.ToLower(intelObj.Access), pharosObj.Access)
 }
+
+func TestNewPremisEventForPharos(t *testing.T) {
+	event := testutil.MakePremisEvent()
+	pharosEvent := models.NewPremisEventForPharos(event)
+	assert.Equal(t, event.Id, pharosEvent.Id)
+	assert.Equal(t, event.Identifier, pharosEvent.Identifier)
+	assert.Equal(t, event.EventType, pharosEvent.EventType)
+	assert.Equal(t, event.DateTime, pharosEvent.DateTime)
+	assert.Equal(t, event.Detail, pharosEvent.Detail)
+	assert.Equal(t, event.Outcome, pharosEvent.Outcome)
+	assert.Equal(t, event.OutcomeDetail, pharosEvent.OutcomeDetail)
+	assert.Equal(t, event.Object, pharosEvent.Object)
+	assert.Equal(t, event.Agent, pharosEvent.Agent)
+	assert.Equal(t, event.OutcomeInformation, pharosEvent.OutcomeInformation)
+	assert.Equal(t, event.IntellectualObjectId, pharosEvent.IntellectualObjectId)
+	assert.Equal(t, event.IntellectualObjectIdentifier, pharosEvent.IntellectualObjectIdentifier)
+	assert.Equal(t, event.GenericFileId, pharosEvent.GenericFileId)
+	assert.Equal(t, event.GenericFileIdentifier, pharosEvent.GenericFileIdentifier)
+}
+
+func TestNewChecksumForPharos(t *testing.T) {
+	cs := testutil.MakeChecksum()
+	pharosChecksum := models.NewChecksumForPharos(cs)
+	assert.Equal(t, cs.Id, pharosChecksum.Id)
+	assert.Equal(t, cs.GenericFileId, pharosChecksum.GenericFileId)
+	assert.Equal(t, cs.Algorithm, pharosChecksum.Algorithm)
+	assert.Equal(t, cs.DateTime, pharosChecksum.DateTime)
+	assert.Equal(t, cs.Digest, pharosChecksum.Digest)
+}

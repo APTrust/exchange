@@ -976,6 +976,18 @@ func genericFileSaveBatchHandler(w http.ResponseWriter, r *http.Request) {
 	// Assign ID and timestamps, as if the object has been saved.
 	files := make([]*models.GenericFile, 0)
 	for i, file := range batch {
+		checksums := make([]*models.Checksum, len(file.Checksums))
+		for i, cs := range file.Checksums {
+			checksums[i] = &models.Checksum{
+				Digest: cs.Digest,
+			}
+		}
+		events := make([]*models.PremisEvent, len(file.PremisEvents))
+		for i, event := range file.PremisEvents {
+			events[i] = &models.PremisEvent{
+				Identifier: event.Identifier,
+			}
+		}
 		gf := &models.GenericFile{
 			Id: 1000 + i,
 			Identifier: file.Identifier,
@@ -986,8 +998,8 @@ func genericFileSaveBatchHandler(w http.ResponseWriter, r *http.Request) {
 			// TODO: Restore these when they are part of the Pharos model.
 			//FileCreated: file.FileCreated,
 			//FileModified: file.FileModified,
-			Checksums: file.Checksums,
-			PremisEvents: file.PremisEvents,
+			Checksums: checksums,
+			PremisEvents: events,
 			CreatedAt: time.Now().UTC(),
 			UpdatedAt: time.Now().UTC(),
 		}

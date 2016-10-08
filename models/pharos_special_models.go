@@ -43,13 +43,19 @@ type GenericFileForPharos struct {
 	// We need to add these to the Rails schema.
 //	FileCreated                  time.Time      `json:"file_created"`
 //	FileModified                 time.Time      `json:"file_modified"`
-	CreatedAt                    time.Time      `json:"created_at"`
-	UpdatedAt                    time.Time      `json:"updated_at"`
-	Checksums                    []*Checksum    `json:"checksums_attributes"`
-	PremisEvents                 []*PremisEvent `json:"premis_events_attributes"`
+	Checksums                    []*ChecksumForPharos    `json:"checksums_attributes"`
+	PremisEvents                 []*PremisEventForPharos `json:"premis_events_attributes"`
 }
 
 func NewGenericFileForPharos(gf *GenericFile) (*GenericFileForPharos) {
+	checksums := make([]*ChecksumForPharos, len(gf.Checksums))
+	for i, cs := range gf.Checksums {
+		checksums[i] = NewChecksumForPharos(cs)
+	}
+	events := make([]*PremisEventForPharos, len(gf.PremisEvents))
+	for i, event := range gf.PremisEvents {
+		events[i] = NewPremisEventForPharos(event)
+	}
 	return &GenericFileForPharos{
 		Identifier:                     gf.Identifier,
 		IntellectualObjectId:           gf.IntellectualObjectId,
@@ -59,7 +65,63 @@ func NewGenericFileForPharos(gf *GenericFile) (*GenericFileForPharos) {
 		// TODO: See note above. Add these to Rails!
 //		FileCreated:                    gf.FileCreated,
 //		FileModified:                   gf.FileModified,
-		Checksums:                      gf.Checksums,
-		PremisEvents:                   gf.PremisEvents,
+		Checksums:                      checksums,
+		PremisEvents:                   events,
+	}
+}
+
+// Same as PremisEvent, but omits CreatedAt and UpdatedAt
+type PremisEventForPharos struct {
+	Id                 int       `json:"id,omitempty"`
+	Identifier         string    `json:"identifier"`
+	EventType          string    `json:"event_type"`
+	DateTime           time.Time `json:"date_time"`
+	Detail             string    `json:"detail"`
+	Outcome            string    `json:"outcome"`
+	OutcomeDetail      string    `json:"outcome_detail"`
+	Object             string    `json:"object"`
+	Agent              string    `json:"agent"`
+	OutcomeInformation string    `json:"outcome_information"`
+	IntellectualObjectId int     `json:"intellectual_object_id"`
+	IntellectualObjectIdentifier string `json:"intellectual_object_identifier"`
+	GenericFileId int            `json:"generic_file_id"`
+	GenericFileIdentifier string `json:"generic_file_identifier"`
+}
+
+func NewPremisEventForPharos (event *PremisEvent) (*PremisEventForPharos) {
+	return &PremisEventForPharos{
+		Id: event.Id,
+		Identifier: event.Identifier,
+		EventType: event.EventType,
+		DateTime: event.DateTime,
+		Detail: event.Detail,
+		Outcome: event.Outcome,
+		OutcomeDetail: event.OutcomeDetail,
+		Object: event.Object,
+		Agent: event.Agent,
+		OutcomeInformation: event.OutcomeInformation,
+		IntellectualObjectId: event.IntellectualObjectId,
+		IntellectualObjectIdentifier: event.IntellectualObjectIdentifier,
+		GenericFileId: event.GenericFileId,
+		GenericFileIdentifier: event.GenericFileIdentifier,
+	}
+}
+
+// Same as Checksum, but without CreatedAt and UpdatedAt
+type ChecksumForPharos struct {
+	Id            int       `json:"id,omitempty"`  // Do not serialize zero to JSON!
+	GenericFileId int       `json:"generic_file_id"`
+	Algorithm     string    `json:"algorithm"`
+	DateTime      time.Time `json:"datetime"`
+	Digest        string    `json:"digest"`
+}
+
+func NewChecksumForPharos (cs *Checksum) (*ChecksumForPharos) {
+	return &ChecksumForPharos{
+		Id: cs.Id,
+		GenericFileId: cs.GenericFileId,
+		Algorithm: cs.Algorithm,
+		DateTime: cs.DateTime,
+		Digest: cs.Digest,
 	}
 }
