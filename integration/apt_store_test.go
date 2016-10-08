@@ -37,6 +37,7 @@ func TestStoreResults(t *testing.T) {
 		if err != nil {
 			continue
 		}
+		// TODO: Test WorkItem (stage, status, etc.) below
 		storeTestCommon(t, bagName, ingestManifest, config)
 	}
 }

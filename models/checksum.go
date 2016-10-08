@@ -21,8 +21,8 @@ type Checksum struct {
 	Algorithm     string    `json:"algorithm"`
 	DateTime      time.Time `json:"datetime"`
 	Digest        string    `json:"digest"`
-	CreatedAt     time.Time `json:"created_at"`
-	UpdatedAt     time.Time `json:"updated_at"`
+	CreatedAt     time.Time `json:"created_at,omitempty"`
+	UpdatedAt     time.Time `json:"updated_at,omitempty"`
 }
 
 // Sets the Id, CreatedAt and UpdatedAt properties of this checksum to

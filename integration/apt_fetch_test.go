@@ -39,6 +39,7 @@ func TestFetchResults(t *testing.T) {
 			continue
 		}
 		fetcherTestCommon(t, bagName, ingestManifest)
+		// TODO: Test WorkItem (stage, status, etc.) below
 		fetcherTestGoodBagResult(t, bagName, ingestManifest)
 		if bagName == "aptrust.receiving.test.test.edu/example.edu.tagsample_good.tar" {
 			fetcherTestSpecifics(t, ingestManifest)
@@ -51,6 +52,7 @@ func TestFetchResults(t *testing.T) {
 			continue
 		}
 		fetcherTestCommon(t, bagName, ingestManifest)
+		// TODO: Test WorkItem (stage, status, etc.) below
 		fetcherTestBadBagResult(t, bagName, ingestManifest)
 	}
 }

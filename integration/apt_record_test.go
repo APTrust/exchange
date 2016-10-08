@@ -38,6 +38,7 @@ func TestRecordResults(t *testing.T) {
 		if err != nil {
 			continue
 		}
+		// TODO: Test WorkItem (stage, status, etc.) below.
 		recordTestCommon(t, bagName, ingestManifest)
 	}
 }

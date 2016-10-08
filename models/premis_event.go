@@ -72,10 +72,10 @@ type PremisEvent struct {
 	GenericFileIdentifier string `json:"generic_file_identifier"`
 
 	// Rails timestamp for when this object was created.
-	CreatedAt     time.Time `json:"created_at"`
+	CreatedAt     time.Time `json:"created_at,omitempty"`
 
 	// Rails timestamp for when this object was last updated.
-	UpdatedAt     time.Time `json:"updated_at"`
+	UpdatedAt     time.Time `json:"updated_at,omitempty"`
 }
 
 // EventTypeValid returns true/false, indicating whether the
