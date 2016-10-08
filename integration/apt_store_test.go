@@ -27,7 +27,7 @@ func TestStoreResults(t *testing.T) {
 	require.Nil(t, err)
 	config.ExpandFilePaths()
 
-	// Find the log file that apt_fetch created when it was running
+	// Find the log file that apt_store created when it was running
 	// with the "config/integration.json" config options. We'll read
 	// that file.
 	pathToJsonLog := filepath.Join(config.LogDirectory, "apt_store.json")

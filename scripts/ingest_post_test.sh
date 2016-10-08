@@ -26,3 +26,6 @@ RUN_EXCHANGE_INTEGRATION=true go test apt_fetch_test.go
 
 echo "Testing apt_store output"
 RUN_EXCHANGE_INTEGRATION=true go test apt_store_test.go
+
+echo "Testing apt_record output"
+RUN_EXCHANGE_INTEGRATION=true go test apt_record_test.go
