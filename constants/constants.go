@@ -106,7 +106,7 @@ var ChecksumAlgorithms = []string{ AlgMd5, AlgSha256 }
 
 const (
 	IdTypeStorageURL                 = "url"
-	IdTypeBagAndPath                 = "uuid"
+	IdTypeBagAndPath                 = "bag/filepath"
 )
 
 // List of valid APTrust IntellectualObject AccessRights.
