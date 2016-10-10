@@ -129,8 +129,8 @@ func recordTestCommon(t *testing.T, bagName string, ingestManifest *models.Inges
 		// Make sure checksums are present
 		require.Equal(t, 2, len(gf.Checksums),
 			"Checksums should be %s, found %d for %s", 2, len(gf.Checksums), gf.Identifier)
-		md5 := gf.GetChecksumByDigest(constants.AlgMd5)
-		sha256 := gf.GetChecksumByDigest(constants.AlgSha256)
+		md5 := gf.GetChecksumByAlgorithm(constants.AlgMd5)
+		sha256 := gf.GetChecksumByAlgorithm(constants.AlgSha256)
 		require.NotNil(t, md5, "Missing md5 digest for for %s", gf.Identifier)
 		require.NotNil(t, sha256, "Missing sha256 digest for for %s", gf.Identifier)
 
