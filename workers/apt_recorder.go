@@ -204,6 +204,7 @@ func (recorder *APTRecorder) saveIntellectualObject (ingestState *models.IngestS
 	obj.CreatedAt = savedObject.CreatedAt
 	obj.UpdatedAt = savedObject.UpdatedAt
 	obj.PropagateIdsToChildren()
+	recorder.savePremisEventsForObject(ingestState)
 }
 
 func (recorder *APTRecorder) saveGenericFiles (ingestState *models.IngestState) {
@@ -287,35 +288,39 @@ func (recorder *APTRecorder) updateGenericFiles (ingestState *models.IngestState
 				"Error updating '%s': %v", gf.Identifier, resp.Error)
 			continue
 		}
-
 		// Shouldn't need to call this. Should already have Id?
 		gf.PropagateIdsToChildren()
-
-		// ----------------------------------------------------------------------
-		// TODO: Make sure events an cheksums are correct, then delete these calls
-		// ----------------------------------------------------------------------
-		//recorder.savePremisEvents(ingestState, gf)
-		//recorder.saveChecksums(ingestState, gf)
+		recorder.savePremisEventsForFile(ingestState, gf)
+		recorder.saveChecksums(ingestState, gf)
 	}
 }
 
-func (recorder *APTRecorder) savePremisEvents (ingestState *models.IngestState, gf *models.GenericFile) {
+func (recorder *APTRecorder) savePremisEventsForFile (ingestState *models.IngestState, gf *models.GenericFile) {
 	// Call this only for files that need update.
 	// The batch create call creates all of the PremisEvents
 	// and checksums as well.
-
 	// Save new ingest event, fixity check and fixity generation.
 	// Do not save new identifier assignment, because there isn't one.
-
-	// The only events we should have on this object are the ones
-	// we created during this ingest - not ones that already exist
-	// in Pharos.
 	for _, event := range gf.PremisEvents {
 		resp := recorder.Context.PharosClient.PremisEventSave(event)
 		if resp.Error != nil {
 			ingestState.IngestManifest.RecordResult.AddError(
 				"While updating '%s', error adding PremisEvent '%s': %v",
 				gf.Identifier, event.EventType, resp.Error)
+		}
+	}
+}
+
+func (recorder *APTRecorder) savePremisEventsForObject (ingestState *models.IngestState) {
+	obj := ingestState.IngestManifest.Object
+	for i, event := range obj.PremisEvents {
+		resp := recorder.Context.PharosClient.PremisEventSave(event)
+		if resp.Error != nil {
+			ingestState.IngestManifest.RecordResult.AddError(
+				"While saving events for '%s', error adding PremisEvent '%s': %v",
+				obj.Identifier, event.EventType, resp.Error)
+		} else {
+			obj.PremisEvents[i].MergeAttributes(resp.PremisEvent())
 		}
 	}
 }
@@ -341,12 +346,16 @@ func (recorder *APTRecorder) saveChecksums (ingestState *models.IngestState, gf 
 }
 
 func (recorder *APTRecorder) deleteBagFromReceivingBucket (ingestState *models.IngestState) {
+	ingestState.IngestManifest.CleanupResult.Start()
+	ingestState.IngestManifest.CleanupResult.Attempted = true
+	ingestState.IngestManifest.CleanupResult.AttemptNumber += 1
 	// Remove the bag from the receiving bucket, if ingest succeeded
 	if recorder.Context.Config.DeleteOnSuccess == false {
 		// We don't actually delete files if config is dev, test, or integration.
 		recorder.Context.MessageLog.Info("Skipping deletion step because config.DeleteOnSuccess == false")
 		// Set deletion timestamp, so we know this method was called.
 		ingestState.IngestManifest.Object.IngestDeletedFromReceivingAt = time.Now().UTC()
+		ingestState.IngestManifest.CleanupResult.Finish()
 		return
 	}
 	deleter := network.NewS3ObjectDelete(
@@ -366,5 +375,5 @@ func (recorder *APTRecorder) deleteBagFromReceivingBucket (ingestState *models.I
 		recorder.Context.MessageLog.Info(message)
 		ingestState.IngestManifest.Object.IngestDeletedFromReceivingAt = time.Now().UTC()
 	}
-
+	ingestState.IngestManifest.CleanupResult.Finish()
 }
