@@ -271,7 +271,7 @@ func NewEventGenericFileDigestCalculation(checksumGeneratedAt time.Time, fixityA
 		OutcomeDetail:      fmt.Sprintf("%s:%s", fixityAlg, digest),
 		Object:             object,
 		Agent:              agent,
-		OutcomeInformation: "",
+		OutcomeInformation: "Calculated fixity value",
 	}, nil
 }
 
@@ -312,7 +312,7 @@ func NewEventGenericFileIdentifierAssignment(identifierGeneratedAt time.Time, id
 		OutcomeDetail:      identifier,
 		Object:             object,
 		Agent:              agent,
-		OutcomeInformation: "",
+		OutcomeInformation: fmt.Sprintf("Assigned %s identifier", identifierType),
 	}, nil
 }
 
@@ -338,7 +338,7 @@ func NewEventGenericFileReplication(replicatedAt time.Time, replicationUrl strin
 		OutcomeDetail:      replicationUrl,
 		Object:             "Go uuid library + goamz S3 library",
 		Agent:              "http://github.com/nu7hatch/gouuid",
-		OutcomeInformation: "",
+		OutcomeInformation: "Replicated to secondary storage",
 	}, nil
 }
 

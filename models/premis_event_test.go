@@ -231,7 +231,7 @@ func TestNewEventGenericFileDigestCalculation(t *testing.T) {
 	assert.Equal(t, md5_digest, event.OutcomeDetail)
 	assert.Equal(t, "Go language crypto/md5", event.Object)
 	assert.Equal(t, "http://golang.org/pkg/crypto/md5/", event.Agent)
-	assert.Equal(t, "", event.OutcomeInformation)
+	assert.Equal(t, "Calculated fixity value", event.OutcomeInformation)
 
 	event, err = models.NewEventGenericFileDigestCalculation(testutil.TEST_TIMESTAMP, constants.AlgSha256, digest)
 	if err != nil {
@@ -246,7 +246,7 @@ func TestNewEventGenericFileDigestCalculation(t *testing.T) {
 	assert.Equal(t, sha256_digest, event.OutcomeDetail)
 	assert.Equal(t, "Go language crypto/sha256", event.Object)
 	assert.Equal(t, "http://golang.org/pkg/crypto/sha256/", event.Agent)
-	assert.Equal(t, "", event.OutcomeInformation)
+	assert.Equal(t, "Calculated fixity value", event.OutcomeInformation)
 }
 
 func TestNewEventGenericFileIdentifierAssignment(t *testing.T) {
@@ -280,7 +280,7 @@ func TestNewEventGenericFileIdentifierAssignment(t *testing.T) {
 	assert.Equal(t, "blah.edu/blah/blah.txt", event.OutcomeDetail)
 	assert.Equal(t, "APTrust exchange/ingest processor", event.Object)
 	assert.Equal(t, "https://github.com/APTrust/exchange", event.Agent)
-	assert.Equal(t, "", event.OutcomeInformation)
+	assert.Equal(t, "Assigned bag/filepath identifier", event.OutcomeInformation)
 
 	event, err = models.NewEventGenericFileIdentifierAssignment(testutil.TEST_TIMESTAMP, constants.IdTypeStorageURL, "https://example.com/000-000-999")
 	if err != nil {
@@ -295,7 +295,7 @@ func TestNewEventGenericFileIdentifierAssignment(t *testing.T) {
 	assert.Equal(t, "https://example.com/000-000-999", event.OutcomeDetail)
 	assert.Equal(t, "Go uuid library + goamz S3 library", event.Object)
 	assert.Equal(t, "http://github.com/nu7hatch/gouuid", event.Agent)
-	assert.Equal(t, "", event.OutcomeInformation)
+	assert.Equal(t, "Assigned url identifier", event.OutcomeInformation)
 
 }
 
@@ -325,7 +325,7 @@ func TestNewEventGenericFileReplication(t *testing.T) {
 	assert.Equal(t, "https://example.com/123456789", event.OutcomeDetail)
 	assert.Equal(t, "Go uuid library + goamz S3 library", event.Object)
 	assert.Equal(t, "http://github.com/nu7hatch/gouuid", event.Agent)
-	assert.Equal(t, "", event.OutcomeInformation)
+	assert.Equal(t, "Replicated to secondary storage", event.OutcomeInformation)
 }
 
 func TestPremisEventMergeAttributes (t *testing.T) {
