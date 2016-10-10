@@ -504,13 +504,15 @@ func (client *PharosClient) PremisEventSave(obj *models.PremisEvent) (*PharosRes
 	relativeUrl := fmt.Sprintf("/api/%s/events/", client.apiVersion)
 	httpMethod := "POST"
 	if obj.Id > 0 {
+		// PUT is not even implemented in Pharos, and never will be
 		relativeUrl = fmt.Sprintf("%s/%s", relativeUrl, escapeSlashes(obj.Identifier))
 		httpMethod = "PUT"
 	}
 	absoluteUrl := client.BuildUrl(relativeUrl)
 
 	// Prepare the JSON data
-	postData, err := json.Marshal(obj)
+	pharosObj := models.NewPremisEventForPharos(obj)
+	postData, err := json.Marshal(pharosObj)
 	if err != nil {
 		resp.Error = err
 	}
