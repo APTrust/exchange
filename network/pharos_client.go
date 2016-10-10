@@ -412,7 +412,7 @@ func (client *PharosClient) ChecksumSave(obj *models.Checksum, gfIdentifier stri
 	absoluteUrl := client.BuildUrl(relativeUrl)
 
 	// Prepare the JSON data
-	postData, err := json.Marshal(obj)
+	postData, err := obj.SerializeForPharos()
 	if err != nil {
 		resp.Error = err
 	}

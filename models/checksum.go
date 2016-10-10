@@ -1,6 +1,7 @@
 package models
 
 import (
+	"encoding/json"
 	"fmt"
 	"time"
 )
@@ -39,4 +40,12 @@ func (checksum *Checksum) MergeAttributes(savedChecksum *Checksum) (error) {
 	checksum.CreatedAt = savedChecksum.CreatedAt
 	checksum.UpdatedAt = savedChecksum.UpdatedAt
 	return nil
+}
+
+// Serialize for Pharos create
+func (checksum *Checksum) SerializeForPharos() ([]byte, error) {
+	pharosObj := NewChecksumForPharos(checksum)
+	dataStruct := make(map[string]interface{})
+	dataStruct["checksum"] = pharosObj
+	return json.Marshal(dataStruct)
 }

@@ -1052,13 +1052,14 @@ func checksumListHandler(w http.ResponseWriter, r *http.Request) {
 func checksumSaveHandler(w http.ResponseWriter, r *http.Request) {
 	decoder := json.NewDecoder(r.Body)
 	decoder.UseNumber()
-	data := make(map[string]interface{})
-	err := decoder.Decode(&data)
+	topLevelData := make(map[string]interface{})
+	err := decoder.Decode(&topLevelData)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error decoding JSON data: %v", err)
 		fmt.Fprintln(w, "")
 		return
 	}
+	data := topLevelData["checksum"].(map[string]interface{})
 	// Assign ID and timestamps, as if the object has been saved.
 	data["id"] = 1000
 	data["created_at"] = time.Now().UTC()
