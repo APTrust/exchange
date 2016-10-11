@@ -6,7 +6,7 @@ import (
 
 type RestoreTransfer struct {
 
-	// RestoreId is a unique id for this restoration request.
+	// RestoreId is the UUID for this restoration request.
 	RestoreId       string       `json:"restore_id"`
 
 	// FromNode is the node from which the bag should be restored.
@@ -17,23 +17,7 @@ type RestoreTransfer struct {
 	ToNode          string       `json:"to_node"`
 
 	// Bag is the unique identifier of the bag to be restored.
-	BagId           string       `json:"uuid"`
-
-	// Status is the status of the restoration operation. It can
-	// have any of the following values:
-	//
-	// "requested" - Default status used when record first created.
-	// "accepted"  - Indicates the FromNode has accepted the request to
-	//               restore the bag.
-	// "rejected"  - Set by the FromNode if it cannot or will not restore
-	//               the bag.
-	// "prepared"  - Set by the FromNode when the content has been restored
-	//               locally and staged for transfer back to the to_node.
-	// "finished"  - Set by the ToNode after it has retrieved the restored
-	//               bag from the FromNode.
-	// "cancelled" - Set by either node to indicate the restore operation
-	//               was cancelled.
-	Status          string       `json:"status"`
+	Bag             string       `json:"bag"`
 
 	// Protocol is the network protocol used to transfer the bag.
 	// At launch, the only valid value for this is 'R' for rsync.
@@ -42,6 +26,23 @@ type RestoreTransfer struct {
 	// Link is a URL that the ToNode can use to copy the bag from the
 	// FromNode. This value is set by the FromNode.
 	Link            string       `json:"link"`
+
+	// Accepted indicates whether the FromNode is willing to
+	// restore the bag to the ToNode.
+	Accepted        bool         `json:"accepted"`
+
+	// Finished indicates whether this restore request has been
+	// completed.
+	Finished        string       `json:"finished"`
+
+	// Cancelled indicates whether this restore request was
+	// cancelled.
+	Cancelled       bool         `json:"cancelled"`
+
+	// CancelReason is free-form text describing why this restore
+	// request was cancelled.
+	CancelReason	string       `json:"cancel_reason"`
+
 
 	// CreatedAt is the datetime when this record was created.
 	CreatedAt       time.Time    `json:"created_at"`

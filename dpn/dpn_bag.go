@@ -50,8 +50,13 @@ type DPNBag struct {
 	// which are strings. E.g. ['aptrust', 'chron', 'tdr']
 	ReplicatingNodes   []string             `json:"replicating_nodes"`
 
-	// Fixities are the checksum/fixity values for this bag.
-	Fixities           *Fixity              `json:"fixities"`
+	// MessageDigests are the digests calculated on ingest by various
+	// nodes. (Is this calculated on the tag manifest?)
+	MessageDigests     []*MessageDigest     `json:"message_digests"`
+
+	// FixityChecks record the result of post-ingest periodic fixity
+	// checks.
+	FixityChecks       []*FixityCheck       `json:"fixity_checks"`
 
 	// CreatedAt is when this record was created.
 	CreatedAt          time.Time            `json:"created_at"`

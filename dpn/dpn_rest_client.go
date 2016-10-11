@@ -299,7 +299,7 @@ func (client *DPNRestClient) dpnMemberSave(member *Member, method string) (*Memb
 	objUrl := client.BuildUrl(relativeUrl, nil)
 	if method == "PUT" {
 		// PUT/Update
-		relativeUrl = fmt.Sprintf("/%s/member/%s/", client.APIVersion, member.UUID)
+		relativeUrl = fmt.Sprintf("/%s/member/%s/", client.APIVersion, member.MemberId)
 		objUrl = client.BuildUrl(relativeUrl, nil)
 	}
 	postData, err := json.Marshal(member)

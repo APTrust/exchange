@@ -20,16 +20,12 @@ func awsEnvAvailable() (envVarsOk bool) {
 // Creates a DPN bag.
 func MakeDPNBag() (*dpn.DPNBag) {
 	youyoueyedee := uuid.NewV4()
-	randChars := youyoueyedee.String()[0:8]
 	tenSecondsAgo := time.Now().Add(-10 * time.Second)
 	return &dpn.DPNBag {
 		UUID: youyoueyedee.String(),
 		Interpretive: []string{},
 		Rights: []string{},
 		ReplicatingNodes: []string{},
-		Fixities: &dpn.Fixity{
-		Sha256: randChars,
-	},
 		LocalId: fmt.Sprintf("GO-TEST-BAG-%s", youyoueyedee.String()),
 		Size: 12345678,
 		FirstVersionUUID: youyoueyedee.String(),
@@ -51,14 +47,11 @@ func MakeXferRequest(fromNode, toNode, bagUuid string) (*dpn.ReplicationTransfer
 	return &dpn.ReplicationTransfer{
 		FromNode: fromNode,
 		ToNode: toNode,
-		BagId: bagUuid,
+		Bag: bagUuid,
 		ReplicationId: uuid.NewV4().String(),
 		FixityAlgorithm: "sha256",
 		FixityNonce: nil,
 		FixityValue: nil,
-		FixityAccept: nil,
-		BagValid: nil,
-		Status: "requested",
 		Protocol: "rsync",
 		Link: fmt.Sprintf("rsync://mnt/staging/%s.tar", idString),
 		CreatedAt: tenSecondsAgo,
@@ -74,9 +67,8 @@ func MakeRestoreRequest(fromNode, toNode, bagUuid string) (*dpn.RestoreTransfer)
 	return &dpn.RestoreTransfer{
 		FromNode: fromNode,
 		ToNode: toNode,
-		BagId: bagUuid,
+		Bag: bagUuid,
 		RestoreId: uuid.NewV4().String(),
-		Status: "requested",
 		Protocol: "rsync",
 		Link: fmt.Sprintf("rsync://mnt/staging/%s.tar", idString),
 		CreatedAt: tenSecondsAgo,

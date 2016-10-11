@@ -230,7 +230,7 @@ func TestMemberGet(t *testing.T) {
 	require.NotNil(t, result.Member)
 	assert.NotNil(t, result.Request)
 	assert.NotNil(t, result.Response)
-	assert.Equal(t, memberIdentifier, result.Member.UUID)
+	assert.Equal(t, memberIdentifier, result.Member.MemberId)
 }
 
 func TestMemberCreate(t *testing.T) {
@@ -240,7 +240,7 @@ func TestMemberCreate(t *testing.T) {
 	client := getClient(t)
 	id := uuid.NewV4().String()
 	member := dpn.Member{
-		UUID: id,
+		MemberId: id,
 		Name: fmt.Sprintf("GO-TEST-MEMBER-%s", id),
 		Email: fmt.Sprintf("%s@example.com", id),
 	}
@@ -249,7 +249,7 @@ func TestMemberCreate(t *testing.T) {
 	require.NotNil(t, result.Member)
 	assert.NotNil(t, result.Request)
 	assert.NotNil(t, result.Response)
-	assert.Equal(t, member.UUID, result.Member.UUID)
+	assert.Equal(t, member.MemberId, result.Member.MemberId)
 	assert.Equal(t, member.Name, result.Member.Name)
 	assert.Equal(t, member.Email, result.Member.Email)
 }
@@ -264,7 +264,6 @@ func TestMemberUpdate(t *testing.T) {
 	require.Nil(t, memberResult.Error)
 	newName := fmt.Sprintf("GO-UPDATED-%s", uuid.NewV4().String())
 	memberResult.Member.Name = newName
-	memberResult.Member.UpdatedAt = time.Now().UTC().Truncate(time.Second)
 	newMemberResult := client.MemberUpdate(memberResult.Member)
 	require.NotNil(t, newMemberResult)
 	require.Nil(t, newMemberResult.Error)
@@ -293,9 +292,6 @@ func TestDPNBagGet(t *testing.T) {
 	require.True(t, len(bagResult.Bag.ReplicatingNodes) > 1)
 	assert.Equal(t, "chron", bagResult.Bag.ReplicatingNodes[0])
 	assert.Equal(t, "hathi", bagResult.Bag.ReplicatingNodes[1])
-	require.NotNil(t, bagResult.Bag.Fixities)
-	assert.Equal(t, "e39a201a88bc3d7803a5e375d9752439d328c2e85b4f1ba70a6d984b6c5378bd",
-		bagResult.Bag.Fixities.Sha256)
 }
 
 func TestDPNBagListGet(t *testing.T) {
@@ -353,8 +349,6 @@ func TestDPNBagCreate(t *testing.T) {
 	assert.Equal(t, bag.FirstVersionUUID, dpnBagResult.Bag.FirstVersionUUID)
 	assert.Equal(t, bag.Version, dpnBagResult.Bag.Version)
 	assert.Equal(t, bag.BagType, dpnBagResult.Bag.BagType)
-	require.NotNil(t, dpnBagResult.Bag.Fixities)
-	assert.Equal(t, bag.Fixities.Sha256, dpnBagResult.Bag.Fixities.Sha256)
 	assert.NotEmpty(t, dpnBagResult.Bag.IngestNode)
 	assert.Equal(t, dpnBagResult.Bag.IngestNode, dpnBagResult.Bag.AdminNode)
 	assert.NotEmpty(t, dpnBagResult.Bag.CreatedAt)
@@ -397,7 +391,7 @@ func TestReplicationTransferGet(t *testing.T) {
 	require.Nil(t, xferResult.Error)
 	assert.Equal(t, "aptrust", xferResult.Xfer.FromNode)
 	assert.Equal(t, "hathi", xferResult.Xfer.ToNode)
-	assert.Equal(t, aptrustBagIdentifier, xferResult.Xfer.BagId)
+	assert.Equal(t, aptrustBagIdentifier, xferResult.Xfer.Bag)
 	assert.Equal(t, replicationIdentifier, xferResult.Xfer.ReplicationId)
 
 	if xferResult.Xfer.FixityNonce != nil && *xferResult.Xfer.FixityNonce != "" {
@@ -408,9 +402,9 @@ func TestReplicationTransferGet(t *testing.T) {
 	}
 
 	assert.Equal(t, "sha256", xferResult.Xfer.FixityAlgorithm)
-	assert.True(t, *xferResult.Xfer.FixityAccept)
-	assert.True(t, *xferResult.Xfer.BagValid)
-	assert.Equal(t, "stored", xferResult.Xfer.Status)
+	assert.False(t, xferResult.Xfer.Cancelled)
+	assert.True(t, xferResult.Xfer.Stored)
+	assert.True(t, xferResult.Xfer.StoreRequested)
 	assert.Equal(t, "rsync", xferResult.Xfer.Protocol)
 
 	expectedTarName := fmt.Sprintf("%s.tar", aptrustBagIdentifier)
@@ -492,14 +486,15 @@ func TestReplicationTransferCreate(t *testing.T) {
 
 	assert.Equal(t, xfer.FromNode, xferResult.Xfer.FromNode)
 	assert.Equal(t, xfer.ToNode, xferResult.Xfer.ToNode)
-	assert.Equal(t, xfer.BagId, xferResult.Xfer.BagId)
+	assert.Equal(t, xfer.Bag, xferResult.Xfer.Bag)
 	assert.NotEmpty(t, xferResult.Xfer.ReplicationId)
 	assert.Equal(t, xfer.FixityAlgorithm, xferResult.Xfer.FixityAlgorithm)
 	assert.Equal(t, xfer.FixityNonce, xferResult.Xfer.FixityNonce)
 	assert.Equal(t, xfer.FixityValue, xferResult.Xfer.FixityValue)
-	assert.Equal(t, xfer.FixityAccept, xferResult.Xfer.FixityAccept)
-	assert.Equal(t, xfer.BagValid, xferResult.Xfer.BagValid)
-	assert.Equal(t, xfer.Status, xferResult.Xfer.Status)
+	assert.Equal(t, xfer.Stored, xferResult.Xfer.Stored)
+	assert.Equal(t, xfer.StoreRequested, xferResult.Xfer.StoreRequested)
+	assert.Equal(t, xfer.Cancelled, xferResult.Xfer.Cancelled)
+	assert.Equal(t, xfer.CancelReason, xferResult.Xfer.CancelReason)
 	assert.Equal(t, xfer.Protocol, xferResult.Xfer.Protocol)
 	assert.Equal(t, xfer.Link, xferResult.Xfer.Link)
 	assert.NotEmpty(t, xferResult.Xfer.CreatedAt)
@@ -531,44 +526,14 @@ func TestReplicationTransferUpdate(t *testing.T) {
 
 	// Mark as received, with a bad fixity.
 	newXfer := xferResult.Xfer
-	bagValid := true
 	newFixityValue :=  "1234567890"
-	newXfer.Status = "received"
 	newXfer.UpdatedAt = newXfer.UpdatedAt.Add(1 * time.Second)
-	newXfer.BagValid = &bagValid
 	newXfer.FixityValue = &newFixityValue
 
 	updatedXfer := client.ReplicationTransferUpdate(newXfer)
 	require.NotNil(t, updatedXfer.Xfer)
 	require.Nil(t, updatedXfer.Error)
-	assert.Equal(t, "received", updatedXfer.Xfer.Status)
-
-	// Mark as confirmed and send a bad fixity value.
-	// The server should cancel this transfer.
-	// At this point, we're testing the server's behavior,
-	// not the behavior of our own code. This kind of test
-	// belongs in the Rails spec.
-	newXfer.Status = "confirmed"
-	newXfer.UpdatedAt = newXfer.UpdatedAt.Add(1 * time.Second)
-
-	updatedXfer = client.ReplicationTransferUpdate(newXfer)
-	require.NotNil(t, updatedXfer.Xfer)
-	require.Nil(t, updatedXfer.Error)
-	require.NotNil(t, updatedXfer.Xfer.FixityValue)
-	assert.Equal(t, "1234567890", *updatedXfer.Xfer.FixityValue)
-
-	// -----------------------------------------------------------------
-	// TODO: Figure out why FixityAccept is nil.
-	// Verified that JSON from the server has a null value here,
-	// so the problem is not on our end.
-	// -----------------------------------------------------------------
-    //require.NotNil(t, updatedXfer.Xfer.FixityAccept)
-    //assert.False(t, *updatedXfer.Xfer.FixityAccept)
-
-	require.NotNil(t, updatedXfer.Xfer.BagValid)
-	assert.True(t, *updatedXfer.Xfer.BagValid)
-	assert.Equal(t, "confirmed", updatedXfer.Xfer.Status)
-	assert.True(t, updatedXfer.Xfer.UpdatedAt.UTC().Unix() >= newXfer.UpdatedAt.UTC().Unix())
+	assert.False(t, updatedXfer.Xfer.StoreRequested)
 }
 
 func TestRestoreTransferGet(t *testing.T) {
@@ -581,9 +546,8 @@ func TestRestoreTransferGet(t *testing.T) {
 	require.Nil(t, xferResult.Error)
 	assert.Equal(t, "hathi", xferResult.Xfer.FromNode)
 	assert.Equal(t, "aptrust", xferResult.Xfer.ToNode)
-	assert.Equal(t, aptrustBagIdentifier, xferResult.Xfer.BagId)
+	assert.Equal(t, aptrustBagIdentifier, xferResult.Xfer.Bag)
 	assert.Equal(t, restoreIdentifier, xferResult.Xfer.RestoreId)
-	assert.Equal(t, "requested", xferResult.Xfer.Status)
 	assert.Equal(t, "rsync", xferResult.Xfer.Protocol)
 	assert.Equal(t, "2015-09-15T19:38:31Z", xferResult.Xfer.CreatedAt.Format(time.RFC3339))
 	assert.Equal(t, "2015-09-15T19:38:31Z", xferResult.Xfer.UpdatedAt.Format(time.RFC3339))
@@ -664,9 +628,8 @@ func TestRestoreTransferCreate(t *testing.T) {
 
 	assert.Equal(t, xfer.FromNode, xferResult.Xfer.FromNode)
 	assert.Equal(t, xfer.ToNode, xferResult.Xfer.ToNode)
-	assert.Equal(t, xfer.BagId, xferResult.Xfer.BagId)
+	assert.Equal(t, xfer.Bag, xferResult.Xfer.Bag)
 	assert.NotEmpty(t, xferResult.Xfer.RestoreId)
-	assert.Equal(t, "requested", xferResult.Xfer.Status)
 	assert.Equal(t, xfer.Protocol, xferResult.Xfer.Protocol)
 	assert.Equal(t, xfer.Link, xferResult.Xfer.Link)
 	assert.NotEmpty(t, xferResult.Xfer.CreatedAt)
@@ -692,27 +655,25 @@ func TestRestoreTransferUpdate(t *testing.T) {
 	require.NotNil(t, xferResult)
 	require.Nil(t, xferResult.Error)
 
-	// Reject this one...
-	xferResult.Xfer.Status = "rejected"
+	// Accept this one...
+	xferResult.Xfer.Accepted = true
 
 	updatedXfer := client.RestoreTransferUpdate(xferResult.Xfer)
 	require.NotNil(t, updatedXfer)
 	require.Nil(t, updatedXfer.Error)
-	assert.Equal(t, "rejected", updatedXfer.Xfer.Status)
+	assert.True(t, updatedXfer.Xfer.Accepted)
 
 	// Update the allowed fields. We're going to send a bad
 	// fixity value, because we don't know the good one, so
 	// the server will cancel this transfer.
 	newXfer := updatedXfer.Xfer
 	link := "rsync://blah/blah/blah/yadda/yadda/beer"
-	newXfer.Status = "prepared"
 	newXfer.Link = link
 	newXfer.UpdatedAt = time.Now().Add(1 * time.Second).UTC()
 
 	updatedXfer = client.RestoreTransferUpdate(newXfer)
 	require.NotNil(t, updatedXfer)
 	require.Nil(t, updatedXfer.Error)
-	assert.Equal(t, "prepared", updatedXfer.Xfer.Status)
 	assert.Equal(t, link, updatedXfer.Xfer.Link)
 	assert.InDelta(t, newXfer.UpdatedAt.Unix(), updatedXfer.Xfer.UpdatedAt.Unix(), float64(2.0))
 }

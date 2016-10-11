@@ -6,20 +6,67 @@ import (
 )
 
 type Node struct {
+
+	// Name is the full name of the node.
 	Name                 string       `json:"name"`
+
+	// Namespace is the node's short name, and is generally
+	// used as the node identifier on other record types.
 	Namespace            string       `json:"namespace"`
+
+	// APIRoot is the root URL of the node's DPN server.
 	APIRoot              string       `json:"api_root"`
+
+	// SSHPubKey is the public half of the SSH key that the
+	// node uses to connect to other nodes to copy data via
+	// rsync/ssh.
 	SSHPubKey            string       `json:"ssh_pubkey"`
+
+	// ReplicateFrom is a list of node namespaces from which
+	// this node will replicate content.
 	ReplicateFrom        []string     `json:"replicate_from"`
+
+	// ReplicateTo is a list of node namespaces to which
+	// this node will replicate content.
 	ReplicateTo          []string     `json:"replicate_to"`
+
+	// RestoreFrom is a list of node namespaces from which
+	// this node will restore content.
 	RestoreFrom          []string     `json:"restore_from"`
+
+	// RestoreTo is a list of node namespaces to which
+	// this node will restore content.
 	RestoreTo            []string     `json:"restore_to"`
+
+	// Protocols is a list of protocols this node supports for
+	// copying files to and from other nodes. Initially, the
+	// only supported protocol is rsync.
 	Protocols            []string     `json:"protocols"`
+
+	// FixityAlgorithms is a list of fixity algorithms this
+	// node supports for calculating a bag's initial message
+	// digest and subsequent periodic fixity checks. Initially,
+	// all nodes support sha256.
 	FixityAlgorithms     []string     `json:"fixity_algorithms"`
-	CreatedAt            time.Time    `json:"created_at"`
-	UpdatedAt            time.Time    `json:"updated_at"`
-	LastPullDate         time.Time    `json:"last_pull_date"`
+
+	// Storage describes the node's storage region and type.
 	Storage              *Storage     `json:"storage"`
+
+	// CreatedAt is the time at which this node record was
+	// created in the DPN registry.
+	CreatedAt            time.Time    `json:"created_at"`
+
+	// UpdatedAt describes when this node record was last
+	// updated.
+	UpdatedAt            time.Time    `json:"updated_at"`
+
+	// LastPullDate describes when we last pulled data from
+	// this node. This property is not part of the DPN spec.
+	// It is for APTrust internal use only. We don't save
+	// this info to the DPN registry, because there's no
+	// place for it there. We save it locally and use it in
+	// the dpn_sync chron job.
+	LastPullDate         time.Time    `json:"last_pull_date"`
 }
 
 
