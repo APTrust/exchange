@@ -39,13 +39,13 @@ type NodeResult struct {
 }
 
 type NodeListResult struct {
-	Count        int32                      `json:count`
-	Next         *string                    `json:next`
-	Previous     *string                    `json:previous`
-	Results      []*Node                    `json:results`
-	Request      *http.Request              `json:-`
-	Response     *http.Response             `json:-`
-	Error        error                      `json:-`
+	Count        int32                      `json:"count"`
+	Next         *string                    `json:"next"`
+	Previous     *string                    `json:"previous"`
+	Results      []*Node                    `json:"results"`
+	Request      *http.Request              `json:"-"`
+	Response     *http.Response             `json:"-"`
+	Error        error                      `json:"-"`
 }
 
 type MemberResult struct {
@@ -56,13 +56,13 @@ type MemberResult struct {
 }
 
 type MemberListResult struct {
-	Count        int32                      `json:count`
-	Next         *string                    `json:next`
-	Previous     *string                    `json:previous`
-	Results      []*Member                  `json:results`
-	Request      *http.Request              `json:-`
-	Response     *http.Response             `json:-`
-	Error        error                      `json:-`
+	Count        int32                      `json:"count"`
+	Next         *string                    `json:"next"`
+	Previous     *string                    `json:"previous"`
+	Results      []*Member                  `json:"results"`
+	Request      *http.Request              `json:"-"`
+	Response     *http.Response             `json:"-"`
+	Error        error                      `json:"-"`
 }
 
 type BagResult struct {
@@ -75,13 +75,13 @@ type BagResult struct {
 // BagListResult is what the REST service returns when
 // we ask for a list of bags.
 type BagListResult struct {
-	Count       int32                      `json:count`
-	Next        *string                    `json:next`
-	Previous    *string                    `json:previous`
-	Results     []*DPNBag                  `json:results`
-	Request     *http.Request              `json:-`
-	Response    *http.Response             `json:-`
-	Error       error                      `json:-`
+	Count       int32                      `json:"count"`
+	Next        *string                    `json:"next"`
+	Previous    *string                    `json:"previous"`
+	Results     []*DPNBag                  `json:"results"`
+	Request     *http.Request              `json:"-"`
+	Response    *http.Response             `json:"-"`
+	Error       error                      `json:"-"`
 }
 
 type ReplicationResult struct {
@@ -94,13 +94,13 @@ type ReplicationResult struct {
 // ReplicationListResult is what the REST service returns when
 // we ask for a list of transfer requests.
 type ReplicationListResult struct {
-	Count       int32                     `json:count`
-	Next        *string                   `json:next`
-	Previous    *string                   `json:previous`
-	Results     []*ReplicationTransfer    `json:results`
-	Request     *http.Request             `json:-`
-	Response    *http.Response            `json:-`
-	Error       error                     `json:-`
+	Count       int32                     `json:"count"`
+	Next        *string                   `json:"next"`
+	Previous    *string                   `json:"previous"`
+	Results     []*ReplicationTransfer    `json:"results"`
+	Request     *http.Request             `json:"-"`
+	Response    *http.Response            `json:"-"`
+	Error       error                     `json:"-"`
 }
 
 type RestoreResult struct {
@@ -113,13 +113,13 @@ type RestoreResult struct {
 // RestoreListResult is what the REST service returns when
 // we ask for a list of restore requests.
 type RestoreListResult struct {
-	Count       int32                     `json:count`
-	Next        *string                   `json:next`
-	Previous    *string                   `json:previous`
-	Results     []*RestoreTransfer        `json:results`
-	Request     *http.Request             `json:-`
-	Response    *http.Response            `json:-`
-	Error       error                     `json:-`
+	Count       int32                     `json:"count"`
+	Next        *string                   `json:"next"`
+	Previous    *string                   `json:"previous"`
+	Results     []*RestoreTransfer        `json:"results"`
+	Request     *http.Request             `json:"-"`
+	Response    *http.Response            `json:"-"`
+	Error       error                     `json:"-"`
 }
 
 
