@@ -51,6 +51,7 @@ func TestLoad(t *testing.T) {
 	assert.Equal(t, 18, len(config.ReceivingBuckets))
 	assert.Equal(t, configFile, config.ActiveConfig)
 	assert.Equal(t, 24, config.BucketReaderCacheHours)
+	assert.Equal(t, "api-v2", config.DPN.DPNAPIVersion)
 	assert.Equal(t, "us-east-1", config.DPN.DPNGlacierRegion)
 }
 

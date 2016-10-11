@@ -460,6 +460,10 @@ type DPNConfig struct {
 	// Default metadata that goes into bags produced at our node.
 	DefaultMetadata         DefaultMetadata
 
+	// DPNAPIVersion is the current version of the DPN REST API.
+	// This should be a string in the format api-v1, api-v2, etc.
+	DPNAPIVersion           string
+
 	// The name of the AWS region that hosts DPN's Glacier files.
 	DPNGlacierRegion        string
 

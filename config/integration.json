@@ -171,6 +171,7 @@
         "LogLevel": 4,
         "LogToStderr": false,
         "ReplicateToNumNodes": 2,
+        "DPNAPIVersion": "api-v2",
         "AcceptInvalidSSLCerts": true,
         "UseSSHWithRsync": false,
         "DPNGlacierRegion": "us-east-1",
