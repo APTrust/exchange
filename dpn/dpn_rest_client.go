@@ -123,7 +123,7 @@ type RestoreListResult struct {
 }
 
 
-// Creates a new DPN REST client.
+// NewDPNRestClient creates a new DPN REST client.
 func NewDPNRestClient(hostUrl, apiVersion, apiKey, node string, dpnConfig models.DPNConfig) (*DPNRestClient, error) {
 	cookieJar, err := cookiejar.New(nil)
 	if err != nil {
