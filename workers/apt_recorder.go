@@ -6,6 +6,7 @@ import (
 	"github.com/APTrust/exchange/context"
 	"github.com/APTrust/exchange/models"
 	"github.com/APTrust/exchange/network"
+	"github.com/APTrust/exchange/util"
 	"github.com/nsqio/go-nsq"
 	"sync"
 	"time"
@@ -211,6 +212,13 @@ func (recorder *APTRecorder) saveGenericFiles (ingestState *models.IngestState) 
 	filesToCreate := make([]*models.GenericFile, 0)
 	filesToUpdate := make([]*models.GenericFile, 0)
 	for i, gf := range ingestState.IngestManifest.Object.GenericFiles {
+		// We run this check here, rather than in the validator,
+		// because this is an APTrust-specific policy.
+		if !util.HasSavableName(gf.OriginalPath()) {
+			recorder.Context.MessageLog.Info("Will not save %s: does not match savable name pattern.",
+				gf.Identifier)
+			gf.IngestNeedsSave = false
+		}
 		if i % GENERIC_FILE_BATCH_SIZE == 0 {
 			recorder.createGenericFiles(ingestState, filesToCreate)
 			if ingestState.IngestManifest.RecordResult.HasErrors() {

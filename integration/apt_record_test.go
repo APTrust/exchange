@@ -126,6 +126,14 @@ func recordTestCommon(t *testing.T, bagName string, ingestManifest *models.Inges
 	}
 
 	for _, gf := range obj.GenericFiles {
+		// Skip these checks for files that didn't need to be saved.
+		// Reasons for not needing to be saved:
+		// 1. File has a non-savable name, according to util.HasSavableName
+		// 2. File has not changed since last time we ingested this bag.
+		if !gf.IngestNeedsSave {
+			continue
+		}
+
 		// Make sure checksums are present
 		require.Equal(t, 2, len(gf.Checksums),
 			"Checksums should be %s, found %d for %s", 2, len(gf.Checksums), gf.Identifier)
