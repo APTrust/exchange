@@ -687,7 +687,7 @@ func TestGetRemoteClients(t *testing.T) {
 	}
 	client := getClient(t)
 	remoteClients, err := client.GetRemoteClients()
-	require.NotNil(t, err)
+	require.Nil(t, err)
 	nodes := []string { "chron", "hathi", "sdr", "tdr" }
 	for _, node := range nodes {
 		remoteClient := remoteClients[node]

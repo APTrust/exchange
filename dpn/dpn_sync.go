@@ -184,6 +184,11 @@ func (dpnSync *DPNSync) syncBags(bags []*DPNBag) ([]*DPNBag, error) {
 		resp := dpnSync.LocalClient.DPNBagGet(bag.UUID)
 		existingBag := resp.Bag
 		err := resp.Error
+		if existingBag == nil {
+			dpnSync.Context.MessageLog.Debug("Bag %s does not exist", bag.UUID)
+		} else {
+			dpnSync.Context.MessageLog.Debug("%v", existingBag)
+		}
 		var processedBag *DPNBag
 		if existingBag != nil {
 			if !existingBag.UpdatedAt.Before(bag.UpdatedAt) {
@@ -205,6 +210,8 @@ func (dpnSync *DPNSync) syncBags(bags []*DPNBag) ([]*DPNBag, error) {
 		}
 		if err != nil {
 			dpnSync.Context.MessageLog.Debug("Oops! Bag %s: %v", bag.UUID, err)
+			dpnSync.Context.MessageLog.Error("%s %s", resp.Request.Method, resp.Request.URL.String())
+			dpnSync.Context.MessageLog.Error("Status Code: %d", resp.Response.StatusCode)
 			return bagsProcessed, err
 		}
 		bagsProcessed = append(bagsProcessed, processedBag)

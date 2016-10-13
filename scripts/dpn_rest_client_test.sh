@@ -10,6 +10,7 @@
 # TODO: Set this dir name in a config file?
 echo "Starting DPN cluster. This takes a minute or so..."
 cd ~/dpn/dpn-server
+rm log/impersonate*
 bundle exec ./script/run_cluster.rb -f &
 sleep 60
 
