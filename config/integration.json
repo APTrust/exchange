@@ -179,7 +179,7 @@
         "RestClient": {
             "Comment": "Settings for our local DPN REST API server. Load LocalAuthToken from environment!",
             "LocalServiceURL": "http://localhost:3001",
-            "LocalAPIRoot": "api-v1",
+            "LocalAPIRoot": "api-v2",
             "LocalAuthToken": "aptrust_token"
         },
         "DefaultMetadata": {

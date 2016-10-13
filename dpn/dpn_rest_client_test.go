@@ -36,6 +36,9 @@ var replicationIdentifier = "10000000-0000-4111-a000-000000000001"
 var restoreIdentifier = "11000000-0000-4111-a000-000000000001"
 var memberIdentifier = "9a000000-0000-4000-a000-000000000001"
 
+// This is the fixity value for replicationIdentifier above
+var fixityForReplication = "e39a201a88bc3d7803a5e375d9752439d328c2e85b4f1ba70a6d984b6c5378bd"
+
 func runRestTests(t *testing.T) bool {
 	config, err := models.LoadConfigFile(configFile)
 	require.Nil(t, err)
@@ -397,8 +400,8 @@ func TestReplicationTransferGet(t *testing.T) {
 	if xferResult.Xfer.FixityNonce != nil && *xferResult.Xfer.FixityNonce != "" {
 		t.Errorf("FixityNonce: expected '', got '%s'", *xferResult.Xfer.FixityNonce)
 	}
-	if xferResult.Xfer.FixityValue != nil && *xferResult.Xfer.FixityValue != "" {
-		t.Errorf("FixityValue: expected empty, got '%s'", *xferResult.Xfer.FixityValue)
+	if xferResult.Xfer.FixityValue == nil || *xferResult.Xfer.FixityValue != fixityForReplication {
+		t.Errorf("FixityValue: expected '%s', got '%s'", fixityForReplication, *xferResult.Xfer.FixityValue)
 	}
 
 	assert.Equal(t, "sha256", xferResult.Xfer.FixityAlgorithm)
@@ -662,20 +665,6 @@ func TestRestoreTransferUpdate(t *testing.T) {
 	require.NotNil(t, updatedXfer)
 	require.Nil(t, updatedXfer.Error)
 	assert.True(t, updatedXfer.Xfer.Accepted)
-
-	// Update the allowed fields. We're going to send a bad
-	// fixity value, because we don't know the good one, so
-	// the server will cancel this transfer.
-	newXfer := updatedXfer.Xfer
-	link := "rsync://blah/blah/blah/yadda/yadda/beer"
-	newXfer.Link = link
-	newXfer.UpdatedAt = time.Now().Add(1 * time.Second).UTC()
-
-	updatedXfer = client.RestoreTransferUpdate(newXfer)
-	require.NotNil(t, updatedXfer)
-	require.Nil(t, updatedXfer.Error)
-	assert.Equal(t, link, updatedXfer.Xfer.Link)
-	assert.InDelta(t, newXfer.UpdatedAt.Unix(), updatedXfer.Xfer.UpdatedAt.Unix(), float64(2.0))
 }
 
 func TestGetRemoteClient(t *testing.T) {

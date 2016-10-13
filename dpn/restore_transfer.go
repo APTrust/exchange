@@ -33,7 +33,7 @@ type RestoreTransfer struct {
 
 	// Finished indicates whether this restore request has been
 	// completed.
-	Finished        string       `json:"finished"`
+	Finished        bool         `json:"finished"`
 
 	// Cancelled indicates whether this restore request was
 	// cancelled.
