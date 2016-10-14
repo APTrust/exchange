@@ -232,7 +232,7 @@ func TestMemberGet(t *testing.T) {
 	require.NotNil(t, result.Member)
 	assert.NotNil(t, result.Request)
 	assert.NotNil(t, result.Response)
-	assert.Equal(t, memberIdentifier, result.Member.MemberId)
+	assert.Equal(t, memberIdentifier, result.Member().MemberId)
 }
 
 func TestMemberCreate(t *testing.T) {
@@ -265,8 +265,9 @@ func TestMemberUpdate(t *testing.T) {
 	require.NotNil(t, memberResult)
 	require.Nil(t, memberResult.Error)
 	newName := fmt.Sprintf("GO-UPDATED-%s", uuid.NewV4().String())
-	memberResult.Member.Name = newName
-	newMemberResult := client.MemberUpdate(memberResult.Member)
+	member := memberResult.Member()
+	member.Name = newName
+	newMemberResult := client.MemberUpdate(member)
 	require.NotNil(t, newMemberResult)
 	require.Nil(t, newMemberResult.Error)
 	assert.Equal(t, newName, newMemberResult.Member.Name)

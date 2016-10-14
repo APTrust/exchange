@@ -210,58 +210,25 @@ func (client *DPNRestClient) NewJsonRequest(method, targetUrl string, body io.Re
 	return req, nil
 }
 
-func (client *DPNRestClient) MemberGet(identifier string) (*MemberResult) {
-	result := &MemberResult{}
+func (client *DPNRestClient) MemberGet(identifier string) (*DPNResponse) {
+	resp := NewDPNResponse(DPNTypeMember)
+	resp.members = make([]*Member, 1)
+
 	relativeUrl := fmt.Sprintf("/%s/member/%s/", client.APIVersion, identifier)
-	objUrl := client.BuildUrl(relativeUrl, nil)
-	request, err := client.NewJsonRequest("GET", objUrl, nil)
-	result.Request = request
-	if err != nil {
-		result.Error = err
-		return result
-	}
-	body, response, err := client.doRequest(request)
-	result.Response = response
-	if err != nil {
-		result.Error = err
-		return result
+	absUrl := client.BuildUrl(relativeUrl, nil)
+
+	client._doRequest(resp, "GET", absUrl, nil)
+	if resp.Error != nil {
+		return resp
 	}
 
-	// Build and return the data structure
+	// Parse the JSON from the response body
 	member := &Member{}
-	result.Error = json.Unmarshal(body, member)
-	result.Member = member
-	return result
-}
-
-// Returns the DPN Member with the specified name, or an error
-// if there is not exactly one DPN member with that name.
-func (client *DPNRestClient) MemberGetByName(name string) (*MemberResult) {
-	result := &MemberResult {}
-	params := url.Values{}
-	params.Set("name", name)
-	memberListResult := client.MemberListGet(&params)
-	if memberListResult.Error != nil {
-		result.Error = memberListResult.Error
-		return result
+	resp.Error = json.Unmarshal(resp.data, member)
+	if resp.Error == nil {
+		resp.members[0] = member
 	}
-	result.Request = memberListResult.Request
-	result.Response = memberListResult.Response
-	if memberListResult.Count == 0 {
-		result.Error = fmt.Errorf("Cannot find member with name '%s'", name)
-		return result
-	}
-	if memberListResult.Count > 1 {
-		// Member names are supposed to be unique, and the Rails app
-		// enforces this, so this case should never happen. If it did happen,
-		// it could cause a client to  assign ownership of an intellectual
-		// object to the wrong member institution. Better for the process to
-		// fail than make that mistake.
-		result.Error = fmt.Errorf("Found %d members with name '%s'", memberListResult.Count, name)
-		return result
-	}
-	result.Member = memberListResult.Results[0]
-	return result
+	return resp
 }
 
 func (client *DPNRestClient) MemberListGet(queryParams *url.Values) (*MemberListResult) {
@@ -325,6 +292,7 @@ func (client *DPNRestClient) dpnMemberSave(member *Member, method string) (*Memb
 	return result
 }
 
+// NodeGet returns the node with the specified identifier (namespace).
 func (client *DPNRestClient) NodeGet(identifier string) (*DPNResponse) {
 	resp := NewDPNResponse(DPNTypeNode)
 	resp.nodes = make([]*Node, 1)
