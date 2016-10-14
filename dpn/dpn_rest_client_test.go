@@ -127,7 +127,9 @@ func TestNodeGet(t *testing.T) {
 	assert.NotNil(t, resp.Response)
 	assert.NotEmpty(t, node.Name)
 	assert.NotEmpty(t, node.Namespace)
-	assert.True(t, strings.HasPrefix(node.APIRoot, "https://"))
+	// In test and local integration environments,
+	// we're running on HTTP, not HTTPS.
+	assert.True(t, strings.HasPrefix(node.APIRoot, "http://"))
 }
 
 func TestNodeList(t *testing.T) {
