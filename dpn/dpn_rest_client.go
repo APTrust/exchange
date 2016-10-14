@@ -368,34 +368,42 @@ func (client *DPNRestClient) NodeList(params *url.Values) (*DPNResponse) {
 // attributes related to the node, you should update only the
 // LastPullDate attribute through this client. Use the web admin
 // interface to perform more substantive node updates.
-func (client *DPNRestClient) NodeUpdate(node *Node) (*NodeResult) {
-	result := &NodeResult{}
-	relativeUrl := fmt.Sprintf("/%s/node/%s/", client.APIVersion, node.Namespace)
-	objUrl := client.BuildUrl(relativeUrl, nil)
+func (client *DPNRestClient) NodeUpdate(node *Node) (*DPNResponse) {
+	return client.nodeSave(node, "PUT")
+}
+
+// nodeSave creates or updates a node. Since the current DPN REST API
+// does not support creating new nodes, this client doesn't implement
+// NodeCreate.
+func (client *DPNRestClient) nodeSave(node *Node, httpMethod string) (*DPNResponse) {
+	resp := NewDPNResponse(DPNTypeNode)
+	resp.nodes = make([]*Node, 1)
+
+	relativeUrl := fmt.Sprintf("/%s/node/", client.APIVersion)
+	if httpMethod == "PUT" {
+		relativeUrl = fmt.Sprintf("/%s/node/%s", client.APIVersion, node.Namespace)
+	}
+	absoluteUrl := client.BuildUrl(relativeUrl, nil)
+
+	// Create the JSON data
 	postData, err := json.Marshal(node)
 	if err != nil {
-		result.Error = err
-		return result
-	}
-	request, err := client.NewJsonRequest("PUT", objUrl, bytes.NewBuffer(postData))
-	result.Request = request
-	if err != nil {
-		result.Error = err
-		return result
-	}
-	body, response, err := client.doRequest(request)
-	result.Response = response
-	if err != nil {
-		result.Error = err
-		return result
+		resp.Error = err
 	}
 
-	// HACK! Get rid of this when Golang fixes the JSON null date problem!
-	body = HackNullDates(body)
+	// Build the request
+	client._doRequest(resp, httpMethod, absoluteUrl, bytes.NewBuffer(postData))
+	if resp.Error != nil {
+		return resp
+	}
+
+	// Parse the JSON from the response body
 	savedNode := &Node{}
-	result.Error = json.Unmarshal(body, savedNode)
-	result.Node = savedNode
-	return result
+	resp.Error = json.Unmarshal(resp.data, savedNode)
+	if resp.Error == nil {
+		resp.nodes[0] = savedNode
+	}
+	return resp
 }
 
 // Returns the last time we pulled data from the specified node.
@@ -410,6 +418,7 @@ func (client *DPNRestClient) NodeGetLastPullDate(identifier string) (time.Time, 
 	}
 	return bags.Results[0].UpdatedAt, nil
 }
+
 
 func (client *DPNRestClient) DPNBagGet(identifier string) (*BagResult) {
 	result := &BagResult{}
