@@ -31,98 +31,6 @@ type DPNRestClient struct {
 	transport    *http.Transport
 }
 
-type NodeResult struct {
-	Node         *Node
-	Request      *http.Request
-	Response     *http.Response
-	Error        error
-}
-
-type NodeListResult struct {
-	Count        int32                      `json:"count"`
-	Next         *string                    `json:"next"`
-	Previous     *string                    `json:"previous"`
-	Results      []*Node                    `json:"results"`
-	Request      *http.Request              `json:"-"`
-	Response     *http.Response             `json:"-"`
-	Error        error                      `json:"-"`
-}
-
-type MemberResult struct {
-	Member       *Member
-	Request      *http.Request
-	Response     *http.Response
-	Error        error
-}
-
-type MemberListResult struct {
-	Count        int32                      `json:"count"`
-	Next         *string                    `json:"next"`
-	Previous     *string                    `json:"previous"`
-	Results      []*Member                  `json:"results"`
-	Request      *http.Request              `json:"-"`
-	Response     *http.Response             `json:"-"`
-	Error        error                      `json:"-"`
-}
-
-type BagResult struct {
-	Bag          *DPNBag
-	Request      *http.Request
-	Response     *http.Response
-	Error        error
-}
-
-// BagListResult is what the REST service returns when
-// we ask for a list of bags.
-type BagListResult struct {
-	Count       int32                      `json:"count"`
-	Next        *string                    `json:"next"`
-	Previous    *string                    `json:"previous"`
-	Results     []*DPNBag                  `json:"results"`
-	Request     *http.Request              `json:"-"`
-	Response    *http.Response             `json:"-"`
-	Error       error                      `json:"-"`
-}
-
-type ReplicationResult struct {
-	Xfer        *ReplicationTransfer
-	Request     *http.Request
-	Response    *http.Response
-	Error       error
-}
-
-// ReplicationListResult is what the REST service returns when
-// we ask for a list of transfer requests.
-type ReplicationListResult struct {
-	Count       int32                     `json:"count"`
-	Next        *string                   `json:"next"`
-	Previous    *string                   `json:"previous"`
-	Results     []*ReplicationTransfer    `json:"results"`
-	Request     *http.Request             `json:"-"`
-	Response    *http.Response            `json:"-"`
-	Error       error                     `json:"-"`
-}
-
-type RestoreResult struct {
-	Xfer        *RestoreTransfer
-	Request     *http.Request
-	Response    *http.Response
-	Error       error
-}
-
-// RestoreListResult is what the REST service returns when
-// we ask for a list of restore requests.
-type RestoreListResult struct {
-	Count       int32                     `json:"count"`
-	Next        *string                   `json:"next"`
-	Previous    *string                   `json:"previous"`
-	Results     []*RestoreTransfer        `json:"results"`
-	Request     *http.Request             `json:"-"`
-	Response    *http.Response            `json:"-"`
-	Error       error                     `json:"-"`
-}
-
-
 // NewDPNRestClient creates a new DPN REST client.
 func NewDPNRestClient(hostUrl, apiVersion, apiKey, node string, dpnConfig models.DPNConfig) (*DPNRestClient, error) {
 	cookieJar, err := cookiejar.New(nil)
@@ -465,7 +373,7 @@ func (client *DPNRestClient) ReplicationTransferGet(identifier string) (*DPNResp
 	resp := NewDPNResponse(DPNTypeReplication)
 	resp.replications = make([]*ReplicationTransfer, 1)
 
-	relativeUrl := fmt.Sprintf("/%s/replication/%s/", client.APIVersion, identifier)
+	relativeUrl := fmt.Sprintf("/%s/replicate/%s/", client.APIVersion, identifier)
 	absUrl := client.BuildUrl(relativeUrl, nil)
 
 	client._doRequest(resp, "GET", absUrl, nil)
