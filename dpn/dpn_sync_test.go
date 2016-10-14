@@ -248,35 +248,6 @@ func TestSyncRestoreRequests(t *testing.T) {
 // 	}
 // }
 
-func TestSyncWithError(t *testing.T) {
-	if runSyncTests(t) == false {
-		return  // local test cluster isn't running
-	}
-	dpnSync := newDPNSync(t)
-	nodes, err := dpnSync.GetAllNodes()
-	require.Nil(t, err)
-
-	// Pick one node to sync with, and set the API key for that node
-	// to a value we know is invalid. This will cause the sync to fail.
-	node := nodes[len(nodes) - 1]
-	dpnSync.RemoteClients[node.Namespace].APIKey = "0000000000000000"
-
-	aLongTimeAgo := time.Date(1999, time.December, 31, 23, 0, 0, 0, time.UTC)
-	node.LastPullDate = aLongTimeAgo
-
-	syncResult := dpnSync.SyncEverythingFromNode(node)
-	assert.NotNil(t, syncResult.BagSyncError)
-	assert.NotNil(t, syncResult.ReplicationSyncError)
-	assert.NotNil(t, syncResult.RestoreSyncError)
-
-	// Because the sync failed (due to the bad API Key), the LastPullDate
-	// on the node we tried to pull from should NOT be updated.
-	resp := dpnSync.LocalClient.NodeGet(node.Namespace)
-	require.Nil(t, resp.Error)
-	assert.Equal(t, aLongTimeAgo, resp.Node().LastPullDate, node.Namespace)
-}
-
-
 func TestHasSyncErrors(t *testing.T) {
 	syncResult := &dpn.SyncResult{}
 	assert.False(t, syncResult.HasSyncErrors())
