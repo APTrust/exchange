@@ -135,11 +135,11 @@ func TestNodeListGet(t *testing.T) {
 		return
 	}
 	client := getClient(t)
-	nodeList := client.NodeListGet(nil)
+	nodeList := client.NodeList(nil)
 	require.Nil(t, nodeList.Error)
-	require.NotEmpty(t, nodeList.Results)
+	require.NotEmpty(t, nodeList.Nodes())
 	assert.EqualValues(t, 5, nodeList.Count)
-	assert.Equal(t, 5, len(nodeList.Results))
+	assert.Equal(t, 5, len(nodeList.Nodes()))
 	assert.NotNil(t, nodeList.Request)
 	assert.NotNil(t, nodeList.Response)
 }

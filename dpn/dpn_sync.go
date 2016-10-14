@@ -85,11 +85,11 @@ func NewDPNSync(_context *context.Context) (*DPNSync, error) {
 
 // GetAllNodes returns a list of all the nodes that our node knows about.
 func (dpnSync *DPNSync) GetAllNodes()([]*Node, error) {
-	result := dpnSync.LocalClient.NodeListGet(nil)
+	result := dpnSync.LocalClient.NodeList(nil)
 	if result.Error != nil {
 		return nil, result.Error
 	}
-	return result.Results, nil
+	return result.Nodes(), nil
 }
 
 // LocalNodeName returns the namespace of our local DPN node.

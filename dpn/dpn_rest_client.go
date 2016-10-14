@@ -347,28 +347,19 @@ func (client *DPNRestClient) NodeGet(identifier string) (*DPNResponse) {
 	return resp
 }
 
-func (client *DPNRestClient) NodeListGet(queryParams *url.Values) (*NodeListResult) {
-	result := &NodeListResult{}
+func (client *DPNRestClient) NodeList(params *url.Values) (*DPNResponse) {
+	resp := NewDPNResponse(DPNTypeNode)
+	resp.nodes = make([]*Node, 1)
+
 	relativeUrl := fmt.Sprintf("/%s/node/", client.APIVersion)
-	objUrl := client.BuildUrl(relativeUrl, queryParams)
-	request, err := client.NewJsonRequest("GET", objUrl, nil)
-	result.Request = request
-	if err != nil {
-		result.Error = err
-		return result
-	}
-	body, response, err := client.doRequest(request)
-	result.Response = response
-	if err != nil {
-		result.Error = err
-		return result
-	}
+	absUrl := client.BuildUrl(relativeUrl, params)
 
-	// HACK! Get rid of this when Golang fixes the JSON null date problem!
-	body = HackNullDates(body)
-
-	result.Error = json.Unmarshal(body, result)
-	return result
+	client._doRequest(resp, "GET", absUrl, nil)
+	if resp.Error != nil {
+		return resp
+	}
+	resp.UnmarshalJsonList()
+	return resp
 }
 
 // NodeUpdate updates a DPN Node record. You can update node
