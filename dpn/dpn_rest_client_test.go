@@ -121,14 +121,13 @@ func TestNodeGet(t *testing.T) {
 	client := getClient(t)
 	result := client.NodeGet("aptrust")
 	require.Nil(t, result.Error)
-	require.NotNil(t, result.Node)
+	node := result.Node()
+	require.NotNil(t, node)
 	assert.NotNil(t, result.Request)
 	assert.NotNil(t, result.Response)
-	assert.Equal(t, "APTrust", result.Node.Name)
-	assert.Equal(t, "aptrust", result.Node.Namespace)
-	if !strings.HasPrefix(result.Node.APIRoot, "https://") && !strings.HasPrefix(result.Node.APIRoot, "http://") {
-		t.Errorf("APIRoot should begin with http:// or https://")
-	}
+	assert.NotEmpty(t, node.Name)
+	assert.NotEmpty(t, node.Namespace)
+	assert.True(t, strings.HasPrefix(node.APIRoot, "https://"))
 }
 
 func TestNodeListGet(t *testing.T) {
@@ -703,7 +702,7 @@ func TestHackNullDates(t *testing.T) {
 	testHackNullDates(jsonString, t)
 	jsonString = `{
                      "id": 5,
-                     "last_pull_date":    null
+                     "last_pull_date": null
                    }`
 	testHackNullDates(jsonString, t)
 }
@@ -714,4 +713,54 @@ func testHackNullDates(jsonString string, t *testing.T) {
 	hackedBytes := dpn.HackNullDates(jsonBytes)
 	json.Unmarshal(hackedBytes, &data)
 	assert.Equal(t, "1980-01-01T00:00:00Z", data["last_pull_date"])
+}
+
+
+// -------------------------------------------------------------------------
+// HTTP test handlers from here down...
+// -------------------------------------------------------------------------
+
+// Build a simple struct that mimics the structure of a DPN
+// JSON list response. That includes keys count, next, previous,
+// and results. The caller will add ["results"] with a list of
+// objects of the appropriate type.
+func listResponseData() (map[string]interface{}) {
+	data := make(map[string]interface{})
+	data["count"] = 100
+	data["next"] = "http://example.com/?page=11"
+	data["previous"] = "http://example.com/?page=9"
+	return data
+}
+
+// Returns some sample URL parameters.
+func sampleParams() (url.Values) {
+	v := url.Values{}
+	v.Add("member", "00000000-0000-0000-0000-000000000000")
+	v.Add("ingest_node", "aptrust")
+	v.Add("page", "1")
+	v.Add("per_page", "20")
+	return v
+}
+
+// -------------------------------------------------------------------------
+// Node handlers
+// -------------------------------------------------------------------------
+
+func nodeGetHandler(w http.ResponseWriter, r *http.Request) {
+	obj := MakeDPNNode()
+	objJson, _ := json.Marshal(obj)
+	w.Header().Set("Content-Type", "application/json")
+	fmt.Fprintln(w, string(objJson))
+}
+
+func nodeListHandler(w http.ResponseWriter, r *http.Request) {
+	list := make([]*dpn.Node, 4)
+	for i := 0; i < 4; i++ {
+		list[i] = MakeDPNNode()
+	}
+	data := listResponseData()
+	data["results"] = list
+	listJson, _ := json.Marshal(data)
+	w.Header().Set("Content-Type", "application/json")
+	fmt.Fprintln(w, string(listJson))
 }

@@ -273,7 +273,7 @@ func TestSyncWithError(t *testing.T) {
 	// on the node we tried to pull from should NOT be updated.
 	resp := dpnSync.LocalClient.NodeGet(node.Namespace)
 	require.Nil(t, resp.Error)
-	assert.Equal(t, aLongTimeAgo, resp.Node.LastPullDate, node.Namespace)
+	assert.Equal(t, aLongTimeAgo, resp.Node().LastPullDate, node.Namespace)
 }
 
 

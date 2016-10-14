@@ -325,34 +325,26 @@ func (client *DPNRestClient) dpnMemberSave(member *Member, method string) (*Memb
 	return result
 }
 
-func (client *DPNRestClient) NodeGet(identifier string) (*NodeResult) {
-	result := &NodeResult{}
+func (client *DPNRestClient) NodeGet(identifier string) (*DPNResponse) {
+	resp := NewDPNResponse(DPNTypeNode)
+	resp.nodes = make([]*Node, 1)
+
 	relativeUrl := fmt.Sprintf("/%s/node/%s/", client.APIVersion, identifier)
-	objUrl := client.BuildUrl(relativeUrl, nil)
-	request, err := client.NewJsonRequest("GET", objUrl, nil)
-	result.Request = request
-	if err != nil {
-		result.Error = err
-		return result
-	}
-	body, response, err := client.doRequest(request)
-	result.Response = response
-	if err != nil {
-		result.Error = err
-		return result
+	absUrl := client.BuildUrl(relativeUrl, nil)
+
+	client._doRequest(resp, "GET", absUrl, nil)
+	if resp.Error != nil {
+		return resp
 	}
 
-	// HACK! Get rid of this when Golang fixes the JSON null date problem!
-	body = HackNullDates(body)
-
-	// Build and return the data structure
+	// Parse the JSON from the response body
 	node := &Node{}
-	result.Error = json.Unmarshal(body, node)
-	result.Node = node
-	if result.Error == nil {
-		result.Node.LastPullDate, result.Error = client.NodeGetLastPullDate(identifier)
+	resp.Error = json.Unmarshal(resp.data, node)
+	if resp.Error == nil {
+		node.LastPullDate, resp.Error = client.NodeGetLastPullDate(identifier)
+		resp.nodes[0] = node
 	}
-	return result
+	return resp
 }
 
 func (client *DPNRestClient) NodeListGet(queryParams *url.Values) (*NodeListResult) {
@@ -390,7 +382,6 @@ func (client *DPNRestClient) NodeUpdate(node *Node) (*NodeResult) {
 	relativeUrl := fmt.Sprintf("/%s/node/%s/", client.APIVersion, node.Namespace)
 	objUrl := client.BuildUrl(relativeUrl, nil)
 	postData, err := json.Marshal(node)
-	fmt.Println(string(postData))
 	if err != nil {
 		result.Error = err
 		return result
@@ -699,7 +690,12 @@ func (client *DPNRestClient) GetRemoteClient(remoteNodeNamespace string, dpnConf
 			"from local DPN REST service: %v", remoteNodeNamespace, nodeResult.Error)
 		return nil, detailedError
 	}
-	remoteNode := nodeResult.Node
+	remoteNode := nodeResult.Node()
+	if remoteNode == nil {
+		detailedError := fmt.Errorf("Local DPN REST service has no record of node %d",
+			remoteNodeNamespace)
+		return nil, detailedError
+	}
 
 	authToken := dpnConfig.RemoteNodeTokens[remoteNode.Namespace]
 	if authToken == "" {
@@ -752,6 +748,39 @@ func (client *DPNRestClient) doRequest(request *http.Request) (data []byte, resp
 	}
 	return data, response, err
 }
+
+// DoRequest issues an HTTP request, reads the response, and closes the
+// connection to the remote server.
+//
+// Param resp should be a PharosResponse.
+//
+// For a description of the other params, see NewJsonRequest.
+//
+// If an error occurs, it will be recorded in resp.Error.
+func (client *DPNRestClient) _doRequest(resp *DPNResponse, method, absoluteUrl string, requestData io.Reader) {
+	// Build the request
+	request, err := client.NewJsonRequest(method, absoluteUrl, requestData)
+	resp.Request = request
+	resp.Error = err
+	if resp.Error != nil {
+		return
+	}
+
+	// Issue the HTTP request
+	resp.Response, resp.Error = client.httpClient.Do(request)
+	if resp.Error != nil {
+		return
+	}
+
+	// Read the response data and close the response body.
+	// That's the only way to close the remote HTTP connection,
+	// which will otherwise stay open indefinitely, causing
+	// the system to eventually have too many open files.
+	// If there's an error reading the response body, it will
+	// be recorded in resp.Error.
+	resp.readResponse()
+}
+
 
 // This hack works around the JSON decoding bug in Golang's core
 // time and json libraries. The bug is described here:

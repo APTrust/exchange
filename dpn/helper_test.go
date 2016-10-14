@@ -5,19 +5,37 @@ package dpn_test
 import (
 	"fmt"
 	"github.com/APTrust/exchange/dpn"
-	"github.com/crowdmob/goamz/aws"
+	"github.com/APTrust/exchange/util/testutil"
+	"github.com/icrowley/fake"
 	"github.com/satori/go.uuid"
 	"time"
 )
 
 var fluctusUrl string = "http://localhost:3000"
 
-func awsEnvAvailable() (envVarsOk bool) {
-	_, err := aws.EnvAuth()
-	return err == nil
+// MakeDPNNode creates a mock DPN node object for testing.
+func MakeDPNNode() (*dpn.Node) {
+	return &dpn.Node{
+		Name: fake.Word(),
+		Namespace: fake.Word(),
+		APIRoot: fmt.Sprintf("https://", fake.DomainName()),
+		SSHPubKey: fake.Word(),
+		CreatedAt: testutil.RandomDateTime(),
+		UpdatedAt: testutil.RandomDateTime(),
+		Protocols: []string{ "rsync" },
+		Storage: &dpn.Storage{
+			Region: "palookaville",
+			Type: "shoe box",
+		},
+		FixityAlgorithms: []string{ "sha256" },
+		ReplicateFrom: []string{ "aptrust", "chron", "sdr", "tdr" },
+		ReplicateTo: []string{ "aptrust", "chron", "sdr", "tdr" },
+		RestoreFrom: []string{ "aptrust", "chron", "sdr", "tdr" },
+		RestoreTo: []string{ "aptrust", "chron", "sdr", "tdr" },
+	}
 }
 
-// Creates a DPN bag.
+// MakeDPNBag creates a mock DPN bag for testing.
 func MakeDPNBag() (*dpn.DPNBag) {
 	youyoueyedee := uuid.NewV4()
 	tenSecondsAgo := time.Now().Add(-10 * time.Second)
