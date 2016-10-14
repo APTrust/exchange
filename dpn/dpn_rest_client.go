@@ -231,65 +231,62 @@ func (client *DPNRestClient) MemberGet(identifier string) (*DPNResponse) {
 	return resp
 }
 
-func (client *DPNRestClient) MemberListGet(queryParams *url.Values) (*MemberListResult) {
-	result := &MemberListResult{}
+func (client *DPNRestClient) MemberList(params *url.Values) (*DPNResponse) {
+	resp := NewDPNResponse(DPNTypeMember)
+	resp.members = make([]*Member, 1)
+
 	relativeUrl := fmt.Sprintf("/%s/member/", client.APIVersion)
-	objUrl := client.BuildUrl(relativeUrl, queryParams)
-	request, err := client.NewJsonRequest("GET", objUrl, nil)
-	result.Request = request
-	if err != nil {
-		result.Error = err
-		return result
+	absUrl := client.BuildUrl(relativeUrl, params)
+
+	client._doRequest(resp, "GET", absUrl, nil)
+	if resp.Error != nil {
+		return resp
 	}
-	body, response, err := client.doRequest(request)
-	result.Response = response
-	if err != nil {
-		result.Error = err
-		return result
-	}
-	result.Error = json.Unmarshal(body, result)
-	return result
+	resp.UnmarshalJsonList()
+	return resp
 }
 
-func (client *DPNRestClient) MemberCreate(bag *Member) (*MemberResult) {
-	return client.dpnMemberSave(bag, "POST")
+// MemberCreate creates a new member in the DPN repository.
+func (client *DPNRestClient) MemberCreate(member *Member) (*DPNResponse) {
+	return client.dpnMemberSave(member, "POST")
 }
 
-func (client *DPNRestClient) MemberUpdate(bag *Member) (*MemberResult) {
-	return client.dpnMemberSave(bag, "PUT")
+// MemberUpdate creates a new member in the DPN repository.
+func (client *DPNRestClient) MemberUpdate(member *Member) (*DPNResponse) {
+	return client.dpnMemberSave(member, "PUT")
 }
 
-func (client *DPNRestClient) dpnMemberSave(member *Member, method string) (*MemberResult) {
-	result := &MemberResult{}
-	// POST/Create
+// memberSave creates or updates a member in the DPN repository,
+// depending on the httpMethod.
+func (client *DPNRestClient) dpnMemberSave(member *Member, httpMethod string) (*DPNResponse) {
+	resp := NewDPNResponse(DPNTypeMember)
+	resp.members = make([]*Member, 1)
+
 	relativeUrl := fmt.Sprintf("/%s/member/", client.APIVersion)
-	objUrl := client.BuildUrl(relativeUrl, nil)
-	if method == "PUT" {
-		// PUT/Update
-		relativeUrl = fmt.Sprintf("/%s/member/%s/", client.APIVersion, member.MemberId)
-		objUrl = client.BuildUrl(relativeUrl, nil)
+	if httpMethod == "PUT" {
+		relativeUrl = fmt.Sprintf("/%s/member/%s", client.APIVersion, member.MemberId)
 	}
+	absoluteUrl := client.BuildUrl(relativeUrl, nil)
+
+	// Create the JSON data
 	postData, err := json.Marshal(member)
 	if err != nil {
-		result.Error = err
-		return result
+		resp.Error = err
 	}
-	request, err := client.NewJsonRequest(method, objUrl, bytes.NewBuffer(postData))
-	result.Request = request
-	if err != nil {
-		result.Error = err
-		return result
+
+	// Build the request
+	client._doRequest(resp, httpMethod, absoluteUrl, bytes.NewBuffer(postData))
+	if resp.Error != nil {
+		return resp
 	}
-	body, response, err := client.doRequest(request)
-	result.Response = response
-	if err != nil {
-		result.Error = err
-		return result
-	}
+
+	// Parse the JSON from the response body
 	savedMember := &Member{}
-	result.Error = json.Unmarshal(body, savedMember)
-	result.Member = savedMember
-	return result
+	resp.Error = json.Unmarshal(resp.data, savedMember)
+	if resp.Error == nil {
+		resp.members[0] = savedMember
+	}
+	return resp
 }
 
 // NodeGet returns the node with the specified identifier (namespace).

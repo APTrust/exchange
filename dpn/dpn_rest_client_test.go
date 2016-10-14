@@ -203,23 +203,23 @@ func TestNodeGetLastPullDate(t *testing.T) {
 	}
 }
 
-func TestMemberListGet(t *testing.T) {
+func TestMemberList(t *testing.T) {
 	if runRestTests(t) == false {
 		return
 	}
 	client := getClient(t)
-	memberList := client.MemberListGet(nil)
+	memberList := client.MemberList(nil)
 	assert.Nil(t, memberList.Error)
 	assert.EqualValues(t, 5, memberList.Count)
-	assert.EqualValues(t, 5, len(memberList.Results))
+	assert.EqualValues(t, 5, len(memberList.Members()))
 	params := url.Values{}
 	params.Set("name", "Faber College")
-	memberList  = client.MemberListGet(&params)
+	memberList  = client.MemberList(&params)
 	assert.Nil(t, memberList.Error)
 	assert.NotNil(t, memberList.Request)
 	assert.NotNil(t, memberList.Response)
 	assert.EqualValues(t, 1, memberList.Count)
-	assert.Equal(t, 1, len(memberList.Results))
+	assert.Equal(t, 1, len(memberList.Members()))
 }
 
 func TestMemberGet(t *testing.T) {
@@ -251,9 +251,11 @@ func TestMemberCreate(t *testing.T) {
 	require.NotNil(t, result.Member)
 	assert.NotNil(t, result.Request)
 	assert.NotNil(t, result.Response)
-	assert.Equal(t, member.MemberId, result.Member.MemberId)
-	assert.Equal(t, member.Name, result.Member.Name)
-	assert.Equal(t, member.Email, result.Member.Email)
+	newMember := result.Member()
+	require.NotNil(t, newMember)
+	assert.Equal(t, member.MemberId, newMember.MemberId)
+	assert.Equal(t, member.Name, newMember.Name)
+	assert.Equal(t, member.Email, newMember.Email)
 }
 
 func TestMemberUpdate(t *testing.T) {
@@ -261,16 +263,17 @@ func TestMemberUpdate(t *testing.T) {
 		return
 	}
 	client := getClient(t)
-	memberResult := client.MemberGet(memberIdentifier)
-	require.NotNil(t, memberResult)
-	require.Nil(t, memberResult.Error)
+	resp := client.MemberGet(memberIdentifier)
+	require.NotNil(t, resp)
+	require.Nil(t, resp.Error)
+	member := resp.Member()
+	require.NotNil(t, member)
 	newName := fmt.Sprintf("GO-UPDATED-%s", uuid.NewV4().String())
-	member := memberResult.Member()
 	member.Name = newName
-	newMemberResult := client.MemberUpdate(member)
-	require.NotNil(t, newMemberResult)
-	require.Nil(t, newMemberResult.Error)
-	assert.Equal(t, newName, newMemberResult.Member.Name)
+	newMemberResponse := client.MemberUpdate(member)
+	require.NotNil(t, newMemberResponse)
+	require.Nil(t, newMemberResponse.Error)
+	assert.Equal(t, newName, newMemberResponse.Member().Name)
 }
 
 func TestDPNBagGet(t *testing.T) {
