@@ -158,9 +158,9 @@ func (dpnSync *DPNSync) SyncBags(remoteNode *Node) ([]*DPNBag, error) {
 		if resp.Error != nil {
 			return bagsProcessed, resp.Error
 		}
-		dpnSync.Context.MessageLog.Debug("Got %d bags from %s", len(resp.Results),
+		dpnSync.Context.MessageLog.Debug("Got %d bags from %s", resp.Count,
 			remoteNode.Namespace)
-		processed, err := dpnSync.syncBags(resp.Results)
+		processed, err := dpnSync.syncBags(resp.Bags())
 		if err != nil {
 			return bagsProcessed, err
 		}
@@ -182,7 +182,7 @@ func (dpnSync *DPNSync) syncBags(bags []*DPNBag) ([]*DPNBag, error) {
 	for _, bag := range(bags) {
 		dpnSync.Context.MessageLog.Debug("Processing bag %s from %s", bag.UUID, bag.AdminNode)
 		resp := dpnSync.LocalClient.DPNBagGet(bag.UUID)
-		existingBag := resp.Bag
+		existingBag := resp.Bag()
 		err := resp.Error
 		if existingBag == nil {
 			dpnSync.Context.MessageLog.Debug("Bag %s does not exist", bag.UUID)
@@ -199,13 +199,13 @@ func (dpnSync *DPNSync) syncBags(bags []*DPNBag) ([]*DPNBag, error) {
 			} else {
 				dpnSync.Context.MessageLog.Debug("Bag %s exists... updating", bag.UUID)
 				resp = dpnSync.LocalClient.DPNBagUpdate(bag)
-				processedBag = resp.Bag
+				processedBag = resp.Bag()
 				err = resp.Error
 			}
 		} else {  // New bag
 			dpnSync.Context.MessageLog.Debug("Bag %s not in local registry... creating", bag.UUID)
 			resp = dpnSync.LocalClient.DPNBagCreate(bag)
-			processedBag = resp.Bag
+			processedBag = resp.Bag()
 			err = resp.Error
 		}
 		if err != nil {
@@ -219,7 +219,7 @@ func (dpnSync *DPNSync) syncBags(bags []*DPNBag) ([]*DPNBag, error) {
 	return bagsProcessed, nil
 }
 
-func (dpnSync *DPNSync) getBags(remoteClient *DPNRestClient, remoteNode *Node, pageNumber int) (*BagListResult) {
+func (dpnSync *DPNSync) getBags(remoteClient *DPNRestClient, remoteNode *Node, pageNumber int) (*DPNResponse) {
 	// We want to get all bags updated since the last time we pulled
 	// from this node, and only those bags for which the node we're
 	// querying is the admin node.
@@ -227,7 +227,7 @@ func (dpnSync *DPNSync) getBags(remoteClient *DPNRestClient, remoteNode *Node, p
 	params.Set("after", remoteNode.LastPullDate.Format(time.RFC3339Nano))
 	params.Set("admin_node", remoteNode.Namespace)
 	params.Set("page", fmt.Sprintf("%d", pageNumber))
-	return remoteClient.DPNBagListGet(&params)
+	return remoteClient.DPNBagList(&params)
 }
 
 // SyncReplicationRequests copies ReplicationTransfer records from
@@ -251,8 +251,8 @@ func (dpnSync *DPNSync) SyncReplicationRequests(remoteNode *Node) ([]*Replicatio
 			return xfersProcessed, resp.Error
 		}
 		dpnSync.Context.MessageLog.Debug("Got %d replication requests from %s",
-			len(resp.Results), remoteNode.Namespace)
-		updated, err := dpnSync.syncReplicationRequests(resp.Results)
+			resp.Count, remoteNode.Namespace)
+		updated, err := dpnSync.syncReplicationRequests(resp.ReplicationTransfers())
 		if err != nil {
 			return xfersProcessed, err
 		}
@@ -274,7 +274,7 @@ func (dpnSync *DPNSync) syncReplicationRequests(xfers []*ReplicationTransfer) ([
 	for _, xfer := range(xfers) {
 		dpnSync.Context.MessageLog.Debug("Processing transfer %s in local registry", xfer.ReplicationId)
 		resp := dpnSync.LocalClient.ReplicationTransferGet(xfer.ReplicationId)
-		existingXfer := resp.Xfer
+		existingXfer := resp.ReplicationTransfer()
 		err := resp.Error
 		var updatedXfer *ReplicationTransfer
 		if existingXfer != nil {
@@ -287,14 +287,14 @@ func (dpnSync *DPNSync) syncReplicationRequests(xfers []*ReplicationTransfer) ([
 				dpnSync.Context.MessageLog.Debug("Replication request %s exists... updating",
 					xfer.ReplicationId)
 				resp = dpnSync.LocalClient.ReplicationTransferUpdate(xfer)
-				updatedXfer = resp.Xfer
+				updatedXfer = resp.ReplicationTransfer()
 				err = resp.Error
 			}
 		} else {
 			dpnSync.Context.MessageLog.Debug("Replication request %s not in local registry... creating",
 				xfer.ReplicationId)
 			resp = dpnSync.LocalClient.ReplicationTransferCreate(xfer)
-			updatedXfer = resp.Xfer
+			updatedXfer = resp.ReplicationTransfer()
 			err = resp.Error
 		}
 		if err != nil {
@@ -306,14 +306,14 @@ func (dpnSync *DPNSync) syncReplicationRequests(xfers []*ReplicationTransfer) ([
 	return xfersProcessed, nil
 }
 
-func (dpnSync *DPNSync) getReplicationRequests(remoteClient *DPNRestClient, remoteNode *Node, pageNumber int) (*ReplicationListResult) {
+func (dpnSync *DPNSync) getReplicationRequests(remoteClient *DPNRestClient, remoteNode *Node, pageNumber int) (*DPNResponse) {
 	// Get requests updated since the last time we pulled
 	// from this node, where this node is the from_node.
 	params := url.Values{}
 	params.Set("after", remoteNode.LastPullDate.Format(time.RFC3339Nano))
 	params.Set("from_node", remoteNode.Namespace)
 	params.Set("page", fmt.Sprintf("%d", pageNumber))
-	return remoteClient.ReplicationListGet(&params)
+	return remoteClient.ReplicationList(&params)
 }
 
 // SyncRestoreRequests copies RestoreTransfer records from remote
@@ -335,8 +335,8 @@ func (dpnSync *DPNSync) SyncRestoreRequests(remoteNode *Node) ([]*RestoreTransfe
 			return xfersProcessed, resp.Error
 		}
 		dpnSync.Context.MessageLog.Debug("Got %d restore requests from %s",
-			len(resp.Results), remoteNode.Namespace)
-		updated, err := dpnSync.syncRestoreRequests(resp.Results)
+			resp.Count, remoteNode.Namespace)
+		updated, err := dpnSync.syncRestoreRequests(resp.RestoreTransfers())
 		if err != nil {
 			return xfersProcessed, err
 		}
@@ -358,7 +358,7 @@ func (dpnSync *DPNSync) syncRestoreRequests(xfers []*RestoreTransfer) ([]*Restor
 	for _, xfer := range(xfers) {
 		dpnSync.Context.MessageLog.Debug("Processing restore transfer %s", xfer.RestoreId)
 		resp := dpnSync.LocalClient.RestoreTransferGet(xfer.RestoreId)
-		existingXfer := resp.Xfer
+		existingXfer := resp.RestoreTransfer()
 		err := resp.Error
 		var updatedXfer *RestoreTransfer
 		if existingXfer != nil {
@@ -371,14 +371,14 @@ func (dpnSync *DPNSync) syncRestoreRequests(xfers []*RestoreTransfer) ([]*Restor
 				dpnSync.Context.MessageLog.Debug("Restore request %s exists... updating",
 					xfer.RestoreId)
 				resp = dpnSync.LocalClient.RestoreTransferUpdate(xfer)
-				updatedXfer = resp.Xfer
+				updatedXfer = resp.RestoreTransfer()
 				err = resp.Error
 			}
 		} else {
 			dpnSync.Context.MessageLog.Debug("Restore request %s not in local registry... creating",
 				xfer.RestoreId)
 			resp = dpnSync.LocalClient.RestoreTransferCreate(xfer)
-			updatedXfer = resp.Xfer
+			updatedXfer = resp.RestoreTransfer()
 			err = resp.Error
 		}
 		if err != nil {
@@ -390,7 +390,7 @@ func (dpnSync *DPNSync) syncRestoreRequests(xfers []*RestoreTransfer) ([]*Restor
 	return xfersProcessed, nil
 }
 
-func (dpnSync *DPNSync) getRestoreRequests(remoteClient *DPNRestClient, remoteNode *Node, pageNumber int) (*RestoreListResult) {
+func (dpnSync *DPNSync) getRestoreRequests(remoteClient *DPNRestClient, remoteNode *Node, pageNumber int) (*DPNResponse) {
 	// Get requests updated since the last time we pulled
 	// from this node, where this node is the to_node.
 	// E.g. We ask TDR for restore requests going TO TDR.
@@ -398,5 +398,5 @@ func (dpnSync *DPNSync) getRestoreRequests(remoteClient *DPNRestClient, remoteNo
 	params.Set("after", remoteNode.LastPullDate.Format(time.RFC3339Nano))
 	params.Set("to_node", remoteNode.Namespace)
 	params.Set("page", fmt.Sprintf("%d", pageNumber))
-	return remoteClient.RestoreListGet(&params)
+	return remoteClient.RestoreList(&params)
 }

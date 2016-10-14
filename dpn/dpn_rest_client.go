@@ -377,267 +377,239 @@ func (client *DPNRestClient) NodeGetLastPullDate(identifier string) (time.Time, 
 	params.Set("ordering", "updated_at")
 	params.Set("page", "1")
 	params.Set("page_size", "1")
-	bags := client.DPNBagListGet(&params)
-	if bags.Error != nil || bags.Count == 0 {
-		return time.Time{}, bags.Error
+	resp := client.DPNBagList(&params)
+	if resp.Error != nil || resp.Count == 0 {
+		return time.Time{}, resp.Error
 	}
-	return bags.Results[0].UpdatedAt, nil
+	return resp.Bags()[0].UpdatedAt, nil
 }
 
 
-func (client *DPNRestClient) DPNBagGet(identifier string) (*BagResult) {
-	result := &BagResult{}
+func (client *DPNRestClient) DPNBagGet(identifier string) (*DPNResponse) {
+	resp := NewDPNResponse(DPNTypeBag)
+	resp.bags = make([]*DPNBag, 1)
+
 	relativeUrl := fmt.Sprintf("/%s/bag/%s/", client.APIVersion, identifier)
-	objUrl := client.BuildUrl(relativeUrl, nil)
-	request, err := client.NewJsonRequest("GET", objUrl, nil)
-	result.Request = request
-	if err != nil {
-		result.Error = err
-		return result
+	absUrl := client.BuildUrl(relativeUrl, nil)
+
+	client._doRequest(resp, "GET", absUrl, nil)
+	if resp.Error != nil {
+		return resp
 	}
-	body, response, err := client.doRequest(request)
-	result.Response = response
-	if err != nil {
-		result.Error = err
-		return result
-	}
+
+	// Parse the JSON from the response body
 	bag := &DPNBag{}
-	result.Error = json.Unmarshal(body, bag)
-	result.Bag = bag
-	return result
+	resp.Error = json.Unmarshal(resp.data, bag)
+	if resp.Error == nil {
+		resp.bags[0] = bag
+	}
+	return resp
 }
 
-func (client *DPNRestClient) DPNBagListGet(queryParams *url.Values) (*BagListResult) {
-	result := &BagListResult{}
+func (client *DPNRestClient) DPNBagList(params *url.Values) (*DPNResponse) {
+	resp := NewDPNResponse(DPNTypeBag)
+	resp.bags = make([]*DPNBag, 1)
+
 	relativeUrl := fmt.Sprintf("/%s/bag/", client.APIVersion)
-	objUrl := client.BuildUrl(relativeUrl, queryParams)
-	request, err := client.NewJsonRequest("GET", objUrl, nil)
-	result.Request = request
-	if err != nil {
-		result.Error = err
-		return result
+	absUrl := client.BuildUrl(relativeUrl, params)
+
+	client._doRequest(resp, "GET", absUrl, nil)
+	if resp.Error != nil {
+		return resp
 	}
-	body, response, err := client.doRequest(request)
-	result.Response = response
-	if err != nil {
-		result.Error = err
-		return result
-	}
-	result.Error = json.Unmarshal(body, result)
-	return result
+	resp.UnmarshalJsonList()
+	return resp
 }
 
 
-func (client *DPNRestClient) DPNBagCreate(bag *DPNBag) (*BagResult) {
+func (client *DPNRestClient) DPNBagCreate(bag *DPNBag) (*DPNResponse) {
 	return client.dpnBagSave(bag, "POST")
 }
 
-func (client *DPNRestClient) DPNBagUpdate(bag *DPNBag) (*BagResult) {
+func (client *DPNRestClient) DPNBagUpdate(bag *DPNBag) (*DPNResponse) {
 	return client.dpnBagSave(bag, "PUT")
 }
 
-func (client *DPNRestClient) dpnBagSave(bag *DPNBag, method string) (*BagResult) {
-	result := &BagResult{}
-	// POST/Create
+func (client *DPNRestClient) dpnBagSave(bag *DPNBag, httpMethod string) (*DPNResponse) {
+	resp := NewDPNResponse(DPNTypeBag)
+	resp.bags = make([]*DPNBag, 1)
+
 	relativeUrl := fmt.Sprintf("/%s/bag/", client.APIVersion)
-	objUrl := client.BuildUrl(relativeUrl, nil)
-	if method == "PUT" {
-		// PUT/Update
-		relativeUrl = fmt.Sprintf("/%s/bag/%s/", client.APIVersion, bag.UUID)
-		objUrl = client.BuildUrl(relativeUrl, nil)
+	if httpMethod == "PUT" {
+		relativeUrl = fmt.Sprintf("/%s/bag/%s", client.APIVersion, bag.UUID)
 	}
+	absoluteUrl := client.BuildUrl(relativeUrl, nil)
+
+	// Create the JSON data
 	postData, err := json.Marshal(bag)
 	if err != nil {
-		result.Error = err
-		return result
+		resp.Error = err
 	}
-	request, err := client.NewJsonRequest(method, objUrl, bytes.NewBuffer(postData))
-	result.Request = request
-	if err != nil {
-		result.Error = err
-		return result
+
+	// Build the request
+	client._doRequest(resp, httpMethod, absoluteUrl, bytes.NewBuffer(postData))
+	if resp.Error != nil {
+		return resp
 	}
-	body, response, err := client.doRequest(request)
-	result.Response = response
-	if err != nil {
-		result.Error = err
-		return result
-	}
+
+	// Parse the JSON from the response body
 	savedBag := &DPNBag{}
-	result.Error = json.Unmarshal(body, savedBag)
-	result.Bag = savedBag
-	return result
+	resp.Error = json.Unmarshal(resp.data, savedBag)
+	if resp.Error == nil {
+		resp.bags[0] = savedBag
+	}
+	return resp
 }
 
-func (client *DPNRestClient) ReplicationTransferGet(identifier string) (*ReplicationResult) {
-	// /api-v1/replicate/aptrust-999999/
-	result := &ReplicationResult{}
-	relativeUrl := fmt.Sprintf("/%s/replicate/%s/", client.APIVersion, identifier)
-	objUrl := client.BuildUrl(relativeUrl, nil)
-	request, err := client.NewJsonRequest("GET", objUrl, nil)
-	result.Request = request
-	if err != nil {
-		result.Error = err
-		return result
+func (client *DPNRestClient) ReplicationTransferGet(identifier string) (*DPNResponse) {
+	resp := NewDPNResponse(DPNTypeReplication)
+	resp.replications = make([]*ReplicationTransfer, 1)
+
+	relativeUrl := fmt.Sprintf("/%s/replication/%s/", client.APIVersion, identifier)
+	absUrl := client.BuildUrl(relativeUrl, nil)
+
+	client._doRequest(resp, "GET", absUrl, nil)
+	if resp.Error != nil {
+		return resp
 	}
-	body, response, err := client.doRequest(request)
-	result.Response = response
-	if err != nil {
-		result.Error = err
-		return result
+
+	// Parse the JSON from the response body
+	replication := &ReplicationTransfer{}
+	resp.Error = json.Unmarshal(resp.data, replication)
+	if resp.Error == nil {
+		resp.replications[0] = replication
 	}
-	xfer := &ReplicationTransfer{}
-	result.Error = json.Unmarshal(body, xfer)
-	result.Xfer = xfer
-	return result
+	return resp
 }
 
-func (client *DPNRestClient) ReplicationListGet(queryParams *url.Values) (*ReplicationListResult) {
-	result := &ReplicationListResult{}
+func (client *DPNRestClient) ReplicationList(params *url.Values) (*DPNResponse) {
+	resp := NewDPNResponse(DPNTypeReplication)
+	resp.replications = make([]*ReplicationTransfer, 1)
+
 	relativeUrl := fmt.Sprintf("/%s/replicate/", client.APIVersion)
-	objUrl := client.BuildUrl(relativeUrl, queryParams)
-	request, err := client.NewJsonRequest("GET", objUrl, nil)
-	result.Request = request
-	if err != nil {
-		result.Error = err
-		return result
+	absUrl := client.BuildUrl(relativeUrl, params)
+
+	client._doRequest(resp, "GET", absUrl, nil)
+	if resp.Error != nil {
+		return resp
 	}
-	body, response, err := client.doRequest(request)
-	result.Response = response
-	if err != nil {
-		result.Error = err
-		return result
-	}
-	result.Error = json.Unmarshal(body, result)
-	return result
+	resp.UnmarshalJsonList()
+	return resp
 }
 
 
-func (client *DPNRestClient) ReplicationTransferCreate(xfer *ReplicationTransfer) (*ReplicationResult) {
+func (client *DPNRestClient) ReplicationTransferCreate(xfer *ReplicationTransfer) (*DPNResponse) {
 	return client.replicationTransferSave(xfer, "POST")
 }
 
-func (client *DPNRestClient) ReplicationTransferUpdate(xfer *ReplicationTransfer) (*ReplicationResult) {
+func (client *DPNRestClient) ReplicationTransferUpdate(xfer *ReplicationTransfer) (*DPNResponse) {
 	return client.replicationTransferSave(xfer, "PUT")
 }
 
-func (client *DPNRestClient) replicationTransferSave(xfer *ReplicationTransfer, method string) (*ReplicationResult) {
-	result := &ReplicationResult{}
-	// POST/Create
+func (client *DPNRestClient) replicationTransferSave(xfer *ReplicationTransfer, httpMethod string) (*DPNResponse) {
+	resp := NewDPNResponse(DPNTypeReplication)
+	resp.replications = make([]*ReplicationTransfer, 1)
+
 	relativeUrl := fmt.Sprintf("/%s/replicate/", client.APIVersion)
-	objUrl := client.BuildUrl(relativeUrl, nil)
-	if method == "PUT" {
-		// PUT/Update
-		relativeUrl = fmt.Sprintf("/%s/replicate/%s/", client.APIVersion, xfer.ReplicationId)
-		objUrl = client.BuildUrl(relativeUrl, nil)
+	if httpMethod == "PUT" {
+		relativeUrl = fmt.Sprintf("/%s/replicate/%s", client.APIVersion, xfer.ReplicationId)
 	}
-	xfer.UpdatedAt = time.Now().UTC().Truncate(time.Second)
+	absoluteUrl := client.BuildUrl(relativeUrl, nil)
+
+	// Create the JSON data
 	postData, err := json.Marshal(xfer)
 	if err != nil {
-		result.Error = err
-		return result
+		resp.Error = err
 	}
 
-	request, err := client.NewJsonRequest(method, objUrl, bytes.NewBuffer(postData))
-	result.Request = request
-	if err != nil {
-		result.Error = err
-		return result
+	// Build the request
+	client._doRequest(resp, httpMethod, absoluteUrl, bytes.NewBuffer(postData))
+	if resp.Error != nil {
+		return resp
 	}
-	body, response, err := client.doRequest(request)
-	result.Response = response
-	if err != nil {
-		result.Error = err
-		return result
+
+	// Parse the JSON from the response body
+	savedReplication := &ReplicationTransfer{}
+	resp.Error = json.Unmarshal(resp.data, savedReplication)
+	if resp.Error == nil {
+		resp.replications[0] = savedReplication
 	}
-	xfer = &ReplicationTransfer{}
-	result.Error = json.Unmarshal(body, xfer)
-	result.Xfer = xfer
-	return result
+	return resp
 }
 
-func (client *DPNRestClient) RestoreTransferGet(identifier string) (*RestoreResult) {
-	result := &RestoreResult{}
-	// /api-v1/restore/aptrust-64/
+func (client *DPNRestClient) RestoreTransferGet(identifier string) (*DPNResponse) {
+	resp := NewDPNResponse(DPNTypeRestore)
+	resp.restores = make([]*RestoreTransfer, 1)
+
 	relativeUrl := fmt.Sprintf("/%s/restore/%s/", client.APIVersion, identifier)
-	objUrl := client.BuildUrl(relativeUrl, nil)
-	request, err := client.NewJsonRequest("GET", objUrl, nil)
-	result.Request = request
-	if err != nil {
-		result.Error = err
-		return result
+	absUrl := client.BuildUrl(relativeUrl, nil)
+
+	client._doRequest(resp, "GET", absUrl, nil)
+	if resp.Error != nil {
+		return resp
 	}
-	body, response, err := client.doRequest(request)
-	result.Response = response
-	if err != nil {
-		result.Error = err
-		return result
+
+	// Parse the JSON from the response body
+	restore := &RestoreTransfer{}
+	resp.Error = json.Unmarshal(resp.data, restore)
+	if resp.Error == nil {
+		resp.restores[0] = restore
 	}
-	xfer := &RestoreTransfer{}
-	result.Error = json.Unmarshal(body, xfer)
-	result.Xfer = xfer
-	return result
+	return resp
 }
 
-func (client *DPNRestClient) RestoreListGet(queryParams *url.Values) (*RestoreListResult) {
-	result := &RestoreListResult{}
+func (client *DPNRestClient) RestoreList(params *url.Values) (*DPNResponse) {
+	resp := NewDPNResponse(DPNTypeRestore)
+	resp.restores = make([]*RestoreTransfer, 1)
+
 	relativeUrl := fmt.Sprintf("/%s/restore/", client.APIVersion)
-	objUrl := client.BuildUrl(relativeUrl, queryParams)
-	request, err := client.NewJsonRequest("GET", objUrl, nil)
-	result.Request = request
-	if err != nil {
-		result.Error = err
-		return result
+	absUrl := client.BuildUrl(relativeUrl, params)
+
+	client._doRequest(resp, "GET", absUrl, nil)
+	if resp.Error != nil {
+		return resp
 	}
-	body, response, err := client.doRequest(request)
-	result.Response = response
-	if err != nil {
-		result.Error = err
-		return result
-	}
-	result.Error = json.Unmarshal(body, result)
-	return result
+	resp.UnmarshalJsonList()
+	return resp
 }
 
-func (client *DPNRestClient) RestoreTransferCreate(xfer *RestoreTransfer) (*RestoreResult) {
+func (client *DPNRestClient) RestoreTransferCreate(xfer *RestoreTransfer) (*DPNResponse) {
 	return client.restoreTransferSave(xfer, "POST")
 }
 
-func (client *DPNRestClient) RestoreTransferUpdate(xfer *RestoreTransfer) (*RestoreResult) {
+func (client *DPNRestClient) RestoreTransferUpdate(xfer *RestoreTransfer) (*DPNResponse) {
 	return client.restoreTransferSave(xfer, "PUT")
 }
 
-func (client *DPNRestClient) restoreTransferSave(xfer *RestoreTransfer, method string) (*RestoreResult) {
-	result := &RestoreResult{}
-	// POST/Create
+func (client *DPNRestClient) restoreTransferSave(xfer *RestoreTransfer, httpMethod string) (*DPNResponse) {
+	resp := NewDPNResponse(DPNTypeRestore)
+	resp.restores = make([]*RestoreTransfer, 1)
+
 	relativeUrl := fmt.Sprintf("/%s/restore/", client.APIVersion)
-	objUrl := client.BuildUrl(relativeUrl, nil)
-	if method == "PUT" {
-		// PUT/Update
-		relativeUrl = fmt.Sprintf("/%s/restore/%s/", client.APIVersion, xfer.RestoreId)
-		objUrl = client.BuildUrl(relativeUrl, nil)
+	if httpMethod == "PUT" {
+		relativeUrl = fmt.Sprintf("/%s/restore/%s", client.APIVersion, xfer.RestoreId)
 	}
+	absoluteUrl := client.BuildUrl(relativeUrl, nil)
+
+	// Create the JSON data
 	postData, err := json.Marshal(xfer)
 	if err != nil {
-		result.Error = err
-		return result
+		resp.Error = err
 	}
-	request, err := client.NewJsonRequest(method, objUrl, bytes.NewBuffer(postData))
-	result.Request = request
-	if err != nil {
-		result.Error = err
-		return result
+
+	// Build the request
+	client._doRequest(resp, httpMethod, absoluteUrl, bytes.NewBuffer(postData))
+	if resp.Error != nil {
+		return resp
 	}
-	body, response, err := client.doRequest(request)
-	result.Response = response
-	if err != nil {
-		result.Error = err
-		return result
+
+	// Parse the JSON from the response body
+	savedRestore := &RestoreTransfer{}
+	resp.Error = json.Unmarshal(resp.data, savedRestore)
+	if resp.Error == nil {
+		resp.restores[0] = savedRestore
 	}
-	xfer = &RestoreTransfer{}
-	result.Error = json.Unmarshal(body, xfer)
-	result.Xfer = xfer
-	return result
+	return resp
 }
 
 

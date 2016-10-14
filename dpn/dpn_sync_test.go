@@ -142,8 +142,8 @@ func TestSyncBags(t *testing.T) {
 			require.NotNil(t, remoteBag, node.Namespace)
 			resp := dpnSync.LocalClient.DPNBagGet(remoteBag.UUID)
 			require.Nil(t, resp.Error)
-			require.NotNil(t, resp.Bag)
-			assert.Equal(t, remoteBag.UpdatedAt, resp.Bag.UpdatedAt)
+			require.NotNil(t, resp.Bag())
+			assert.Equal(t, remoteBag.UpdatedAt, resp.Bag().UpdatedAt)
 		}
 	}
 }
@@ -170,8 +170,8 @@ func TestSyncReplicationRequests(t *testing.T) {
 			require.NotNil(t, xfer)
 			resp := dpnSync.LocalClient.ReplicationTransferGet(xfer.ReplicationId)
 			require.Nil(t, resp.Error)
-			require.NotNil(t, resp.Xfer)
-			assert.Equal(t, xfer.UpdatedAt, resp.Xfer.UpdatedAt, xfer.ReplicationId)
+			require.NotNil(t, resp.ReplicationTransfer())
+			assert.Equal(t, xfer.UpdatedAt, resp.ReplicationTransfer().UpdatedAt, xfer.ReplicationId)
 		}
 	}
 }
@@ -196,8 +196,8 @@ func TestSyncRestoreRequests(t *testing.T) {
 			require.NotNil(t, xfer)
 			resp := dpnSync.LocalClient.RestoreTransferGet(xfer.RestoreId)
 			require.Nil(t, resp.Error)
-			require.NotNil(t, resp.Xfer)
-			assert.Equal(t, xfer.UpdatedAt, resp.Xfer.UpdatedAt, node.Namespace)
+			require.NotNil(t, resp.RestoreTransfer())
+			assert.Equal(t, xfer.UpdatedAt, resp.RestoreTransfer().UpdatedAt, node.Namespace)
 		}
 	}
 }

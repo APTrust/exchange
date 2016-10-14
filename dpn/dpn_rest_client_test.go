@@ -119,18 +119,18 @@ func TestNodeGet(t *testing.T) {
 		return
 	}
 	client := getClient(t)
-	result := client.NodeGet("aptrust")
-	require.Nil(t, result.Error)
-	node := result.Node()
+	resp := client.NodeGet("aptrust")
+	require.Nil(t, resp.Error)
+	node := resp.Node()
 	require.NotNil(t, node)
-	assert.NotNil(t, result.Request)
-	assert.NotNil(t, result.Response)
+	assert.NotNil(t, resp.Request)
+	assert.NotNil(t, resp.Response)
 	assert.NotEmpty(t, node.Name)
 	assert.NotEmpty(t, node.Namespace)
 	assert.True(t, strings.HasPrefix(node.APIRoot, "https://"))
 }
 
-func TestNodeListGet(t *testing.T) {
+func TestNodeList(t *testing.T) {
 	if runRestTests(t) == false {
 		return
 	}
@@ -160,10 +160,10 @@ func TestNodeListGet(t *testing.T) {
 // 		return
 // 	}
 // 	client := getClient(t)
-// 	result := client.NodeGet("sdr")
-// 	require.Nil(t, result.Error)
+// 	resp := client.NodeGet("sdr")
+// 	require.Nil(t, resp.Error)
 
-// 	origName := result.Node.Name
+// 	origName := resp.Node.Name
 // 	if origName == "" {
 // 		origName = "No Name"
 // 	}
@@ -174,8 +174,8 @@ func TestNodeListGet(t *testing.T) {
 // 		i--;
 // 		newName[i] = c;
 //     }
-// 	result.Node.Name = string(newName)
-// 	savedNodeResult := client.NodeUpdate(result.Node)
+// 	resp.Node.Name = string(newName)
+// 	savedNodeResult := client.NodeUpdate(resp.Node)
 // 	require.Nil(t, savedNodeResult.Error)
 // 	require.NotNil(t, savedNodeResult.Node)
 // 	assert.NotNil(t, savedNodeResult.Request)
@@ -227,12 +227,12 @@ func TestMemberGet(t *testing.T) {
 		return
 	}
 	client := getClient(t)
-	result := client.MemberGet(memberIdentifier)
-	require.Nil(t, result.Error)
-	require.NotNil(t, result.Member)
-	assert.NotNil(t, result.Request)
-	assert.NotNil(t, result.Response)
-	assert.Equal(t, memberIdentifier, result.Member().MemberId)
+	resp := client.MemberGet(memberIdentifier)
+	require.Nil(t, resp.Error)
+	require.NotNil(t, resp.Member)
+	assert.NotNil(t, resp.Request)
+	assert.NotNil(t, resp.Response)
+	assert.Equal(t, memberIdentifier, resp.Member().MemberId)
 }
 
 func TestMemberCreate(t *testing.T) {
@@ -246,12 +246,12 @@ func TestMemberCreate(t *testing.T) {
 		Name: fmt.Sprintf("GO-TEST-MEMBER-%s", id),
 		Email: fmt.Sprintf("%s@example.com", id),
 	}
-	result := client.MemberCreate(&member)
-	require.Nil(t, result.Error)
-	require.NotNil(t, result.Member)
-	assert.NotNil(t, result.Request)
-	assert.NotNil(t, result.Response)
-	newMember := result.Member()
+	resp := client.MemberCreate(&member)
+	require.Nil(t, resp.Error)
+	require.NotNil(t, resp.Member)
+	assert.NotNil(t, resp.Request)
+	assert.NotNil(t, resp.Response)
+	newMember := resp.Member()
 	require.NotNil(t, newMember)
 	assert.Equal(t, member.MemberId, newMember.MemberId)
 	assert.Equal(t, member.Name, newMember.Name)
@@ -281,43 +281,45 @@ func TestDPNBagGet(t *testing.T) {
 		return
 	}
 	client := getClient(t)
-	bagResult := client.DPNBagGet(aptrustBagIdentifier)
-	require.NotNil(t, bagResult)
-	require.Nil(t, bagResult.Error)
-	assert.Equal(t, aptrustBagIdentifier, bagResult.Bag.UUID)
-	assert.Equal(t, "APTrust Bag 1", bagResult.Bag.LocalId)
-	assert.EqualValues(t, 71680, bagResult.Bag.Size)
-	assert.Equal(t, aptrustBagIdentifier, bagResult.Bag.FirstVersionUUID)
-	assert.Equal(t, "D", bagResult.Bag.BagType)
-	assert.EqualValues(t, 1, bagResult.Bag.Version)
-	assert.Equal(t, "aptrust", bagResult.Bag.IngestNode)
-	assert.Equal(t, "aptrust", bagResult.Bag.AdminNode)
-	assert.Equal(t, "2015-09-15T17:56:03Z", bagResult.Bag.CreatedAt.Format(time.RFC3339))
-	assert.Equal(t, "2015-09-15T17:56:03Z", bagResult.Bag.UpdatedAt.Format(time.RFC3339))
-	assert.Equal(t, 2, len(bagResult.Bag.ReplicatingNodes))
-	require.True(t, len(bagResult.Bag.ReplicatingNodes) > 1)
-	assert.Equal(t, "chron", bagResult.Bag.ReplicatingNodes[0])
-	assert.Equal(t, "hathi", bagResult.Bag.ReplicatingNodes[1])
+	resp := client.DPNBagGet(aptrustBagIdentifier)
+	require.NotNil(t, resp)
+	require.Nil(t, resp.Error)
+	bag := resp.Bag()
+	require.NotNil(t, bag)
+	assert.Equal(t, aptrustBagIdentifier, bag.UUID)
+	assert.Equal(t, "APTrust Bag 1", bag.LocalId)
+	assert.EqualValues(t, 71680, bag.Size)
+	assert.Equal(t, aptrustBagIdentifier, bag.FirstVersionUUID)
+	assert.Equal(t, "D", bag.BagType)
+	assert.EqualValues(t, 1, bag.Version)
+	assert.Equal(t, "aptrust", bag.IngestNode)
+	assert.Equal(t, "aptrust", bag.AdminNode)
+	assert.Equal(t, "2015-09-15T17:56:03Z", bag.CreatedAt.Format(time.RFC3339))
+	assert.Equal(t, "2015-09-15T17:56:03Z", bag.UpdatedAt.Format(time.RFC3339))
+	assert.Equal(t, 2, len(bag.ReplicatingNodes))
+	require.True(t, len(bag.ReplicatingNodes) > 1)
+	assert.Equal(t, "chron", bag.ReplicatingNodes[0])
+	assert.Equal(t, "hathi", bag.ReplicatingNodes[1])
 }
 
-func TestDPNBagListGet(t *testing.T) {
+func TestDPNBagList(t *testing.T) {
 	if runRestTests(t) == false {
 		return
 	}
 	client := getClient(t)
-	bagList := client.DPNBagListGet(nil)
-	require.NotNil(t, bagList)
-	require.Nil(t, bagList.Error)
+	resp := client.DPNBagList(nil)
+	require.NotNil(t, resp)
+	require.Nil(t, resp.Error)
 
-	unfilteredCount := bagList.Count
+	unfilteredCount := resp.Count
 	if unfilteredCount == 0 {
-		t.Errorf("DPNBagListGet returned zero results. Are there any bags in the registry?")
+		t.Errorf("DPNBagList returned zero results. Are there any bags in the registry?")
 		return
 	}
 	aptrustCount := 0
-	for i := range bagList.Results {
-		bag := bagList.Results[i]
-		if bag.IngestNode == "aptrust" {
+	bags := resp.Bags()
+	for i := range bags {
+		if bags[i].IngestNode == "aptrust" {
 			aptrustCount++
 		}
 	}
@@ -327,17 +329,17 @@ func TestDPNBagListGet(t *testing.T) {
 	aLongTimeAgo := time.Date(1999, time.December, 31, 23, 0, 0, 0, time.UTC)
 	params := url.Values{}
 	params.Set("after", aLongTimeAgo.Format(time.RFC3339Nano))
-	bagList = client.DPNBagListGet(&params)
-	require.NotNil(t, bagList)
-	require.Nil(t, bagList.Error)
-	assert.Equal(t, unfilteredCount, bagList.Count)
+	resp = client.DPNBagList(&params)
+	require.NotNil(t, resp)
+	require.Nil(t, resp.Error)
+	assert.Equal(t, unfilteredCount, resp.Count)
 
 	// Get all bags updated after 1 hour from now
 	params.Set("after", time.Now().Add(1 * time.Hour).Format(time.RFC3339Nano))
-	bagList = client.DPNBagListGet(&params)
-	require.NotNil(t, bagList)
-	require.Nil(t, bagList.Error)
-	assert.EqualValues(t, 0, bagList.Count)
+	resp = client.DPNBagList(&params)
+	require.NotNil(t, resp)
+	require.Nil(t, resp.Error)
+	assert.EqualValues(t, 0, resp.Count)
 }
 
 func TestDPNBagCreate(t *testing.T) {
@@ -346,19 +348,21 @@ func TestDPNBagCreate(t *testing.T) {
 	}
 	client := getClient(t)
 	bag := MakeDPNBag()
-	dpnBagResult := client.DPNBagCreate(bag)
-	require.NotNil(t, dpnBagResult)
-	require.Nil(t, dpnBagResult.Error)
-	assert.Equal(t, bag.UUID, dpnBagResult.Bag.UUID)
-	assert.Equal(t, bag.LocalId, dpnBagResult.Bag.LocalId)
-	assert.Equal(t, bag.Size, dpnBagResult.Bag.Size)
-	assert.Equal(t, bag.FirstVersionUUID, dpnBagResult.Bag.FirstVersionUUID)
-	assert.Equal(t, bag.Version, dpnBagResult.Bag.Version)
-	assert.Equal(t, bag.BagType, dpnBagResult.Bag.BagType)
-	assert.NotEmpty(t, dpnBagResult.Bag.IngestNode)
-	assert.Equal(t, dpnBagResult.Bag.IngestNode, dpnBagResult.Bag.AdminNode)
-	assert.NotEmpty(t, dpnBagResult.Bag.CreatedAt)
-	assert.NotEmpty(t, dpnBagResult.Bag.UpdatedAt)
+	resp := client.DPNBagCreate(bag)
+	require.NotNil(t, resp)
+	require.Nil(t, resp.Error)
+	newBag := resp.Bag()
+	require.NotNil(t, newBag)
+	assert.Equal(t, bag.UUID, newBag.UUID)
+	assert.Equal(t, bag.LocalId, newBag.LocalId)
+	assert.Equal(t, bag.Size, newBag.Size)
+	assert.Equal(t, bag.FirstVersionUUID, newBag.FirstVersionUUID)
+	assert.Equal(t, bag.Version, newBag.Version)
+	assert.Equal(t, bag.BagType, newBag.BagType)
+	assert.NotEmpty(t, newBag.IngestNode)
+	assert.Equal(t, newBag.IngestNode, newBag.AdminNode)
+	assert.NotEmpty(t, newBag.CreatedAt)
+	assert.NotEmpty(t, newBag.UpdatedAt)
 }
 
 func TestDPNBagUpdate(t *testing.T) {
@@ -367,24 +371,26 @@ func TestDPNBagUpdate(t *testing.T) {
 	}
 	client := getClient(t)
 	bag := MakeDPNBag()
-	dpnBagResult := client.DPNBagCreate(bag)
-	require.NotNil(t, dpnBagResult)
-	require.Nil(t, dpnBagResult.Error)
+	resp := client.DPNBagCreate(bag)
+	require.NotNil(t, resp)
+	require.Nil(t, resp.Error)
 
 	// We have to set UpdatedAt ahead, or the server won't update
 	// record we're sending.
 	newTimestamp := time.Now().UTC().Add(1 * time.Second).Truncate(time.Second)
 	newLocalId := fmt.Sprintf("GO-TEST-BAG-%s", uuid.NewV4().String())
 
-	dpnBag := dpnBagResult.Bag
+	dpnBag := resp.Bag()
 	dpnBag.UpdatedAt = newTimestamp
 	dpnBag.LocalId = newLocalId
 
-	updatedBagResult := client.DPNBagUpdate(dpnBag)
-	require.NotNil(t, updatedBagResult)
-	require.Nil(t, updatedBagResult.Error)
-	assert.InDelta(t, newTimestamp.Unix(), updatedBagResult.Bag.UpdatedAt.Unix(), float64(2.0))
-	assert.Equal(t, newLocalId, updatedBagResult.Bag.LocalId)
+	updateResp := client.DPNBagUpdate(dpnBag)
+	require.NotNil(t, updateResp)
+	require.Nil(t, updateResp.Error)
+	updatedBag := updateResp.Bag()
+	require.NotNil(t, updatedBag)
+	assert.InDelta(t, newTimestamp.Unix(), updatedBag.UpdatedAt.Unix(), float64(2.0))
+	assert.Equal(t, newLocalId, updatedBag.LocalId)
 }
 
 func TestReplicationTransferGet(t *testing.T) {
@@ -392,83 +398,87 @@ func TestReplicationTransferGet(t *testing.T) {
 		return
 	}
 	client := getClient(t)
-	xferResult := client.ReplicationTransferGet(replicationIdentifier)
-	require.NotNil(t, xferResult)
-	require.Nil(t, xferResult.Error)
-	assert.Equal(t, "aptrust", xferResult.Xfer.FromNode)
-	assert.Equal(t, "hathi", xferResult.Xfer.ToNode)
-	assert.Equal(t, aptrustBagIdentifier, xferResult.Xfer.Bag)
-	assert.Equal(t, replicationIdentifier, xferResult.Xfer.ReplicationId)
+	resp := client.ReplicationTransferGet(replicationIdentifier)
+	require.NotNil(t, resp)
+	require.Nil(t, resp.Error)
 
-	if xferResult.Xfer.FixityNonce != nil && *xferResult.Xfer.FixityNonce != "" {
-		t.Errorf("FixityNonce: expected '', got '%s'", *xferResult.Xfer.FixityNonce)
+	xfer := resp.ReplicationTransfer()
+	require.NotNil(t, xfer)
+
+	assert.Equal(t, "aptrust", xfer.FromNode)
+	assert.Equal(t, "hathi", xfer.ToNode)
+	assert.Equal(t, aptrustBagIdentifier, xfer.Bag)
+	assert.Equal(t, replicationIdentifier, xfer.ReplicationId)
+
+	if xfer.FixityNonce != nil && *xfer.FixityNonce != "" {
+		t.Errorf("FixityNonce: expected '', got '%s'", *xfer.FixityNonce)
 	}
-	if xferResult.Xfer.FixityValue == nil || *xferResult.Xfer.FixityValue != fixityForReplication {
-		t.Errorf("FixityValue: expected '%s', got '%s'", fixityForReplication, *xferResult.Xfer.FixityValue)
+	if xfer.FixityValue == nil || *xfer.FixityValue != fixityForReplication {
+		t.Errorf("FixityValue: expected '%s', got '%s'", fixityForReplication, *xfer.FixityValue)
 	}
 
-	assert.Equal(t, "sha256", xferResult.Xfer.FixityAlgorithm)
-	assert.False(t, xferResult.Xfer.Cancelled)
-	assert.True(t, xferResult.Xfer.Stored)
-	assert.True(t, xferResult.Xfer.StoreRequested)
-	assert.Equal(t, "rsync", xferResult.Xfer.Protocol)
+	assert.Equal(t, "sha256", xfer.FixityAlgorithm)
+	assert.False(t, xfer.Cancelled)
+	assert.True(t, xfer.Stored)
+	assert.True(t, xfer.StoreRequested)
+	assert.Equal(t, "rsync", xfer.Protocol)
 
 	expectedTarName := fmt.Sprintf("%s.tar", aptrustBagIdentifier)
-	assert.True(t, strings.HasSuffix(xferResult.Xfer.Link, expectedTarName))
-	assert.Equal(t, "2015-09-15T19:38:31Z", xferResult.Xfer.CreatedAt.Format(time.RFC3339))
-	assert.Equal(t, "2015-09-15T19:38:31Z", xferResult.Xfer.UpdatedAt.Format(time.RFC3339))
+	assert.True(t, strings.HasSuffix(xfer.Link, expectedTarName))
+	assert.Equal(t, "2015-09-15T19:38:31Z", xfer.CreatedAt.Format(time.RFC3339))
+	assert.Equal(t, "2015-09-15T19:38:31Z", xfer.UpdatedAt.Format(time.RFC3339))
 }
 
-func TestReplicationListGet(t *testing.T) {
+func TestReplicationList(t *testing.T) {
 	if runRestTests(t) == false {
 		return
 	}
 	client := getClient(t)
-	xferList := client.ReplicationListGet(nil)
-	require.NotNil(t, xferList)
-	require.Nil(t, xferList.Error)
-	assert.True(t, xferList.Count > 0)
-	assert.True(t, len(xferList.Results) > 0)
+	resp := client.ReplicationList(nil)
+	require.NotNil(t, resp)
+	require.Nil(t, resp.Error)
+	assert.True(t, resp.Count > 0)
+	assert.True(t, len(resp.ReplicationTransfers()) > 0)
 
-	totalRecordCount := xferList.Count
+	totalRecordCount := resp.Count
 
 	params := &url.Values{}
 	params.Set("bag_valid", "true")
-	xferList = client.ReplicationListGet(params)
-	require.NotNil(t, xferList)
-	require.Nil(t, xferList.Error)
+	resp = client.ReplicationList(params)
+	require.NotNil(t, resp)
+	require.Nil(t, resp.Error)
 
 	params.Set("bag_valid", "false")
-	xferList = client.ReplicationListGet(params)
-	require.NotNil(t, xferList)
-	require.Nil(t, xferList.Error)
+	resp = client.ReplicationList(params)
+	require.NotNil(t, resp)
+	require.Nil(t, resp.Error)
 
 	params.Del("bag_valid")
 	params.Set("fixity_accept", "true")
-	xferList = client.ReplicationListGet(params)
-	require.NotNil(t, xferList)
-	require.Nil(t, xferList.Error)
+	resp = client.ReplicationList(params)
+	require.NotNil(t, resp)
+	require.Nil(t, resp.Error)
 
 	params.Set("fixity_accept", "false")
-	xferList  = client.ReplicationListGet(params)
-	require.NotNil(t, xferList)
-	require.Nil(t, xferList.Error)
+	resp  = client.ReplicationList(params)
+	require.NotNil(t, resp)
+	require.Nil(t, resp.Error)
 
 	params.Del("fixity_accept")
 
 	aLongTimeAgo := time.Date(1999, time.December, 31, 23, 0, 0, 0, time.UTC)
 	params.Set("after", aLongTimeAgo.Format(time.RFC3339Nano))
-	xferList = client.ReplicationListGet(params)
-	require.NotNil(t, xferList)
-	require.Nil(t, xferList.Error)
+	resp = client.ReplicationList(params)
+	require.NotNil(t, resp)
+	require.Nil(t, resp.Error)
 
-	assert.Equal(t, totalRecordCount, xferList.Count)
+	assert.Equal(t, totalRecordCount, resp.Count)
 
 	params.Set("after", time.Now().Add(1 * time.Hour).Format(time.RFC3339Nano))
-	xferList = client.ReplicationListGet(params)
-	require.NotNil(t, xferList)
-	require.Nil(t, xferList.Error)
-	assert.EqualValues(t, 0, xferList.Count)
+	resp = client.ReplicationList(params)
+	require.NotNil(t, resp)
+	require.Nil(t, resp.Error)
+	assert.EqualValues(t, 0, resp.Count)
 }
 
 func TestReplicationTransferCreate(t *testing.T) {
@@ -480,31 +490,34 @@ func TestReplicationTransferCreate(t *testing.T) {
 	// The transfer request must refer to an actual bag,
 	// so let's make a bag...
 	bag := MakeDPNBag()
-	dpnBagResult := client.DPNBagCreate(bag)
-	require.NotNil(t, dpnBagResult)
-	require.Nil(t, dpnBagResult.Error)
+	resp := client.DPNBagCreate(bag)
+	require.NotNil(t, resp)
+	require.Nil(t, resp.Error)
 
 	// Make sure we can create a transfer request.
-	xfer := MakeXferRequest("aptrust", "chron", dpnBagResult.Bag.UUID)
-	xferResult := client.ReplicationTransferCreate(xfer)
-	require.NotNil(t, xferResult)
-	require.Nil(t, xferResult.Error)
+	xfer := MakeXferRequest("aptrust", "chron", resp.Bag().UUID)
+	xferResp := client.ReplicationTransferCreate(xfer)
+	require.NotNil(t, xferResp)
+	require.Nil(t, xferResp.Error)
 
-	assert.Equal(t, xfer.FromNode, xferResult.Xfer.FromNode)
-	assert.Equal(t, xfer.ToNode, xferResult.Xfer.ToNode)
-	assert.Equal(t, xfer.Bag, xferResult.Xfer.Bag)
-	assert.NotEmpty(t, xferResult.Xfer.ReplicationId)
-	assert.Equal(t, xfer.FixityAlgorithm, xferResult.Xfer.FixityAlgorithm)
-	assert.Equal(t, xfer.FixityNonce, xferResult.Xfer.FixityNonce)
-	assert.Equal(t, xfer.FixityValue, xferResult.Xfer.FixityValue)
-	assert.Equal(t, xfer.Stored, xferResult.Xfer.Stored)
-	assert.Equal(t, xfer.StoreRequested, xferResult.Xfer.StoreRequested)
-	assert.Equal(t, xfer.Cancelled, xferResult.Xfer.Cancelled)
-	assert.Equal(t, xfer.CancelReason, xferResult.Xfer.CancelReason)
-	assert.Equal(t, xfer.Protocol, xferResult.Xfer.Protocol)
-	assert.Equal(t, xfer.Link, xferResult.Xfer.Link)
-	assert.NotEmpty(t, xferResult.Xfer.CreatedAt)
-	assert.NotEmpty(t, xferResult.Xfer.UpdatedAt)
+	newXfer := xferResp.ReplicationTransfer()
+	require.NotNil(t, newXfer)
+
+	assert.Equal(t, xfer.FromNode, newXfer.FromNode)
+	assert.Equal(t, xfer.ToNode, newXfer.ToNode)
+	assert.Equal(t, xfer.Bag, newXfer.Bag)
+	assert.NotEmpty(t, newXfer.ReplicationId)
+	assert.Equal(t, xfer.FixityAlgorithm, newXfer.FixityAlgorithm)
+	assert.Equal(t, xfer.FixityNonce, newXfer.FixityNonce)
+	assert.Equal(t, xfer.FixityValue, newXfer.FixityValue)
+	assert.Equal(t, xfer.Stored, newXfer.Stored)
+	assert.Equal(t, xfer.StoreRequested, newXfer.StoreRequested)
+	assert.Equal(t, xfer.Cancelled, newXfer.Cancelled)
+	assert.Equal(t, xfer.CancelReason, newXfer.CancelReason)
+	assert.Equal(t, xfer.Protocol, newXfer.Protocol)
+	assert.Equal(t, xfer.Link, newXfer.Link)
+	assert.NotEmpty(t, newXfer.CreatedAt)
+	assert.NotEmpty(t, newXfer.UpdatedAt)
 }
 
 func TestReplicationTransferUpdate(t *testing.T) {
@@ -516,9 +529,9 @@ func TestReplicationTransferUpdate(t *testing.T) {
 	// The transfer request must refer to an actual bag,
 	// so let's make a bag...
 	bag := MakeDPNBag()
-	dpnBagResult := client.DPNBagCreate(bag)
-	require.NotNil(t, dpnBagResult)
-	require.Nil(t, dpnBagResult.Error)
+	resp := client.DPNBagCreate(bag)
+	require.NotNil(t, resp)
+	require.Nil(t, resp.Error)
 
 	// Make sure we can create a transfer request.
 	xfer := MakeXferRequest("chron", "aptrust", bag.UUID)
@@ -526,20 +539,22 @@ func TestReplicationTransferUpdate(t *testing.T) {
 	// Null out the fixity value, because once it's set, we can't change
 	// it. And below, we want to set a bad fixity value to see what happens.
 	xfer.FixityValue = nil
-	xferResult := client.ReplicationTransferCreate(xfer)
-	require.NotNil(t, xferResult)
-	require.Nil(t, xferResult.Error)
+	xferResp := client.ReplicationTransferCreate(xfer)
+	require.NotNil(t, xferResp)
+	require.Nil(t, xferResp.Error)
 
 	// Mark as received, with a bad fixity.
-	newXfer := xferResult.Xfer
+	newXfer := xferResp.ReplicationTransfer()
 	newFixityValue :=  "1234567890"
 	newXfer.UpdatedAt = newXfer.UpdatedAt.Add(1 * time.Second)
 	newXfer.FixityValue = &newFixityValue
 
-	updatedXfer := client.ReplicationTransferUpdate(newXfer)
-	require.NotNil(t, updatedXfer.Xfer)
-	require.Nil(t, updatedXfer.Error)
-	assert.False(t, updatedXfer.Xfer.StoreRequested)
+	updateResp := client.ReplicationTransferUpdate(newXfer)
+	require.NotNil(t, updateResp)
+	require.Nil(t, updateResp.Error)
+	updatedXfer := updateResp.ReplicationTransfer()
+	require.NotNil(t, updatedXfer)
+	assert.False(t, updatedXfer.StoreRequested)
 }
 
 func TestRestoreTransferGet(t *testing.T) {
@@ -547,70 +562,72 @@ func TestRestoreTransferGet(t *testing.T) {
 		return
 	}
 	client := getClient(t)
-	xferResult := client.RestoreTransferGet(restoreIdentifier)
-	require.NotNil(t, xferResult)
-	require.Nil(t, xferResult.Error)
-	assert.Equal(t, "hathi", xferResult.Xfer.FromNode)
-	assert.Equal(t, "aptrust", xferResult.Xfer.ToNode)
-	assert.Equal(t, aptrustBagIdentifier, xferResult.Xfer.Bag)
-	assert.Equal(t, restoreIdentifier, xferResult.Xfer.RestoreId)
-	assert.Equal(t, "rsync", xferResult.Xfer.Protocol)
-	assert.Equal(t, "2015-09-15T19:38:31Z", xferResult.Xfer.CreatedAt.Format(time.RFC3339))
-	assert.Equal(t, "2015-09-15T19:38:31Z", xferResult.Xfer.UpdatedAt.Format(time.RFC3339))
+	resp := client.RestoreTransferGet(restoreIdentifier)
+	require.NotNil(t, resp)
+	require.Nil(t, resp.Error)
+	xfer := resp.RestoreTransfer()
+	require.NotNil(t, xfer)
+	assert.Equal(t, "hathi", xfer.FromNode)
+	assert.Equal(t, "aptrust", xfer.ToNode)
+	assert.Equal(t, aptrustBagIdentifier, xfer.Bag)
+	assert.Equal(t, restoreIdentifier, xfer.RestoreId)
+	assert.Equal(t, "rsync", xfer.Protocol)
+	assert.Equal(t, "2015-09-15T19:38:31Z", xfer.CreatedAt.Format(time.RFC3339))
+	assert.Equal(t, "2015-09-15T19:38:31Z", xfer.UpdatedAt.Format(time.RFC3339))
 	expectedTarName := fmt.Sprintf("%s.tar", aptrustBagIdentifier)
-	assert.True(t, strings.HasSuffix(xferResult.Xfer.Link, expectedTarName))
+	assert.True(t, strings.HasSuffix(xfer.Link, expectedTarName))
 }
 
-func TestRestoreListGet(t *testing.T) {
+func TestRestoreList(t *testing.T) {
 	if runRestTests(t) == false {
 		return
 	}
 	client := getClient(t)
-	xferList := client.RestoreListGet(nil)
-	require.NotNil(t, xferList)
-	require.Nil(t, xferList.Error)
-	assert.NotEmpty(t, xferList.Results)
-	assert.False(t, xferList.Count == 0)
+	resp := client.RestoreList(nil)
+	require.NotNil(t, resp)
+	require.Nil(t, resp.Error)
+	assert.NotEmpty(t, resp.RestoreTransfers())
+	assert.False(t, resp.Count == 0)
 
-	totalRecordCount := xferList.Count
+	totalRecordCount := resp.Count
 
 	params := &url.Values{}
 	params.Set("bag_valid", "true")
-	xferList  = client.RestoreListGet(params)
-	require.NotNil(t, xferList)
-	require.Nil(t, xferList.Error)
+	resp  = client.RestoreList(params)
+	require.NotNil(t, resp)
+	require.Nil(t, resp.Error)
 
 	params.Set("bag_valid", "false")
-	xferList = client.RestoreListGet(params)
-	require.NotNil(t, xferList)
-	require.Nil(t, xferList.Error)
+	resp = client.RestoreList(params)
+	require.NotNil(t, resp)
+	require.Nil(t, resp.Error)
 
 	params.Del("bag_valid")
 	params.Set("fixity_accept", "true")
-	xferList = client.RestoreListGet(params)
-	require.NotNil(t, xferList)
-	require.Nil(t, xferList.Error)
+	resp = client.RestoreList(params)
+	require.NotNil(t, resp)
+	require.Nil(t, resp.Error)
 
 	params.Set("fixity_accept", "false")
-	xferList = client.RestoreListGet(params)
-	require.NotNil(t, xferList)
-	require.Nil(t, xferList.Error)
+	resp = client.RestoreList(params)
+	require.NotNil(t, resp)
+	require.Nil(t, resp.Error)
 
 	params.Del("fixity_accept")
 
 	aLongTimeAgo := time.Date(1999, time.December, 31, 23, 0, 0, 0, time.UTC)
 	params.Set("after", aLongTimeAgo.Format(time.RFC3339Nano))
-	xferList = client.RestoreListGet(params)
-	require.NotNil(t, xferList)
-	require.Nil(t, xferList.Error)
-	assert.Equal(t, totalRecordCount, xferList.Count)
+	resp = client.RestoreList(params)
+	require.NotNil(t, resp)
+	require.Nil(t, resp.Error)
+	assert.Equal(t, totalRecordCount, resp.Count)
 
 	params.Set("after", time.Now().Add(1 * time.Hour).Format(time.RFC3339Nano))
-	xferList = client.RestoreListGet(params)
-	require.NotNil(t, xferList)
-	require.Nil(t, xferList.Error)
-	assert.EqualValues(t, 0, xferList.Count)
-	assert.Empty(t, xferList.Results)
+	resp = client.RestoreList(params)
+	require.NotNil(t, resp)
+	require.Nil(t, resp.Error)
+	assert.EqualValues(t, 0, resp.Count)
+	assert.Empty(t, resp.RestoreTransfers())
 }
 
 func TestRestoreTransferCreate(t *testing.T) {
@@ -622,24 +639,26 @@ func TestRestoreTransferCreate(t *testing.T) {
 	// The transfer request must refer to an actual bag,
 	// so let's make a bag...
 	bag := MakeDPNBag()
-	dpnBagResult := client.DPNBagCreate(bag)
-	require.NotNil(t, dpnBagResult)
-	require.Nil(t, dpnBagResult.Error)
+	resp := client.DPNBagCreate(bag)
+	require.NotNil(t, resp)
+	require.Nil(t, resp.Error)
 
 	// Make sure we can create a transfer request.
 	xfer := MakeRestoreRequest("tdr", "aptrust", bag.UUID)
-	xferResult := client.RestoreTransferCreate(xfer)
-	require.NotNil(t, xferResult)
-	require.Nil(t, xferResult.Error)
+	createResp := client.RestoreTransferCreate(xfer)
+	require.NotNil(t, createResp)
+	require.Nil(t, createResp.Error)
 
-	assert.Equal(t, xfer.FromNode, xferResult.Xfer.FromNode)
-	assert.Equal(t, xfer.ToNode, xferResult.Xfer.ToNode)
-	assert.Equal(t, xfer.Bag, xferResult.Xfer.Bag)
-	assert.NotEmpty(t, xferResult.Xfer.RestoreId)
-	assert.Equal(t, xfer.Protocol, xferResult.Xfer.Protocol)
-	assert.Equal(t, xfer.Link, xferResult.Xfer.Link)
-	assert.NotEmpty(t, xferResult.Xfer.CreatedAt)
-	assert.NotEmpty(t, xferResult.Xfer.UpdatedAt)
+	createdXfer := createResp.RestoreTransfer()
+	require.NotNil(t, createdXfer)
+	assert.Equal(t, xfer.FromNode, createdXfer.FromNode)
+	assert.Equal(t, xfer.ToNode, createdXfer.ToNode)
+	assert.Equal(t, xfer.Bag, createdXfer.Bag)
+	assert.NotEmpty(t, createdXfer.RestoreId)
+	assert.Equal(t, xfer.Protocol, createdXfer.Protocol)
+	assert.Equal(t, xfer.Link, createdXfer.Link)
+	assert.NotEmpty(t, createdXfer.CreatedAt)
+	assert.NotEmpty(t, createdXfer.UpdatedAt)
 }
 
 func TestRestoreTransferUpdate(t *testing.T) {
@@ -651,23 +670,30 @@ func TestRestoreTransferUpdate(t *testing.T) {
 	// The transfer request must refer to an actual bag,
 	// so let's make a bag...
 	bag := MakeDPNBag()
-	dpnBagResult := client.DPNBagCreate(bag)
-	require.NotNil(t, dpnBagResult)
-	require.Nil(t, dpnBagResult.Error)
+	resp := client.DPNBagCreate(bag)
+	require.NotNil(t, resp)
+	require.Nil(t, resp.Error)
 
 	// Make sure we can create a transfer request.
 	xfer := MakeRestoreRequest("chron", "aptrust", bag.UUID)
-	xferResult := client.RestoreTransferCreate(xfer)
-	require.NotNil(t, xferResult)
-	require.Nil(t, xferResult.Error)
+	createResp := client.RestoreTransferCreate(xfer)
+	require.NotNil(t, createResp)
+	require.Nil(t, createResp.Error)
+
+	newXfer := createResp.RestoreTransfer()
+	require.NotNil(t, newXfer)
 
 	// Accept this one...
-	xferResult.Xfer.Accepted = true
+	newXfer.Accepted = true
 
-	updatedXfer := client.RestoreTransferUpdate(xferResult.Xfer)
+	updateResp := client.RestoreTransferUpdate(newXfer)
+	require.NotNil(t, updateResp)
+	require.Nil(t, updateResp.Error)
+
+	updatedXfer := updateResp.RestoreTransfer()
 	require.NotNil(t, updatedXfer)
-	require.Nil(t, updatedXfer.Error)
-	assert.True(t, updatedXfer.Xfer.Accepted)
+
+	assert.True(t, updatedXfer.Accepted)
 }
 
 func TestGetRemoteClient(t *testing.T) {
