@@ -13,7 +13,7 @@ import (
 	"strings"
 	"testing"
 	"time"
-	//	"unicode/utf8" // See comment below, in NodeUpdate
+	"unicode/utf8"
 )
 
 /*
@@ -157,36 +157,38 @@ func TestNodeList(t *testing.T) {
 // "storage_type_id" = ?, "updated_at" = ? WHERE "nodes"."id"= ?):
 // app/controllers/nodes_controller.rb:52:in `update'
 // ---------------------------------------------------------------------
-// func TestNodeUpdate(t *testing.T) {
-//	if runRestTests(t) == false {
-//		return
-//	}
-//	client := getClient(t)
-//	resp := client.NodeGet("sdr")
-//	require.Nil(t, resp.Error)
+func TestNodeUpdate(t *testing.T) {
+	if runRestTests(t) == false {
+		return
+	}
+	client := getClient(t)
+	resp := client.NodeGet("sdr")
+	require.Nil(t, resp.Error)
+	node := resp.Node()
+	require.NotNil(t, node)
 
-//	origName := resp.Node.Name
-//	if origName == "" {
-//		origName = "No Name"
-//	}
-//	// Reverse the name.
-//     newName := make([]rune, utf8.RuneCountInString(origName));
-//     i := len(origName);
-//     for _, c := range origName {
-//		i--;
-//		newName[i] = c;
-//     }
-//	resp.Node.Name = string(newName)
-//	savedNodeResult := client.NodeUpdate(resp.Node)
-//	require.Nil(t, savedNodeResult.Error)
-//	require.NotNil(t, savedNodeResult.Node)
-//	assert.NotNil(t, savedNodeResult.Request)
-//	assert.NotNil(t, savedNodeResult.Response)
+	origName := node.Name
+	if origName == "" {
+		origName = "No Name"
+	}
+	// Reverse the name.
+	newName := make([]rune, utf8.RuneCountInString(origName));
+	i := len(origName);
+	for _, c := range origName {
+		i--;
+		newName[i] = c;
+	}
+	node.Name = string(newName)
+	savedNodeResult := client.NodeUpdate(node)
+	require.Nil(t, savedNodeResult.Error)
+	require.NotNil(t, savedNodeResult.Node())
+	assert.NotNil(t, savedNodeResult.Request)
+	assert.NotNil(t, savedNodeResult.Response)
 
-//	// This is broken on the server, causing our test to fail.
-//	// Uncomment when the server is fixed.
-//	//	assert.Equal(t, newName, savedNodeResult.Node.Name)
-// }
+	// This is broken on the server, causing our test to fail.
+	// Uncomment when the server is fixed.
+	assert.Equal(t, string(newName), savedNodeResult.Node().Name)
+}
 
 func TestNodeGetLastPullDate(t *testing.T) {
 	if runRestTests(t) == false {
