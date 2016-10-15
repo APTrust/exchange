@@ -580,7 +580,24 @@ func (client *DPNRestClient) restoreTransferSave(xfer *RestoreTransfer, httpMeth
 // DigestGet returns the message digest for the specified bag with
 // the specified algorithm, if it exists.
 func (client *DPNRestClient) DigestGet(bagUUID, algorithm string) (*DPNResponse) {
+	resp := NewDPNResponse(DPNTypeDigest)
+	resp.digests = make([]*MessageDigest, 1)
 
+	relativeUrl := fmt.Sprintf("/%s/bag/%s/digest/%s/", client.APIVersion, bagUUID, algorithm)
+	absUrl := client.BuildUrl(relativeUrl, nil)
+
+	client._doRequest(resp, "GET", absUrl, nil)
+	if resp.Error != nil {
+		return resp
+	}
+
+	// Parse the JSON from the response body
+	digest := &MessageDigest{}
+	resp.Error = json.Unmarshal(resp.data, digest)
+	if resp.Error == nil {
+		resp.digests[0] = digest
+	}
+	return resp
 }
 
 // DigestList returns a list of MessageDigests that match the specified
@@ -588,63 +605,161 @@ func (client *DPNRestClient) DigestGet(bagUUID, algorithm string) (*DPNResponse)
 // is required. Optional params include before, after, page, page_size,
 // and order_by.
 func (client *DPNRestClient) DigestList(params *url.Values) (*DPNResponse) {
+	resp := NewDPNResponse(DPNTypeDigest)
+	resp.digests = make([]*MessageDigest, 1)
 
+	relativeUrl := fmt.Sprintf("/%s/digest/", client.APIVersion)
+	absUrl := client.BuildUrl(relativeUrl, params)
+
+	client._doRequest(resp, "GET", absUrl, nil)
+	if resp.Error != nil {
+		return resp
+	}
+	resp.UnmarshalJsonList()
+	return resp
 }
 
 // DigestCreate creates a MessageDigest record.
 func (client *DPNRestClient) DigestCreate(digest *MessageDigest) (*DPNResponse) {
-
+	return client.digestSave(digest, "POST")
 }
 
 // digestSave saves a MessageDigest record.
+// Note that the DPN 2.0 server does not implement DigestUpdate.
 func (client *DPNRestClient) digestSave(digest *MessageDigest, httpMethod string) (*DPNResponse) {
+	resp := NewDPNResponse(DPNTypeDigest)
+	resp.digests = make([]*MessageDigest, 1)
 
-}
+	relativeUrl := fmt.Sprintf("/%s/bag/%s/digest", client.APIVersion, digest.Bag)
+	absoluteUrl := client.BuildUrl(relativeUrl, nil)
 
-// FixityCheckGet returns the fixity with the specified algorithm for the specified bag.
-func (client *DPNRestClient) FixityCheckGet(bagUUID, algorithm string) (*DPNResponse) {
+	// Create the JSON data
+	postData, err := json.Marshal(digest)
+	if err != nil {
+		resp.Error = err
+	}
 
+	// Build the request
+	client._doRequest(resp, httpMethod, absoluteUrl, bytes.NewBuffer(postData))
+	if resp.Error != nil {
+		return resp
+	}
+
+	// Parse the JSON from the response body
+	savedDigest := &MessageDigest{}
+	resp.Error = json.Unmarshal(resp.data, savedDigest)
+	if resp.Error == nil {
+		resp.digests[0] = savedDigest
+	}
+	return resp
 }
 
 // FixityCheckList returns a list of FixityCheck records. Valid params include
 // before, after, bag, latest, node, page, page_size, order_by. Param latest
 // is a boolean. If true, only the latest fixity check(s) for each bag will
-// be returned.
+// be returned. Note that the DPN 2.0 server does not implement FixityCheckGet.
 func (client *DPNRestClient) FixityCheckList(params *url.Values) (*DPNResponse) {
+	resp := NewDPNResponse(DPNTypeFixityCheck)
+	resp.fixities = make([]*FixityCheck, 1)
 
+	relativeUrl := fmt.Sprintf("/%s/fixity_check/", client.APIVersion)
+	absUrl := client.BuildUrl(relativeUrl, params)
+
+	client._doRequest(resp, "GET", absUrl, nil)
+	if resp.Error != nil {
+		return resp
+	}
+	resp.UnmarshalJsonList()
+	return resp
 }
 
 // FixityCheckCreate creates a new FixityCheck
 func (client *DPNRestClient) FixityCheckCreate(fixity *FixityCheck) (*DPNResponse) {
-
+	return client.fixityCheckSave(fixity, "POST")
 }
 
 // fixityCheckSave saves a FixityCheck via POST or PUT.
+// Note that the DPN 2.0 server does not implement FixityCheckUpdate.
 func (client *DPNRestClient) fixityCheckSave(fixity *FixityCheck, httpMethod string) (*DPNResponse) {
+	resp := NewDPNResponse(DPNTypeFixityCheck)
+	resp.fixities = make([]*FixityCheck, 1)
 
-}
+	relativeUrl := fmt.Sprintf("/%s/fixity_check/", client.APIVersion)
+	absoluteUrl := client.BuildUrl(relativeUrl, nil)
 
-// IngestGet returns an Ingest record for the specified bagUUID, if
-// it exists.
-func (client *DPNRestClient) IngestGet(bagUUID string) (*DPNResponse) {
+	// Create the JSON data
+	postData, err := json.Marshal(fixity)
+	if err != nil {
+		resp.Error = err
+	}
 
+	// Build the request
+	client._doRequest(resp, httpMethod, absoluteUrl, bytes.NewBuffer(postData))
+	if resp.Error != nil {
+		return resp
+	}
+
+	// Parse the JSON from the response body
+	savedFixity := &FixityCheck{}
+	resp.Error = json.Unmarshal(resp.data, savedFixity)
+	if resp.Error == nil {
+		resp.fixities[0] = savedFixity
+	}
+	return resp
 }
 
 // IngestList returns a list of Ingest records that match the specified
 // criteria. Valid params include before, after, bag, ingested, latest,
 // page, page_size, order_by. See the swagger docs for more info.
+// Note that the DPN 2.0 server does not implement IngestGet.
 func (client *DPNRestClient) IngestList(params *url.Values) (*DPNResponse) {
+	resp := NewDPNResponse(DPNTypeIngest)
+	resp.ingests = make([]*Ingest, 1)
 
+	relativeUrl := fmt.Sprintf("/%s/ingest/", client.APIVersion)
+	absUrl := client.BuildUrl(relativeUrl, params)
+
+	client._doRequest(resp, "GET", absUrl, nil)
+	if resp.Error != nil {
+		return resp
+	}
+	resp.UnmarshalJsonList()
+	return resp
 }
 
 // IngestCreate creates a new Ingest record.
 func (client *DPNRestClient) IngestCreate(ingest *Ingest) (*DPNResponse) {
-
+	return client.ingestSave(ingest, "POST")
 }
 
 // ingestSave saves an Ingest record by POST or PUT.
+// Note that the DPN 2.0 server does not implement IngestUpdate.
 func (client *DPNRestClient) ingestSave(ingest *Ingest, httpMethod string) (*DPNResponse) {
+	resp := NewDPNResponse(DPNTypeIngest)
+	resp.ingests = make([]*Ingest, 1)
 
+	relativeUrl := fmt.Sprintf("/%s/ingest/", client.APIVersion)
+	absoluteUrl := client.BuildUrl(relativeUrl, nil)
+
+	// Create the JSON data
+	postData, err := json.Marshal(ingest)
+	if err != nil {
+		resp.Error = err
+	}
+
+	// Build the request
+	client._doRequest(resp, httpMethod, absoluteUrl, bytes.NewBuffer(postData))
+	if resp.Error != nil {
+		return resp
+	}
+
+	// Parse the JSON from the response body
+	savedIngest := &Ingest{}
+	resp.Error = json.Unmarshal(resp.data, savedIngest)
+	if resp.Error == nil {
+		resp.ingests[0] = savedIngest
+	}
+	return resp
 }
 
 // Returns a DPN REST client that can talk to a remote node.
