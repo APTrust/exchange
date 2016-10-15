@@ -118,6 +118,8 @@ func (client *DPNRestClient) NewJsonRequest(method, targetUrl string, body io.Re
 	return req, nil
 }
 
+// MemberGet returns a DPNResponse containing the member with the
+// specified identifier, if that member exists.
 func (client *DPNRestClient) MemberGet(identifier string) (*DPNResponse) {
 	resp := NewDPNResponse(DPNTypeMember)
 	resp.members = make([]*Member, 1)
@@ -139,6 +141,9 @@ func (client *DPNRestClient) MemberGet(identifier string) (*DPNResponse) {
 	return resp
 }
 
+// MemberList returns a DPNResponse members that match the specific
+// params. Valid params include before, after, page, page_size
+// and order_by.
 func (client *DPNRestClient) MemberList(params *url.Values) (*DPNResponse) {
 	resp := NewDPNResponse(DPNTypeMember)
 	resp.members = make([]*Member, 1)
@@ -164,7 +169,7 @@ func (client *DPNRestClient) MemberUpdate(member *Member) (*DPNResponse) {
 	return client.dpnMemberSave(member, "PUT")
 }
 
-// memberSave creates or updates a member in the DPN repository,
+// dpnMemberSave creates or updates a member in the DPN repository,
 // depending on the httpMethod.
 func (client *DPNRestClient) dpnMemberSave(member *Member, httpMethod string) (*DPNResponse) {
 	resp := NewDPNResponse(DPNTypeMember)
@@ -220,6 +225,10 @@ func (client *DPNRestClient) NodeGet(identifier string) (*DPNResponse) {
 	return resp
 }
 
+// NodeList returns a DPNResponse containing nodes that match the
+// specified params. Valid params include before, after, page,
+// page_size, and order_by. This call is deprecated in DPN 2.0
+// and may disappear in later versions.
 func (client *DPNRestClient) NodeList(params *url.Values) (*DPNResponse) {
 	resp := NewDPNResponse(DPNTypeNode)
 	resp.nodes = make([]*Node, 1)
@@ -279,10 +288,13 @@ func (client *DPNRestClient) nodeSave(node *Node, httpMethod string) (*DPNRespon
 	return resp
 }
 
-// Returns the last time we pulled data from the specified node.
+// NodeGetLastPullDate returns the last time we pulled data from the
+// specified node. The last pull date is derived from the latest
+// updated_at timestamp for bags from the specified admin_node.
 func (client *DPNRestClient) NodeGetLastPullDate(identifier string) (time.Time, error) {
 	params := url.Values{}
-	params.Set("ordering", "updated_at")
+	params.Set("admin_node", identifier)
+	params.Set("order_by", "updated_at")
 	params.Set("page", "1")
 	params.Set("page_size", "1")
 	resp := client.DPNBagList(&params)
@@ -292,7 +304,8 @@ func (client *DPNRestClient) NodeGetLastPullDate(identifier string) (time.Time, 
 	return resp.Bags()[0].UpdatedAt, nil
 }
 
-
+// DPNBagGet returns a DPNResponse with the bag having the specified
+// identifier, if it exists.
 func (client *DPNRestClient) DPNBagGet(identifier string) (*DPNResponse) {
 	resp := NewDPNResponse(DPNTypeBag)
 	resp.bags = make([]*DPNBag, 1)
@@ -314,6 +327,10 @@ func (client *DPNRestClient) DPNBagGet(identifier string) (*DPNResponse) {
 	return resp
 }
 
+// DPNBagList lists bags matching the specified parameters.
+// Valid parameters include before, after, bag_type, admin_node,
+// ingest_node, member, replicated_by, first_version_uuid, page,
+// page_size, order_by.
 func (client *DPNRestClient) DPNBagList(params *url.Values) (*DPNResponse) {
 	resp := NewDPNResponse(DPNTypeBag)
 	resp.bags = make([]*DPNBag, 1)
@@ -329,15 +346,19 @@ func (client *DPNRestClient) DPNBagList(params *url.Values) (*DPNResponse) {
 	return resp
 }
 
-
+// DPNBagCreate creates a new bag. Note that you can create bags
+// only at your own node.
 func (client *DPNRestClient) DPNBagCreate(bag *DPNBag) (*DPNResponse) {
 	return client.dpnBagSave(bag, "POST")
 }
 
+// DPNBagUpdate updates an existing bag. Note that you can update bags
+// only at your own node.
 func (client *DPNRestClient) DPNBagUpdate(bag *DPNBag) (*DPNResponse) {
 	return client.dpnBagSave(bag, "PUT")
 }
 
+// dpnBagSave saves a bag record.
 func (client *DPNRestClient) dpnBagSave(bag *DPNBag, httpMethod string) (*DPNResponse) {
 	resp := NewDPNResponse(DPNTypeBag)
 	resp.bags = make([]*DPNBag, 1)
@@ -369,6 +390,8 @@ func (client *DPNRestClient) dpnBagSave(bag *DPNBag, httpMethod string) (*DPNRes
 	return resp
 }
 
+// ReplicationTransferGet returns the ReplicationTransfer with the
+// specified id, if it exists.
 func (client *DPNRestClient) ReplicationTransferGet(identifier string) (*DPNResponse) {
 	resp := NewDPNResponse(DPNTypeReplication)
 	resp.replications = make([]*ReplicationTransfer, 1)
@@ -390,6 +413,10 @@ func (client *DPNRestClient) ReplicationTransferGet(identifier string) (*DPNResp
 	return resp
 }
 
+// ReplicationList returns a list of ReplicationTransfers matching
+// the specified criteria. Valid params include before, after, bag,
+// to_node, from_node, store_requested, stored, cancelled, cancel_reason,
+// page, page_size, order_by.
 func (client *DPNRestClient) ReplicationList(params *url.Values) (*DPNResponse) {
 	resp := NewDPNResponse(DPNTypeReplication)
 	resp.replications = make([]*ReplicationTransfer, 1)
@@ -405,15 +432,20 @@ func (client *DPNRestClient) ReplicationList(params *url.Values) (*DPNResponse) 
 	return resp
 }
 
-
+// ReplicationTransferCreate creates a ReplicationTransfer. You can only
+// create transfers on your own node.
 func (client *DPNRestClient) ReplicationTransferCreate(xfer *ReplicationTransfer) (*DPNResponse) {
 	return client.replicationTransferSave(xfer, "POST")
 }
 
+// ReplicationTransferUpdate updates a ReplicationTransfer. You can
+// updated transfers on remote nodes if they are the from_node and you
+// are the to_node.
 func (client *DPNRestClient) ReplicationTransferUpdate(xfer *ReplicationTransfer) (*DPNResponse) {
 	return client.replicationTransferSave(xfer, "PUT")
 }
 
+// replicationTransferSave saves a ReplicationTransfer.
 func (client *DPNRestClient) replicationTransferSave(xfer *ReplicationTransfer, httpMethod string) (*DPNResponse) {
 	resp := NewDPNResponse(DPNTypeReplication)
 	resp.replications = make([]*ReplicationTransfer, 1)
@@ -445,6 +477,8 @@ func (client *DPNRestClient) replicationTransferSave(xfer *ReplicationTransfer, 
 	return resp
 }
 
+// RestoreTransferGet returns the RestoreTransfer with the specified
+// identifier.
 func (client *DPNRestClient) RestoreTransferGet(identifier string) (*DPNResponse) {
 	resp := NewDPNResponse(DPNTypeRestore)
 	resp.restores = make([]*RestoreTransfer, 1)
@@ -466,7 +500,11 @@ func (client *DPNRestClient) RestoreTransferGet(identifier string) (*DPNResponse
 	return resp
 }
 
-func (client *DPNRestClient) RestoreList(params *url.Values) (*DPNResponse) {
+// RestoreTransferList returns a list of RestoreTransfers matching the
+// specified criteria. Valid params include before, after, bag, to_node,
+// from_node, accepted, finished, cancelled, cancel_reason, page, page_size,
+// order_by.
+func (client *DPNRestClient) RestoreTransferList(params *url.Values) (*DPNResponse) {
 	resp := NewDPNResponse(DPNTypeRestore)
 	resp.restores = make([]*RestoreTransfer, 1)
 
@@ -481,14 +519,20 @@ func (client *DPNRestClient) RestoreList(params *url.Values) (*DPNResponse) {
 	return resp
 }
 
+// RestoreTransferCreate creates a RestoreTransfer request, which you can
+// do only on your own node.
 func (client *DPNRestClient) RestoreTransferCreate(xfer *RestoreTransfer) (*DPNResponse) {
 	return client.restoreTransferSave(xfer, "POST")
 }
 
+// RestoreTransferUpdate updates a RestoreTransfer request, which you can do
+// on your own node if you are the to_node, or on the to_node if you are the
+// from_node.
 func (client *DPNRestClient) RestoreTransferUpdate(xfer *RestoreTransfer) (*DPNResponse) {
 	return client.restoreTransferSave(xfer, "PUT")
 }
 
+// restoreTransferSave saves a RestoreTransfer.
 func (client *DPNRestClient) restoreTransferSave(xfer *RestoreTransfer, httpMethod string) (*DPNResponse) {
 	resp := NewDPNResponse(DPNTypeRestore)
 	resp.restores = make([]*RestoreTransfer, 1)
@@ -597,7 +641,7 @@ func (client *DPNRestClient) doRequest(request *http.Request) (data []byte, resp
 // DoRequest issues an HTTP request, reads the response, and closes the
 // connection to the remote server.
 //
-// Param resp should be a PharosResponse.
+// Param resp should be a DPNResponse.
 //
 // For a description of the other params, see NewJsonRequest.
 //

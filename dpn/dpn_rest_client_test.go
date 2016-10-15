@@ -158,34 +158,34 @@ func TestNodeList(t *testing.T) {
 // app/controllers/nodes_controller.rb:52:in `update'
 // ---------------------------------------------------------------------
 // func TestNodeUpdate(t *testing.T) {
-// 	if runRestTests(t) == false {
-// 		return
-// 	}
-// 	client := getClient(t)
-// 	resp := client.NodeGet("sdr")
-// 	require.Nil(t, resp.Error)
+//	if runRestTests(t) == false {
+//		return
+//	}
+//	client := getClient(t)
+//	resp := client.NodeGet("sdr")
+//	require.Nil(t, resp.Error)
 
-// 	origName := resp.Node.Name
-// 	if origName == "" {
-// 		origName = "No Name"
-// 	}
-// 	// Reverse the name.
+//	origName := resp.Node.Name
+//	if origName == "" {
+//		origName = "No Name"
+//	}
+//	// Reverse the name.
 //     newName := make([]rune, utf8.RuneCountInString(origName));
 //     i := len(origName);
 //     for _, c := range origName {
-// 		i--;
-// 		newName[i] = c;
+//		i--;
+//		newName[i] = c;
 //     }
-// 	resp.Node.Name = string(newName)
-// 	savedNodeResult := client.NodeUpdate(resp.Node)
-// 	require.Nil(t, savedNodeResult.Error)
-// 	require.NotNil(t, savedNodeResult.Node)
-// 	assert.NotNil(t, savedNodeResult.Request)
-// 	assert.NotNil(t, savedNodeResult.Response)
+//	resp.Node.Name = string(newName)
+//	savedNodeResult := client.NodeUpdate(resp.Node)
+//	require.Nil(t, savedNodeResult.Error)
+//	require.NotNil(t, savedNodeResult.Node)
+//	assert.NotNil(t, savedNodeResult.Request)
+//	assert.NotNil(t, savedNodeResult.Response)
 
-// 	// This is broken on the server, causing our test to fail.
-// 	// Uncomment when the server is fixed.
-// 	// 	assert.Equal(t, newName, savedNodeResult.Node.Name)
+//	// This is broken on the server, causing our test to fail.
+//	// Uncomment when the server is fixed.
+//	//	assert.Equal(t, newName, savedNodeResult.Node.Name)
 // }
 
 func TestNodeGetLastPullDate(t *testing.T) {
@@ -193,16 +193,14 @@ func TestNodeGetLastPullDate(t *testing.T) {
 		return
 	}
 	client := getClient(t)
-	nodes := []string{"tdr", "sdr", "hathi", "chron"}
-	for _, node := range nodes {
-		lastPull, err := client.NodeGetLastPullDate(node)
-		if err != nil {
-			t.Errorf("Error getting last pull date for %s: %v", node, err)
-		}
-		if lastPull.IsZero() {
-			t.Errorf("Error getting last pull date for %s is empty", node)
-		}
-	}
+	// In reality, we would not try to get the last pull date
+	// for our own node, because we don't sync data with ourselves.
+	// However, our fixture data starts with just one bag, of
+	// which we are the admin node. The last pull date should
+	// match the updated_at time on that bag.
+	lastPull, err := client.NodeGetLastPullDate("aptrust")
+	assert.Nil(t, err)
+	assert.False(t, lastPull.IsZero())
 }
 
 func TestMemberList(t *testing.T) {
@@ -580,12 +578,12 @@ func TestRestoreTransferGet(t *testing.T) {
 	assert.True(t, strings.HasSuffix(xfer.Link, expectedTarName))
 }
 
-func TestRestoreList(t *testing.T) {
+func TestRestoreTransferList(t *testing.T) {
 	if runRestTests(t) == false {
 		return
 	}
 	client := getClient(t)
-	resp := client.RestoreList(nil)
+	resp := client.RestoreTransferList(nil)
 	require.NotNil(t, resp)
 	require.Nil(t, resp.Error)
 	assert.NotEmpty(t, resp.RestoreTransfers())
@@ -595,23 +593,23 @@ func TestRestoreList(t *testing.T) {
 
 	params := &url.Values{}
 	params.Set("bag_valid", "true")
-	resp  = client.RestoreList(params)
+	resp  = client.RestoreTransferList(params)
 	require.NotNil(t, resp)
 	require.Nil(t, resp.Error)
 
 	params.Set("bag_valid", "false")
-	resp = client.RestoreList(params)
+	resp = client.RestoreTransferList(params)
 	require.NotNil(t, resp)
 	require.Nil(t, resp.Error)
 
 	params.Del("bag_valid")
 	params.Set("fixity_accept", "true")
-	resp = client.RestoreList(params)
+	resp = client.RestoreTransferList(params)
 	require.NotNil(t, resp)
 	require.Nil(t, resp.Error)
 
 	params.Set("fixity_accept", "false")
-	resp = client.RestoreList(params)
+	resp = client.RestoreTransferList(params)
 	require.NotNil(t, resp)
 	require.Nil(t, resp.Error)
 
@@ -619,13 +617,13 @@ func TestRestoreList(t *testing.T) {
 
 	aLongTimeAgo := time.Date(1999, time.December, 31, 23, 0, 0, 0, time.UTC)
 	params.Set("after", aLongTimeAgo.Format(time.RFC3339Nano))
-	resp = client.RestoreList(params)
+	resp = client.RestoreTransferList(params)
 	require.NotNil(t, resp)
 	require.Nil(t, resp.Error)
 	assert.Equal(t, totalRecordCount, resp.Count)
 
 	params.Set("after", time.Now().Add(1 * time.Hour).Format(time.RFC3339Nano))
-	resp = client.RestoreList(params)
+	resp = client.RestoreTransferList(params)
 	require.NotNil(t, resp)
 	require.Nil(t, resp.Error)
 	assert.EqualValues(t, 0, resp.Count)
@@ -733,9 +731,9 @@ func TestHackNullDates(t *testing.T) {
 	jsonString = `{"id":5,"last_pull_date":null}`
 	testHackNullDates(jsonString, t)
 	jsonString = `{
-                     "id": 5,
-                     "last_pull_date": null
-                   }`
+					 "id": 5,
+					 "last_pull_date": null
+				   }`
 	testHackNullDates(jsonString, t)
 }
 

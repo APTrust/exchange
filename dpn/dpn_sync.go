@@ -100,10 +100,10 @@ func (dpnSync *DPNSync) LocalNodeName() (string) {
 // RemoteNodeNames returns the namespaces of all known remote
 // DPN nodes.
 func (dpnSync *DPNSync) RemoteNodeNames() ([]string) {
-    remoteNodeNames := make([]string, 0)
-    for namespace := range dpnSync.RemoteClients {
-        remoteNodeNames = append(remoteNodeNames, namespace)
-    }
+	remoteNodeNames := make([]string, 0)
+	for namespace := range dpnSync.RemoteClients {
+		remoteNodeNames = append(remoteNodeNames, namespace)
+	}
 	return remoteNodeNames
 }
 
@@ -398,5 +398,5 @@ func (dpnSync *DPNSync) getRestoreRequests(remoteClient *DPNRestClient, remoteNo
 	params.Set("after", remoteNode.LastPullDate.Format(time.RFC3339Nano))
 	params.Set("to_node", remoteNode.Namespace)
 	params.Set("page", fmt.Sprintf("%d", pageNumber))
-	return remoteClient.RestoreList(&params)
+	return remoteClient.RestoreTransferList(&params)
 }
