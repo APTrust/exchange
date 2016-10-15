@@ -7,15 +7,18 @@
 # tests finish.
 #
 
-# TODO: Set this dir name in a config file?
+[ -z "$DPN_SERVER_ROOT" ] && echo "Set env var DPN_SERVER_ROOT" && exit 1;
+[ -z "$EXCHANGE_ROOT" ] && echo "Set env var EXCHANGE_ROOT" && exit 1;
+
 echo "Starting DPN cluster. This takes a minute or so..."
-cd ~/dpn/dpn-server
+cd $DPN_SERVER_ROOT
 rm log/impersonate*
 bundle exec ./script/run_cluster.rb -f &
 sleep 60
 
 echo "Starting DPN REST client tests"
-cd ~/go/src/github.com/APTrust/exchange/dpn
+cd $EXCHANGE_ROOT
+cd dpn
 go test
 
 echo "\n\nShutting down DPN cluster"
