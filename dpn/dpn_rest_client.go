@@ -21,6 +21,19 @@ import (
 const MAX_ERR_MSG_SIZE = 2048
 
 // DPNRestClient is a client for the DPN REST API.
+// Common params for "List" methods include page (the page number
+// in a paged result set), page_size (the number of results per
+// page to retrieve), order_by (which can be created_at or updated_at,
+// and always returns results in descending order), before (which
+// includes only items whose updated_at is before the specified
+// timestamp) and after (which includes only items whose updated_at
+// is after the specified timestamp). Additional information about
+// the DPN server and its capabilities are available at
+// http://chronopolis01.umiacs.umd.edu/ or any swagger server that points to
+// https://raw.githubusercontent.com/dpn-admin/dpn-rest-spec/master/dist/swagger.yaml
+//
+// The main dpn-server repo is available at
+// https://github.com/dpn-admin/dpn-server
 type DPNRestClient struct {
 	HostUrl      string
 	APIVersion   string
@@ -564,6 +577,75 @@ func (client *DPNRestClient) restoreTransferSave(xfer *RestoreTransfer, httpMeth
 	return resp
 }
 
+// DigestGet returns the message digest for the specified bag with
+// the specified algorithm, if it exists.
+func (client *DPNRestClient) DigestGet(bagUUID, algorithm string) (*DPNResponse) {
+
+}
+
+// DigestList returns a list of MessageDigests that match the specified
+// criteria. Param uuid (the uuid of the bag to which the digests belong)
+// is required. Optional params include before, after, page, page_size,
+// and order_by.
+func (client *DPNRestClient) DigestList(params *url.Values) (*DPNResponse) {
+
+}
+
+// DigestCreate creates a MessageDigest record.
+func (client *DPNRestClient) DigestCreate(digest *MessageDigest) (*DPNResponse) {
+
+}
+
+// digestSave saves a MessageDigest record.
+func (client *DPNRestClient) digestSave(digest *MessageDigest, httpMethod string) (*DPNResponse) {
+
+}
+
+// FixityCheckGet returns the fixity with the specified algorithm for the specified bag.
+func (client *DPNRestClient) FixityCheckGet(bagUUID, algorithm string) (*DPNResponse) {
+
+}
+
+// FixityCheckList returns a list of FixityCheck records. Valid params include
+// before, after, bag, latest, node, page, page_size, order_by. Param latest
+// is a boolean. If true, only the latest fixity check(s) for each bag will
+// be returned.
+func (client *DPNRestClient) FixityCheckList(params *url.Values) (*DPNResponse) {
+
+}
+
+// FixityCheckCreate creates a new FixityCheck
+func (client *DPNRestClient) FixityCheckCreate(fixity *FixityCheck) (*DPNResponse) {
+
+}
+
+// fixityCheckSave saves a FixityCheck via POST or PUT.
+func (client *DPNRestClient) fixityCheckSave(fixity *FixityCheck, httpMethod string) (*DPNResponse) {
+
+}
+
+// IngestGet returns an Ingest record for the specified bagUUID, if
+// it exists.
+func (client *DPNRestClient) IngestGet(bagUUID string) (*DPNResponse) {
+
+}
+
+// IngestList returns a list of Ingest records that match the specified
+// criteria. Valid params include before, after, bag, ingested, latest,
+// page, page_size, order_by. See the swagger docs for more info.
+func (client *DPNRestClient) IngestList(params *url.Values) (*DPNResponse) {
+
+}
+
+// IngestCreate creates a new Ingest record.
+func (client *DPNRestClient) IngestCreate(ingest *Ingest) (*DPNResponse) {
+
+}
+
+// ingestSave saves an Ingest record by POST or PUT.
+func (client *DPNRestClient) ingestSave(ingest *Ingest, httpMethod string) (*DPNResponse) {
+
+}
 
 // Returns a DPN REST client that can talk to a remote node.
 // This function has to connect to out local DPN node to get
@@ -626,17 +708,17 @@ func readResponse(body io.ReadCloser) (data []byte, err error) {
 	return data, err
 }
 
-func (client *DPNRestClient) doRequest(request *http.Request) (data []byte, response *http.Response, err error) {
-	response, err = client.httpClient.Do(request)
-	if err != nil {
-		return nil, nil, err
-	}
-	data, err = readResponse(response.Body)
-	if err != nil {
-		return nil, response, err
-	}
-	return data, response, err
-}
+// func (client *DPNRestClient) doRequest(request *http.Request) (data []byte, response *http.Response, err error) {
+//	response, err = client.httpClient.Do(request)
+//	if err != nil {
+//		return nil, nil, err
+//	}
+//	data, err = readResponse(response.Body)
+//	if err != nil {
+//		return nil, response, err
+//	}
+//	return data, response, err
+// }
 
 // DoRequest issues an HTTP request, reads the response, and closes the
 // connection to the remote server.
