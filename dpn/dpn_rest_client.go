@@ -712,6 +712,9 @@ func (client *DPNRestClient) fixityCheckSave(fixity *FixityCheck, httpMethod str
 // IngestList returns a list of Ingest records that match the specified
 // criteria. Valid params include before, after, bag, ingested, latest,
 // page, page_size, order_by. See the swagger docs for more info.
+// Note that param "ingested", if not supplied, defaults to false on the
+// server side. This may result in the server returning no records, so
+// you should explicitly specficy "ingested=true" if that's what you want.
 // Note that the DPN 2.0 server does not implement IngestGet.
 func (client *DPNRestClient) IngestList(params *url.Values) (*DPNResponse) {
 	resp := NewDPNResponse(DPNTypeIngest)

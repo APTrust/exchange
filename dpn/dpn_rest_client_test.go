@@ -823,41 +823,31 @@ func TestFixityCheckCreate(t *testing.T) {
 	assert.NotNil(t, resp.FixityCheck())
 }
 
-// func TestIngestGet(t *testing.T) {
-//	if runRestTests(t) == false {
-//		return
-//	}
-//	client := getClient(t)
-//	resp := client.ReplicationList(nil)
-//	require.NotNil(t, resp)
-//	require.Nil(t, resp.Error)
-//	assert.True(t, resp.Count > 0)
-//	assert.True(t, len(resp.ReplicationTransfers()) > 0)
-// }
+func TestIngestList(t *testing.T) {
+	if runRestTests(t) == false {
+		return
+	}
+	params := &url.Values{}
+	params.Set("ingested", "true")
+	client := getClient(t)
+	resp := client.IngestList(params)
+	require.NotNil(t, resp)
+	require.Nil(t, resp.Error)
+	assert.True(t, resp.Count > 0)
+	assert.NotEmpty(t, resp.Ingests())
+}
 
-// func TestIngestList(t *testing.T) {
-//	if runRestTests(t) == false {
-//		return
-//	}
-//	client := getClient(t)
-//	resp := client.ReplicationList(nil)
-//	require.NotNil(t, resp)
-//	require.Nil(t, resp.Error)
-//	assert.True(t, resp.Count > 0)
-//	assert.True(t, len(resp.ReplicationTransfers()) > 0)
-// }
-
-// func TestIngestCreate(t *testing.T) {
-//	if runRestTests(t) == false {
-//		return
-//	}
-//	client := getClient(t)
-//	resp := client.ReplicationList(nil)
-//	require.NotNil(t, resp)
-//	require.Nil(t, resp.Error)
-//	assert.True(t, resp.Count > 0)
-//	assert.True(t, len(resp.ReplicationTransfers()) > 0)
-// }
+func TestIngestCreate(t *testing.T) {
+	if runRestTests(t) == false {
+		return
+	}
+	ingest := MakeIngest(aptrustBagIdentifier)
+	client := getClient(t)
+	resp := client.IngestCreate(ingest)
+	require.NotNil(t, resp)
+	require.Nil(t, resp.Error)
+	assert.NotNil(t, resp.Ingest())
+}
 
 
 // -------------------------------------------------------------------------

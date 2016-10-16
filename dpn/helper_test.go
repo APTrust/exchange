@@ -117,6 +117,18 @@ func MakeFixityCheck(bagUUID, node string) (*dpn.FixityCheck) {
 	}
 }
 
+func MakeIngest(bagUUID string) (*dpn.Ingest) {
+	id := uuid.NewV4()
+	idString := id.String()
+	return &dpn.Ingest{
+		IngestId: idString,
+		Bag: bagUUID,
+		Ingested: true,
+		ReplicatingNodes: []string { "tdr", "sdr" },
+		CreatedAt: time.Now().UTC(),
+	}
+}
+
 // ---------------------------------------------------------------------
 // Uncomment code below when we have the sync code in place
 // ---------------------------------------------------------------------
