@@ -104,6 +104,19 @@ func MakeMessageDigest(bagUUID, node string) (*dpn.MessageDigest) {
 	}
 }
 
+func MakeFixityCheck(bagUUID, node string) (*dpn.FixityCheck) {
+	id := uuid.NewV4()
+	idString := id.String()
+	return &dpn.FixityCheck{
+		FixityCheckId: idString,
+		Bag: bagUUID,
+		Node: node,
+		Success: true,
+		FixityAt: time.Now().UTC(),
+		CreatedAt: time.Now().UTC(),
+	}
+}
+
 // ---------------------------------------------------------------------
 // Uncomment code below when we have the sync code in place
 // ---------------------------------------------------------------------

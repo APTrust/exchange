@@ -794,41 +794,34 @@ func TestDigestCreate(t *testing.T) {
 	assert.NotNil(t, resp.Digest())
 }
 
-// func TestFixityCheckGet(t *testing.T) {
-//	if runRestTests(t) == false {
-//		return
-//	}
-//	client := getClient(t)
-//	resp := client.ReplicationList(nil)
-//	require.NotNil(t, resp)
-//	require.Nil(t, resp.Error)
-//	assert.True(t, resp.Count > 0)
-//	assert.True(t, len(resp.ReplicationTransfers()) > 0)
-// }
+func TestFixityCheckList(t *testing.T) {
+	if runRestTests(t) == false {
+		return
+	}
+	params := &url.Values{}
+	params.Set("page", "1")
+	params.Set("per_page", "10")
+	params.Set("order_by", "created_at")
+	params.Set("uuid", aptrustBagIdentifier)
+	client := getClient(t)
+	resp := client.FixityCheckList(nil)
+	require.NotNil(t, resp)
+	require.Nil(t, resp.Error)
+	assert.True(t, resp.Count > 0)
+	assert.True(t, len(resp.FixityChecks()) > 0)
+}
 
-// func TestFixityCheckList(t *testing.T) {
-//	if runRestTests(t) == false {
-//		return
-//	}
-//	client := getClient(t)
-//	resp := client.ReplicationList(nil)
-//	require.NotNil(t, resp)
-//	require.Nil(t, resp.Error)
-//	assert.True(t, resp.Count > 0)
-//	assert.True(t, len(resp.ReplicationTransfers()) > 0)
-// }
-
-// func TestFixityCheckCreate(t *testing.T) {
-//	if runRestTests(t) == false {
-//		return
-//	}
-//	client := getClient(t)
-//	resp := client.ReplicationList(nil)
-//	require.NotNil(t, resp)
-//	require.Nil(t, resp.Error)
-//	assert.True(t, resp.Count > 0)
-//	assert.True(t, len(resp.ReplicationTransfers()) > 0)
-// }
+func TestFixityCheckCreate(t *testing.T) {
+	if runRestTests(t) == false {
+		return
+	}
+	fixityCheck := MakeFixityCheck(aptrustBagIdentifier, "aptrust")
+	client := getClient(t)
+	resp := client.FixityCheckCreate(fixityCheck)
+	require.NotNil(t, resp)
+	require.Nil(t, resp.Error)
+	assert.NotNil(t, resp.FixityCheck())
+}
 
 // func TestIngestGet(t *testing.T) {
 //	if runRestTests(t) == false {
