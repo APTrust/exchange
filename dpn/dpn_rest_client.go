@@ -602,7 +602,8 @@ func (client *DPNRestClient) DigestGet(bagUUID, algorithm string) (*DPNResponse)
 
 // DigestList returns a list of MessageDigests that match the specified
 // criteria. Param uuid (the uuid of the bag to which the digests belong)
-// is required. Optional params include before, after, page, page_size,
+// is required according to DPN REST server docs, though server may respond
+// without error. Optional params include before, after, page, page_size,
 // and order_by.
 func (client *DPNRestClient) DigestList(params *url.Values) (*DPNResponse) {
 	resp := NewDPNResponse(DPNTypeDigest)

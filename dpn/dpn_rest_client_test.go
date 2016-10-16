@@ -747,6 +747,125 @@ func testHackNullDates(jsonString string, t *testing.T) {
 	assert.Equal(t, "1980-01-01T00:00:00Z", data["last_pull_date"])
 }
 
+func TestDigestGet(t *testing.T) {
+	if runRestTests(t) == false {
+		return
+	}
+	client := getClient(t)
+	resp := client.DigestGet(aptrustBagIdentifier, "sha256")
+	require.NotNil(t, resp)
+	require.Nil(t, resp.Error)
+	assert.NotNil(t, resp.Digest())
+
+	// Make sure no error for digest that doesn't exist.
+	resp = client.DigestGet("00000000-0000-0000-0000-000000000000", "sha256")
+	require.NotNil(t, resp)
+	require.NotNil(t, resp.Error)
+	assert.Equal(t, 0, resp.Count)
+	assert.Nil(t, resp.Digest())
+}
+
+func TestDigestList(t *testing.T) {
+	if runRestTests(t) == false {
+		return
+	}
+	client := getClient(t)
+	params := &url.Values{}
+	params.Set("page", "1")
+	params.Set("per_page", "10")
+	params.Set("order_by", "created_at")
+	params.Set("uuid", aptrustBagIdentifier)
+	resp := client.DigestList(params)
+	require.NotNil(t, resp)
+	require.Nil(t, resp.Error)
+	assert.True(t, resp.Count > 0)
+	assert.True(t, len(resp.Digests()) > 0)
+}
+
+func TestDigestCreate(t *testing.T) {
+	if runRestTests(t) == false {
+		return
+	}
+	client := getClient(t)
+	digest := MakeMessageDigest(aptrustBagIdentifier, "aptrust")
+	resp := client.DigestCreate(digest)
+	require.NotNil(t, resp)
+	require.Nil(t, resp.Error)
+	assert.NotNil(t, resp.Digest())
+}
+
+// func TestFixityCheckGet(t *testing.T) {
+//	if runRestTests(t) == false {
+//		return
+//	}
+//	client := getClient(t)
+//	resp := client.ReplicationList(nil)
+//	require.NotNil(t, resp)
+//	require.Nil(t, resp.Error)
+//	assert.True(t, resp.Count > 0)
+//	assert.True(t, len(resp.ReplicationTransfers()) > 0)
+// }
+
+// func TestFixityCheckList(t *testing.T) {
+//	if runRestTests(t) == false {
+//		return
+//	}
+//	client := getClient(t)
+//	resp := client.ReplicationList(nil)
+//	require.NotNil(t, resp)
+//	require.Nil(t, resp.Error)
+//	assert.True(t, resp.Count > 0)
+//	assert.True(t, len(resp.ReplicationTransfers()) > 0)
+// }
+
+// func TestFixityCheckCreate(t *testing.T) {
+//	if runRestTests(t) == false {
+//		return
+//	}
+//	client := getClient(t)
+//	resp := client.ReplicationList(nil)
+//	require.NotNil(t, resp)
+//	require.Nil(t, resp.Error)
+//	assert.True(t, resp.Count > 0)
+//	assert.True(t, len(resp.ReplicationTransfers()) > 0)
+// }
+
+// func TestIngestGet(t *testing.T) {
+//	if runRestTests(t) == false {
+//		return
+//	}
+//	client := getClient(t)
+//	resp := client.ReplicationList(nil)
+//	require.NotNil(t, resp)
+//	require.Nil(t, resp.Error)
+//	assert.True(t, resp.Count > 0)
+//	assert.True(t, len(resp.ReplicationTransfers()) > 0)
+// }
+
+// func TestIngestList(t *testing.T) {
+//	if runRestTests(t) == false {
+//		return
+//	}
+//	client := getClient(t)
+//	resp := client.ReplicationList(nil)
+//	require.NotNil(t, resp)
+//	require.Nil(t, resp.Error)
+//	assert.True(t, resp.Count > 0)
+//	assert.True(t, len(resp.ReplicationTransfers()) > 0)
+// }
+
+// func TestIngestCreate(t *testing.T) {
+//	if runRestTests(t) == false {
+//		return
+//	}
+//	client := getClient(t)
+//	resp := client.ReplicationList(nil)
+//	require.NotNil(t, resp)
+//	require.Nil(t, resp.Error)
+//	assert.True(t, resp.Count > 0)
+//	assert.True(t, len(resp.ReplicationTransfers()) > 0)
+// }
+
 
 // -------------------------------------------------------------------------
 // HTTP test handlers from here down...

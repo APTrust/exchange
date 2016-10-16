@@ -94,6 +94,16 @@ func MakeRestoreRequest(fromNode, toNode, bagUuid string) (*dpn.RestoreTransfer)
 	}
 }
 
+func MakeMessageDigest(bagUUID, node string) (*dpn.MessageDigest) {
+	return &dpn.MessageDigest{
+		Bag: bagUUID,
+		Algorithm: "sha265",
+		Node: node,
+		Value: fake.CharactersN(64),
+		CreatedAt: time.Now().UTC(),
+	}
+}
+
 // ---------------------------------------------------------------------
 // Uncomment code below when we have the sync code in place
 // ---------------------------------------------------------------------
@@ -101,79 +111,79 @@ func MakeRestoreRequest(fromNode, toNode, bagUuid string) (*dpn.RestoreTransfer)
 // // This is the struct returned by AddRecords, so the caller can
 // // know which records were created.
 // type Mock struct {
-// 	DPNSync   *dpn.DPNSync
-// 	Bags      []*dpn.DPNBag
-// 	Xfers     []*dpn.ReplicationTransfer
-// 	Restores  []*dpn.RestoreTransfer
+//	DPNSync   *dpn.DPNSync
+//	Bags      []*dpn.DPNBag
+//	Xfers     []*dpn.ReplicationTransfer
+//	Restores  []*dpn.RestoreTransfer
 // }
 
 // func NewMock(dpnSync *dpn.DPNSync) *Mock {
-// 	return &Mock{
-// 		DPNSync: dpnSync,
-// 	}
+//	return &Mock{
+//		DPNSync: dpnSync,
+//	}
 // }
 
 // // Creates bags, transfer requests and restore requests
 // // at the specified nodes.
 // func (mock *Mock)AddRecordsToNodes(nodeNamespaces []string, count int) (err error) {
-// 	for _, node := range nodeNamespaces {
-// 		err = mock.AddRecordsToNode(node, count)
-// 		if err != nil {
-// 			return err
-// 		}
-// 	}
-// 	return nil
+//	for _, node := range nodeNamespaces {
+//		err = mock.AddRecordsToNode(node, count)
+//		if err != nil {
+//			return err
+//		}
+//	}
+//	return nil
 // }
 
 // // Create some bags, transfer requests and restore requests
 // // at the specified node.
 // func (mock *Mock)AddRecordsToNode(nodeNamespace string, count int) (err error) {
-// 	allNodes, err := mock.DPNSync.GetAllNodes()
-// 	if err != nil {
-// 		return fmt.Errorf("While adding records, " +
-// 			"can't get list of nodes: %v", err)
-// 	}
-// 	client := mock.DPNSync.RemoteClients[nodeNamespace]
-// 	if nodeNamespace == mock.DPNSync.LocalNodeName() {
-// 		client = mock.DPNSync.LocalClient
-// 	}
-// 	if client == nil {
-// 		return fmt.Errorf("No client available for node %s", nodeNamespace)
-// 	}
-// 	for i := 0; i < count; i++ {
-// 		// Create bags...
-// 		bag := MakeBag()
-// 		bag.IngestNode = nodeNamespace
-// 		bag.AdminNode = nodeNamespace
-// 		_, err = client.DPNBagCreate(bag)
-// 		if err != nil {
-// 			return err
-// 		}
-// 		mock.Bags = append(mock.Bags, bag)
+//	allNodes, err := mock.DPNSync.GetAllNodes()
+//	if err != nil {
+//		return fmt.Errorf("While adding records, " +
+//			"can't get list of nodes: %v", err)
+//	}
+//	client := mock.DPNSync.RemoteClients[nodeNamespace]
+//	if nodeNamespace == mock.DPNSync.LocalNodeName() {
+//		client = mock.DPNSync.LocalClient
+//	}
+//	if client == nil {
+//		return fmt.Errorf("No client available for node %s", nodeNamespace)
+//	}
+//	for i := 0; i < count; i++ {
+//		// Create bags...
+//		bag := MakeBag()
+//		bag.IngestNode = nodeNamespace
+//		bag.AdminNode = nodeNamespace
+//		_, err = client.DPNBagCreate(bag)
+//		if err != nil {
+//			return err
+//		}
+//		mock.Bags = append(mock.Bags, bag)
 
-// 		for _, otherNode := range allNodes {
-// 			// Don't create transfers to the current node
-// 			if otherNode.Namespace == nodeNamespace {
-// 				continue
-// 			}
-// 			// Create replication transfers
-// 			xfer := MakeXferRequest(nodeNamespace,
-// 				otherNode.Namespace, bag.UUID)
-// 			_, err = client.ReplicationTransferCreate(xfer)
-// 			if err != nil {
-// 				return err
-// 			}
-// 			mock.Xfers = append(mock.Xfers, xfer)
+//		for _, otherNode := range allNodes {
+//			// Don't create transfers to the current node
+//			if otherNode.Namespace == nodeNamespace {
+//				continue
+//			}
+//			// Create replication transfers
+//			xfer := MakeXferRequest(nodeNamespace,
+//				otherNode.Namespace, bag.UUID)
+//			_, err = client.ReplicationTransferCreate(xfer)
+//			if err != nil {
+//				return err
+//			}
+//			mock.Xfers = append(mock.Xfers, xfer)
 
-// 			// Create restore transfers
-// 			restore := MakeRestoreRequest(otherNode.Namespace,
-// 				nodeNamespace, bag.UUID)
-// 			_, err = client.RestoreTransferCreate(restore)
-// 			if err != nil {
-// 				return err
-// 			}
-// 			mock.Restores = append(mock.Restores, restore)
-// 		}
-// 	}
-// 	return nil
+//			// Create restore transfers
+//			restore := MakeRestoreRequest(otherNode.Namespace,
+//				nodeNamespace, bag.UUID)
+//			_, err = client.RestoreTransferCreate(restore)
+//			if err != nil {
+//				return err
+//			}
+//			mock.Restores = append(mock.Restores, restore)
+//		}
+//	}
+//	return nil
 // }
