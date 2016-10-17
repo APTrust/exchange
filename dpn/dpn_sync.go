@@ -426,6 +426,104 @@ func (dpnSync *DPNSync) getRestoreRequests(remoteClient *DPNRestClient, remoteNo
 	return remoteClient.RestoreTransferList(&params)
 }
 
+func (dpnSync *DPNSync) SyncDigests(remoteNode *Node, bags []*DPNBag) ([]*MessageDigest, error) {
+	// foreach bag
+	// .. get digests
+	// .. for each digest
+	// .. sync digest
+	return nil, nil
+}
+
+func (dpnSync *DPNSync) syncDigest(digest *MessageDigest) ([]*MessageDigest, error) {
+	// If digest exists on local node, do nothing
+	// otherwise, create digest
+	return nil, nil
+}
+
+func (dpnSync *DPNSync) getDigests(remoteClient *DPNRestClient, remoteNode *Node, bagUUID string, pageNumber int) (*DPNResponse) {
+	params := url.Values{}
+	params.Set("uuid", bagUUID)
+	params.Set("page", fmt.Sprintf("%d", pageNumber))
+	params.Set("per_page", strconv.Itoa(SYNC_BATCH_SIZE))
+	return remoteClient.DigestList(&params)
+}
+
+func (dpnSync *DPNSync) SyncIngests(remoteNode *Node, bags []*DPNBag) ([]*Ingest, error) {
+	// foreach bag
+	// .. get ingests
+	// .. for each ingest
+	// .. sync ingest
+	return nil, nil
+}
+
+func (dpnSync *DPNSync) syncIngest(ingest *Ingest) ([]*Ingest, error) {
+	// If ingest exists on local node, do nothing
+	// otherwise, create ingest
+	return nil, nil
+}
+
+func (dpnSync *DPNSync) getIngests(remoteClient *DPNRestClient, remoteNode *Node, pageNumber int, bagUUID string) (*DPNResponse) {
+	params := url.Values{}
+	params.Set("bag", bagUUID)
+	params.Set("latest", "true")
+	params.Set("ingested", "true")
+	params.Set("page", fmt.Sprintf("%d", pageNumber))
+	params.Set("per_page", strconv.Itoa(SYNC_BATCH_SIZE))
+	return remoteClient.IngestList(&params)
+}
+
+func (dpnSync *DPNSync) SyncFixities(remoteNode *Node) ([]*FixityCheck, error) {
+	// Pull all fixities since last pull date
+	// foreach fixity, syncFixity
+	return nil, nil
+}
+
+func (dpnSync *DPNSync) syncFixity(fixities []*FixityCheck) ([]*FixityCheck, error) {
+	// If fixity already exists, ignore
+	// else create
+	return nil, nil
+}
+
+func (dpnSync *DPNSync) getFixities(remoteClient *DPNRestClient, remoteNode *Node, pageNumber int) (*DPNResponse) {
+	// Get fixities for the remote node *calculated by that node*
+	params := url.Values{}
+	params.Set("after", remoteNode.LastPullDate.Format(time.RFC3339Nano))
+	params.Set("node", remoteNode.Namespace)
+	params.Set("page", fmt.Sprintf("%d", pageNumber))
+	params.Set("per_page", strconv.Itoa(SYNC_BATCH_SIZE))
+	return remoteClient.FixityCheckList(&params)
+}
+
+func (dpnSync *DPNSync) SyncMembers(remoteNode *Node) ([]*Member, error) {
+	// Pull all members since last pull date
+	// foreach member, syncMember
+	return nil, nil
+}
+
+func (dpnSync *DPNSync) syncMembers(members []*Member) ([]*Member, error) {
+	// If member already exists, ignore
+	// else create
+	return nil, nil
+}
+
+func (dpnSync *DPNSync) getMembers(remoteClient *DPNRestClient, remoteNode *Node, pageNumber int) (*DPNResponse) {
+	params := url.Values{}
+	params.Set("after", remoteNode.LastPullDate.Format(time.RFC3339Nano))
+	params.Set("page", fmt.Sprintf("%d", pageNumber))
+	params.Set("per_page", strconv.Itoa(SYNC_BATCH_SIZE))
+	return remoteClient.FixityCheckList(&params)
+}
+
+func (dpnSync *DPNSync) SyncNode(remoteClient *DPNRestClient) (error) {
+	// Get latest info from each node about itself
+	// resp := remoteClient.NodeGet(remoteClient.Node)
+	// Save node info to our node table
+	return nil
+}
+
+
+// -------------------------------------------------------------------------
+
 // PrintAndLogResult logs results to both STDOUT and the application's
 // message log.
 func (dpnSync *DPNSync) PrintAndLogResult(result *SyncResult) {
