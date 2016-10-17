@@ -4,8 +4,14 @@ import (
 	"fmt"
 	"github.com/APTrust/exchange/context"
 	"net/url"
+	"strconv"
 	"time"
 )
+
+// SYNC_BATCH_SIZE describes how many records should request
+// per page from remote nodes when we're synching bags,
+// replication requests, etc.
+const SYNC_BATCH_SIZE = 50
 
 type DPNSync struct {
 	// LocalClient is the DPN REST client that talks to our own
@@ -81,6 +87,22 @@ func NewDPNSync(_context *context.Context) (*DPNSync, error) {
 		Context: _context,
 	}
 	return &sync, nil
+}
+
+// Run runs all sync operations against all nodes. This is the only function
+// your cron job needs to call.
+func (dpnSync *DPNSync) Run() (error) {
+	nodes, err := dpnSync.GetAllNodes()
+	if err != nil {
+		return fmt.Errorf("Error getting node info. Nothing synched. %v", err)
+	}
+	for _, node := range nodes {
+		if node.Namespace != dpnSync.LocalNodeName() {
+			result := dpnSync.SyncEverythingFromNode(node)
+			dpnSync.PrintAndLogResult(result)
+		}
+	}
+	return nil
 }
 
 // GetAllNodes returns a list of all the nodes that our node knows about.
@@ -209,7 +231,7 @@ func (dpnSync *DPNSync) syncBags(bags []*DPNBag) ([]*DPNBag, error) {
 			err = resp.Error
 		}
 		if err != nil {
-			dpnSync.Context.MessageLog.Debug("Oops! Bag %s: %v", bag.UUID, err)
+			dpnSync.Context.MessageLog.Error("Oops! Bag %s: %v", bag.UUID, err)
 			dpnSync.Context.MessageLog.Error("%s %s", resp.Request.Method, resp.Request.URL.String())
 			dpnSync.Context.MessageLog.Error("Status Code: %d", resp.Response.StatusCode)
 			return bagsProcessed, err
@@ -227,6 +249,7 @@ func (dpnSync *DPNSync) getBags(remoteClient *DPNRestClient, remoteNode *Node, p
 	params.Set("after", remoteNode.LastPullDate.Format(time.RFC3339Nano))
 	params.Set("admin_node", remoteNode.Namespace)
 	params.Set("page", fmt.Sprintf("%d", pageNumber))
+	params.Set("per_page", strconv.Itoa(SYNC_BATCH_SIZE))
 	return remoteClient.DPNBagList(&params)
 }
 
@@ -313,6 +336,7 @@ func (dpnSync *DPNSync) getReplicationRequests(remoteClient *DPNRestClient, remo
 	params.Set("after", remoteNode.LastPullDate.Format(time.RFC3339Nano))
 	params.Set("from_node", remoteNode.Namespace)
 	params.Set("page", fmt.Sprintf("%d", pageNumber))
+	params.Set("per_page", strconv.Itoa(SYNC_BATCH_SIZE))
 	return remoteClient.ReplicationList(&params)
 }
 
@@ -398,5 +422,33 @@ func (dpnSync *DPNSync) getRestoreRequests(remoteClient *DPNRestClient, remoteNo
 	params.Set("after", remoteNode.LastPullDate.Format(time.RFC3339Nano))
 	params.Set("to_node", remoteNode.Namespace)
 	params.Set("page", fmt.Sprintf("%d", pageNumber))
+	params.Set("per_page", strconv.Itoa(SYNC_BATCH_SIZE))
 	return remoteClient.RestoreTransferList(&params)
+}
+
+// PrintAndLogResult logs results to both STDOUT and the application's
+// message log.
+func (dpnSync *DPNSync) PrintAndLogResult(result *SyncResult) {
+	// Result summary
+	msg := fmt.Sprintf("From %s:\n%d bags\n%d replications\n%d restores\n" +
+		"%d digests\n%d fixity checks\n%d ingests",
+		result.RemoteNode.Namespace, len(result.Bags),
+		len(result.ReplicationTransfers),
+		len(result.RestoreTransfers), 0, 0, 0)
+
+	fmt.Println(msg)
+	dpnSync.Context.MessageLog.Info(msg)
+
+	// Error messages
+	dpnSync.printAndLogErr("BagSyncError", result.BagSyncError)
+	dpnSync.printAndLogErr("ReplicationSyncError", result.ReplicationSyncError)
+	dpnSync.printAndLogErr("RestoreSyncError", result.RestoreSyncError)
+}
+
+func (dpnSync *DPNSync) printAndLogErr(errName string, err error) {
+	if err != nil {
+		msg := fmt.Sprintf("%s: %v", errName, err)
+		fmt.Println(msg)
+		dpnSync.Context.MessageLog.Info(msg)
+	}
 }
