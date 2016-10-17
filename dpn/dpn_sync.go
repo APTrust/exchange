@@ -37,6 +37,17 @@ type SyncResult struct {
 	RemoteNode            *Node
 	// Bags is a list of bags successfully synched.
 	Bags                  []*DPNBag
+	// FixityChecks successfully synched.
+	FixityChecks          []*FixityCheck
+	// Ingests successfully synched.
+	Ingests               []*Ingest
+	// Members successfully synched.
+	Members               []*Member
+	// MessageDigests successfully synched.
+	MessageDigests        []*MessageDigest
+	// Nodes successfully synched.
+	// There can only be one per node.
+	Node                  *Node
 	// ReplicationTransfers successfully synched.
 	ReplicationTransfers  []*ReplicationTransfer
 	// RestoreTransfers successfully synched.
@@ -45,6 +56,16 @@ type SyncResult struct {
 	// during the bag sync process. The first error will stop
 	// the synching of all subsquent bags.
 	BagSyncError          error
+	// Error that occurred during FixityCheck sync, if any.
+	FixitySyncError       error
+	// Error that occurred during Ingest sync, if any.
+	IngestSyncError       error
+	// Error that occurred during Member sync, if any.
+	MemberSyncError       error
+	// Error that occurred during MessageDigest sync, if any.
+	MessageDigestSyncError error
+	// Error that occurred during Node sync, if any.
+	NodeSyncError         error
 	// ReplicationSyncError contains the error (if any) that occurred
 	// during the synching of Replication Transfers. The first error
 	// will stop the synching of all subsquent replication requests.
@@ -139,17 +160,26 @@ func (dpnSync *DPNSync) SyncEverythingFromNode(remoteNode *Node) (*SyncResult) {
 		RemoteNode: remoteNode,
 	}
 
-	bags, err := dpnSync.SyncBags(remoteNode)
-	syncResult.Bags = bags
-	syncResult.BagSyncError = err
+	syncResult.Node, syncResult.NodeSyncError = dpnSync.SyncNode(remoteNode)
+	if syncResult.NodeSyncError != nil { return syncResult }
 
-	replXfers, err := dpnSync.SyncReplicationRequests(remoteNode)
-	syncResult.ReplicationTransfers = replXfers
-	syncResult.ReplicationSyncError = err
+	syncResult.Members, syncResult.MemberSyncError = dpnSync.SyncMembers(remoteNode)
+	if syncResult.MemberSyncError != nil { return syncResult }
 
-	restoreXfers, err := dpnSync.SyncRestoreRequests(remoteNode)
-	syncResult.RestoreTransfers = restoreXfers
-	syncResult.RestoreSyncError = err
+	syncResult.Bags, syncResult.BagSyncError = dpnSync.SyncBags(remoteNode)
+	if syncResult.BagSyncError != nil { return syncResult }
+
+	syncResult.MessageDigests, syncResult.MessageDigestSyncError = dpnSync.SyncDigests(remoteNode, syncResult.Bags)
+	if syncResult.MessageDigestSyncError != nil { return syncResult }
+
+	syncResult.FixityChecks, syncResult.FixitySyncError = dpnSync.SyncFixities(remoteNode)
+	if syncResult.FixitySyncError != nil { return syncResult }
+
+	syncResult.ReplicationTransfers, syncResult.ReplicationSyncError = dpnSync.SyncReplicationRequests(remoteNode)
+	if syncResult.ReplicationSyncError != nil { return syncResult }
+
+	syncResult.RestoreTransfers, syncResult.RestoreSyncError = dpnSync.SyncRestoreRequests(remoteNode)
+	if syncResult.RestoreSyncError != nil { return syncResult }
 
 	return syncResult
 }
@@ -406,7 +436,7 @@ func (dpnSync *DPNSync) syncRestoreRequests(xfers []*RestoreTransfer) ([]*Restor
 			err = resp.Error
 		}
 		if err != nil {
-			dpnSync.Context.MessageLog.Debug("Oops! Restore request %s: %v", xfer.RestoreId, err)
+			dpnSync.Context.MessageLog.Error("Oops! Restore request %s: %v", xfer.RestoreId, err)
 			return xfersProcessed, err
 		}
 		xfersProcessed = append(xfersProcessed, updatedXfer)
@@ -514,11 +544,20 @@ func (dpnSync *DPNSync) getMembers(remoteClient *DPNRestClient, remoteNode *Node
 	return remoteClient.FixityCheckList(&params)
 }
 
-func (dpnSync *DPNSync) SyncNode(remoteClient *DPNRestClient) (error) {
-	// Get latest info from each node about itself
-	// resp := remoteClient.NodeGet(remoteClient.Node)
-	// Save node info to our node table
-	return nil
+func (dpnSync *DPNSync) SyncNode(remoteNode *Node) (*Node, error) {
+	// Get latest info from the node about itself
+	remoteClient := dpnSync.RemoteClients[remoteNode.Namespace]
+	resp := remoteClient.NodeGet(remoteNode.Namespace)
+	if resp.Error != nil {
+		return nil, resp.Error
+	}
+	node := resp.Node()
+	if node == nil {
+		return nil, fmt.Errorf("Node returned no node record for itself.")
+	}
+	// Copy the node record to our own node table
+	resp = dpnSync.LocalClient.NodeUpdate(node)
+	return resp.Node(), resp.Error
 }
 
 
