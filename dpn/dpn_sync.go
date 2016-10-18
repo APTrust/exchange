@@ -203,7 +203,7 @@ func (dpnSync *DPNSync) SyncMembers(remoteNode *Node) {
 		}
 		pageNumber += 1
 	}
-	log.Debug("Members from %s: fetched %d, synched %s", remoteNode.Namespace,
+	log.Debug("Members from %s: fetched %d, synched %d", remoteNode.Namespace,
 		result.FetchCounts[DPNTypeMember], result.SyncCounts[DPNTypeMember])
 }
 
@@ -275,7 +275,7 @@ func (dpnSync *DPNSync) SyncBags(node *Node) () {
 		}
 		pageNumber += 1
 	}
-	log.Debug("Bags from %s: fetched %d, synched %s", node.Namespace,
+	log.Debug("Bags from %s: fetched %d, synched %d", node.Namespace,
 		result.FetchCounts[DPNTypeBag], result.SyncCounts[DPNTypeBag])
 }
 
@@ -372,7 +372,7 @@ func (dpnSync *DPNSync) SyncIngests(remoteNode *Node, bag *DPNBag) {
 		}
 		pageNumber += 1
 	}
-	log.Debug("Ingests from %s: fetched %d, synched %s", remoteNode.Namespace,
+	log.Debug("Ingests from %s: fetched %d, synched %d", remoteNode.Namespace,
 		result.FetchCounts[DPNTypeIngest], result.SyncCounts[DPNTypeIngest])
 
 }
@@ -432,7 +432,7 @@ func (dpnSync *DPNSync) SyncFixities(remoteNode *Node) {
 		}
 		pageNumber += 1
 	}
-	log.Debug("Fixities from %s: fetched %d, synched %s", remoteNode.Namespace,
+	log.Debug("Fixities from %s: fetched %d, synched %d", remoteNode.Namespace,
 		result.FetchCounts[DPNTypeFixityCheck], result.SyncCounts[DPNTypeFixityCheck])
 }
 
@@ -494,7 +494,7 @@ func (dpnSync *DPNSync) SyncReplicationRequests(remoteNode *Node) {
 		}
 		pageNumber += 1
 	}
-	log.Debug("Replications from %s: fetched %d, synched %s", remoteNode.Namespace,
+	log.Debug("Replications from %s: fetched %d, synched %d", remoteNode.Namespace,
 		result.FetchCounts[DPNTypeReplication], result.SyncCounts[DPNTypeReplication])
 }
 
@@ -628,7 +628,7 @@ func (dpnSync *DPNSync) logNoClient(dpnType DPNObjectType, nodeName string) {
 
 func (dpnSync *DPNSync) logResult(syncResult *SyncResult) {
 	for _, dpnType := range DPNTypes {
-		dpnSync.Context.MessageLog.Info("Node %s %s: Fetched %s, Synched %d",
+		dpnSync.Context.MessageLog.Info("Node %s %s: Fetched %d, Synched %d",
 			syncResult.NodeName, dpnType, syncResult.FetchCounts[dpnType],
 			syncResult.SyncCounts[dpnType])
 	}
