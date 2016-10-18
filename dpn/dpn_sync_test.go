@@ -1,17 +1,17 @@
 package dpn_test
 
-import (
-	"fmt"
-	"github.com/APTrust/exchange/context"
-	"github.com/APTrust/exchange/dpn"
-	"github.com/APTrust/exchange/models"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
-	"net/http"
-	"path/filepath"
-	"testing"
-	"time"
-)
+// import (
+//	"fmt"
+//	"github.com/APTrust/exchange/context"
+//	"github.com/APTrust/exchange/dpn"
+//	"github.com/APTrust/exchange/models"
+//	"github.com/stretchr/testify/assert"
+//	"github.com/stretchr/testify/require"
+//	"net/http"
+//	"path/filepath"
+//	"testing"
+//	"time"
+// )
 
 // var skipSyncMessagePrinted = false
 
@@ -248,17 +248,17 @@ import (
 //	}
 // }
 
-func TestHasSyncErrors(t *testing.T) {
-	syncResult := &dpn.SyncResult{}
-	assert.False(t, syncResult.HasSyncErrors())
-	syncResult.BagSyncError = fmt.Errorf("Oops.")
-	assert.True(t, syncResult.HasSyncErrors())
+// func TestHasSyncErrors(t *testing.T) {
+//	syncResult := &dpn.SyncResult{}
+//	assert.False(t, syncResult.HasSyncErrors())
+//	syncResult.BagSyncError = fmt.Errorf("Oops.")
+//	assert.True(t, syncResult.HasSyncErrors())
 
-	syncResult.BagSyncError = nil
-	syncResult.ReplicationSyncError = fmt.Errorf("Oops.")
-	assert.True(t, syncResult.HasSyncErrors())
+//	syncResult.BagSyncError = nil
+//	syncResult.ReplicationSyncError = fmt.Errorf("Oops.")
+//	assert.True(t, syncResult.HasSyncErrors())
 
-	syncResult.ReplicationSyncError = nil
-	syncResult.RestoreSyncError = fmt.Errorf("Oops.")
-	assert.True(t, syncResult.HasSyncErrors())
-}
+//	syncResult.ReplicationSyncError = nil
+//	syncResult.RestoreSyncError = fmt.Errorf("Oops.")
+//	assert.True(t, syncResult.HasSyncErrors())
+// }
