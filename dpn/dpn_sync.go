@@ -155,7 +155,7 @@ func (dpnSync *DPNSync) SyncEverythingFromNode(remoteNode *Node) {
 // to us, but only if the remote record is newer.
 func (dpnSync *DPNSync) SyncNode(remoteNode *Node) {
 	log := dpnSync.Context.MessageLog
-	result := dpnSync.Results[nodeName]
+	result := dpnSync.Results[remoteNode.Namespace]
 	// Get latest info from the node about itself
 	remoteClient := dpnSync.RemoteClients[remoteNode.Namespace]
 	resp := remoteClient.NodeGet(remoteNode.Namespace)
@@ -164,7 +164,8 @@ func (dpnSync *DPNSync) SyncNode(remoteNode *Node) {
 		return
 	}
 	node := resp.Node()
-	if node != nil &&  node.UpdatedAt.IsAfter(remoteNode.UpdatedAt) {
+	if node != nil &&  node.UpdatedAt.After(remoteNode.UpdatedAt) {
+		log.Info("Updating node %s because their record is newer", node.Namespace)
 		resp = dpnSync.LocalClient.NodeUpdate(node)
 		if resp.Error != nil {
 			result.AddError(DPNTypeNode, resp.Error)
@@ -177,40 +178,39 @@ func (dpnSync *DPNSync) SyncNode(remoteNode *Node) {
 func (dpnSync *DPNSync) SyncMembers(remoteNode *Node) {
 	pageNumber := 1
 	log := dpnSync.Context.MessageLog
-	result := dpnSync.Results[nodeName]
-	remoteClient := dpnSync.RemoteClients[nodeName]
+	result := dpnSync.Results[remoteNode.Namespace]
+	remoteClient := dpnSync.RemoteClients[remoteNode.Namespace]
 	if remoteClient == nil {
-		dpnSync.logNoClient(DPNTypeMember, nodeName)
+		dpnSync.logNoClient(DPNTypeMember, remoteNode.Namespace)
 		return
 	}
 	for {
-		log.Debug("Getting page %d of members from %s", pageNumber, nodeName)
+		log.Debug("Getting page %d of members from %s", pageNumber, remoteNode.Namespace)
 		resp := dpnSync.getMembers(remoteClient, pageNumber)
 		if resp.Error != nil {
 			result.AddError(DPNTypeMember, resp.Error)
 			break
 		}
 		result.AddToFetchCount(DPNTypeMember, resp.Count)
-		log.Debug("Got %d members from %s", resp.Count, nodeName)
-		dpnSync.syncMembers(resp.Members())
+		log.Debug("Got %d members from %s", resp.Count, remoteNode.Namespace)
+		dpnSync.syncMembers(resp.Members(), result)
 		if result.HasErrors(DPNTypeMember) {
 			break
 		}
 		if resp.Next == nil || *resp.Next == "" {
-			log.Debug("No more members to get from %s", nodeName)
+			log.Debug("No more members to get from %s", remoteNode.Namespace)
 			break
 		}
 		pageNumber += 1
 	}
-	log.Debug("Members from %s: fetched %d, synched %s", nodeName,
+	log.Debug("Members from %s: fetched %d, synched %s", remoteNode.Namespace,
 		result.FetchCounts[DPNTypeMember], result.SyncCounts[DPNTypeMember])
 }
 
-func (dpnSync *DPNSync) syncMembers(members []*Member) ([]*Member, error) {
+func (dpnSync *DPNSync) syncMembers(members []*Member, result *SyncResult) {
 	log := dpnSync.Context.MessageLog
-	result := dpnSync.Results[nodeName]
 	for _, member := range(members) {
-		resp := dpnSync.LocalClient.DPNMemberGet(member.MemberId)
+		resp := dpnSync.LocalClient.MemberGet(member.MemberId)
 		if resp.Error != nil {
 			result.AddError(DPNTypeMember, resp.Error)
 			return
@@ -218,7 +218,7 @@ func (dpnSync *DPNSync) syncMembers(members []*Member) ([]*Member, error) {
 		existingMember := resp.Member()
 		if existingMember == nil {
 			log.Debug("Creating new member %s (%s)", member.Name, member.MemberId)
-			resp = dpnSync.LocalClient.DPNMemberCreate(member)
+			resp = dpnSync.LocalClient.MemberCreate(member)
 			if resp.Error != nil {
 				result.AddError(DPNTypeMember, resp.Error)
 				return
@@ -265,7 +265,7 @@ func (dpnSync *DPNSync) SyncBags(node *Node) () {
 		}
 		result.AddToFetchCount(DPNTypeBag, resp.Count)
 		log.Debug("Got %d bags from %s", resp.Count, node.Namespace)
-		dpnSync.syncBags(resp.Bags())
+		dpnSync.syncBags(resp.Bags(), result)
 		if result.HasErrors(DPNTypeBag) {
 			break
 		}
@@ -279,9 +279,8 @@ func (dpnSync *DPNSync) SyncBags(node *Node) () {
 		result.FetchCounts[DPNTypeBag], result.SyncCounts[DPNTypeBag])
 }
 
-func (dpnSync *DPNSync) syncBags(bags []*DPNBag) {
+func (dpnSync *DPNSync) syncBags(bags []*DPNBag, result *SyncResult) {
 	log := dpnSync.Context.MessageLog
-	result := dpnSync.Results[nodeName]
 	for _, bag := range(bags) {
 		log.Debug("Processing bag %s from %s", bag.UUID, bag.AdminNode)
 		resp := dpnSync.LocalClient.DPNBagGet(bag.UUID)
@@ -324,18 +323,16 @@ func (dpnSync *DPNSync) getBags(remoteClient *DPNRestClient, pageNumber int) (*D
 	return remoteClient.DPNBagList(&params)
 }
 
-func (dpnSync *DPNSync) SyncDigests(remoteNode *Node, bags []*DPNBag) {
+func (dpnSync *DPNSync) SyncDigests(remoteNode *Node) {
 	// foreach bag
 	// .. get digests
 	// .. for each digest
 	// .. sync digest
-	return nil, nil
 }
 
 func (dpnSync *DPNSync) syncDigest(digest *MessageDigest) {
 	// If digest exists on local node, do nothing
 	// otherwise, create digest
-	return nil, nil
 }
 
 func (dpnSync *DPNSync) getDigests(remoteClient *DPNRestClient, pageNumber int) (*DPNResponse) {
@@ -350,41 +347,40 @@ func (dpnSync *DPNSync) getDigests(remoteClient *DPNRestClient, pageNumber int) 
 func (dpnSync *DPNSync) SyncIngests(remoteNode *Node, bag *DPNBag) {
 	pageNumber := 1
 	log := dpnSync.Context.MessageLog
-	result := dpnSync.Results[nodeName]
-	remoteClient := dpnSync.RemoteClients[nodeName]
+	result := dpnSync.Results[remoteNode.Namespace]
+	remoteClient := dpnSync.RemoteClients[remoteNode.Namespace]
 	if remoteClient == nil {
-		dpnSync.logNoClient(DPNTypeIngest, nodeName)
+		dpnSync.logNoClient(DPNTypeIngest, remoteNode.Namespace)
 		return
 	}
 	for {
-		log.Debug("Getting page %d of ingests from remote %s for bag %s", pageNumber, nodeName, bag.UUID)
+		log.Debug("Getting page %d of ingests from remote %s for bag %s", pageNumber, remoteNode.Namespace, bag.UUID)
 		resp := dpnSync.getIngests(remoteClient, pageNumber, bag.UUID)
 		if resp.Error != nil {
 			result.AddError(DPNTypeIngest, resp.Error)
 			break
 		}
 		result.AddToFetchCount(DPNTypeIngest, resp.Count)
-		log.Debug("Got %d ingests for bag %s from %s", resp.Count, bag.UUID, nodeName)
-		dpnSync.syncIngests(resp.Ingests())
+		log.Debug("Got %d ingests for bag %s from %s", resp.Count, bag.UUID, remoteNode.Namespace)
+		dpnSync.syncIngests(resp.Ingests(), result)
 		if result.HasErrors(DPNTypeIngest) {
 			break
 		}
 		if resp.Next == nil || *resp.Next == "" {
-			log.Debug("No more ingests to get from %s", nodeName)
+			log.Debug("No more ingests to get from %s", remoteNode.Namespace)
 			break
 		}
 		pageNumber += 1
 	}
-	log.Debug("Ingests from %s: fetched %d, synched %s", nodeName,
+	log.Debug("Ingests from %s: fetched %d, synched %s", remoteNode.Namespace,
 		result.FetchCounts[DPNTypeIngest], result.SyncCounts[DPNTypeIngest])
 
 }
 
-func (dpnSync *DPNSync) syncIngests(ingests *Ingest) {
+func (dpnSync *DPNSync) syncIngests(ingests []*Ingest, result *SyncResult) {
 	log := dpnSync.Context.MessageLog
-	result := dpnSync.Results[nodeName]
 	for _, ingest := range(ingests) {
-		resp = dpnSync.LocalClient.DPNIngestCreate(ingest)
+		resp := dpnSync.LocalClient.IngestCreate(ingest)
 		if resp.Response.StatusCode == 409 {
 			// Do nothing. This ingest record already exists
 			// on our local server.
@@ -411,50 +407,49 @@ func (dpnSync *DPNSync) getIngests(remoteClient *DPNRestClient, pageNumber int, 
 func (dpnSync *DPNSync) SyncFixities(remoteNode *Node) {
 	pageNumber := 1
 	log := dpnSync.Context.MessageLog
-	result := dpnSync.Results[nodeName]
-	remoteClient := dpnSync.RemoteClients[nodeName]
+	result := dpnSync.Results[remoteNode.Namespace]
+	remoteClient := dpnSync.RemoteClients[remoteNode.Namespace]
 	if remoteClient == nil {
-		dpnSync.logNoClient(DPNTypeFixity, nodeName)
+		dpnSync.logNoClient(DPNTypeFixityCheck, remoteNode.Namespace)
 		return
 	}
 	for {
-		log.Debug("Getting page %d of fixities from %s", pageNumber, nodeName)
+		log.Debug("Getting page %d of fixities from %s", pageNumber, remoteNode.Namespace)
 		resp := dpnSync.getFixities(remoteClient, pageNumber)
 		if resp.Error != nil {
-			result.AddError(DPNTypeFixity, resp.Error)
+			result.AddError(DPNTypeFixityCheck, resp.Error)
 			break
 		}
-		result.AddToFetchCount(DPNTypeFixity, resp.Count)
-		log.Debug("Got %d fixities from %s", resp.Count, nodeName)
-		dpnSync.syncFixities(resp.Fixities())
-		if result.HasErrors(DPNTypeFixity) {
+		result.AddToFetchCount(DPNTypeFixityCheck, resp.Count)
+		log.Debug("Got %d fixities from %s", resp.Count, remoteNode.Namespace)
+		dpnSync.syncFixities(resp.FixityChecks(), result)
+		if result.HasErrors(DPNTypeFixityCheck) {
 			break
 		}
 		if resp.Next == nil || *resp.Next == "" {
-			log.Debug("No more fixities to get from %s", nodeName)
+			log.Debug("No more fixities to get from %s", remoteNode.Namespace)
 			break
 		}
 		pageNumber += 1
 	}
-	log.Debug("Fixities from %s: fetched %d, synched %s", nodeName,
-		result.FetchCounts[DPNTypeFixity], result.SyncCounts[DPNTypeFixity])
+	log.Debug("Fixities from %s: fetched %d, synched %s", remoteNode.Namespace,
+		result.FetchCounts[DPNTypeFixityCheck], result.SyncCounts[DPNTypeFixityCheck])
 }
 
-func (dpnSync *DPNSync) syncFixities(fixities []*FixityCheck) {
+func (dpnSync *DPNSync) syncFixities(fixities []*FixityCheck, result *SyncResult) {
 	log := dpnSync.Context.MessageLog
-	result := dpnSync.Results[nodeName]
 	for _, fixity := range(fixities) {
-		resp = dpnSync.LocalClient.FixityCreate(fixity)
+		resp := dpnSync.LocalClient.FixityCheckCreate(fixity)
 		if resp.Response.StatusCode == 409 {
 			// Do nothing. This fixity record already exists
 			// on our local server.
 		} else if resp.Error != nil {
-			result.AddError(DPNTypeFixity, resp.Error)
+			result.AddError(DPNTypeFixityCheck, resp.Error)
 			return
 		} else {
-			log.Debug("Created new fixity %s (bag %s)", fixity.FixityId, fixity.Bag)
+			log.Debug("Created new fixity %s (bag %s)", fixity.FixityCheckId, fixity.Bag)
 		}
-		result.AddToSyncCount(DPNTypeFixity, 1)
+		result.AddToSyncCount(DPNTypeFixityCheck, 1)
 	}
 }
 
@@ -474,38 +469,37 @@ func (dpnSync *DPNSync) getFixities(remoteClient *DPNRestClient, pageNumber int)
 func (dpnSync *DPNSync) SyncReplicationRequests(remoteNode *Node) {
 	pageNumber := 1
 	log := dpnSync.Context.MessageLog
-	result := dpnSync.Results[nodeName]
-	remoteClient := dpnSync.RemoteClients[nodeName]
+	result := dpnSync.Results[remoteNode.Namespace]
+	remoteClient := dpnSync.RemoteClients[remoteNode.Namespace]
 	if remoteClient == nil {
-		dpnSync.logNoClient(DPNTypeReplication, nodeName)
+		dpnSync.logNoClient(DPNTypeReplication, remoteNode.Namespace)
 		return
 	}
 	for {
-		log.Debug("Getting page %d of replication transfers from %s", pageNumber, nodeName)
+		log.Debug("Getting page %d of replication transfers from %s", pageNumber, remoteNode.Namespace)
 		resp := dpnSync.getReplicationRequests(remoteClient, pageNumber)
 		if resp.Error != nil {
 			result.AddError(DPNTypeReplication, resp.Error)
 			break
 		}
 		result.AddToFetchCount(DPNTypeReplication, resp.Count)
-		log.Debug("Got %d replication requests from %s", resp.Count, nodeName)
-		dpnSync.syncBags(resp.Bags())
+		log.Debug("Got %d replication requests from %s", resp.Count, remoteNode.Namespace)
+		dpnSync.syncReplicationRequests(resp.ReplicationTransfers(), result)
 		if result.HasErrors(DPNTypeReplication) {
 			break
 		}
 		if resp.Next == nil || *resp.Next == "" {
-			log.Debug("No more replications to get from %s", nodeName)
+			log.Debug("No more replications to get from %s", remoteNode.Namespace)
 			break
 		}
 		pageNumber += 1
 	}
-	log.Debug("Replications from %s: fetched %d, synched %s", nodeName,
+	log.Debug("Replications from %s: fetched %d, synched %s", remoteNode.Namespace,
 		result.FetchCounts[DPNTypeReplication], result.SyncCounts[DPNTypeReplication])
 }
 
-func (dpnSync *DPNSync) syncReplicationRequests(xfers []*ReplicationTransfer) {
+func (dpnSync *DPNSync) syncReplicationRequests(xfers []*ReplicationTransfer, result *SyncResult) {
 	log := dpnSync.Context.MessageLog
-	result := dpnSync.Results[nodeName]
 	for _, xfer := range(xfers) {
 		log.Debug("Processing replication %s from %s (bag %s)", xfer.ReplicationId,
 			xfer.FromNode, xfer.Bag)
@@ -553,38 +547,37 @@ func (dpnSync *DPNSync) getReplicationRequests(remoteClient *DPNRestClient, page
 func (dpnSync *DPNSync) SyncRestoreRequests(remoteNode *Node) {
 	pageNumber := 1
 	log := dpnSync.Context.MessageLog
-	result := dpnSync.Results[nodeName]
-	remoteClient := dpnSync.RemoteClients[nodeName]
+	result := dpnSync.Results[remoteNode.Namespace]
+	remoteClient := dpnSync.RemoteClients[remoteNode.Namespace]
 	if remoteClient == nil {
-		dpnSync.logNoClient(DPNTypeRestore, nodeName)
+		dpnSync.logNoClient(DPNTypeRestore, remoteNode.Namespace)
 		return
 	}
 	for {
-		log.Debug("Getting page %d of restore transfers from %s", pageNumber, nodeName)
+		log.Debug("Getting page %d of restore transfers from %s", pageNumber, remoteNode.Namespace)
 		resp := dpnSync.getRestoreRequests(remoteClient, pageNumber)
 		if resp.Error != nil {
 			result.AddError(DPNTypeRestore, resp.Error)
 			break
 		}
 		result.AddToFetchCount(DPNTypeRestore, resp.Count)
-		log.Debug("Got %d restore requests from %s", resp.Count, nodeName)
-		dpnSync.syncBags(resp.Bags())
+		log.Debug("Got %d restore requests from %s", resp.Count, remoteNode.Namespace)
+		dpnSync.syncRestoreRequests(resp.RestoreTransfers(), result)
 		if result.HasErrors(DPNTypeRestore) {
 			break
 		}
 		if resp.Next == nil || *resp.Next == "" {
-			log.Debug("No more restores to get from %s", nodeName)
+			log.Debug("No more restores to get from %s", remoteNode.Namespace)
 			break
 		}
 		pageNumber += 1
 	}
-	log.Debug("Restores from %s: fetched %d, synched %s", nodeName,
+	log.Debug("Restores from %s: fetched %d, synched %s", remoteNode.Namespace,
 		result.FetchCounts[DPNTypeRestore], result.SyncCounts[DPNTypeRestore])
 }
 
-func (dpnSync *DPNSync) syncRestoreRequests(xfers []*RestoreTransfer) {
+func (dpnSync *DPNSync) syncRestoreRequests(xfers []*RestoreTransfer, result *SyncResult) {
 	log := dpnSync.Context.MessageLog
-	result := dpnSync.Results[nodeName]
 	for _, xfer := range(xfers) {
 		log.Debug("Processing restore %s from %s (bag %s)", xfer.RestoreId,
 			xfer.FromNode, xfer.Bag)
@@ -628,16 +621,16 @@ func (dpnSync *DPNSync) getRestoreRequests(remoteClient *DPNRestClient, pageNumb
 	return remoteClient.RestoreTransferList(&params)
 }
 
-func (dpnSync *DPNSync) logNoClient(operation, nodeName string) {
+func (dpnSync *DPNSync) logNoClient(dpnType DPNObjectType, nodeName string) {
 	dpnSync.Context.MessageLog.Error("Skipping %s for node %s: REST client is nil",
-		operation, nodeName)
+		dpnType, nodeName)
 }
 
 func (dpnSync *DPNSync) logResult(syncResult *SyncResult) {
 	for _, dpnType := range DPNTypes {
 		dpnSync.Context.MessageLog.Info("Node %s %s: Fetched %s, Synched %d",
-			syncResult.NodeName, dpnType, result.FetchCounts[dpnType],
-			result.SyncCounts[dpnType])
+			syncResult.NodeName, dpnType, syncResult.FetchCounts[dpnType],
+			syncResult.SyncCounts[dpnType])
 	}
 	for _, dpnType := range DPNTypes {
 		errors := syncResult.Errors[dpnType]

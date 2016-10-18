@@ -46,7 +46,7 @@ func (syncResult *SyncResult) AddError (objectType DPNObjectType, err error) {
 	if _, keyExists := syncResult.Errors[objectType]; !keyExists {
 		syncResult.Errors[objectType] = make([]error, 0)
 	}
-	syncResult.Errors[objectType] = append(syncResult.Errors[objectType], error)
+	syncResult.Errors[objectType] = append(syncResult.Errors[objectType], err)
 }
 
 // HasErrors returns true if there are any errors for the specified objectType.
@@ -54,7 +54,7 @@ func (syncResult *SyncResult) AddError (objectType DPNObjectType, err error) {
 func (syncResult *SyncResult) HasErrors(objectType DPNObjectType) (bool) {
 	hasErrors := false
 	if objectType == "" {
-		for objType, errors := range syncResult.Errors {
+		for _, errors := range syncResult.Errors {
 			if len(errors) > 0 {
 				hasErrors = true
 				break
