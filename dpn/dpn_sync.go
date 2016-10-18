@@ -507,8 +507,6 @@ func (dpnSync *DPNSync) syncFixities(fixities []*FixityCheck, result *SyncResult
 
 func (dpnSync *DPNSync) getFixities(remoteClient *DPNRestClient, pageNumber int) (*DPNResponse) {
 	// Get fixities for the remote node *calculated by that node*
-	// TODO: Fixtures for DPN do not include own-node fixity checks.
-	// E.g. All of Chron's fixity checks come from other nodes. Need to fix that.
 	remoteNode := dpnSync.RemoteNodes[remoteClient.Node]
 	params := url.Values{}
 	params.Set("after", remoteNode.LastPullDate.Format(time.RFC3339Nano))
