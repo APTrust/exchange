@@ -140,8 +140,8 @@ func (client *DPNRestClient) MemberGet(identifier string) (*DPNResponse) {
 	relativeUrl := fmt.Sprintf("/%s/member/%s/", client.APIVersion, identifier)
 	absUrl := client.BuildUrl(relativeUrl, nil)
 
-	client._doRequest(resp, "GET", absUrl, nil)
-	if resp.Error != nil {
+	client.doRequest(resp, "GET", absUrl, nil)
+	if resp.Error != nil || resp.Response.StatusCode != http.StatusOK {
 		return resp
 	}
 
@@ -164,11 +164,13 @@ func (client *DPNRestClient) MemberList(params *url.Values) (*DPNResponse) {
 	relativeUrl := fmt.Sprintf("/%s/member/", client.APIVersion)
 	absUrl := client.BuildUrl(relativeUrl, params)
 
-	client._doRequest(resp, "GET", absUrl, nil)
+	client.doRequest(resp, "GET", absUrl, nil)
 	if resp.Error != nil {
 		return resp
 	}
-	resp.UnmarshalJsonList()
+	if resp.Response.StatusCode == http.StatusOK {
+		resp.UnmarshalJsonList()
+	}
 	return resp
 }
 
@@ -201,8 +203,8 @@ func (client *DPNRestClient) dpnMemberSave(member *Member, httpMethod string) (*
 	}
 
 	// Build the request
-	client._doRequest(resp, httpMethod, absoluteUrl, bytes.NewBuffer(postData))
-	if resp.Error != nil {
+	client.doRequest(resp, httpMethod, absoluteUrl, bytes.NewBuffer(postData))
+	if resp.Error != nil || (resp.Response.StatusCode != http.StatusOK && resp.Response.StatusCode != http.StatusCreated) {
 		return resp
 	}
 
@@ -223,8 +225,8 @@ func (client *DPNRestClient) NodeGet(identifier string) (*DPNResponse) {
 	relativeUrl := fmt.Sprintf("/%s/node/%s/", client.APIVersion, identifier)
 	absUrl := client.BuildUrl(relativeUrl, nil)
 
-	client._doRequest(resp, "GET", absUrl, nil)
-	if resp.Error != nil {
+	client.doRequest(resp, "GET", absUrl, nil)
+	if resp.Error != nil || resp.Response.StatusCode != http.StatusOK {
 		return resp
 	}
 
@@ -249,8 +251,8 @@ func (client *DPNRestClient) NodeList(params *url.Values) (*DPNResponse) {
 	relativeUrl := fmt.Sprintf("/%s/node/", client.APIVersion)
 	absUrl := client.BuildUrl(relativeUrl, params)
 
-	client._doRequest(resp, "GET", absUrl, nil)
-	if resp.Error != nil {
+	client.doRequest(resp, "GET", absUrl, nil)
+	if resp.Error != nil || resp.Response.StatusCode != http.StatusOK {
 		return resp
 	}
 	resp.UnmarshalJsonList()
@@ -287,8 +289,8 @@ func (client *DPNRestClient) nodeSave(node *Node, httpMethod string) (*DPNRespon
 	}
 
 	// Build the request
-	client._doRequest(resp, httpMethod, absoluteUrl, bytes.NewBuffer(postData))
-	if resp.Error != nil {
+	client.doRequest(resp, httpMethod, absoluteUrl, bytes.NewBuffer(postData))
+	if resp.Error != nil || (resp.Response.StatusCode != http.StatusOK && resp.Response.StatusCode != http.StatusCreated) {
 		return resp
 	}
 
@@ -326,8 +328,8 @@ func (client *DPNRestClient) DPNBagGet(identifier string) (*DPNResponse) {
 	relativeUrl := fmt.Sprintf("/%s/bag/%s/", client.APIVersion, identifier)
 	absUrl := client.BuildUrl(relativeUrl, nil)
 
-	client._doRequest(resp, "GET", absUrl, nil)
-	if resp.Error != nil {
+	client.doRequest(resp, "GET", absUrl, nil)
+	if resp.Error != nil || resp.Response.StatusCode != http.StatusOK {
 		return resp
 	}
 
@@ -351,8 +353,8 @@ func (client *DPNRestClient) DPNBagList(params *url.Values) (*DPNResponse) {
 	relativeUrl := fmt.Sprintf("/%s/bag/", client.APIVersion)
 	absUrl := client.BuildUrl(relativeUrl, params)
 
-	client._doRequest(resp, "GET", absUrl, nil)
-	if resp.Error != nil {
+	client.doRequest(resp, "GET", absUrl, nil)
+	if resp.Error != nil || resp.Response.StatusCode != http.StatusOK {
 		return resp
 	}
 	resp.UnmarshalJsonList()
@@ -389,8 +391,8 @@ func (client *DPNRestClient) dpnBagSave(bag *DPNBag, httpMethod string) (*DPNRes
 	}
 
 	// Build the request
-	client._doRequest(resp, httpMethod, absoluteUrl, bytes.NewBuffer(postData))
-	if resp.Error != nil {
+	client.doRequest(resp, httpMethod, absoluteUrl, bytes.NewBuffer(postData))
+	if resp.Error != nil || (resp.Response.StatusCode != http.StatusOK && resp.Response.StatusCode != http.StatusCreated) {
 		return resp
 	}
 
@@ -412,15 +414,15 @@ func (client *DPNRestClient) ReplicationTransferGet(identifier string) (*DPNResp
 	relativeUrl := fmt.Sprintf("/%s/replicate/%s/", client.APIVersion, identifier)
 	absUrl := client.BuildUrl(relativeUrl, nil)
 
-	client._doRequest(resp, "GET", absUrl, nil)
-	if resp.Error != nil {
+	client.doRequest(resp, "GET", absUrl, nil)
+	if resp.Error != nil || resp.Response.StatusCode != http.StatusOK {
 		return resp
 	}
 
 	// Parse the JSON from the response body
 	replication := &ReplicationTransfer{}
 	resp.Error = json.Unmarshal(resp.data, replication)
-	if resp.Error == nil {
+	if resp.Error == nil || resp.Response.StatusCode != http.StatusOK {
 		resp.replications[0] = replication
 	}
 	return resp
@@ -437,8 +439,8 @@ func (client *DPNRestClient) ReplicationList(params *url.Values) (*DPNResponse) 
 	relativeUrl := fmt.Sprintf("/%s/replicate/", client.APIVersion)
 	absUrl := client.BuildUrl(relativeUrl, params)
 
-	client._doRequest(resp, "GET", absUrl, nil)
-	if resp.Error != nil {
+	client.doRequest(resp, "GET", absUrl, nil)
+	if resp.Error != nil || resp.Response.StatusCode != http.StatusOK {
 		return resp
 	}
 	resp.UnmarshalJsonList()
@@ -476,8 +478,8 @@ func (client *DPNRestClient) replicationTransferSave(xfer *ReplicationTransfer, 
 	}
 
 	// Build the request
-	client._doRequest(resp, httpMethod, absoluteUrl, bytes.NewBuffer(postData))
-	if resp.Error != nil {
+	client.doRequest(resp, httpMethod, absoluteUrl, bytes.NewBuffer(postData))
+	if resp.Error != nil || (resp.Response.StatusCode != http.StatusOK && resp.Response.StatusCode != http.StatusCreated) {
 		return resp
 	}
 
@@ -499,8 +501,8 @@ func (client *DPNRestClient) RestoreTransferGet(identifier string) (*DPNResponse
 	relativeUrl := fmt.Sprintf("/%s/restore/%s/", client.APIVersion, identifier)
 	absUrl := client.BuildUrl(relativeUrl, nil)
 
-	client._doRequest(resp, "GET", absUrl, nil)
-	if resp.Error != nil {
+	client.doRequest(resp, "GET", absUrl, nil)
+	if resp.Error != nil || resp.Response.StatusCode != http.StatusOK {
 		return resp
 	}
 
@@ -524,8 +526,8 @@ func (client *DPNRestClient) RestoreTransferList(params *url.Values) (*DPNRespon
 	relativeUrl := fmt.Sprintf("/%s/restore/", client.APIVersion)
 	absUrl := client.BuildUrl(relativeUrl, params)
 
-	client._doRequest(resp, "GET", absUrl, nil)
-	if resp.Error != nil {
+	client.doRequest(resp, "GET", absUrl, nil)
+	if resp.Error != nil || resp.Response.StatusCode != http.StatusOK {
 		return resp
 	}
 	resp.UnmarshalJsonList()
@@ -563,8 +565,8 @@ func (client *DPNRestClient) restoreTransferSave(xfer *RestoreTransfer, httpMeth
 	}
 
 	// Build the request
-	client._doRequest(resp, httpMethod, absoluteUrl, bytes.NewBuffer(postData))
-	if resp.Error != nil {
+	client.doRequest(resp, httpMethod, absoluteUrl, bytes.NewBuffer(postData))
+	if resp.Error != nil || (resp.Response.StatusCode != http.StatusOK && resp.Response.StatusCode != http.StatusCreated) {
 		return resp
 	}
 
@@ -586,8 +588,8 @@ func (client *DPNRestClient) DigestGet(bagUUID, algorithm string) (*DPNResponse)
 	relativeUrl := fmt.Sprintf("/%s/bag/%s/digest/%s/", client.APIVersion, bagUUID, algorithm)
 	absUrl := client.BuildUrl(relativeUrl, nil)
 
-	client._doRequest(resp, "GET", absUrl, nil)
-	if resp.Error != nil {
+	client.doRequest(resp, "GET", absUrl, nil)
+	if resp.Error != nil || resp.Response.StatusCode != http.StatusOK {
 		return resp
 	}
 
@@ -612,8 +614,8 @@ func (client *DPNRestClient) DigestList(params *url.Values) (*DPNResponse) {
 	relativeUrl := fmt.Sprintf("/%s/digest/", client.APIVersion)
 	absUrl := client.BuildUrl(relativeUrl, params)
 
-	client._doRequest(resp, "GET", absUrl, nil)
-	if resp.Error != nil {
+	client.doRequest(resp, "GET", absUrl, nil)
+	if resp.Error != nil || resp.Response.StatusCode != http.StatusOK {
 		return resp
 	}
 	resp.UnmarshalJsonList()
@@ -641,8 +643,8 @@ func (client *DPNRestClient) digestSave(digest *MessageDigest, httpMethod string
 	}
 
 	// Build the request
-	client._doRequest(resp, httpMethod, absoluteUrl, bytes.NewBuffer(postData))
-	if resp.Error != nil {
+	client.doRequest(resp, httpMethod, absoluteUrl, bytes.NewBuffer(postData))
+	if resp.Error != nil || (resp.Response.StatusCode != http.StatusOK && resp.Response.StatusCode != http.StatusCreated) {
 		return resp
 	}
 
@@ -666,8 +668,8 @@ func (client *DPNRestClient) FixityCheckList(params *url.Values) (*DPNResponse) 
 	relativeUrl := fmt.Sprintf("/%s/fixity_check/", client.APIVersion)
 	absUrl := client.BuildUrl(relativeUrl, params)
 
-	client._doRequest(resp, "GET", absUrl, nil)
-	if resp.Error != nil {
+	client.doRequest(resp, "GET", absUrl, nil)
+	if resp.Error != nil || resp.Response.StatusCode != http.StatusOK {
 		return resp
 	}
 	resp.UnmarshalJsonList()
@@ -695,8 +697,8 @@ func (client *DPNRestClient) fixityCheckSave(fixity *FixityCheck, httpMethod str
 	}
 
 	// Build the request
-	client._doRequest(resp, httpMethod, absoluteUrl, bytes.NewBuffer(postData))
-	if resp.Error != nil {
+	client.doRequest(resp, httpMethod, absoluteUrl, bytes.NewBuffer(postData))
+	if resp.Error != nil || (resp.Response.StatusCode != http.StatusOK&& resp.Response.StatusCode != http.StatusCreated) {
 		return resp
 	}
 
@@ -723,8 +725,8 @@ func (client *DPNRestClient) IngestList(params *url.Values) (*DPNResponse) {
 	relativeUrl := fmt.Sprintf("/%s/ingest/", client.APIVersion)
 	absUrl := client.BuildUrl(relativeUrl, params)
 
-	client._doRequest(resp, "GET", absUrl, nil)
-	if resp.Error != nil {
+	client.doRequest(resp, "GET", absUrl, nil)
+	if resp.Error != nil || resp.Response.StatusCode != http.StatusOK {
 		return resp
 	}
 	resp.UnmarshalJsonList()
@@ -752,8 +754,8 @@ func (client *DPNRestClient) ingestSave(ingest *Ingest, httpMethod string) (*DPN
 	}
 
 	// Build the request
-	client._doRequest(resp, httpMethod, absoluteUrl, bytes.NewBuffer(postData))
-	if resp.Error != nil {
+	client.doRequest(resp, httpMethod, absoluteUrl, bytes.NewBuffer(postData))
+	if resp.Error != nil || (resp.Response.StatusCode != http.StatusOK && resp.Response.StatusCode != http.StatusCreated) {
 		return resp
 	}
 
@@ -847,7 +849,7 @@ func readResponse(body io.ReadCloser) (data []byte, err error) {
 // For a description of the other params, see NewJsonRequest.
 //
 // If an error occurs, it will be recorded in resp.Error.
-func (client *DPNRestClient) _doRequest(resp *DPNResponse, method, absoluteUrl string, requestData io.Reader) {
+func (client *DPNRestClient) doRequest(resp *DPNResponse, method, absoluteUrl string, requestData io.Reader) {
 	// Build the request
 	request, err := client.NewJsonRequest(method, absoluteUrl, requestData)
 	resp.Request = request
