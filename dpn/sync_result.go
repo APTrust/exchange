@@ -1,5 +1,9 @@
 package dpn
 
+import (
+	"fmt"
+)
+
 // SyncResult describes the result of an operation where we pull
 // info about all updated bags, replication requests and restore
 // requests from a remote node and copy that data into our own
@@ -54,8 +58,10 @@ func (syncResult *SyncResult) AddError (objectType DPNObjectType, err error) {
 func (syncResult *SyncResult) HasErrors(objectType DPNObjectType) (bool) {
 	hasErrors := false
 	if objectType == "" {
-		for _, errors := range syncResult.Errors {
+		for key, errors := range syncResult.Errors {
 			if len(errors) > 0 {
+				fmt.Println("Errors for", key)
+				fmt.Println(errors[0].Error())
 				hasErrors = true
 				break
 			}

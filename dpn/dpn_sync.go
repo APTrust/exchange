@@ -572,7 +572,7 @@ func (dpnSync *DPNSync) SyncRestoreRequests(remoteNode *Node) {
 		}
 		pageNumber += 1
 	}
-	log.Debug("Restores from %s: fetched %d, synched %s", remoteNode.Namespace,
+	log.Debug("Restores from %s: fetched %d, synched %d", remoteNode.Namespace,
 		result.FetchCounts[DPNTypeRestore], result.SyncCounts[DPNTypeRestore])
 }
 
@@ -636,7 +636,7 @@ func (dpnSync *DPNSync) logResult(syncResult *SyncResult) {
 		errors := syncResult.Errors[dpnType]
 		if errors != nil {
 			for _, err := range errors {
-				dpnSync.Context.MessageLog.Info("Node %s %s: %v",
+				dpnSync.Context.MessageLog.Error("Node %s %s: %v",
 					syncResult.NodeName, dpnType, err)
 			}
 		}
