@@ -44,6 +44,17 @@ const (
 	DPNTypeRestore                   = "Restore"
 )
 
+var DPNTypes = []DPNObjectType{
+	DPNTypeBag,
+	DPNTypeDigest,
+	DPNTypeFixityCheck,
+	DPNTypeIngest,
+	DPNTypeMember,
+	DPNTypeNode,
+	DPNTypeReplication,
+	DPNTypeRestore,
+}
+
 // NewDPNResponse returns a pointer to a new response object.
 func NewDPNResponse(objType DPNObjectType) (*DPNResponse) {
 	return &DPNResponse{
