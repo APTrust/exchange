@@ -306,7 +306,6 @@ func (dpnSync *DPNSync) syncBags(bags []*DPNBag, result *SyncResult) {
 			}
 		} else if !existingBag.UpdatedAt.Before(bag.UpdatedAt) {
 			log.Debug("Skipping bag %s, because ours is same age or newer.", bag.UUID)
-			dpnSync.SyncIngests(bag)
 		} else {
 			log.Debug("Updating bag %s", bag.UUID)
 			resp = dpnSync.LocalClient.DPNBagUpdate(bag)
@@ -314,8 +313,8 @@ func (dpnSync *DPNSync) syncBags(bags []*DPNBag, result *SyncResult) {
 				result.AddError(DPNTypeBag, resp.Error)
 				return
 			}
-			dpnSync.SyncIngests(bag)
 		}
+		dpnSync.SyncIngests(bag)
 		result.AddToSyncCount(DPNTypeBag, 1)
 	}
 }
@@ -334,21 +333,64 @@ func (dpnSync *DPNSync) getBags(remoteClient *DPNRestClient, pageNumber int) (*D
 }
 
 func (dpnSync *DPNSync) SyncDigests(remoteNode *Node) {
-	// foreach bag
-	// .. get digests
-	// .. for each digest
-	// .. sync digest
+	pageNumber := 1
+	log := dpnSync.Context.MessageLog
+	result := dpnSync.Results[remoteNode.Namespace]
+	remoteClient := dpnSync.RemoteClients[remoteNode.Namespace]
+	if remoteClient == nil {
+		dpnSync.logNoClient(DPNTypeDigest, remoteNode.Namespace)
+		return
+	}
+	for {
+		log.Debug("Getting page %d of digests from %s", pageNumber, remoteNode.Namespace)
+		resp := dpnSync.getDigests(remoteClient, pageNumber)
+		if resp.Error != nil {
+			result.AddError(DPNTypeDigest, resp.Error)
+			break
+		}
+		result.AddToFetchCount(DPNTypeDigest, resp.Count)
+		log.Debug("Got %d digests from %s", resp.Count, remoteNode.Namespace)
+		dpnSync.syncDigests(resp.Digests(), result)
+		if result.HasErrors(DPNTypeDigest) {
+			break
+		}
+		if resp.Next == nil || *resp.Next == "" {
+			log.Debug("No more digests to get from %s", remoteNode.Namespace)
+			break
+		}
+		pageNumber += 1
+	}
+	log.Debug("Digests from %s: fetched %d, synched %d", remoteNode.Namespace,
+		result.FetchCounts[DPNTypeDigest], result.SyncCounts[DPNTypeDigest])
 }
 
-func (dpnSync *DPNSync) syncDigest(digest *MessageDigest) {
-	// If digest exists on local node, do nothing
-	// otherwise, create digest
+func (dpnSync *DPNSync) syncDigests(digests []*MessageDigest, result *SyncResult) {
+	log := dpnSync.Context.MessageLog
+	for _, digest := range(digests) {
+		resp := dpnSync.LocalClient.DigestGet(digest.Bag, digest.Algorithm)
+		if resp.Error != nil {
+			result.AddError(DPNTypeDigest, resp.Error)
+			return
+		}
+		existingDigest := resp.Digest()
+		if existingDigest == nil {
+			log.Debug("Creating new %s digest for bag %s", digest.Algorithm, digest.Bag)
+			resp = dpnSync.LocalClient.DigestCreate(digest)
+			if resp.Error != nil {
+				result.AddError(DPNTypeDigest, resp.Error)
+				return
+			}
+		}
+		result.AddToSyncCount(DPNTypeDigest, 1)
+	}
 }
 
 func (dpnSync *DPNSync) getDigests(remoteClient *DPNRestClient, pageNumber int) (*DPNResponse) {
+	// We want digests only from the node that calculated them.
 	remoteNode := dpnSync.RemoteNodes[remoteClient.Node]
 	params := url.Values{}
 	params.Set("after", remoteNode.LastPullDate.Format(time.RFC3339Nano))
+	params.Set("node", remoteNode.Namespace)
 	params.Set("page", fmt.Sprintf("%d", pageNumber))
 	params.Set("per_page", strconv.Itoa(SYNC_BATCH_SIZE))
 	return remoteClient.DigestList(&params)
@@ -465,6 +507,8 @@ func (dpnSync *DPNSync) syncFixities(fixities []*FixityCheck, result *SyncResult
 
 func (dpnSync *DPNSync) getFixities(remoteClient *DPNRestClient, pageNumber int) (*DPNResponse) {
 	// Get fixities for the remote node *calculated by that node*
+	// TODO: Fixtures for DPN do not include own-node fixity checks.
+	// E.g. All of Chron's fixity checks come from other nodes. Need to fix that.
 	remoteNode := dpnSync.RemoteNodes[remoteClient.Node]
 	params := url.Values{}
 	params.Set("after", remoteNode.LastPullDate.Format(time.RFC3339Nano))
