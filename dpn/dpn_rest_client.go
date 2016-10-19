@@ -141,7 +141,7 @@ func (client *DPNRestClient) MemberGet(identifier string) (*DPNResponse) {
 	absUrl := client.BuildUrl(relativeUrl, nil)
 
 	client._doRequest(resp, "GET", absUrl, nil)
-	if resp.Error != nil {
+	if resp.Error != nil || resp.Response.StatusCode != 200 {
 		return resp
 	}
 
@@ -165,7 +165,7 @@ func (client *DPNRestClient) MemberList(params *url.Values) (*DPNResponse) {
 	absUrl := client.BuildUrl(relativeUrl, params)
 
 	client._doRequest(resp, "GET", absUrl, nil)
-	if resp.Error != nil {
+	if resp.Error != nil || resp.Response.StatusCode != 200 {
 		return resp
 	}
 	resp.UnmarshalJsonList()
@@ -202,7 +202,7 @@ func (client *DPNRestClient) dpnMemberSave(member *Member, httpMethod string) (*
 
 	// Build the request
 	client._doRequest(resp, httpMethod, absoluteUrl, bytes.NewBuffer(postData))
-	if resp.Error != nil {
+	if resp.Error != nil || (resp.Response.StatusCode != 200 && resp.Response.StatusCode != 201) {
 		return resp
 	}
 
@@ -224,7 +224,7 @@ func (client *DPNRestClient) NodeGet(identifier string) (*DPNResponse) {
 	absUrl := client.BuildUrl(relativeUrl, nil)
 
 	client._doRequest(resp, "GET", absUrl, nil)
-	if resp.Error != nil {
+	if resp.Error != nil || resp.Response.StatusCode != 200 {
 		return resp
 	}
 
@@ -250,7 +250,7 @@ func (client *DPNRestClient) NodeList(params *url.Values) (*DPNResponse) {
 	absUrl := client.BuildUrl(relativeUrl, params)
 
 	client._doRequest(resp, "GET", absUrl, nil)
-	if resp.Error != nil {
+	if resp.Error != nil || resp.Response.StatusCode != 200 {
 		return resp
 	}
 	resp.UnmarshalJsonList()
@@ -288,7 +288,7 @@ func (client *DPNRestClient) nodeSave(node *Node, httpMethod string) (*DPNRespon
 
 	// Build the request
 	client._doRequest(resp, httpMethod, absoluteUrl, bytes.NewBuffer(postData))
-	if resp.Error != nil {
+	if resp.Error != nil || (resp.Response.StatusCode != 200 && resp.Response.StatusCode != 201) {
 		return resp
 	}
 
@@ -327,7 +327,7 @@ func (client *DPNRestClient) DPNBagGet(identifier string) (*DPNResponse) {
 	absUrl := client.BuildUrl(relativeUrl, nil)
 
 	client._doRequest(resp, "GET", absUrl, nil)
-	if resp.Error != nil {
+	if resp.Error != nil || resp.Response.StatusCode != 200 {
 		return resp
 	}
 
@@ -352,7 +352,7 @@ func (client *DPNRestClient) DPNBagList(params *url.Values) (*DPNResponse) {
 	absUrl := client.BuildUrl(relativeUrl, params)
 
 	client._doRequest(resp, "GET", absUrl, nil)
-	if resp.Error != nil {
+	if resp.Error != nil || resp.Response.StatusCode != 200{
 		return resp
 	}
 	resp.UnmarshalJsonList()
@@ -390,7 +390,7 @@ func (client *DPNRestClient) dpnBagSave(bag *DPNBag, httpMethod string) (*DPNRes
 
 	// Build the request
 	client._doRequest(resp, httpMethod, absoluteUrl, bytes.NewBuffer(postData))
-	if resp.Error != nil {
+	if resp.Error != nil || (resp.Response.StatusCode != 200 && resp.Response.StatusCode != 201) {
 		return resp
 	}
 
@@ -413,7 +413,7 @@ func (client *DPNRestClient) ReplicationTransferGet(identifier string) (*DPNResp
 	absUrl := client.BuildUrl(relativeUrl, nil)
 
 	client._doRequest(resp, "GET", absUrl, nil)
-	if resp.Error != nil {
+	if resp.Error != nil || resp.Response.StatusCode != 200 {
 		return resp
 	}
 
@@ -438,7 +438,7 @@ func (client *DPNRestClient) ReplicationList(params *url.Values) (*DPNResponse) 
 	absUrl := client.BuildUrl(relativeUrl, params)
 
 	client._doRequest(resp, "GET", absUrl, nil)
-	if resp.Error != nil {
+	if resp.Error != nil || resp.Response.StatusCode != 200 {
 		return resp
 	}
 	resp.UnmarshalJsonList()
@@ -477,7 +477,7 @@ func (client *DPNRestClient) replicationTransferSave(xfer *ReplicationTransfer, 
 
 	// Build the request
 	client._doRequest(resp, httpMethod, absoluteUrl, bytes.NewBuffer(postData))
-	if resp.Error != nil {
+	if resp.Error != nil || (resp.Response.StatusCode != 200 && resp.Response.StatusCode != 201) {
 		return resp
 	}
 
@@ -500,7 +500,7 @@ func (client *DPNRestClient) RestoreTransferGet(identifier string) (*DPNResponse
 	absUrl := client.BuildUrl(relativeUrl, nil)
 
 	client._doRequest(resp, "GET", absUrl, nil)
-	if resp.Error != nil {
+	if resp.Error != nil || resp.Response.StatusCode != 200 {
 		return resp
 	}
 
@@ -525,7 +525,7 @@ func (client *DPNRestClient) RestoreTransferList(params *url.Values) (*DPNRespon
 	absUrl := client.BuildUrl(relativeUrl, params)
 
 	client._doRequest(resp, "GET", absUrl, nil)
-	if resp.Error != nil {
+	if resp.Error != nil || resp.Response.StatusCode != 200 {
 		return resp
 	}
 	resp.UnmarshalJsonList()
@@ -564,7 +564,7 @@ func (client *DPNRestClient) restoreTransferSave(xfer *RestoreTransfer, httpMeth
 
 	// Build the request
 	client._doRequest(resp, httpMethod, absoluteUrl, bytes.NewBuffer(postData))
-	if resp.Error != nil {
+	if resp.Error != nil || (resp.Response.StatusCode != 200 && resp.Response.StatusCode != 201) {
 		return resp
 	}
 
@@ -587,7 +587,7 @@ func (client *DPNRestClient) DigestGet(bagUUID, algorithm string) (*DPNResponse)
 	absUrl := client.BuildUrl(relativeUrl, nil)
 
 	client._doRequest(resp, "GET", absUrl, nil)
-	if resp.Error != nil {
+	if resp.Error != nil || resp.Response.StatusCode != 200 {
 		return resp
 	}
 
@@ -613,7 +613,7 @@ func (client *DPNRestClient) DigestList(params *url.Values) (*DPNResponse) {
 	absUrl := client.BuildUrl(relativeUrl, params)
 
 	client._doRequest(resp, "GET", absUrl, nil)
-	if resp.Error != nil {
+	if resp.Error != nil || resp.Response.StatusCode != 200 {
 		return resp
 	}
 	resp.UnmarshalJsonList()
@@ -642,7 +642,7 @@ func (client *DPNRestClient) digestSave(digest *MessageDigest, httpMethod string
 
 	// Build the request
 	client._doRequest(resp, httpMethod, absoluteUrl, bytes.NewBuffer(postData))
-	if resp.Error != nil {
+	if resp.Error != nil || (resp.Response.StatusCode != 200 && resp.Response.StatusCode != 201) {
 		return resp
 	}
 
@@ -667,7 +667,7 @@ func (client *DPNRestClient) FixityCheckList(params *url.Values) (*DPNResponse) 
 	absUrl := client.BuildUrl(relativeUrl, params)
 
 	client._doRequest(resp, "GET", absUrl, nil)
-	if resp.Error != nil {
+	if resp.Error != nil || resp.Response.StatusCode != 200 {
 		return resp
 	}
 	resp.UnmarshalJsonList()
@@ -696,7 +696,7 @@ func (client *DPNRestClient) fixityCheckSave(fixity *FixityCheck, httpMethod str
 
 	// Build the request
 	client._doRequest(resp, httpMethod, absoluteUrl, bytes.NewBuffer(postData))
-	if resp.Error != nil {
+	if resp.Error != nil || (resp.Response.StatusCode != 200 && resp.Response.StatusCode != 201) {
 		return resp
 	}
 
@@ -724,7 +724,7 @@ func (client *DPNRestClient) IngestList(params *url.Values) (*DPNResponse) {
 	absUrl := client.BuildUrl(relativeUrl, params)
 
 	client._doRequest(resp, "GET", absUrl, nil)
-	if resp.Error != nil {
+	if resp.Error != nil || resp.Response.StatusCode != 200 {
 		return resp
 	}
 	resp.UnmarshalJsonList()
@@ -753,7 +753,7 @@ func (client *DPNRestClient) ingestSave(ingest *Ingest, httpMethod string) (*DPN
 
 	// Build the request
 	client._doRequest(resp, httpMethod, absoluteUrl, bytes.NewBuffer(postData))
-	if resp.Error != nil {
+	if resp.Error != nil || (resp.Response.StatusCode != 200 && resp.Response.StatusCode != 201) {
 		return resp
 	}
 
