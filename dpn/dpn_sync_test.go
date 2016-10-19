@@ -1,7 +1,6 @@
 package dpn_test
 
 import (
-	"fmt"
 	"github.com/APTrust/exchange/context"
 	"github.com/APTrust/exchange/dpn"
 	"github.com/APTrust/exchange/models"
@@ -13,6 +12,57 @@ import (
 	"testing"
 	"time"
 )
+var BAG_IDS = []string{
+	"00000000-0000-4000-a000-000000000001",
+	"00000000-0000-4000-a000-000000000002",
+	"00000000-0000-4000-a000-000000000003",
+	"00000000-0000-4000-a000-000000000004",
+	"00000000-0000-4000-a000-000000000005",
+}
+var REPLICATION_IDS = []string{
+	"10000000-0000-4111-a000-000000000001",
+	"10000000-0000-4111-a000-000000000007",
+	"10000000-0000-4111-a000-000000000013",
+	"10000000-0000-4111-a000-000000000019",
+	"20000000-0000-4000-a000-000000000001",
+	"20000000-0000-4000-a000-000000000007",
+	"20000000-0000-4000-a000-000000000013",
+	"20000000-0000-4000-a000-000000000019",
+	"30000000-0000-4000-a000-000000000001",
+	"30000000-0000-4000-a000-000000000007",
+	"30000000-0000-4000-a000-000000000013",
+	"30000000-0000-4000-a000-000000000019",
+	"40000000-0000-4000-a000-000000000001",
+	"40000000-0000-4000-a000-000000000007",
+	"40000000-0000-4000-a000-000000000013",
+	"40000000-0000-4000-a000-000000000019",
+	"50000000-0000-4000-a000-000000000001",
+	"50000000-0000-4000-a000-000000000007",
+	"50000000-0000-4000-a000-000000000013",
+	"50000000-0000-4000-a000-000000000019",
+}
+var RESTORE_IDS = []string{
+	"11000000-0000-4111-a000-000000000001",
+	"11000000-0000-4111-a000-000000000002",
+	"11000000-0000-4111-a000-000000000003",
+	"11000000-0000-4111-a000-000000000004",
+	"21000000-0000-4111-a000-000000000001",
+	"21000000-0000-4111-a000-000000000002",
+	"21000000-0000-4111-a000-000000000003",
+	"21000000-0000-4111-a000-000000000004",
+	"31000000-0000-4111-a000-000000000001",
+	"31000000-0000-4111-a000-000000000002",
+	"31000000-0000-4111-a000-000000000003",
+	"31000000-0000-4111-a000-000000000004",
+	"41000000-0000-4111-a000-000000000001",
+	"41000000-0000-4111-a000-000000000002",
+	"41000000-0000-4111-a000-000000000003",
+	"41000000-0000-4111-a000-000000000004",
+	"51000000-0000-4111-a000-000000000001",
+	"51000000-0000-4111-a000-000000000002",
+	"51000000-0000-4111-a000-000000000003",
+	"51000000-0000-4111-a000-000000000004",
+}
 
 func loadConfig(t *testing.T) (*models.Config) {
 	configFile := filepath.Join("config", "integration.json")
@@ -23,6 +73,22 @@ func loadConfig(t *testing.T) (*models.Config) {
 
 func runSyncTests() bool {
 	return os.Getenv("RUN_DPN_SYNC_POST_TEST") == "true"
+}
+
+// Returns the namespace of the local node, and a list of
+// remote node namespaces.
+func nodeNamespaces(t *testing.T) (string, []string) {
+	config := loadConfig(t)
+	remoteNodes := make([]string, 0)
+	for namespace, _ := range config.DPN.RemoteNodeTokens {
+		remoteNodes = append(remoteNodes, namespace)
+	}
+	return config.DPN.LocalNode, remoteNodes
+}
+
+func allNodeNamespaces(t *testing.T) ([]string) {
+	localNode, remoteNodes := nodeNamespaces(t)
+	return append([]string { localNode }, remoteNodes...)
 }
 
 func newDPNSync(t *testing.T) (*dpn.DPNSync) {
@@ -60,7 +126,7 @@ func getParams() (*url.Values) {
 
 func TestNewDPNSync(t *testing.T) {
 	if runSyncTests() == false {
-		return  // local test cluster isn't running
+		return
 	}
 	dpnSync := newDPNSync(t)
 	if dpnSync == nil {
@@ -70,7 +136,7 @@ func TestNewDPNSync(t *testing.T) {
 
 func TestLocalNodeName(t *testing.T) {
 	if runSyncTests() == false {
-		return  // local test cluster isn't running
+		return
 	}
 	config := loadConfig(t)
 	dpnSync := newDPNSync(t)
@@ -79,7 +145,7 @@ func TestLocalNodeName(t *testing.T) {
 
 func TestRemoteNodeNames(t *testing.T) {
 	if runSyncTests() == false {
-		return  // local test cluster isn't running
+		return
 	}
 	config := loadConfig(t)
 	dpnSync := newDPNSync(t)
@@ -99,7 +165,7 @@ func TestRemoteNodeNames(t *testing.T) {
 func TestNodesWereSynched(t *testing.T) {
 	if runSyncTests() == false {
 		t.Skip("Skipping TestNodesWereSynched")
-		return  // local test cluster isn't running
+		return
 	}
 	client := getPostTestClient(t)
 	resp := client.NodeList(nil)
@@ -110,15 +176,15 @@ func TestNodesWereSynched(t *testing.T) {
 	for _, node := range nodes {
 		nodesFound[node.Namespace] = node
 	}
-	for _, name := range []string{ "aptrust", "chron", "hathi", "sdr", "tdr" } {
-		node := nodesFound[name]
-		assert.NotNil(t, node, "No record for node %s", name)
+	for _, namespace := range allNodeNamespaces(t) {
+		node := nodesFound[namespace]
+		assert.NotNil(t, node, "No record for node %s", namespace)
 	}
 }
 
 func TestMembersWereSynched(t *testing.T) {
 	if runSyncTests() == false {
-		return  // local test cluster isn't running
+		return
 	}
 	client := getPostTestClient(t)
 	resp := client.MemberList(nil)
@@ -129,54 +195,104 @@ func TestMembersWereSynched(t *testing.T) {
 
 func TestBagsWereSynched(t *testing.T) {
 	if runSyncTests() == false {
-		return  // local test cluster isn't running
+		return
 	}
 	client := getPostTestClient(t)
 	resp := client.DPNBagList(nil)
 	require.Nil(t, resp.Error)
 	bags := resp.Bags()
 	require.Equal(t, 5, len(bags))
-	for _, bag := range bags {
-		fmt.Println(bag.UUID)
+
+	for _, id := range BAG_IDS {
+		resp := client.DPNBagGet(id)
+		assert.NotNil(t, resp.Bag())
 	}
 }
 
 func TestIngestsWereSynched(t *testing.T) {
 	if runSyncTests() == false {
-		return  // local test cluster isn't running
+		return
 	}
-	//dpnSync := newDPNSync(t)
-
+	client := getPostTestClient(t)
+	params := &url.Values{}
+	params.Set("ingested", "true")
+	resp := client.IngestList(params)
+	require.Nil(t, resp.Error)
+	ingests := resp.Ingests()
+	require.Equal(t, 5, len(ingests))
 }
 
 func TestDigestsWereSynched(t *testing.T) {
 	if runSyncTests() == false {
-		return  // local test cluster isn't running
+		return
 	}
-	//dpnSync := newDPNSync(t)
-
+	client := getPostTestClient(t)
+	resp := client.DigestList(nil)
+	require.Nil(t, resp.Error)
+	digests := resp.Digests()
+	require.Equal(t, 5, len(digests))
 }
 
 func TestFixitiesWereSynched(t *testing.T) {
 	if runSyncTests() == false {
-		return  // local test cluster isn't running
+		return
 	}
-	//dpnSync := newDPNSync(t)
+	client := getPostTestClient(t)
+	resp := client.FixityCheckList(nil)
+	require.Nil(t, resp.Error)
+	fixities := resp.FixityChecks()
+	require.Equal(t, 9, len(fixities))
 
+	// We should have two fixities from each node.
+	// The first was loaded with the basic fixture
+	// set, and the second was loaded in the
+	// dpn_sync process.
+	params := &url.Values{}
+	params.Set("node", "chron")
+	resp = client.FixityCheckList(params)
+	assert.Equal(t, 2, len(resp.FixityChecks()))
+
+	params.Set("node", "hathi")
+	resp = client.FixityCheckList(params)
+	assert.Equal(t, 2, len(resp.FixityChecks()))
+
+	params.Set("node", "sdr")
+	resp = client.FixityCheckList(params)
+	assert.Equal(t, 2, len(resp.FixityChecks()))
+
+	params.Set("node", "tdr")
+	resp = client.FixityCheckList(params)
+	assert.Equal(t, 2, len(resp.FixityChecks()))
 }
 
 func TestReplicationsWereSynched(t *testing.T) {
 	if runSyncTests() == false {
-		return  // local test cluster isn't running
+		return
 	}
-	//dpnSync := newDPNSync(t)
+	client := getPostTestClient(t)
+	resp := client.ReplicationList(nil)
+	require.Nil(t, resp.Error)
+	xfers:= resp.ReplicationTransfers()
+	require.Equal(t, 18, len(xfers))
 
+	for _, id := range REPLICATION_IDS {
+		resp := client.ReplicationTransferGet(id)
+		assert.NotNil(t, resp.ReplicationTransfer())
+	}
 }
 
 func TestRestoresWereSynched(t *testing.T) {
 	if runSyncTests() == false {
-		return  // local test cluster isn't running
+		return
 	}
-	//dpnSync := newDPNSync(t)
+	client := getPostTestClient(t)
+	resp := client.RestoreTransferList(nil)
+	require.Nil(t, resp.Error)
+	xfers:= resp.RestoreTransfers()
+	require.Equal(t, 20, len(xfers))
 
+	for _, id := range RESTORE_IDS {
+		resp := client.RestoreTransferGet(id)
+		assert.NotNil(t, resp.RestoreTransfer())
+	}
 }
