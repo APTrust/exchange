@@ -26,12 +26,15 @@ echo "Starting DPN cluster. This takes a minute or so..."
 cd $DPN_SERVER_ROOT
 rm log/impersonate*
 bundle exec ./script/run_cluster.rb -f &
-sleep 60
+sleep 30
 
 echo "Starting dpn_sync"
 cd ~/tmp/bin
 ./dpn_sync -config=config/integration.json
 
+echo "Running sync post tests"
+cd $EXCHANGE_ROOT/dpn
+RUN_DPN_SYNC_POST_TEST=true go test dpn_sync_test.go
 
 echo -e "\n\nShutting down DPN cluster"
 pkill -TERM -P $$

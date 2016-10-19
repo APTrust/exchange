@@ -527,7 +527,7 @@ func (client *DPNRestClient) RestoreTransferList(params *url.Values) (*DPNRespon
 	absUrl := client.BuildUrl(relativeUrl, params)
 
 	client.doRequest(resp, "GET", absUrl, nil)
-	if resp.Error != nil || resp.Response.StatusCode != http.StatusOK {
+	if resp.Error != nil || resp.Response.StatusCode != 200 {
 		return resp
 	}
 	resp.UnmarshalJsonList()

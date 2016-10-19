@@ -16,7 +16,7 @@
 #    and failed for the expected reasons.
 #
 
-cd ~/go/src/github.com/APTrust/exchange/integration
+cd $EXCHANGE_ROOT/integration
 
 echo "Testing bucket reader output"
 RUN_EXCHANGE_INTEGRATION=true go test apt_bucket_reader_test.go
