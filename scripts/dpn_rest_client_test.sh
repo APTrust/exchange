@@ -14,12 +14,15 @@ echo "Starting DPN cluster. This takes a minute or so..."
 cd $DPN_SERVER_ROOT
 rm log/impersonate*
 bundle exec ./script/run_cluster.rb -f &
-sleep 60
+sleep 30
 
 echo "Starting DPN REST client tests"
-cd $EXCHANGE_ROOT
-cd dpn
-go test
+cd $EXCHANGE_ROOT/dpn
+echo -e "\n\n***********************************************"
+# Go has to compile helper_test.go because the REST client
+# tests uses some fuctions defined in helper_test.go.
+go test dpn_rest_client_test.go helper_test.go
+echo -e "***********************************************\n\n"
 
 echo -e "\n\nShutting down DPN cluster"
 pkill -TERM -P $$

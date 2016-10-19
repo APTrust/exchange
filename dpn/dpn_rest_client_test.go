@@ -760,7 +760,7 @@ func TestDigestGet(t *testing.T) {
 	// Make sure no error for digest that doesn't exist.
 	resp = client.DigestGet("00000000-0000-0000-0000-000000000000", "sha256")
 	require.NotNil(t, resp)
-	require.NotNil(t, resp.Error)
+	require.Nil(t, resp.Error)
 	assert.Equal(t, 0, resp.Count)
 	assert.Nil(t, resp.Digest())
 }
@@ -787,8 +787,18 @@ func TestDigestCreate(t *testing.T) {
 		return
 	}
 	client := getClient(t)
-	digest := MakeMessageDigest(aptrustBagIdentifier, "aptrust")
-	resp := client.DigestCreate(digest)
+
+	// We have to make a new bag first, because
+	// the existing bag already has a sha256 digest.
+	bag := MakeDPNBag()
+	resp := client.DPNBagCreate(bag)
+	require.NotNil(t, resp)
+	require.Nil(t, resp.Error)
+	newBag := resp.Bag()
+	require.NotNil(t, newBag)
+
+	digest := MakeMessageDigest(newBag.UUID, "aptrust")
+	resp = client.DigestCreate(digest)
 	require.NotNil(t, resp)
 	require.Nil(t, resp.Error)
 	assert.NotNil(t, resp.Digest())

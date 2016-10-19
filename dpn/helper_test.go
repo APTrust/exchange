@@ -97,7 +97,7 @@ func MakeRestoreRequest(fromNode, toNode, bagUuid string) (*dpn.RestoreTransfer)
 func MakeMessageDigest(bagUUID, node string) (*dpn.MessageDigest) {
 	return &dpn.MessageDigest{
 		Bag: bagUUID,
-		Algorithm: "sha265",
+		Algorithm: "sha256",
 		Node: node,
 		Value: fake.CharactersN(64),
 		CreatedAt: time.Now().UTC(),
