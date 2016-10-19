@@ -1,6 +1,7 @@
 package dpn_test
 
 import (
+	"fmt"
 	"github.com/APTrust/exchange/context"
 	"github.com/APTrust/exchange/dpn"
 	"github.com/APTrust/exchange/models"
@@ -97,6 +98,7 @@ func TestRemoteNodeNames(t *testing.T) {
 
 func TestNodesWereSynched(t *testing.T) {
 	if runSyncTests() == false {
+		t.Skip("Skipping TestNodesWereSynched")
 		return  // local test cluster isn't running
 	}
 	client := getPostTestClient(t)
@@ -118,16 +120,25 @@ func TestMembersWereSynched(t *testing.T) {
 	if runSyncTests() == false {
 		return  // local test cluster isn't running
 	}
-	//dpnSync := newDPNSync(t)
-
+	client := getPostTestClient(t)
+	resp := client.MemberList(nil)
+	require.Nil(t, resp.Error)
+	members := resp.Members()
+	require.Equal(t, 5, len(members))
 }
 
 func TestBagsWereSynched(t *testing.T) {
 	if runSyncTests() == false {
 		return  // local test cluster isn't running
 	}
-	//dpnSync := newDPNSync(t)
-
+	client := getPostTestClient(t)
+	resp := client.DPNBagList(nil)
+	require.Nil(t, resp.Error)
+	bags := resp.Bags()
+	require.Equal(t, 5, len(bags))
+	for _, bag := range bags {
+		fmt.Println(bag.UUID)
+	}
 }
 
 func TestIngestsWereSynched(t *testing.T) {

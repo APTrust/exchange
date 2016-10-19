@@ -285,6 +285,7 @@ func (dpnSync *DPNSync) syncBags(bags []*DPNBag, result *SyncResult) {
 		log.Debug("Processing bag %s from %s", bag.UUID, bag.AdminNode)
 		resp := dpnSync.LocalClient.DPNBagGet(bag.UUID)
 		if resp.Error != nil {
+			log.Error(resp.Error.Error())
 			result.AddError(DPNTypeBag, resp.Error)
 			return
 		}
@@ -293,6 +294,7 @@ func (dpnSync *DPNSync) syncBags(bags []*DPNBag, result *SyncResult) {
 			log.Debug("Creating new bag %s", bag.UUID)
 			resp = dpnSync.LocalClient.DPNBagCreate(bag)
 			if resp.Error != nil {
+				log.Error(resp.Error.Error())
 				result.AddError(DPNTypeBag, resp.Error)
 				return
 			}
@@ -302,6 +304,7 @@ func (dpnSync *DPNSync) syncBags(bags []*DPNBag, result *SyncResult) {
 			log.Debug("Updating bag %s", bag.UUID)
 			resp = dpnSync.LocalClient.DPNBagUpdate(bag)
 			if resp.Error != nil {
+				log.Error(resp.Error.Error())
 				result.AddError(DPNTypeBag, resp.Error)
 				return
 			}
