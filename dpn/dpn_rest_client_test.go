@@ -877,7 +877,7 @@ func sampleParams() (url.Values) {
 }
 
 // -------------------------------------------------------------------------
-// Node handlers
+// Node handlers - used for unit testing DPNResponse.
 // -------------------------------------------------------------------------
 
 func nodeGetHandler(w http.ResponseWriter, r *http.Request) {
