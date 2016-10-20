@@ -219,6 +219,21 @@ func MakeWorkItemState() (*models.WorkItemState) {
 	}
 }
 
+func MakeDPNWorkItem() (*models.DPNWorkItem) {
+	_uuid, _ := uuid.NewV4()
+	queuedAt := RandomDateTime()
+	note := fake.Sentence()
+	return &models.DPNWorkItem{
+		Id: rand.Intn(50000) + 1,
+		Node: fake.Word(),
+		Task: RandomFromList(constants.DPNTaskTypes),
+		Identifier: _uuid.String(),
+		QueuedAt: &queuedAt,
+		CompletedAt: nil,
+		Note: &note,
+	}
+}
+
 func MakeWorkSummary() (*models.WorkSummary) {
 	return &models.WorkSummary{
 		Attempted: true,

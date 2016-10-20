@@ -57,7 +57,11 @@ type PharosResponse struct {
 
 	// A slice of Checksum pointers. Will be nil if
 	// objectType is not Checksum.
-	checksums            []*models.Checksum
+	checksums         []*models.Checksum
+
+	// A slice of DPNWorkItem pointers. Will be nil unless
+	// objectType is DPNWorkItem.
+	dpnWorkItems      []*models.DPNWorkItem
 
 	// A slice of PremisEvent pointers. Will be nil if
 	// objectType is not PremisEvent.
@@ -96,6 +100,7 @@ const (
 	PharosPremisEvent                         = "PremisEvent"
 	PharosWorkItem                            = "WorkItem"
 	PharosWorkItemState                       = "WorkItemState"
+	PharosDPNWorkItem                         = "DPNWorkItem"
 )
 
 // Creates a new PharosResponse and returns a pointer to it.
@@ -237,6 +242,22 @@ func (resp *PharosResponse) Checksums() ([]*models.Checksum) {
 	return resp.checksums
 }
 
+// Returns the DPNWorkItem parsed from the HTTP response body,  or nil.
+func (resp *PharosResponse) DPNWorkItem() (*models.DPNWorkItem) {
+	if resp.dpnWorkItems != nil && len(resp.dpnWorkItems) > 0 {
+		return resp.dpnWorkItems[0]
+	}
+	return nil
+}
+
+// Returns a list of DPNWorkItems parsed from the HTTP response body.
+func (resp *PharosResponse) DPNWorkItems() ([]*models.DPNWorkItem) {
+	if resp.dpnWorkItems == nil {
+		return make([]*models.DPNWorkItem, 0)
+	}
+	return resp.dpnWorkItems
+}
+
 // Returns the PremisEvent parsed from the HTTP response body, or nil.
 func (resp *PharosResponse) PremisEvent() (*models.PremisEvent) {
 	if resp.events != nil && len(resp.events) > 0 {
@@ -305,6 +326,8 @@ func(resp *PharosResponse) UnmarshalJsonList() (error) {
 		return resp.decodeAsGenericFileList()
 	case PharosChecksum:
 		return resp.decodeAsChecksumList()
+	case PharosDPNWorkItem:
+		return resp.decodeAsDPNWorkItemList()
 	case PharosPremisEvent:
 		return resp.decodeAsPremisEventList()
 	case PharosWorkItem:
@@ -408,6 +431,30 @@ func(resp *PharosResponse) decodeAsChecksumList() (error) {
 	resp.Next = temp.Next
 	resp.Previous = temp.Previous
 	resp.checksums = temp.Results
+	resp.listHasBeenParsed = true
+	return resp.Error
+}
+
+func(resp *PharosResponse) decodeAsDPNWorkItemList() (error) {
+	if resp.listHasBeenParsed {
+		return nil
+	}
+	temp := struct{
+		Count    int      `json:"count"`
+		Next     *string  `json:"next"`
+		Previous *string  `json:"previous"`
+		Results  []*models.DPNWorkItem `json:"results"`
+	}{ 0, nil, nil, nil }
+	data, err := resp.RawResponseData()
+	if err != nil {
+		resp.Error = err
+		return err
+	}
+	resp.Error = json.Unmarshal(data, &temp)
+	resp.Count = temp.Count
+	resp.Next = temp.Next
+	resp.Previous = temp.Previous
+	resp.dpnWorkItems = temp.Results
 	resp.listHasBeenParsed = true
 	return resp.Error
 }

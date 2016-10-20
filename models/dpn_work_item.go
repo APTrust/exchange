@@ -7,6 +7,7 @@ import (
 // DPNWorkItem contains some basic information about a DPN-related
 // task. Valid task values are enumerated in constants/constants.go.
 type DPNWorkItem struct {
+	Id                     int                  `json:"id"`
 	Node                   string               `json:"node"`
 	Task                   string               `json:"task"`
 	Identifier             string               `json:"identifier"`

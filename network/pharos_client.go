@@ -704,6 +704,95 @@ func (client *PharosClient) WorkItemStateGet(workItemId int) (*PharosResponse) {
 	return resp
 }
 
+// DPNWorkItemList returns a list of DPNWorkItems that match the specified
+// criteria. Valid params include node, task, identifier, queued_before,
+// queued_after, completed_before and completed_after.
+func (client *PharosClient) DPNWorkItemList(params url.Values) (*PharosResponse) {
+	// Set up the response object
+	resp := NewPharosResponse(PharosDPNWorkItem)
+	resp.dpnWorkItems = make([]*models.DPNWorkItem, 0)
+
+	// Build the url and the request object
+	relativeUrl := fmt.Sprintf("/api/%s/dpn_items/?%s", client.apiVersion, encodeParams(params))
+	absoluteUrl := client.BuildUrl(relativeUrl)
+
+	// Run the request
+	client.DoRequest(resp, "GET", absoluteUrl, nil)
+	if resp.Error != nil {
+		return resp
+	}
+
+	// Parse the JSON from the response body.
+	// If there's an error, it will be recorded in resp.Error
+	resp.UnmarshalJsonList()
+	return resp
+}
+
+// Saves a DPNWorkItem record to Pharos. If the WorkItems's ID is zero,
+// this performs a POST to create a new record. For non-zero IDs, this
+// performs a PUT to update the existing record. The response object
+// will include a new copy of the WorkItem if it was saved successfully.
+func (client *PharosClient) DPNWorkItemSave(obj *models.WorkItem) (*PharosResponse) {
+	// Set up the response object
+	resp := NewPharosResponse(PharosDPNWorkItem)
+	resp.dpnWorkItems = make([]*models.DPNWorkItem, 1)
+
+	// URL and method
+	relativeUrl := fmt.Sprintf("/api/%s/items/", client.apiVersion)
+	httpMethod := "POST"
+	if obj.Id > 0 {
+		// URL should look like /api/v2/items/46956/
+		relativeUrl = fmt.Sprintf("%s%d/", relativeUrl, obj.Id)
+		httpMethod = "PUT"
+	}
+	absoluteUrl := client.BuildUrl(relativeUrl)
+
+	// Prepare the JSON data
+	postData, err := obj.SerializeForPharos()
+	if err != nil {
+		resp.Error = err
+	}
+
+	// Run the request
+	client.DoRequest(resp, httpMethod, absoluteUrl, bytes.NewBuffer(postData))
+	if resp.Error != nil {
+		return resp
+	}
+
+	// Parse the JSON from the response body
+	dpnWorkItem := &models.DPNWorkItem{}
+	resp.Error = json.Unmarshal(resp.data, dpnWorkItem)
+	if resp.Error == nil {
+		resp.dpnWorkItems[0] = dpnWorkItem
+	}
+	return resp
+}
+
+// Returns the DPNWorkItem with the specified Id.
+func (client *PharosClient) DPNWorkItemGet(id int) (*PharosResponse) {
+	// Set up the response object
+	resp := NewPharosResponse(PharosDPNWorkItem)
+	resp.dpnWorkItems = make([]*models.DPNWorkItem, 1)
+
+	// Build the url and the request object
+	relativeUrl := fmt.Sprintf("/api/%s/dpn_items/%d/", client.apiVersion, id)
+	absoluteUrl := client.BuildUrl(relativeUrl)
+
+	// Run the request
+	client.DoRequest(resp, "GET", absoluteUrl, nil)
+	if resp.Error != nil {
+		return resp
+	}
+
+	// Parse the JSON from the response body
+	dpnWorkItem := &models.DPNWorkItem{}
+	resp.Error = json.Unmarshal(resp.data, dpnWorkItem)
+	if resp.Error == nil {
+		resp.dpnWorkItems[0] = dpnWorkItem
+	}
+	return resp
+}
+
 
 // -------------------------------------------------------------------------
 // Utility Methods

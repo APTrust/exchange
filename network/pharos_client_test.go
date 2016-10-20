@@ -1158,7 +1158,7 @@ func workItemSaveHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 // -------------------------------------------------------------------------
-// WorkItem handlers
+// WorkItemState handlers
 // -------------------------------------------------------------------------
 
 func workItemStateGetHandler(w http.ResponseWriter, r *http.Request) {
@@ -1184,6 +1184,49 @@ func workItemStateSaveHandler(w http.ResponseWriter, r *http.Request) {
 		data["id"] = 1000
 		data["created_at"] = time.Now().UTC()
 	}
+	data["updated_at"] = time.Now().UTC()
+	objJson, _ := json.Marshal(data)
+	w.Header().Set("Content-Type", "application/json")
+	fmt.Fprintln(w, string(objJson))
+}
+
+// -------------------------------------------------------------------------
+// DPNWorkItem handlers
+// -------------------------------------------------------------------------
+
+func dpnWorkItemGetHandler(w http.ResponseWriter, r *http.Request) {
+	obj := testutil.MakeDPNWorkItem()
+	objJson, _ := json.Marshal(obj)
+	w.Header().Set("Content-Type", "application/json")
+	fmt.Fprintln(w, string(objJson))
+}
+
+func dpnWorkItemListHandler(w http.ResponseWriter, r *http.Request) {
+	list := make([]*models.DPNWorkItem, 4)
+	for i := 0; i < 4; i++ {
+		list[i] = testutil.MakeDPNWorkItem()
+	}
+	data := listResponseData()
+	data["results"] = list
+	listJson, _ := json.Marshal(data)
+	w.Header().Set("Content-Type", "application/json")
+	fmt.Fprintln(w, string(listJson))
+}
+
+func dpnWorkItemSaveHandler(w http.ResponseWriter, r *http.Request) {
+	decoder := json.NewDecoder(r.Body)
+	decoder.UseNumber()
+	data := make(map[string]interface{})
+	err := decoder.Decode(&data)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error decoding JSON data: %v", err)
+		fmt.Fprintln(w, "")
+		return
+	}
+
+	// Assign ID and timestamps, as if the object has been saved.
+	data["id"] = 1000
+	data["created_at"] = time.Now().UTC()
 	data["updated_at"] = time.Now().UTC()
 	objJson, _ := json.Marshal(data)
 	w.Header().Set("Content-Type", "application/json")
