@@ -453,7 +453,6 @@ func (dpnSync *DPNSync) getIngests(remoteClient *DPNRestClient, pageNumber int, 
 	params := url.Values{}
 	params.Set("bag", bagUUID)
 	params.Set("latest", "true")
-	params.Set("ingested", "true")
 	params.Set("page", fmt.Sprintf("%d", pageNumber))
 	params.Set("per_page", strconv.Itoa(SYNC_BATCH_SIZE))
 	return remoteClient.IngestList(&params)

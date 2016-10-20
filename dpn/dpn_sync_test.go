@@ -214,9 +214,7 @@ func TestIngestsWereSynched(t *testing.T) {
 		return
 	}
 	client := getPostTestClient(t)
-	params := &url.Values{}
-	params.Set("ingested", "true")
-	resp := client.IngestList(params)
+	resp := client.IngestList(nil)
 	require.Nil(t, resp.Error)
 	ingests := resp.Ingests()
 	require.Equal(t, 5, len(ingests))
@@ -273,7 +271,7 @@ func TestReplicationsWereSynched(t *testing.T) {
 	resp := client.ReplicationList(nil)
 	require.Nil(t, resp.Error)
 	xfers:= resp.ReplicationTransfers()
-	require.Equal(t, 18, len(xfers))
+	require.Equal(t, 20, len(xfers))
 
 	for _, id := range REPLICATION_IDS {
 		resp := client.ReplicationTransferGet(id)
