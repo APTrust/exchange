@@ -96,6 +96,22 @@ var ActionTypes []string = []string{
 	ActionDelete,
 }
 
+// DPN task types
+const (
+	DPNTaskSync        = "sync"
+	DPNTaskIngest      = "ingest"
+	DPNTaskReplication = "replication"
+	DPNTaskRestore     = "restore"
+	DPNTaskFixity      = "fixity"
+)
+
+var DPNTaskTypes []string = []string{
+	DPNTaskSync,
+	DPNTaskIngest,
+	DPNTaskReplication,
+	DPNTaskRestore,
+	DPNTaskFixity,
+}
 
 const (
 	AlgMd5                      = "md5"
