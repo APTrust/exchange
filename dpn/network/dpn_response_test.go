@@ -2,6 +2,7 @@ package network_test
 
 import (
 	"github.com/APTrust/exchange/dpn"
+	"github.com/APTrust/exchange/dpn/network"
 	"github.com/APTrust/exchange/models"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -23,7 +24,7 @@ var objectTypes = []dpn.DPNObjectType{
 
 func TestNewDPNResponse(t *testing.T) {
 	for _, objType := range objectTypes {
-		resp := dpn.NewDPNResponse(objType)
+		resp := network.NewDPNResponse(objType)
 		assert.NotNil(t, resp)
 		assert.Equal(t, objType, resp.ObjectType())
 		assert.Equal(t, 0, resp.Count)
@@ -40,7 +41,7 @@ func TestRawResponseData(t *testing.T) {
 	// configFile is defined in dpn_rest_client_test.go
 	config, err := models.LoadConfigFile(configFile)
 	require.Nil(t, err)
-	client, err := dpn.NewDPNRestClient(
+	client, err := network.NewDPNRestClient(
 		testServer.URL,
 		"",
 		"",
@@ -65,13 +66,13 @@ func TestRawResponseData(t *testing.T) {
 
 func TestObjectType(t *testing.T) {
 	for _, objType := range objectTypes {
-		resp := dpn.NewDPNResponse(objType)
+		resp := network.NewDPNResponse(objType)
 		assert.Equal(t, objType, resp.ObjectType())
 	}
 }
 
 func TestHasNextPage(t *testing.T) {
-	resp := dpn.NewDPNResponse(dpn.DPNTypeNode)
+	resp := network.NewDPNResponse(dpn.DPNTypeNode)
 	assert.False(t, resp.HasNextPage())
 	link := "http://example.com"
 	resp.Next = &link
@@ -79,7 +80,7 @@ func TestHasNextPage(t *testing.T) {
 }
 
 func TestHasPreviousPage(t *testing.T) {
-	resp := dpn.NewDPNResponse(dpn.DPNTypeNode)
+	resp := network.NewDPNResponse(dpn.DPNTypeNode)
 	assert.False(t, resp.HasPreviousPage())
 	link := "http://example.com"
 	resp.Previous = &link
@@ -87,7 +88,7 @@ func TestHasPreviousPage(t *testing.T) {
 }
 
 func TestParamsForNextPage(t *testing.T) {
-	resp := dpn.NewDPNResponse(dpn.DPNTypeNode)
+	resp := network.NewDPNResponse(dpn.DPNTypeNode)
 	link := "http://example.com?name=college.edu&page=6&per_page=20"
 	resp.Next = &link
 	params := resp.ParamsForNextPage()
@@ -98,7 +99,7 @@ func TestParamsForNextPage(t *testing.T) {
 }
 
 func TestParamsForPreviousPage(t *testing.T) {
-	resp := dpn.NewDPNResponse(dpn.DPNTypeNode)
+	resp := network.NewDPNResponse(dpn.DPNTypeNode)
 	link := "http://example.com?name=college.edu&page=6&per_page=20"
 	resp.Previous = &link
 	params := resp.ParamsForPreviousPage()
