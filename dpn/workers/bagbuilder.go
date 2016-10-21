@@ -3,7 +3,8 @@ package dpn
 import (
 	"fmt"
 	"github.com/APTrust/bagins"
-	"github.com/APTrust/exchange/models"
+	"github.com/APTrust/exchange/dpn"
+	apt_models "github.com/APTrust/exchange/models"
 	"github.com/satori/go.uuid"
 	"os"
 	"path/filepath"
@@ -20,14 +21,14 @@ type BagBuilder struct {
 
 	// IntellectualObject is the APTrust IntellectualObject that
 	// we'll be repackaging as a DPN bag.
-	IntellectualObject     *models.IntellectualObject
+	IntellectualObject     *apt_models.IntellectualObject
 
 	// DefaultMetadata is some metadata that goes into EVERY DPN
 	// bag we create. This includes our name and address in the
 	// DPN data section that describes who packaged the bag.
 	// DefaultMetadata should be loaded from a JSON file using
 	// the dpn.LoadConfig() function.
-	DefaultMetadata        models.DefaultMetadata
+	DefaultMetadata        apt_models.DefaultMetadata
 
 	// UUID is the DPN identifier for this bag. This has nothing to
 	// do with any APTrust UUID. It's generated in the constructor.
@@ -82,7 +83,7 @@ type BagBuilder struct {
 // out to disk:
 //
 //  errors := builder.Bag.Save()
-func NewBagBuilder(localPath string, obj *models.IntellectualObject, defaultMetadata models.DefaultMetadata) (*BagBuilder, error) {
+func NewBagBuilder(localPath string, obj *apt_models.IntellectualObject, defaultMetadata apt_models.DefaultMetadata) (*BagBuilder, error) {
 	uuid := uuid.NewV4().String()
 	filePath, err := filepath.Abs(localPath)
 	if err != nil {
@@ -105,7 +106,7 @@ func NewBagBuilder(localPath string, obj *models.IntellectualObject, defaultMeta
 		IntellectualObject: obj,
 		DefaultMetadata: defaultMetadata,
 		UUID: uuid,
-		BagType: BAG_TYPE_DATA,
+		BagType: dpn.BAG_TYPE_DATA,
 		Bag: bag,
 	}
 
@@ -228,9 +229,9 @@ func (builder *BagBuilder) buildAPTrustBagIt()  {
 		return
 	}
 	aptrustBagit.Data.AddField(*bagins.NewTagField("BagIt-Version",
-		APTRUST_BAGIT_VERSION))
+		dpn.APTRUST_BAGIT_VERSION))
 	aptrustBagit.Data.AddField(*bagins.NewTagField("Tag-File-Character-Encoding",
-		APTRUST_BAGIT_ENCODING))
+		dpn.APTRUST_BAGIT_ENCODING))
 }
 
 // AddTagFile creates a new tag file and adds it to the bag,
