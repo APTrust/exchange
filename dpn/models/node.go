@@ -1,4 +1,4 @@
-package dpn
+package models
 
 import (
 	"math/rand"

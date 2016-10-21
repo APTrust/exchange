@@ -1,11 +1,13 @@
-package dpn
+package network
 
 import (
 	"bytes"
 	"crypto/tls"
 	"encoding/json"
 	"fmt"
-	"github.com/APTrust/exchange/models"
+	apt_models "github.com/APTrust/exchange/models"
+	"github.com/APTrust/exchange/dpn"
+	"github.com/APTrust/exchange/dpn/models"
 	"io"
 	"io/ioutil"
 	"net"
@@ -39,13 +41,13 @@ type DPNRestClient struct {
 	APIVersion   string
 	APIKey       string
 	Node         string
-	dpnConfig    models.DPNConfig
+	dpnConfig    apt_models.DPNConfig
 	httpClient   *http.Client
 	transport    *http.Transport
 }
 
 // NewDPNRestClient creates a new DPN REST client.
-func NewDPNRestClient(hostUrl, apiVersion, apiKey, node string, dpnConfig models.DPNConfig) (*DPNRestClient, error) {
+func NewDPNRestClient(hostUrl, apiVersion, apiKey, node string, dpnConfig apt_models.DPNConfig) (*DPNRestClient, error) {
 	cookieJar, err := cookiejar.New(nil)
 	if err != nil {
 		return nil, fmt.Errorf("Can't create cookie jar for DPN REST client: %v", err)
@@ -134,8 +136,8 @@ func (client *DPNRestClient) NewJsonRequest(method, targetUrl string, body io.Re
 // MemberGet returns a DPNResponse containing the member with the
 // specified identifier, if that member exists.
 func (client *DPNRestClient) MemberGet(identifier string) (*DPNResponse) {
-	resp := NewDPNResponse(DPNTypeMember)
-	resp.members = make([]*Member, 1)
+	resp := NewDPNResponse(dpn.DPNTypeMember)
+	resp.members = make([]*models.Member, 1)
 
 	relativeUrl := fmt.Sprintf("/%s/member/%s/", client.APIVersion, identifier)
 	absUrl := client.BuildUrl(relativeUrl, nil)
@@ -158,8 +160,8 @@ func (client *DPNRestClient) MemberGet(identifier string) (*DPNResponse) {
 // params. Valid params include before, after, page, page_size
 // and order_by.
 func (client *DPNRestClient) MemberList(params *url.Values) (*DPNResponse) {
-	resp := NewDPNResponse(DPNTypeMember)
-	resp.members = make([]*Member, 1)
+	resp := NewDPNResponse(dpn.DPNTypeMember)
+	resp.members = make([]*models.Member, 1)
 
 	relativeUrl := fmt.Sprintf("/%s/member/", client.APIVersion)
 	absUrl := client.BuildUrl(relativeUrl, params)
@@ -175,20 +177,20 @@ func (client *DPNRestClient) MemberList(params *url.Values) (*DPNResponse) {
 }
 
 // MemberCreate creates a new member in the DPN repository.
-func (client *DPNRestClient) MemberCreate(member *Member) (*DPNResponse) {
+func (client *DPNRestClient) MemberCreate(member *models.Member) (*DPNResponse) {
 	return client.dpnMemberSave(member, "POST")
 }
 
 // MemberUpdate creates a new member in the DPN repository.
-func (client *DPNRestClient) MemberUpdate(member *Member) (*DPNResponse) {
+func (client *DPNRestClient) MemberUpdate(member *models.Member) (*DPNResponse) {
 	return client.dpnMemberSave(member, "PUT")
 }
 
 // dpnMemberSave creates or updates a member in the DPN repository,
 // depending on the httpMethod.
-func (client *DPNRestClient) dpnMemberSave(member *Member, httpMethod string) (*DPNResponse) {
-	resp := NewDPNResponse(DPNTypeMember)
-	resp.members = make([]*Member, 1)
+func (client *DPNRestClient) dpnMemberSave(member *models.Member, httpMethod string) (*DPNResponse) {
+	resp := NewDPNResponse(dpn.DPNTypeMember)
+	resp.members = make([]*models.Member, 1)
 
 	relativeUrl := fmt.Sprintf("/%s/member/", client.APIVersion)
 	if httpMethod == "PUT" {
@@ -209,7 +211,7 @@ func (client *DPNRestClient) dpnMemberSave(member *Member, httpMethod string) (*
 	}
 
 	// Parse the JSON from the response body
-	savedMember := &Member{}
+	savedMember := &models.Member{}
 	resp.Error = json.Unmarshal(resp.data, savedMember)
 	if resp.Error == nil {
 		resp.members[0] = savedMember
@@ -219,8 +221,8 @@ func (client *DPNRestClient) dpnMemberSave(member *Member, httpMethod string) (*
 
 // NodeGet returns the node with the specified identifier (namespace).
 func (client *DPNRestClient) NodeGet(identifier string) (*DPNResponse) {
-	resp := NewDPNResponse(DPNTypeNode)
-	resp.nodes = make([]*Node, 1)
+	resp := NewDPNResponse(dpn.DPNTypeNode)
+	resp.nodes = make([]*models.Node, 1)
 
 	relativeUrl := fmt.Sprintf("/%s/node/%s/", client.APIVersion, identifier)
 	absUrl := client.BuildUrl(relativeUrl, nil)
@@ -231,7 +233,7 @@ func (client *DPNRestClient) NodeGet(identifier string) (*DPNResponse) {
 	}
 
 	// Parse the JSON from the response body
-	node := &Node{}
+	node := &models.Node{}
 	resp.Error = json.Unmarshal(resp.data, node)
 	if resp.Error == nil {
 		node.LastPullDate, resp.Error = client.NodeGetLastPullDate(identifier)
@@ -245,8 +247,8 @@ func (client *DPNRestClient) NodeGet(identifier string) (*DPNResponse) {
 // page_size, and order_by. This call is deprecated in DPN 2.0
 // and may disappear in later versions.
 func (client *DPNRestClient) NodeList(params *url.Values) (*DPNResponse) {
-	resp := NewDPNResponse(DPNTypeNode)
-	resp.nodes = make([]*Node, 1)
+	resp := NewDPNResponse(dpn.DPNTypeNode)
+	resp.nodes = make([]*models.Node, 1)
 
 	relativeUrl := fmt.Sprintf("/%s/node/", client.APIVersion)
 	absUrl := client.BuildUrl(relativeUrl, params)
@@ -265,16 +267,16 @@ func (client *DPNRestClient) NodeList(params *url.Values) (*DPNResponse) {
 // attributes related to the node, you should update only the
 // LastPullDate attribute through this client. Use the web admin
 // interface to perform more substantive node updates.
-func (client *DPNRestClient) NodeUpdate(node *Node) (*DPNResponse) {
+func (client *DPNRestClient) NodeUpdate(node *models.Node) (*DPNResponse) {
 	return client.nodeSave(node, "PUT")
 }
 
 // nodeSave creates or updates a node. Since the current DPN REST API
 // does not support creating new nodes, this client doesn't implement
 // NodeCreate.
-func (client *DPNRestClient) nodeSave(node *Node, httpMethod string) (*DPNResponse) {
-	resp := NewDPNResponse(DPNTypeNode)
-	resp.nodes = make([]*Node, 1)
+func (client *DPNRestClient) nodeSave(node *models.Node, httpMethod string) (*DPNResponse) {
+	resp := NewDPNResponse(dpn.DPNTypeNode)
+	resp.nodes = make([]*models.Node, 1)
 
 	relativeUrl := fmt.Sprintf("/%s/node/", client.APIVersion)
 	if httpMethod == "PUT" {
@@ -295,7 +297,7 @@ func (client *DPNRestClient) nodeSave(node *Node, httpMethod string) (*DPNRespon
 	}
 
 	// Parse the JSON from the response body
-	savedNode := &Node{}
+	savedNode := &models.Node{}
 	resp.Error = json.Unmarshal(resp.data, savedNode)
 	if resp.Error == nil {
 		resp.nodes[0] = savedNode
@@ -322,8 +324,8 @@ func (client *DPNRestClient) NodeGetLastPullDate(identifier string) (time.Time, 
 // DPNBagGet returns a DPNResponse with the bag having the specified
 // identifier, if it exists.
 func (client *DPNRestClient) DPNBagGet(identifier string) (*DPNResponse) {
-	resp := NewDPNResponse(DPNTypeBag)
-	resp.bags = make([]*DPNBag, 1)
+	resp := NewDPNResponse(dpn.DPNTypeBag)
+	resp.bags = make([]*models.DPNBag, 1)
 
 	relativeUrl := fmt.Sprintf("/%s/bag/%s/", client.APIVersion, identifier)
 	absUrl := client.BuildUrl(relativeUrl, nil)
@@ -334,7 +336,7 @@ func (client *DPNRestClient) DPNBagGet(identifier string) (*DPNResponse) {
 	}
 
 	// Parse the JSON from the response body
-	bag := &DPNBag{}
+	bag := &models.DPNBag{}
 	resp.Error = json.Unmarshal(resp.data, bag)
 	if resp.Error == nil {
 		resp.bags[0] = bag
@@ -347,8 +349,8 @@ func (client *DPNRestClient) DPNBagGet(identifier string) (*DPNResponse) {
 // ingest_node, member, replicated_by, first_version_uuid, page,
 // page_size, order_by.
 func (client *DPNRestClient) DPNBagList(params *url.Values) (*DPNResponse) {
-	resp := NewDPNResponse(DPNTypeBag)
-	resp.bags = make([]*DPNBag, 1)
+	resp := NewDPNResponse(dpn.DPNTypeBag)
+	resp.bags = make([]*models.DPNBag, 1)
 
 	relativeUrl := fmt.Sprintf("/%s/bag/", client.APIVersion)
 	absUrl := client.BuildUrl(relativeUrl, params)
@@ -363,20 +365,20 @@ func (client *DPNRestClient) DPNBagList(params *url.Values) (*DPNResponse) {
 
 // DPNBagCreate creates a new bag. Note that you can create bags
 // only at your own node.
-func (client *DPNRestClient) DPNBagCreate(bag *DPNBag) (*DPNResponse) {
+func (client *DPNRestClient) DPNBagCreate(bag *models.DPNBag) (*DPNResponse) {
 	return client.dpnBagSave(bag, "POST")
 }
 
 // DPNBagUpdate updates an existing bag. Note that you can update bags
 // only at your own node.
-func (client *DPNRestClient) DPNBagUpdate(bag *DPNBag) (*DPNResponse) {
+func (client *DPNRestClient) DPNBagUpdate(bag *models.DPNBag) (*DPNResponse) {
 	return client.dpnBagSave(bag, "PUT")
 }
 
 // dpnBagSave saves a bag record.
-func (client *DPNRestClient) dpnBagSave(bag *DPNBag, httpMethod string) (*DPNResponse) {
-	resp := NewDPNResponse(DPNTypeBag)
-	resp.bags = make([]*DPNBag, 1)
+func (client *DPNRestClient) dpnBagSave(bag *models.DPNBag, httpMethod string) (*DPNResponse) {
+	resp := NewDPNResponse(dpn.DPNTypeBag)
+	resp.bags = make([]*models.DPNBag, 1)
 
 	relativeUrl := fmt.Sprintf("/%s/bag/", client.APIVersion)
 	if httpMethod == "PUT" {
@@ -397,7 +399,7 @@ func (client *DPNRestClient) dpnBagSave(bag *DPNBag, httpMethod string) (*DPNRes
 	}
 
 	// Parse the JSON from the response body
-	savedBag := &DPNBag{}
+	savedBag := &models.DPNBag{}
 	resp.Error = json.Unmarshal(resp.data, savedBag)
 	if resp.Error == nil {
 		resp.bags[0] = savedBag
@@ -408,8 +410,8 @@ func (client *DPNRestClient) dpnBagSave(bag *DPNBag, httpMethod string) (*DPNRes
 // ReplicationTransferGet returns the ReplicationTransfer with the
 // specified id, if it exists.
 func (client *DPNRestClient) ReplicationTransferGet(identifier string) (*DPNResponse) {
-	resp := NewDPNResponse(DPNTypeReplication)
-	resp.replications = make([]*ReplicationTransfer, 1)
+	resp := NewDPNResponse(dpn.DPNTypeReplication)
+	resp.replications = make([]*models.ReplicationTransfer, 1)
 
 	relativeUrl := fmt.Sprintf("/%s/replicate/%s/", client.APIVersion, identifier)
 	absUrl := client.BuildUrl(relativeUrl, nil)
@@ -420,7 +422,7 @@ func (client *DPNRestClient) ReplicationTransferGet(identifier string) (*DPNResp
 	}
 
 	// Parse the JSON from the response body
-	replication := &ReplicationTransfer{}
+	replication := &models.ReplicationTransfer{}
 	resp.Error = json.Unmarshal(resp.data, replication)
 	if resp.Error == nil || resp.Response.StatusCode != http.StatusOK {
 		resp.replications[0] = replication
@@ -433,8 +435,8 @@ func (client *DPNRestClient) ReplicationTransferGet(identifier string) (*DPNResp
 // to_node, from_node, store_requested, stored, cancelled, cancel_reason,
 // page, page_size, order_by.
 func (client *DPNRestClient) ReplicationList(params *url.Values) (*DPNResponse) {
-	resp := NewDPNResponse(DPNTypeReplication)
-	resp.replications = make([]*ReplicationTransfer, 1)
+	resp := NewDPNResponse(dpn.DPNTypeReplication)
+	resp.replications = make([]*models.ReplicationTransfer, 1)
 
 	relativeUrl := fmt.Sprintf("/%s/replicate/", client.APIVersion)
 	absUrl := client.BuildUrl(relativeUrl, params)
@@ -449,21 +451,21 @@ func (client *DPNRestClient) ReplicationList(params *url.Values) (*DPNResponse) 
 
 // ReplicationTransferCreate creates a ReplicationTransfer. You can only
 // create transfers on your own node.
-func (client *DPNRestClient) ReplicationTransferCreate(xfer *ReplicationTransfer) (*DPNResponse) {
+func (client *DPNRestClient) ReplicationTransferCreate(xfer *models.ReplicationTransfer) (*DPNResponse) {
 	return client.replicationTransferSave(xfer, "POST")
 }
 
 // ReplicationTransferUpdate updates a ReplicationTransfer. You can
 // updated transfers on remote nodes if they are the from_node and you
 // are the to_node.
-func (client *DPNRestClient) ReplicationTransferUpdate(xfer *ReplicationTransfer) (*DPNResponse) {
+func (client *DPNRestClient) ReplicationTransferUpdate(xfer *models.ReplicationTransfer) (*DPNResponse) {
 	return client.replicationTransferSave(xfer, "PUT")
 }
 
 // replicationTransferSave saves a ReplicationTransfer.
-func (client *DPNRestClient) replicationTransferSave(xfer *ReplicationTransfer, httpMethod string) (*DPNResponse) {
-	resp := NewDPNResponse(DPNTypeReplication)
-	resp.replications = make([]*ReplicationTransfer, 1)
+func (client *DPNRestClient) replicationTransferSave(xfer *models.ReplicationTransfer, httpMethod string) (*DPNResponse) {
+	resp := NewDPNResponse(dpn.DPNTypeReplication)
+	resp.replications = make([]*models.ReplicationTransfer, 1)
 
 	relativeUrl := fmt.Sprintf("/%s/replicate/", client.APIVersion)
 	if httpMethod == "PUT" {
@@ -484,7 +486,7 @@ func (client *DPNRestClient) replicationTransferSave(xfer *ReplicationTransfer, 
 	}
 
 	// Parse the JSON from the response body
-	savedReplication := &ReplicationTransfer{}
+	savedReplication := &models.ReplicationTransfer{}
 	resp.Error = json.Unmarshal(resp.data, savedReplication)
 	if resp.Error == nil {
 		resp.replications[0] = savedReplication
@@ -495,8 +497,8 @@ func (client *DPNRestClient) replicationTransferSave(xfer *ReplicationTransfer, 
 // RestoreTransferGet returns the RestoreTransfer with the specified
 // identifier.
 func (client *DPNRestClient) RestoreTransferGet(identifier string) (*DPNResponse) {
-	resp := NewDPNResponse(DPNTypeRestore)
-	resp.restores = make([]*RestoreTransfer, 1)
+	resp := NewDPNResponse(dpn.DPNTypeRestore)
+	resp.restores = make([]*models.RestoreTransfer, 1)
 
 	relativeUrl := fmt.Sprintf("/%s/restore/%s/", client.APIVersion, identifier)
 	absUrl := client.BuildUrl(relativeUrl, nil)
@@ -507,7 +509,7 @@ func (client *DPNRestClient) RestoreTransferGet(identifier string) (*DPNResponse
 	}
 
 	// Parse the JSON from the response body
-	restore := &RestoreTransfer{}
+	restore := &models.RestoreTransfer{}
 	resp.Error = json.Unmarshal(resp.data, restore)
 	if resp.Error == nil {
 		resp.restores[0] = restore
@@ -520,8 +522,8 @@ func (client *DPNRestClient) RestoreTransferGet(identifier string) (*DPNResponse
 // from_node, accepted, finished, cancelled, cancel_reason, page, page_size,
 // order_by.
 func (client *DPNRestClient) RestoreTransferList(params *url.Values) (*DPNResponse) {
-	resp := NewDPNResponse(DPNTypeRestore)
-	resp.restores = make([]*RestoreTransfer, 1)
+	resp := NewDPNResponse(dpn.DPNTypeRestore)
+	resp.restores = make([]*models.RestoreTransfer, 1)
 
 	relativeUrl := fmt.Sprintf("/%s/restore/", client.APIVersion)
 	absUrl := client.BuildUrl(relativeUrl, params)
@@ -536,21 +538,21 @@ func (client *DPNRestClient) RestoreTransferList(params *url.Values) (*DPNRespon
 
 // RestoreTransferCreate creates a RestoreTransfer request, which you can
 // do only on your own node.
-func (client *DPNRestClient) RestoreTransferCreate(xfer *RestoreTransfer) (*DPNResponse) {
+func (client *DPNRestClient) RestoreTransferCreate(xfer *models.RestoreTransfer) (*DPNResponse) {
 	return client.restoreTransferSave(xfer, "POST")
 }
 
 // RestoreTransferUpdate updates a RestoreTransfer request, which you can do
 // on your own node if you are the to_node, or on the to_node if you are the
 // from_node.
-func (client *DPNRestClient) RestoreTransferUpdate(xfer *RestoreTransfer) (*DPNResponse) {
+func (client *DPNRestClient) RestoreTransferUpdate(xfer *models.RestoreTransfer) (*DPNResponse) {
 	return client.restoreTransferSave(xfer, "PUT")
 }
 
 // restoreTransferSave saves a RestoreTransfer.
-func (client *DPNRestClient) restoreTransferSave(xfer *RestoreTransfer, httpMethod string) (*DPNResponse) {
-	resp := NewDPNResponse(DPNTypeRestore)
-	resp.restores = make([]*RestoreTransfer, 1)
+func (client *DPNRestClient) restoreTransferSave(xfer *models.RestoreTransfer, httpMethod string) (*DPNResponse) {
+	resp := NewDPNResponse(dpn.DPNTypeRestore)
+	resp.restores = make([]*models.RestoreTransfer, 1)
 
 	relativeUrl := fmt.Sprintf("/%s/restore/", client.APIVersion)
 	if httpMethod == "PUT" {
@@ -571,7 +573,7 @@ func (client *DPNRestClient) restoreTransferSave(xfer *RestoreTransfer, httpMeth
 	}
 
 	// Parse the JSON from the response body
-	savedRestore := &RestoreTransfer{}
+	savedRestore := &models.RestoreTransfer{}
 	resp.Error = json.Unmarshal(resp.data, savedRestore)
 	if resp.Error == nil {
 		resp.restores[0] = savedRestore
@@ -582,8 +584,8 @@ func (client *DPNRestClient) restoreTransferSave(xfer *RestoreTransfer, httpMeth
 // DigestGet returns the message digest for the specified bag with
 // the specified algorithm, if it exists.
 func (client *DPNRestClient) DigestGet(bagUUID, algorithm string) (*DPNResponse) {
-	resp := NewDPNResponse(DPNTypeDigest)
-	resp.digests = make([]*MessageDigest, 1)
+	resp := NewDPNResponse(dpn.DPNTypeDigest)
+	resp.digests = make([]*models.MessageDigest, 1)
 
 	relativeUrl := fmt.Sprintf("/%s/bag/%s/digest/%s/", client.APIVersion, bagUUID, algorithm)
 	absUrl := client.BuildUrl(relativeUrl, nil)
@@ -594,7 +596,7 @@ func (client *DPNRestClient) DigestGet(bagUUID, algorithm string) (*DPNResponse)
 	}
 
 	// Parse the JSON from the response body
-	digest := &MessageDigest{}
+	digest := &models.MessageDigest{}
 	resp.Error = json.Unmarshal(resp.data, digest)
 	if resp.Error == nil {
 		resp.digests[0] = digest
@@ -608,8 +610,8 @@ func (client *DPNRestClient) DigestGet(bagUUID, algorithm string) (*DPNResponse)
 // without error. Optional params include before, after, page, page_size,
 // and order_by.
 func (client *DPNRestClient) DigestList(params *url.Values) (*DPNResponse) {
-	resp := NewDPNResponse(DPNTypeDigest)
-	resp.digests = make([]*MessageDigest, 1)
+	resp := NewDPNResponse(dpn.DPNTypeDigest)
+	resp.digests = make([]*models.MessageDigest, 1)
 
 	relativeUrl := fmt.Sprintf("/%s/digest/", client.APIVersion)
 	absUrl := client.BuildUrl(relativeUrl, params)
@@ -623,15 +625,15 @@ func (client *DPNRestClient) DigestList(params *url.Values) (*DPNResponse) {
 }
 
 // DigestCreate creates a MessageDigest record.
-func (client *DPNRestClient) DigestCreate(digest *MessageDigest) (*DPNResponse) {
+func (client *DPNRestClient) DigestCreate(digest *models.MessageDigest) (*DPNResponse) {
 	return client.digestSave(digest, "POST")
 }
 
 // digestSave saves a MessageDigest record.
 // Note that the DPN 2.0 server does not implement DigestUpdate.
-func (client *DPNRestClient) digestSave(digest *MessageDigest, httpMethod string) (*DPNResponse) {
-	resp := NewDPNResponse(DPNTypeDigest)
-	resp.digests = make([]*MessageDigest, 1)
+func (client *DPNRestClient) digestSave(digest *models.MessageDigest, httpMethod string) (*DPNResponse) {
+	resp := NewDPNResponse(dpn.DPNTypeDigest)
+	resp.digests = make([]*models.MessageDigest, 1)
 
 	relativeUrl := fmt.Sprintf("/%s/bag/%s/digest", client.APIVersion, digest.Bag)
 	absoluteUrl := client.BuildUrl(relativeUrl, nil)
@@ -649,7 +651,7 @@ func (client *DPNRestClient) digestSave(digest *MessageDigest, httpMethod string
 	}
 
 	// Parse the JSON from the response body
-	savedDigest := &MessageDigest{}
+	savedDigest := &models.MessageDigest{}
 	resp.Error = json.Unmarshal(resp.data, savedDigest)
 	if resp.Error == nil {
 		resp.digests[0] = savedDigest
@@ -662,8 +664,8 @@ func (client *DPNRestClient) digestSave(digest *MessageDigest, httpMethod string
 // is a boolean. If true, only the latest fixity check(s) for each bag will
 // be returned. Note that the DPN 2.0 server does not implement FixityCheckGet.
 func (client *DPNRestClient) FixityCheckList(params *url.Values) (*DPNResponse) {
-	resp := NewDPNResponse(DPNTypeFixityCheck)
-	resp.fixities = make([]*FixityCheck, 1)
+	resp := NewDPNResponse(dpn.DPNTypeFixityCheck)
+	resp.fixities = make([]*models.FixityCheck, 1)
 
 	relativeUrl := fmt.Sprintf("/%s/fixity_check/", client.APIVersion)
 	absUrl := client.BuildUrl(relativeUrl, params)
@@ -677,15 +679,15 @@ func (client *DPNRestClient) FixityCheckList(params *url.Values) (*DPNResponse) 
 }
 
 // FixityCheckCreate creates a new FixityCheck
-func (client *DPNRestClient) FixityCheckCreate(fixity *FixityCheck) (*DPNResponse) {
+func (client *DPNRestClient) FixityCheckCreate(fixity *models.FixityCheck) (*DPNResponse) {
 	return client.fixityCheckSave(fixity, "POST")
 }
 
 // fixityCheckSave saves a FixityCheck via POST or PUT.
 // Note that the DPN 2.0 server does not implement FixityCheckUpdate.
-func (client *DPNRestClient) fixityCheckSave(fixity *FixityCheck, httpMethod string) (*DPNResponse) {
-	resp := NewDPNResponse(DPNTypeFixityCheck)
-	resp.fixities = make([]*FixityCheck, 1)
+func (client *DPNRestClient) fixityCheckSave(fixity *models.FixityCheck, httpMethod string) (*DPNResponse) {
+	resp := NewDPNResponse(dpn.DPNTypeFixityCheck)
+	resp.fixities = make([]*models.FixityCheck, 1)
 
 	relativeUrl := fmt.Sprintf("/%s/fixity_check/", client.APIVersion)
 	absoluteUrl := client.BuildUrl(relativeUrl, nil)
@@ -703,7 +705,7 @@ func (client *DPNRestClient) fixityCheckSave(fixity *FixityCheck, httpMethod str
 	}
 
 	// Parse the JSON from the response body
-	savedFixity := &FixityCheck{}
+	savedFixity := &models.FixityCheck{}
 	resp.Error = json.Unmarshal(resp.data, savedFixity)
 	if resp.Error == nil {
 		resp.fixities[0] = savedFixity
@@ -716,8 +718,8 @@ func (client *DPNRestClient) fixityCheckSave(fixity *FixityCheck, httpMethod str
 // page, page_size, order_by. See the swagger docs for more info.
 // Note that the DPN 2.0 server does not implement IngestGet.
 func (client *DPNRestClient) IngestList(params *url.Values) (*DPNResponse) {
-	resp := NewDPNResponse(DPNTypeIngest)
-	resp.ingests = make([]*Ingest, 1)
+	resp := NewDPNResponse(dpn.DPNTypeIngest)
+	resp.ingests = make([]*models.Ingest, 1)
 
 	relativeUrl := fmt.Sprintf("/%s/ingest/", client.APIVersion)
 	absUrl := client.BuildUrl(relativeUrl, params)
@@ -731,15 +733,15 @@ func (client *DPNRestClient) IngestList(params *url.Values) (*DPNResponse) {
 }
 
 // IngestCreate creates a new Ingest record.
-func (client *DPNRestClient) IngestCreate(ingest *Ingest) (*DPNResponse) {
+func (client *DPNRestClient) IngestCreate(ingest *models.Ingest) (*DPNResponse) {
 	return client.ingestSave(ingest, "POST")
 }
 
 // ingestSave saves an Ingest record by POST or PUT.
 // Note that the DPN 2.0 server does not implement IngestUpdate.
-func (client *DPNRestClient) ingestSave(ingest *Ingest, httpMethod string) (*DPNResponse) {
-	resp := NewDPNResponse(DPNTypeIngest)
-	resp.ingests = make([]*Ingest, 1)
+func (client *DPNRestClient) ingestSave(ingest *models.Ingest, httpMethod string) (*DPNResponse) {
+	resp := NewDPNResponse(dpn.DPNTypeIngest)
+	resp.ingests = make([]*models.Ingest, 1)
 
 	relativeUrl := fmt.Sprintf("/%s/ingest/", client.APIVersion)
 	absoluteUrl := client.BuildUrl(relativeUrl, nil)
@@ -757,7 +759,7 @@ func (client *DPNRestClient) ingestSave(ingest *Ingest, httpMethod string) (*DPN
 	}
 
 	// Parse the JSON from the response body
-	savedIngest := &Ingest{}
+	savedIngest := &models.Ingest{}
 	resp.Error = json.Unmarshal(resp.data, savedIngest)
 	if resp.Error == nil {
 		resp.ingests[0] = savedIngest
@@ -772,7 +774,7 @@ func (client *DPNRestClient) ingestSave(ingest *Ingest, httpMethod string) (*DPN
 // and API key. We use this function to get a client that can
 // update a replication request or a restore request on the
 // originating node.
-func (client *DPNRestClient) GetRemoteClient(remoteNodeNamespace string, dpnConfig models.DPNConfig) (*DPNRestClient, error) {
+func (client *DPNRestClient) GetRemoteClient(remoteNodeNamespace string, dpnConfig apt_models.DPNConfig) (*DPNRestClient, error) {
 	nodeResult := client.NodeGet(remoteNodeNamespace)
 	if nodeResult.Error != nil {
 		detailedError := fmt.Errorf("Error retrieving node record for '%s' "+

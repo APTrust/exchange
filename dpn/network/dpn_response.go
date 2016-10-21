@@ -1,8 +1,10 @@
-package dpn
+package network
 
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/APTrust/exchange/dpn"
+	"github.com/APTrust/exchange/dpn/models"
 	"io/ioutil"
 	"net/http"
 	"net/url"
@@ -16,47 +18,23 @@ type DPNResponse struct {
 	Response          *http.Response
 	Error             error
 
-	bags              []*DPNBag
-	digests           []*MessageDigest
-	fixities          []*FixityCheck
-	ingests           []*Ingest
-	members           []*Member
-	nodes             []*Node
-	replications      []*ReplicationTransfer
-	restores          []*RestoreTransfer
+	bags              []*models.DPNBag
+	digests           []*models.MessageDigest
+	fixities          []*models.FixityCheck
+	ingests           []*models.Ingest
+	members           []*models.Member
+	nodes             []*models.Node
+	replications      []*models.ReplicationTransfer
+	restores          []*models.RestoreTransfer
 
-	objectType        DPNObjectType
+	objectType        dpn.DPNObjectType
 	hasBeenRead       bool
 	listHasBeenParsed bool
 	data              []byte
 }
 
-type DPNObjectType string
-
-const (
-	DPNTypeBag         DPNObjectType = "DPNBag"
-	DPNTypeDigest                    = "Digest"
-	DPNTypeFixityCheck               = "FixityCheck"
-	DPNTypeIngest                    = "Ingest"
-	DPNTypeMember                    = "Member"
-	DPNTypeNode                      = "Node"
-	DPNTypeReplication               = "Replication"
-	DPNTypeRestore                   = "Restore"
-)
-
-var DPNTypes = []DPNObjectType{
-	DPNTypeBag,
-	DPNTypeDigest,
-	DPNTypeFixityCheck,
-	DPNTypeIngest,
-	DPNTypeMember,
-	DPNTypeNode,
-	DPNTypeReplication,
-	DPNTypeRestore,
-}
-
 // NewDPNResponse returns a pointer to a new response object.
-func NewDPNResponse(objType DPNObjectType) (*DPNResponse) {
+func NewDPNResponse(objType dpn.DPNObjectType) (*DPNResponse) {
 	return &DPNResponse{
 		Count: 0,
 		Next: nil,
@@ -88,7 +66,7 @@ func (resp *DPNResponse) readResponse () {
 }
 
 // Returns the type of object(s) contained in this response.
-func (resp *DPNResponse) ObjectType () (DPNObjectType) {
+func (resp *DPNResponse) ObjectType () (dpn.DPNObjectType) {
 	return resp.objectType
 }
 
@@ -129,7 +107,7 @@ func (resp *DPNResponse) ParamsForPreviousPage() (url.Values) {
 }
 
 // Returns the Bag parsed from the HTTP response body, or nil.
-func (resp *DPNResponse) Bag() (*DPNBag) {
+func (resp *DPNResponse) Bag() (*models.DPNBag) {
 	if resp.bags != nil && len(resp.bags) > 0 {
 		return resp.bags[0]
 	}
@@ -137,7 +115,7 @@ func (resp *DPNResponse) Bag() (*DPNBag) {
 }
 
 // Returns a list of Bags parsed from the HTTP response body.
-func (resp *DPNResponse) Bags() ([]*DPNBag) {
+func (resp *DPNResponse) Bags() ([]*models.DPNBag) {
 	if resp.bags == nil {
 		return make([]*DPNBag, 0)
 	}
@@ -145,7 +123,7 @@ func (resp *DPNResponse) Bags() ([]*DPNBag) {
 }
 
 // Returns the Digest parsed from the HTTP response body, or nil.
-func (resp *DPNResponse) Digest() (*MessageDigest) {
+func (resp *DPNResponse) Digest() (*models.MessageDigest) {
 	if resp.digests != nil && len(resp.digests) > 0 {
 		return resp.digests[0]
 	}
@@ -153,7 +131,7 @@ func (resp *DPNResponse) Digest() (*MessageDigest) {
 }
 
 // Returns a list of Digests parsed from the HTTP response body.
-func (resp *DPNResponse) Digests() ([]*MessageDigest) {
+func (resp *DPNResponse) Digests() ([]*models.MessageDigest) {
 	if resp.digests == nil {
 		return make([]*MessageDigest, 0)
 	}
@@ -161,7 +139,7 @@ func (resp *DPNResponse) Digests() ([]*MessageDigest) {
 }
 
 // Returns the FixityCheck parsed from the HTTP response body, or nil.
-func (resp *DPNResponse) FixityCheck() (*FixityCheck) {
+func (resp *DPNResponse) FixityCheck() (*models.FixityCheck) {
 	if resp.fixities != nil && len(resp.fixities) > 0 {
 		return resp.fixities[0]
 	}
@@ -169,7 +147,7 @@ func (resp *DPNResponse) FixityCheck() (*FixityCheck) {
 }
 
 // Returns a list of FixityChecks parsed from the HTTP response body.
-func (resp *DPNResponse) FixityChecks() ([]*FixityCheck) {
+func (resp *DPNResponse) FixityChecks() ([]*models.FixityCheck) {
 	if resp.fixities == nil {
 		return make([]*FixityCheck, 0)
 	}
@@ -177,7 +155,7 @@ func (resp *DPNResponse) FixityChecks() ([]*FixityCheck) {
 }
 
 // Returns the Ingest parsed from the HTTP response body, or nil.
-func (resp *DPNResponse) Ingest() (*Ingest) {
+func (resp *DPNResponse) Ingest() (*models.Ingest) {
 	if resp.ingests != nil && len(resp.ingests) > 0 {
 		return resp.ingests[0]
 	}
@@ -185,7 +163,7 @@ func (resp *DPNResponse) Ingest() (*Ingest) {
 }
 
 // Returns a list of Ingests parsed from the HTTP response body.
-func (resp *DPNResponse) Ingests() ([]*Ingest) {
+func (resp *DPNResponse) Ingests() ([]*models.Ingest) {
 	if resp.ingests == nil {
 		return make([]*Ingest, 0)
 	}
@@ -193,7 +171,7 @@ func (resp *DPNResponse) Ingests() ([]*Ingest) {
 }
 
 // Returns the Member parsed from the HTTP response body, or nil.
-func (resp *DPNResponse) Member() (*Member) {
+func (resp *DPNResponse) Member() (*models.Member) {
 	if resp.members != nil && len(resp.members) > 0 {
 		return resp.members[0]
 	}
@@ -201,7 +179,7 @@ func (resp *DPNResponse) Member() (*Member) {
 }
 
 // Returns a list of Members parsed from the HTTP response body.
-func (resp *DPNResponse) Members() ([]*Member) {
+func (resp *DPNResponse) Members() ([]*models.Member) {
 	if resp.members == nil {
 		return make([]*Member, 0)
 	}
@@ -209,7 +187,7 @@ func (resp *DPNResponse) Members() ([]*Member) {
 }
 
 // Returns the Node parsed from the HTTP response body, or nil.
-func (resp *DPNResponse) Node() (*Node) {
+func (resp *DPNResponse) Node() (*models.Node) {
 	if resp.nodes != nil && len(resp.nodes) > 0 {
 		return resp.nodes[0]
 	}
@@ -217,7 +195,7 @@ func (resp *DPNResponse) Node() (*Node) {
 }
 
 // Returns a list of Nodes parsed from the HTTP response body.
-func (resp *DPNResponse) Nodes() ([]*Node) {
+func (resp *DPNResponse) Nodes() ([]*models.Node) {
 	if resp.nodes == nil {
 		return make([]*Node, 0)
 	}
@@ -225,7 +203,7 @@ func (resp *DPNResponse) Nodes() ([]*Node) {
 }
 
 // Returns the ReplicationTransfer parsed from the HTTP response body, or nil.
-func (resp *DPNResponse) ReplicationTransfer() (*ReplicationTransfer) {
+func (resp *DPNResponse) ReplicationTransfer() (*models.ReplicationTransfer) {
 	if resp.replications != nil && len(resp.replications) > 0 {
 		return resp.replications[0]
 	}
@@ -233,7 +211,7 @@ func (resp *DPNResponse) ReplicationTransfer() (*ReplicationTransfer) {
 }
 
 // Returns a list of ReplicationTransfers parsed from the HTTP response body.
-func (resp *DPNResponse) ReplicationTransfers() ([]*ReplicationTransfer) {
+func (resp *DPNResponse) ReplicationTransfers() ([]*models.ReplicationTransfer) {
 	if resp.replications == nil {
 		return make([]*ReplicationTransfer, 0)
 	}
@@ -241,7 +219,7 @@ func (resp *DPNResponse) ReplicationTransfers() ([]*ReplicationTransfer) {
 }
 
 // Returns the RestoreTransfer parsed from the HTTP response body, or nil.
-func (resp *DPNResponse) RestoreTransfer() (*RestoreTransfer) {
+func (resp *DPNResponse) RestoreTransfer() (*models.RestoreTransfer) {
 	if resp.restores != nil && len(resp.restores) > 0 {
 		return resp.restores[0]
 	}
@@ -249,7 +227,7 @@ func (resp *DPNResponse) RestoreTransfer() (*RestoreTransfer) {
 }
 
 // Returns a list of RestoreTransfers parsed from the HTTP response body.
-func (resp *DPNResponse) RestoreTransfers() ([]*RestoreTransfer) {
+func (resp *DPNResponse) RestoreTransfers() ([]*models.RestoreTransfer) {
 	if resp.restores == nil {
 		return make([]*RestoreTransfer, 0)
 	}
@@ -258,21 +236,21 @@ func (resp *DPNResponse) RestoreTransfers() ([]*RestoreTransfer) {
 
 func(resp *DPNResponse) UnmarshalJsonList() (error) {
 	switch resp.objectType {
-	case DPNTypeBag:
+	case dpn.DPNTypeBag:
 		return resp.unmarshalBagList()
-	case DPNTypeDigest:
+	case dpn.DPNTypeDigest:
 		return resp.unmarshalDigestList()
-	case DPNTypeFixityCheck:
+	case dpn.DPNTypeFixityCheck:
 		return resp.unmarshalFixityList()
-	case DPNTypeIngest:
+	case dpn.DPNTypeIngest:
 		return resp.unmarshalIngestList()
-	case DPNTypeMember:
+	case dpn.DPNTypeMember:
 		return resp.unmarshalMemberList()
-	case DPNTypeNode:
+	case dpn.DPNTypeNode:
 		return resp.unmarshalNodeList()
-	case DPNTypeReplication:
+	case dpn.DPNTypeReplication:
 		return resp.unmarshalReplicationList()
-	case DPNTypeRestore:
+	case dpn.DPNTypeRestore:
 		return resp.unmarshalRestoreList()
 	default:
 		return fmt.Errorf("DPNObjectType %v not supported", resp.objectType)
@@ -287,7 +265,7 @@ func(resp *DPNResponse) unmarshalBagList() (error) {
 		Count    int
 		Next     *string
 		Previous *string
-		Results  []*DPNBag
+		Results  []*models.DPNBag
 	}{ 0, nil, nil, nil }
 	data, err := resp.RawResponseData()
 	if err != nil {
@@ -311,7 +289,7 @@ func(resp *DPNResponse) unmarshalDigestList() (error) {
 		Count    int
 		Next     *string
 		Previous *string
-		Results  []*MessageDigest
+		Results  []*models.MessageDigest
 	}{ 0, nil, nil, nil }
 	data, err := resp.RawResponseData()
 	if err != nil {
@@ -335,7 +313,7 @@ func(resp *DPNResponse) unmarshalFixityList() (error) {
 		Count    int
 		Next     *string
 		Previous *string
-		Results  []*FixityCheck
+		Results  []*models.FixityCheck
 	}{ 0, nil, nil, nil }
 	data, err := resp.RawResponseData()
 	if err != nil {
@@ -359,7 +337,7 @@ func(resp *DPNResponse) unmarshalIngestList() (error) {
 		Count    int
 		Next     *string
 		Previous *string
-		Results  []*Ingest
+		Results  []*models.Ingest
 	}{ 0, nil, nil, nil }
 	data, err := resp.RawResponseData()
 	if err != nil {
@@ -383,7 +361,7 @@ func(resp *DPNResponse) unmarshalMemberList() (error) {
 		Count    int
 		Next     *string
 		Previous *string
-		Results  []*Member
+		Results  []*models.Member
 	}{ 0, nil, nil, nil }
 	data, err := resp.RawResponseData()
 	if err != nil {
@@ -407,7 +385,7 @@ func(resp *DPNResponse) unmarshalNodeList() (error) {
 		Count    int
 		Next     *string
 		Previous *string
-		Results  []*Node
+		Results  []*models.Node
 	}{ 0, nil, nil, nil }
 	data, err := resp.RawResponseData()
 	if err != nil {
@@ -431,7 +409,7 @@ func(resp *DPNResponse) unmarshalReplicationList() (error) {
 		Count    int
 		Next     *string
 		Previous *string
-		Results  []*ReplicationTransfer
+		Results  []*models.ReplicationTransfer
 	}{ 0, nil, nil, nil }
 	data, err := resp.RawResponseData()
 	if err != nil {
@@ -455,7 +433,7 @@ func(resp *DPNResponse) unmarshalRestoreList() (error) {
 		Count    int
 		Next     *string
 		Previous *string
-		Results  []*RestoreTransfer
+		Results  []*models.RestoreTransfer
 	}{ 0, nil, nil, nil }
 	data, err := resp.RawResponseData()
 	if err != nil {

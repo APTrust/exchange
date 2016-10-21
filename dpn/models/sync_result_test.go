@@ -1,4 +1,4 @@
-package dpn_test
+package models_test
 
 import (
 	"fmt"

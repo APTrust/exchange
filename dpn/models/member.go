@@ -1,4 +1,4 @@
-package dpn
+package models
 
 // Member describes an institution or depositor that owns
 // a bag.

@@ -1,4 +1,4 @@
-package dpn
+package models
 
 type Storage struct {
 	Region               string        `json:"region"`

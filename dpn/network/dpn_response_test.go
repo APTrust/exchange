@@ -1,4 +1,4 @@
-package dpn_test
+package network_test
 
 import (
 	"github.com/APTrust/exchange/dpn"

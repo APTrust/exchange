@@ -24,3 +24,27 @@ const (
 	APTRUST_BAGIT_VERSION = "0.97"
 	APTRUST_BAGIT_ENCODING = "UTF-8"
 )
+
+type DPNObjectType string
+
+const (
+	DPNTypeBag         DPNObjectType = "DPNBag"
+	DPNTypeDigest                    = "Digest"
+	DPNTypeFixityCheck               = "FixityCheck"
+	DPNTypeIngest                    = "Ingest"
+	DPNTypeMember                    = "Member"
+	DPNTypeNode                      = "Node"
+	DPNTypeReplication               = "Replication"
+	DPNTypeRestore                   = "Restore"
+)
+
+var DPNTypes = []DPNObjectType{
+	DPNTypeBag,
+	DPNTypeDigest,
+	DPNTypeFixityCheck,
+	DPNTypeIngest,
+	DPNTypeMember,
+	DPNTypeNode,
+	DPNTypeReplication,
+	DPNTypeRestore,
+}
