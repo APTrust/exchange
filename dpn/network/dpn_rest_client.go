@@ -14,7 +14,7 @@ import (
 	"net/http"
 	"net/http/cookiejar"
 	"net/url"
-	"regexp"
+	// 	"regexp"  // TODO: Delete with HackNullDates
 	"strings"
 	"time"
 )
@@ -873,6 +873,8 @@ func (client *DPNRestClient) doRequest(resp *DPNResponse, method, absoluteUrl st
 }
 
 
+// TODO: Delete this when we're sure it's no longer used.
+//
 // This hack works around the JSON decoding bug in Golang's core
 // time and json libraries. The bug is described here:
 // https://go-review.googlesource.com/#/c/9376/
@@ -889,12 +891,12 @@ func (client *DPNRestClient) doRequest(resp *DPNResponse, method, absoluteUrl st
 // to set these back to a reasonably old timestamp so we can ask the
 // node for all items updated since that time. "Reasonably old" is
 // anything before about June 1, 2015.
-func HackNullDates(jsonBytes []byte)([]byte) {
-	// Problem fixed with regex == two problems
-	dummyDate := "\"last_pull_date\":\"1980-01-01T00:00:00Z\""
-	re := regexp.MustCompile("\"last_pull_date\":\\s*null")
-	return re.ReplaceAll(jsonBytes, []byte(dummyDate))
-}
+// func HackNullDates(jsonBytes []byte)([]byte) {
+// 	// Problem fixed with regex == two problems
+// 	dummyDate := "\"last_pull_date\":\"1980-01-01T00:00:00Z\""
+// 	re := regexp.MustCompile("\"last_pull_date\":\\s*null")
+// 	return re.ReplaceAll(jsonBytes, []byte(dummyDate))
+// }
 
 // By default, the Go HTTP client does not send headers from the
 // original request to the redirect location. See the issue at

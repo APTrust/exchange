@@ -3,8 +3,10 @@ package network_test
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/APTrust/exchange/dpn"
-	"github.com/APTrust/exchange/models"
+	"github.com/APTrust/exchange/dpn/models"
+	"github.com/APTrust/exchange/dpn/network"
+	"github.com/APTrust/exchange/dpn/util/testutil"
+	apt_models "github.com/APTrust/exchange/models"
 	"github.com/satori/go.uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -40,7 +42,7 @@ var memberIdentifier = "9a000000-0000-4000-a000-000000000001"
 var fixityForReplication = "e39a201a88bc3d7803a5e375d9752439d328c2e85b4f1ba70a6d984b6c5378bd"
 
 func runRestTests(t *testing.T) bool {
-	config, err := models.LoadConfigFile(configFile)
+	config, err := apt_models.LoadConfigFile(configFile)
 	require.Nil(t, err)
 	_, err = http.Get(config.DPN.RestClient.LocalServiceURL)
 	if err != nil {
@@ -55,12 +57,12 @@ func runRestTests(t *testing.T) bool {
 	return true
 }
 
-func getClient(t *testing.T) (*dpn.DPNRestClient) {
+func getClient(t *testing.T) (*network.DPNRestClient) {
 	// If you want to debug, change ioutil.Discard to os.Stdout
 	// to see log output from the client.
-	config, err := models.LoadConfigFile(configFile)
+	config, err := apt_models.LoadConfigFile(configFile)
 	require.Nil(t, err)
-	client, err := dpn.NewDPNRestClient(
+	client, err := network.NewDPNRestClient(
 		config.DPN.RestClient.LocalServiceURL,
 		config.DPN.RestClient.LocalAPIRoot,
 		config.DPN.RestClient.LocalAuthToken,
@@ -72,12 +74,12 @@ func getClient(t *testing.T) (*dpn.DPNRestClient) {
 	return client
 }
 
-func getRemoteClient(t *testing.T, namespace string) (*dpn.DPNRestClient) {
+func getRemoteClient(t *testing.T, namespace string) (*network.DPNRestClient) {
 	// If you want to debug, change ioutil.Discard to os.Stdout
 	// to see log output from the client.
-	config, err := models.LoadConfigFile(configFile)
+	config, err := apt_models.LoadConfigFile(configFile)
 	require.Nil(t, err)
-	client, err := dpn.NewDPNRestClient(
+	client, err := network.NewDPNRestClient(
 		config.DPN.RestClient.LocalServiceURL,
 		config.DPN.RestClient.LocalAPIRoot,
 		config.DPN.RestClient.LocalAuthToken,
@@ -95,7 +97,7 @@ func getRemoteClient(t *testing.T, namespace string) (*dpn.DPNRestClient) {
 }
 
 func TestBuildUrl(t *testing.T) {
-	config, err := models.LoadConfigFile(configFile)
+	config, err := apt_models.LoadConfigFile(configFile)
 	require.Nil(t, err)
 	client := getClient(t)
 	require.NotNil(t, client)
@@ -243,7 +245,7 @@ func TestMemberCreate(t *testing.T) {
 	}
 	client := getClient(t)
 	id := uuid.NewV4().String()
-	member := dpn.Member{
+	member := models.Member{
 		MemberId: id,
 		Name: fmt.Sprintf("GO-TEST-MEMBER-%s", id),
 		Email: fmt.Sprintf("%s@example.com", id),
@@ -349,7 +351,7 @@ func TestDPNBagCreate(t *testing.T) {
 		return
 	}
 	client := getClient(t)
-	bag := MakeDPNBag()
+	bag := testutil.MakeDPNBag()
 	resp := client.DPNBagCreate(bag)
 	require.NotNil(t, resp)
 	require.Nil(t, resp.Error)
@@ -372,7 +374,7 @@ func TestDPNBagUpdate(t *testing.T) {
 		return
 	}
 	client := getClient(t)
-	bag := MakeDPNBag()
+	bag := testutil.MakeDPNBag()
 	resp := client.DPNBagCreate(bag)
 	require.NotNil(t, resp)
 	require.Nil(t, resp.Error)
@@ -491,13 +493,13 @@ func TestReplicationTransferCreate(t *testing.T) {
 
 	// The transfer request must refer to an actual bag,
 	// so let's make a bag...
-	bag := MakeDPNBag()
+	bag := testutil.MakeDPNBag()
 	resp := client.DPNBagCreate(bag)
 	require.NotNil(t, resp)
 	require.Nil(t, resp.Error)
 
 	// Make sure we can create a transfer request.
-	xfer := MakeXferRequest("aptrust", "chron", resp.Bag().UUID)
+	xfer := testutil.MakeXferRequest("aptrust", "chron", resp.Bag().UUID)
 	xferResp := client.ReplicationTransferCreate(xfer)
 	require.NotNil(t, xferResp)
 	require.Nil(t, xferResp.Error)
@@ -530,13 +532,13 @@ func TestReplicationTransferUpdate(t *testing.T) {
 
 	// The transfer request must refer to an actual bag,
 	// so let's make a bag...
-	bag := MakeDPNBag()
+	bag := testutil.MakeDPNBag()
 	resp := client.DPNBagCreate(bag)
 	require.NotNil(t, resp)
 	require.Nil(t, resp.Error)
 
 	// Make sure we can create a transfer request.
-	xfer := MakeXferRequest("chron", "aptrust", bag.UUID)
+	xfer := testutil.MakeXferRequest("chron", "aptrust", bag.UUID)
 
 	// Null out the fixity value, because once it's set, we can't change
 	// it. And below, we want to set a bad fixity value to see what happens.
@@ -640,13 +642,13 @@ func TestRestoreTransferCreate(t *testing.T) {
 
 	// The transfer request must refer to an actual bag,
 	// so let's make a bag...
-	bag := MakeDPNBag()
+	bag := testutil.MakeDPNBag()
 	resp := client.DPNBagCreate(bag)
 	require.NotNil(t, resp)
 	require.Nil(t, resp.Error)
 
 	// Make sure we can create a transfer request.
-	xfer := MakeRestoreRequest("tdr", "aptrust", bag.UUID)
+	xfer := testutil.MakeRestoreRequest("tdr", "aptrust", bag.UUID)
 	createResp := client.RestoreTransferCreate(xfer)
 	require.NotNil(t, createResp)
 	require.Nil(t, createResp.Error)
@@ -671,13 +673,13 @@ func TestRestoreTransferUpdate(t *testing.T) {
 
 	// The transfer request must refer to an actual bag,
 	// so let's make a bag...
-	bag := MakeDPNBag()
+	bag := testutil.MakeDPNBag()
 	resp := client.DPNBagCreate(bag)
 	require.NotNil(t, resp)
 	require.Nil(t, resp.Error)
 
 	// Make sure we can create a transfer request.
-	xfer := MakeRestoreRequest("chron", "aptrust", bag.UUID)
+	xfer := testutil.MakeRestoreRequest("chron", "aptrust", bag.UUID)
 	createResp := client.RestoreTransferCreate(xfer)
 	require.NotNil(t, createResp)
 	require.Nil(t, createResp.Error)
@@ -702,7 +704,7 @@ func TestGetRemoteClient(t *testing.T) {
 	if runRestTests(t) == false {
 		return
 	}
-	config, err := models.LoadConfigFile(configFile)
+	config, err := apt_models.LoadConfigFile(configFile)
 	require.Nil(t, err)
 	client := getClient(t)
 	nodes := []string { "chron", "hathi", "sdr", "tdr" }
@@ -727,25 +729,27 @@ func TestGetRemoteClients(t *testing.T) {
 	}
 }
 
-func TestHackNullDates(t *testing.T) {
-	jsonString := `{ "id": 5, "last_pull_date": null }`
-	testHackNullDates(jsonString, t)
-	jsonString = `{"id":5,"last_pull_date":null}`
-	testHackNullDates(jsonString, t)
-	jsonString = `{
-					 "id": 5,
-					 "last_pull_date": null
-				   }`
-	testHackNullDates(jsonString, t)
-}
+// TODO: Delete this when we're sure it's no longer used.
+// func TestHackNullDates(t *testing.T) {
+// 	jsonString := `{ "id": 5, "last_pull_date": null }`
+// 	testHackNullDates(jsonString, t)
+// 	jsonString = `{"id":5,"last_pull_date":null}`
+// 	testHackNullDates(jsonString, t)
+// 	jsonString = `{
+// 					 "id": 5,
+// 					 "last_pull_date": null
+// 				   }`
+// 	testHackNullDates(jsonString, t)
+// }
 
-func testHackNullDates(jsonString string, t *testing.T) {
-	data := make(map[string]interface{})
-	jsonBytes := []byte(jsonString)
-	hackedBytes := dpn.HackNullDates(jsonBytes)
-	json.Unmarshal(hackedBytes, &data)
-	assert.Equal(t, "1980-01-01T00:00:00Z", data["last_pull_date"])
-}
+// TODO: Delete this when we're sure it's no longer used.
+// func testHackNullDates(jsonString string, t *testing.T) {
+// 	data := make(map[string]interface{})
+// 	jsonBytes := []byte(jsonString)
+// 	hackedBytes := dpn.HackNullDates(jsonBytes)
+// 	json.Unmarshal(hackedBytes, &data)
+// 	assert.Equal(t, "1980-01-01T00:00:00Z", data["last_pull_date"])
+// }
 
 func TestDigestGet(t *testing.T) {
 	if runRestTests(t) == false {
@@ -790,14 +794,14 @@ func TestDigestCreate(t *testing.T) {
 
 	// We have to make a new bag first, because
 	// the existing bag already has a sha256 digest.
-	bag := MakeDPNBag()
+	bag := testutil.MakeDPNBag()
 	resp := client.DPNBagCreate(bag)
 	require.NotNil(t, resp)
 	require.Nil(t, resp.Error)
 	newBag := resp.Bag()
 	require.NotNil(t, newBag)
 
-	digest := MakeMessageDigest(newBag.UUID, "aptrust")
+	digest := testutil.MakeMessageDigest(newBag.UUID, "aptrust")
 	resp = client.DigestCreate(digest)
 	require.NotNil(t, resp)
 	require.Nil(t, resp.Error)
@@ -825,7 +829,7 @@ func TestFixityCheckCreate(t *testing.T) {
 	if runRestTests(t) == false {
 		return
 	}
-	fixityCheck := MakeFixityCheck(aptrustBagIdentifier, "aptrust")
+	fixityCheck := testutil.MakeFixityCheck(aptrustBagIdentifier, "aptrust")
 	client := getClient(t)
 	resp := client.FixityCheckCreate(fixityCheck)
 	require.NotNil(t, resp)
@@ -851,7 +855,7 @@ func TestIngestCreate(t *testing.T) {
 	if runRestTests(t) == false {
 		return
 	}
-	ingest := MakeIngest(aptrustBagIdentifier)
+	ingest := testutil.MakeIngest(aptrustBagIdentifier)
 	client := getClient(t)
 	resp := client.IngestCreate(ingest)
 	require.NotNil(t, resp)
@@ -891,16 +895,16 @@ func sampleParams() (url.Values) {
 // -------------------------------------------------------------------------
 
 func nodeGetHandler(w http.ResponseWriter, r *http.Request) {
-	obj := MakeDPNNode()
+	obj := testutil.MakeDPNNode()
 	objJson, _ := json.Marshal(obj)
 	w.Header().Set("Content-Type", "application/json")
 	fmt.Fprintln(w, string(objJson))
 }
 
 func nodeListHandler(w http.ResponseWriter, r *http.Request) {
-	list := make([]*dpn.Node, 4)
+	list := make([]*models.Node, 4)
 	for i := 0; i < 4; i++ {
-		list[i] = MakeDPNNode()
+		list[i] = testutil.MakeDPNNode()
 	}
 	data := listResponseData()
 	data["results"] = list
