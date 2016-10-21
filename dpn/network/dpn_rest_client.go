@@ -148,7 +148,7 @@ func (client *DPNRestClient) MemberGet(identifier string) (*DPNResponse) {
 	}
 
 	// Parse the JSON from the response body
-	member := &Member{}
+	member := &models.Member{}
 	resp.Error = json.Unmarshal(resp.data, member)
 	if resp.Error == nil {
 		resp.members[0] = member

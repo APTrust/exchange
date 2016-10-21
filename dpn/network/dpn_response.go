@@ -117,7 +117,7 @@ func (resp *DPNResponse) Bag() (*models.DPNBag) {
 // Returns a list of Bags parsed from the HTTP response body.
 func (resp *DPNResponse) Bags() ([]*models.DPNBag) {
 	if resp.bags == nil {
-		return make([]*DPNBag, 0)
+		return make([]*models.DPNBag, 0)
 	}
 	return resp.bags
 }
@@ -133,7 +133,7 @@ func (resp *DPNResponse) Digest() (*models.MessageDigest) {
 // Returns a list of Digests parsed from the HTTP response body.
 func (resp *DPNResponse) Digests() ([]*models.MessageDigest) {
 	if resp.digests == nil {
-		return make([]*MessageDigest, 0)
+		return make([]*models.MessageDigest, 0)
 	}
 	return resp.digests
 }
@@ -149,7 +149,7 @@ func (resp *DPNResponse) FixityCheck() (*models.FixityCheck) {
 // Returns a list of FixityChecks parsed from the HTTP response body.
 func (resp *DPNResponse) FixityChecks() ([]*models.FixityCheck) {
 	if resp.fixities == nil {
-		return make([]*FixityCheck, 0)
+		return make([]*models.FixityCheck, 0)
 	}
 	return resp.fixities
 }
@@ -165,7 +165,7 @@ func (resp *DPNResponse) Ingest() (*models.Ingest) {
 // Returns a list of Ingests parsed from the HTTP response body.
 func (resp *DPNResponse) Ingests() ([]*models.Ingest) {
 	if resp.ingests == nil {
-		return make([]*Ingest, 0)
+		return make([]*models.Ingest, 0)
 	}
 	return resp.ingests
 }
@@ -181,7 +181,7 @@ func (resp *DPNResponse) Member() (*models.Member) {
 // Returns a list of Members parsed from the HTTP response body.
 func (resp *DPNResponse) Members() ([]*models.Member) {
 	if resp.members == nil {
-		return make([]*Member, 0)
+		return make([]*models.Member, 0)
 	}
 	return resp.members
 }
@@ -197,7 +197,7 @@ func (resp *DPNResponse) Node() (*models.Node) {
 // Returns a list of Nodes parsed from the HTTP response body.
 func (resp *DPNResponse) Nodes() ([]*models.Node) {
 	if resp.nodes == nil {
-		return make([]*Node, 0)
+		return make([]*models.Node, 0)
 	}
 	return resp.nodes
 }
@@ -213,7 +213,7 @@ func (resp *DPNResponse) ReplicationTransfer() (*models.ReplicationTransfer) {
 // Returns a list of ReplicationTransfers parsed from the HTTP response body.
 func (resp *DPNResponse) ReplicationTransfers() ([]*models.ReplicationTransfer) {
 	if resp.replications == nil {
-		return make([]*ReplicationTransfer, 0)
+		return make([]*models.ReplicationTransfer, 0)
 	}
 	return resp.replications
 }
@@ -229,7 +229,7 @@ func (resp *DPNResponse) RestoreTransfer() (*models.RestoreTransfer) {
 // Returns a list of RestoreTransfers parsed from the HTTP response body.
 func (resp *DPNResponse) RestoreTransfers() ([]*models.RestoreTransfer) {
 	if resp.restores == nil {
-		return make([]*RestoreTransfer, 0)
+		return make([]*models.RestoreTransfer, 0)
 	}
 	return resp.restores
 }
