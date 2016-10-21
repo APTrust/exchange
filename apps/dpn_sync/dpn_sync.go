@@ -4,7 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"github.com/APTrust/exchange/context"
-	"github.com/APTrust/exchange/dpn"
+	"github.com/APTrust/exchange/dpn/workers"
 	"github.com/APTrust/exchange/models"
 	"os"
 )
@@ -20,7 +20,7 @@ func main() {
 		os.Exit(1)
 	}
 	_context := context.NewContext(config)
-	dpnSync, err := dpn.NewDPNSync(_context)
+	dpnSync, err := workers.NewDPNSync(_context)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, err.Error())
 		os.Exit(1)
