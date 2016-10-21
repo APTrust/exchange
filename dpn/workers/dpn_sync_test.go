@@ -1,9 +1,11 @@
-package dpn_test
+package workers_test
 
 import (
 	"github.com/APTrust/exchange/context"
-	"github.com/APTrust/exchange/dpn"
-	"github.com/APTrust/exchange/models"
+	"github.com/APTrust/exchange/dpn/models"
+	"github.com/APTrust/exchange/dpn/network"
+	"github.com/APTrust/exchange/dpn/workers"
+	apt_models "github.com/APTrust/exchange/models"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"net/url"
@@ -64,9 +66,9 @@ var RESTORE_IDS = []string{
 	"51000000-0000-4111-a000-000000000004",
 }
 
-func loadConfig(t *testing.T) (*models.Config) {
+func loadConfig(t *testing.T) (*apt_models.Config) {
 	configFile := filepath.Join("config", "integration.json")
-	config, err := models.LoadConfigFile(configFile)
+	config, err := apt_models.LoadConfigFile(configFile)
 	require.Nil(t, err)
 	return config
 }
@@ -91,10 +93,10 @@ func allNodeNamespaces(t *testing.T) ([]string) {
 	return append([]string { localNode }, remoteNodes...)
 }
 
-func newDPNSync(t *testing.T) (*dpn.DPNSync) {
+func newDPNSync(t *testing.T) (*workers.DPNSync) {
 	config := loadConfig(t)
 	_context := context.NewContext(config)
-	dpnSync, err := dpn.NewDPNSync(_context)
+	dpnSync, err := workers.NewDPNSync(_context)
 	require.Nil(t, err)
 	for namespace, _ := range config.DPN.RemoteNodeTokens {
 		require.NotNil(t, dpnSync.RemoteClients[namespace], namespace)
@@ -102,12 +104,12 @@ func newDPNSync(t *testing.T) (*dpn.DPNSync) {
 	return dpnSync
 }
 
-func getPostTestClient(t *testing.T) (*dpn.DPNRestClient) {
+func getPostTestClient(t *testing.T) (*network.DPNRestClient) {
 	// If you want to debug, change ioutil.Discard to os.Stdout
 	// to see log output from the client.
-	config, err := models.LoadConfigFile(filepath.Join("config", "integration.json"))
+	config, err := apt_models.LoadConfigFile(filepath.Join("config", "integration.json"))
 	require.Nil(t, err)
-	client, err := dpn.NewDPNRestClient(
+	client, err := network.NewDPNRestClient(
 		config.DPN.RestClient.LocalServiceURL,
 		config.DPN.RestClient.LocalAPIRoot,
 		config.DPN.RestClient.LocalAuthToken,
@@ -172,7 +174,7 @@ func TestNodesWereSynched(t *testing.T) {
 	require.Nil(t, resp.Error)
 	nodes := resp.Nodes()
 	require.Equal(t, 5, len(nodes))
-	nodesFound := make(map[string]*dpn.Node)
+	nodesFound := make(map[string]*models.Node)
 	for _, node := range nodes {
 		nodesFound[node.Namespace] = node
 	}

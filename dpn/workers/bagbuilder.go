@@ -1,4 +1,4 @@
-package dpn
+package workers
 
 import (
 	"fmt"
