@@ -3,6 +3,7 @@ package models_test
 import (
 	"fmt"
 	"github.com/APTrust/exchange/dpn"
+	"github.com/APTrust/exchange/dpn/models"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"testing"
@@ -10,7 +11,7 @@ import (
 
 
 func TestNewSyncResult(t *testing.T) {
-	result := dpn.NewSyncResult("aptrust")
+	result := models.NewSyncResult("aptrust")
 	require.NotNil(t, result)
 	assert.Equal(t, "aptrust", result.NodeName)
 	assert.NotNil(t, result.FetchCounts)
@@ -19,7 +20,7 @@ func TestNewSyncResult(t *testing.T) {
 }
 
 func TestAddToFetchCount(t *testing.T) {
-	result := dpn.NewSyncResult("aptrust")
+	result := models.NewSyncResult("aptrust")
 	require.NotNil(t, result)
 	result.AddToFetchCount(dpn.DPNTypeBag, 1)
 	assert.Equal(t, 1, result.FetchCounts[dpn.DPNTypeBag])
@@ -28,7 +29,7 @@ func TestAddToFetchCount(t *testing.T) {
 }
 
 func TestAddToSyncCount(t *testing.T) {
-	result := dpn.NewSyncResult("aptrust")
+	result := models.NewSyncResult("aptrust")
 	require.NotNil(t, result)
 	result.AddToSyncCount(dpn.DPNTypeBag, 1)
 	assert.Equal(t, 1, result.SyncCounts[dpn.DPNTypeBag])
@@ -37,7 +38,7 @@ func TestAddToSyncCount(t *testing.T) {
 }
 
 func TestAddError(t *testing.T) {
-	result := dpn.NewSyncResult("aptrust")
+	result := models.NewSyncResult("aptrust")
 	require.NotNil(t, result)
 	result.AddError(dpn.DPNTypeBag, fmt.Errorf("Error 1"))
 	assert.Equal(t, 1, len(result.Errors[dpn.DPNTypeBag]))
@@ -48,7 +49,7 @@ func TestAddError(t *testing.T) {
 }
 
 func TestHasErrors(t *testing.T) {
-	result := dpn.NewSyncResult("aptrust")
+	result := models.NewSyncResult("aptrust")
 	require.NotNil(t, result)
 	assert.False(t, result.HasErrors(dpn.DPNTypeBag))
 	assert.False(t, result.HasErrors(""))
