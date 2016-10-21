@@ -17,11 +17,11 @@ bundle exec ./script/run_cluster.rb -f &
 sleep 30
 
 echo "Starting DPN REST client tests"
-cd $EXCHANGE_ROOT/dpn
+cd $EXCHANGE_ROOT/dpn/network
 echo -e "\n\n***********************************************"
 # Go has to compile helper_test.go because the REST client
 # tests uses some fuctions defined in helper_test.go.
-go test dpn_rest_client_test.go helper_test.go
+go test dpn_rest_client_test.go
 echo -e "***********************************************\n\n"
 
 echo -e "\n\nShutting down DPN cluster"

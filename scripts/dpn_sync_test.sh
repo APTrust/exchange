@@ -33,8 +33,10 @@ cd ~/tmp/bin
 ./dpn_sync -config=config/integration.json
 
 echo "Running sync post tests"
-cd $EXCHANGE_ROOT/dpn
+cd $EXCHANGE_ROOT/dpn/workers
+echo -e "\n\n***********************************************"
 RUN_DPN_SYNC_POST_TEST=true go test dpn_sync_test.go
+echo -e "***********************************************\n\n"
 
 echo -e "\n\nShutting down DPN cluster"
 pkill -TERM -P $$
