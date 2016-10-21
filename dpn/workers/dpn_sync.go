@@ -3,6 +3,9 @@ package dpn
 import (
 	"fmt"
 	"github.com/APTrust/exchange/context"
+	"github.com/APTrust/exchange/dpn"
+	"github.com/APTrust/exchange/dpn/models"
+	"github.com/APTrust/exchange/dpn/network"
 	"net/url"
 	"os"
 	"strconv"
@@ -17,15 +20,15 @@ const SYNC_BATCH_SIZE = 50
 type DPNSync struct {
 	// LocalClient is the DPN REST client that talks to our own
 	// local DPN REST server.
-	LocalClient    *DPNRestClient
+	LocalClient    *network.DPNRestClient
 	// RemoteNodes is a map of remote nodes. Key is the namespace
 	// and value is the node.
-	RemoteNodes    map[string]*Node
+	RemoteNodes    map[string]*models.Node
 	// RemoteClients is a collection of clients that talk to the
 	// DPN REST servers on other nodes. The key is the namespace
 	// of the remote node, and the value is the client that talks
 	// to that node.
-	RemoteClients   map[string]*DPNRestClient
+	RemoteClients   map[string]*network.DPNRestClient
 	// Context provides access to information about our environment
 	// and config settings, and access to basic services like
 	// logging and a Pharos client.
@@ -33,7 +36,7 @@ type DPNSync struct {
 	// Results contains information about the results of the sync
 	// operations with each node. Key is the node namespace,
 	// value is the SyncResult object for that node.
-	Results         map[string]*SyncResult
+	Results         map[string]*models.SyncResult
 }
 
 // NewDPNSync creates a new DPNSync object.
@@ -41,7 +44,7 @@ func NewDPNSync(_context *context.Context) (*DPNSync, error) {
 	if _context == nil {
 		return nil, fmt.Errorf("Param _context cannot be nil.")
 	}
-	localClient, err := NewDPNRestClient(
+	localClient, err := network.NewDPNRestClient(
 		_context.Config.DPN.RestClient.LocalServiceURL,
 		_context.Config.DPN.DPNAPIVersion,
 		_context.Config.DPN.RestClient.LocalAuthToken,
@@ -54,13 +57,13 @@ func NewDPNSync(_context *context.Context) (*DPNSync, error) {
 	if err != nil {
 		return nil, fmt.Errorf("Error creating remote DPN REST client: %v", err)
 	}
-	results := make(map[string]*SyncResult)
+	results := make(map[string]*models.SyncResult)
 	for nodeName := range remoteClients {
-		results[nodeName] = NewSyncResult(nodeName)
+		results[nodeName] = models.NewSyncResult(nodeName)
 	}
 	sync := DPNSync{
 		LocalClient: localClient,
-		RemoteNodes: make(map[string]*Node),
+		RemoteNodes: make(map[string]*models.Node),
 		RemoteClients: remoteClients,
 		Context: _context,
 		Results: results,
@@ -97,7 +100,7 @@ func (dpnSync *DPNSync) Run() (bool) {
 }
 
 // GetAllNodes returns a list of all the nodes that our node knows about.
-func (dpnSync *DPNSync) GetAllNodes()([]*Node, error) {
+func (dpnSync *DPNSync) GetAllNodes()([]*models.Node, error) {
 	result := dpnSync.LocalClient.NodeList(nil)
 	if result.Error != nil {
 		return nil, result.Error
@@ -125,7 +128,7 @@ func (dpnSync *DPNSync) RemoteNodeNames() ([]string) {
 // this is a pull-only sync.We are not writing any data to other
 // nodes, just reading what they have and updating our own registry
 // with their info.
-func (dpnSync *DPNSync) SyncEverythingFromNode(remoteNode *Node) {
+func (dpnSync *DPNSync) SyncEverythingFromNode(remoteNode *models.Node) {
 	result := dpnSync.Results[remoteNode.Namespace]
 
 	dpnSync.SyncNode(remoteNode)
@@ -153,7 +156,7 @@ func (dpnSync *DPNSync) SyncEverythingFromNode(remoteNode *Node) {
 // SyncNode copies the latest node record from the node itself
 // to our DPN registry. E.g. It copies the SDR record from SDR
 // to us, but only if the remote record is newer.
-func (dpnSync *DPNSync) SyncNode(remoteNode *Node) {
+func (dpnSync *DPNSync) SyncNode(remoteNode *models.Node) {
 	log := dpnSync.Context.MessageLog
 	result := dpnSync.Results[remoteNode.Namespace]
 	// Get latest info from the node about itself
@@ -161,7 +164,7 @@ func (dpnSync *DPNSync) SyncNode(remoteNode *Node) {
 	log.Info("Fetching %s record from %s", remoteNode.Namespace, remoteNode.Namespace)
 	resp := remoteClient.NodeGet(remoteNode.Namespace)
 	if resp.Error != nil {
-		result.AddError(DPNTypeNode, resp.Error)
+		result.AddError(dpn.DPNTypeNode, resp.Error)
 		return
 	}
 	node := resp.Node()
@@ -172,37 +175,37 @@ func (dpnSync *DPNSync) SyncNode(remoteNode *Node) {
 		log.Info("Updating node %s because their record is newer", remoteNode.Namespace)
 		resp = dpnSync.LocalClient.NodeUpdate(node)
 		if resp.Error != nil {
-			result.AddError(DPNTypeNode, resp.Error)
+			result.AddError(dpn.DPNTypeNode, resp.Error)
 		}
-		result.AddToSyncCount(DPNTypeNode, 1)
+		result.AddToSyncCount(dpn.DPNTypeNode, 1)
 	} else {
 		log.Info("Our record for %s is up to date.", remoteNode.Namespace)
 	}
-	result.AddToFetchCount(DPNTypeNode, 1)
+	result.AddToFetchCount(dpn.DPNTypeNode, 1)
 }
 
 // SyncMembers copies remote member records to our own node.
 // This does not update existing records, it only creates new ones.
-func (dpnSync *DPNSync) SyncMembers(remoteNode *Node) {
+func (dpnSync *DPNSync) SyncMembers(remoteNode *models.Node) {
 	pageNumber := 1
 	log := dpnSync.Context.MessageLog
 	result := dpnSync.Results[remoteNode.Namespace]
 	remoteClient := dpnSync.RemoteClients[remoteNode.Namespace]
 	if remoteClient == nil {
-		dpnSync.logNoClient(DPNTypeMember, remoteNode.Namespace)
+		dpnSync.logNoClient(dpn.DPNTypeMember, remoteNode.Namespace)
 		return
 	}
 	for {
 		log.Debug("Getting page %d of members from %s", pageNumber, remoteNode.Namespace)
 		resp := dpnSync.getMembers(remoteClient, pageNumber)
 		if resp.Error != nil {
-			result.AddError(DPNTypeMember, resp.Error)
+			result.AddError(dpn.DPNTypeMember, resp.Error)
 			break
 		}
-		result.AddToFetchCount(DPNTypeMember, resp.Count)
+		result.AddToFetchCount(dpn.DPNTypeMember, resp.Count)
 		log.Debug("Got %d members from %s", resp.Count, remoteNode.Namespace)
 		dpnSync.syncMembers(resp.Members(), result)
-		if result.HasErrors(DPNTypeMember) {
+		if result.HasErrors(dpn.DPNTypeMember) {
 			break
 		}
 		if resp.Next == nil || *resp.Next == "" {
@@ -212,15 +215,15 @@ func (dpnSync *DPNSync) SyncMembers(remoteNode *Node) {
 		pageNumber += 1
 	}
 	log.Debug("Members from %s: fetched %d, synched %d", remoteNode.Namespace,
-		result.FetchCounts[DPNTypeMember], result.SyncCounts[DPNTypeMember])
+		result.FetchCounts[dpn.DPNTypeMember], result.SyncCounts[dpn.DPNTypeMember])
 }
 
-func (dpnSync *DPNSync) syncMembers(members []*Member, result *SyncResult) {
+func (dpnSync *DPNSync) syncMembers(members []*models.Member, result *models.SyncResult) {
 	log := dpnSync.Context.MessageLog
 	for _, member := range(members) {
 		resp := dpnSync.LocalClient.MemberGet(member.MemberId)
 		if resp.Error != nil {
-			result.AddError(DPNTypeMember, resp.Error)
+			result.AddError(dpn.DPNTypeMember, resp.Error)
 			return
 		}
 		existingMember := resp.Member()
@@ -228,15 +231,15 @@ func (dpnSync *DPNSync) syncMembers(members []*Member, result *SyncResult) {
 			log.Debug("Creating new member %s (%s)", member.Name, member.MemberId)
 			resp = dpnSync.LocalClient.MemberCreate(member)
 			if resp.Error != nil {
-				result.AddError(DPNTypeMember, resp.Error)
+				result.AddError(dpn.DPNTypeMember, resp.Error)
 				return
 			}
 		}
-		result.AddToSyncCount(DPNTypeMember, 1)
+		result.AddToSyncCount(dpn.DPNTypeMember, 1)
 	}
 }
 
-func (dpnSync *DPNSync) getMembers(remoteClient *DPNRestClient, pageNumber int) (*DPNResponse) {
+func (dpnSync *DPNSync) getMembers(remoteClient *network.DPNRestClient, pageNumber int) (*network.DPNResponse) {
 	remoteNode := dpnSync.RemoteNodes[remoteClient.Node]
 	params := url.Values{}
 	params.Set("after", remoteNode.LastPullDate.Format(time.RFC3339Nano))
@@ -255,26 +258,26 @@ func (dpnSync *DPNSync) getMembers(remoteClient *DPNRestClient, pageNumber int) 
 // Returns a list of the bags that were successfully updated.
 // Even on error, this may still return a list with whatever bags
 // were updated before the error occurred.
-func (dpnSync *DPNSync) SyncBags(node *Node) () {
+func (dpnSync *DPNSync) SyncBags(node *models.Node) () {
 	pageNumber := 1
 	log := dpnSync.Context.MessageLog
 	result := dpnSync.Results[node.Namespace]
 	remoteClient := dpnSync.RemoteClients[node.Namespace]
 	if remoteClient == nil {
-		dpnSync.logNoClient(DPNTypeBag, node.Namespace)
+		dpnSync.logNoClient(dpn.DPNTypeBag, node.Namespace)
 		return
 	}
 	for {
 		log.Debug("Getting page %d of bags from %s", pageNumber, node.Namespace)
 		resp := dpnSync.getBags(remoteClient, pageNumber)
 		if resp.Error != nil {
-			result.AddError(DPNTypeBag, resp.Error)
+			result.AddError(dpn.DPNTypeBag, resp.Error)
 			break
 		}
-		result.AddToFetchCount(DPNTypeBag, resp.Count)
+		result.AddToFetchCount(dpn.DPNTypeBag, resp.Count)
 		log.Debug("Got %d bags from %s", resp.Count, node.Namespace)
 		dpnSync.syncBags(resp.Bags(), result)
-		if result.HasErrors(DPNTypeBag) {
+		if result.HasErrors(dpn.DPNTypeBag) {
 			break
 		}
 		if resp.Next == nil || *resp.Next == "" {
@@ -284,17 +287,17 @@ func (dpnSync *DPNSync) SyncBags(node *Node) () {
 		pageNumber += 1
 	}
 	log.Debug("Bags from %s: fetched %d, synched %d", node.Namespace,
-		result.FetchCounts[DPNTypeBag], result.SyncCounts[DPNTypeBag])
+		result.FetchCounts[dpn.DPNTypeBag], result.SyncCounts[dpn.DPNTypeBag])
 }
 
-func (dpnSync *DPNSync) syncBags(bags []*DPNBag, result *SyncResult) {
+func (dpnSync *DPNSync) syncBags(bags []*models.DPNBag, result *models.SyncResult) {
 	log := dpnSync.Context.MessageLog
 	for _, bag := range(bags) {
 		log.Debug("Processing bag %s from %s", bag.UUID, bag.AdminNode)
 		resp := dpnSync.LocalClient.DPNBagGet(bag.UUID)
 		if resp.Error != nil {
 			log.Error(resp.Error.Error())
-			result.AddError(DPNTypeBag, resp.Error)
+			result.AddError(dpn.DPNTypeBag, resp.Error)
 			return
 		}
 		existingBag := resp.Bag()
@@ -303,7 +306,7 @@ func (dpnSync *DPNSync) syncBags(bags []*DPNBag, result *SyncResult) {
 			resp = dpnSync.LocalClient.DPNBagCreate(bag)
 			if resp.Error != nil {
 				log.Error(resp.Error.Error())
-				result.AddError(DPNTypeBag, resp.Error)
+				result.AddError(dpn.DPNTypeBag, resp.Error)
 				return
 			}
 		} else if !existingBag.UpdatedAt.Before(bag.UpdatedAt) {
@@ -313,16 +316,16 @@ func (dpnSync *DPNSync) syncBags(bags []*DPNBag, result *SyncResult) {
 			resp = dpnSync.LocalClient.DPNBagUpdate(bag)
 			if resp.Error != nil {
 				log.Error(resp.Error.Error())
-				result.AddError(DPNTypeBag, resp.Error)
+				result.AddError(dpn.DPNTypeBag, resp.Error)
 				return
 			}
 		}
 		dpnSync.SyncIngests(bag)
-		result.AddToSyncCount(DPNTypeBag, 1)
+		result.AddToSyncCount(dpn.DPNTypeBag, 1)
 	}
 }
 
-func (dpnSync *DPNSync) getBags(remoteClient *DPNRestClient, pageNumber int) (*DPNResponse) {
+func (dpnSync *DPNSync) getBags(remoteClient *network.DPNRestClient, pageNumber int) (*network.DPNResponse) {
 	// We want to get all bags updated since the last time we pulled
 	// from this node, and only those bags for which the node we're
 	// querying is the admin node.
@@ -335,26 +338,26 @@ func (dpnSync *DPNSync) getBags(remoteClient *DPNRestClient, pageNumber int) (*D
 	return remoteClient.DPNBagList(&params)
 }
 
-func (dpnSync *DPNSync) SyncDigests(remoteNode *Node) {
+func (dpnSync *DPNSync) SyncDigests(remoteNode *models.Node) {
 	pageNumber := 1
 	log := dpnSync.Context.MessageLog
 	result := dpnSync.Results[remoteNode.Namespace]
 	remoteClient := dpnSync.RemoteClients[remoteNode.Namespace]
 	if remoteClient == nil {
-		dpnSync.logNoClient(DPNTypeDigest, remoteNode.Namespace)
+		dpnSync.logNoClient(dpn.DPNTypeDigest, remoteNode.Namespace)
 		return
 	}
 	for {
 		log.Debug("Getting page %d of digests from %s", pageNumber, remoteNode.Namespace)
 		resp := dpnSync.getDigests(remoteClient, pageNumber)
 		if resp.Error != nil {
-			result.AddError(DPNTypeDigest, resp.Error)
+			result.AddError(dpn.DPNTypeDigest, resp.Error)
 			break
 		}
-		result.AddToFetchCount(DPNTypeDigest, resp.Count)
+		result.AddToFetchCount(dpn.DPNTypeDigest, resp.Count)
 		log.Debug("Got %d digests from %s", resp.Count, remoteNode.Namespace)
 		dpnSync.syncDigests(resp.Digests(), result)
-		if result.HasErrors(DPNTypeDigest) {
+		if result.HasErrors(dpn.DPNTypeDigest) {
 			break
 		}
 		if resp.Next == nil || *resp.Next == "" {
@@ -364,15 +367,15 @@ func (dpnSync *DPNSync) SyncDigests(remoteNode *Node) {
 		pageNumber += 1
 	}
 	log.Debug("Digests from %s: fetched %d, synched %d", remoteNode.Namespace,
-		result.FetchCounts[DPNTypeDigest], result.SyncCounts[DPNTypeDigest])
+		result.FetchCounts[dpn.DPNTypeDigest], result.SyncCounts[dpn.DPNTypeDigest])
 }
 
-func (dpnSync *DPNSync) syncDigests(digests []*MessageDigest, result *SyncResult) {
+func (dpnSync *DPNSync) syncDigests(digests []*models.MessageDigest, result *models.SyncResult) {
 	log := dpnSync.Context.MessageLog
 	for _, digest := range(digests) {
 		resp := dpnSync.LocalClient.DigestGet(digest.Bag, digest.Algorithm)
 		if resp.Error != nil {
-			result.AddError(DPNTypeDigest, resp.Error)
+			result.AddError(dpn.DPNTypeDigest, resp.Error)
 			return
 		}
 		existingDigest := resp.Digest()
@@ -380,15 +383,15 @@ func (dpnSync *DPNSync) syncDigests(digests []*MessageDigest, result *SyncResult
 			log.Debug("Creating new %s digest for bag %s", digest.Algorithm, digest.Bag)
 			resp = dpnSync.LocalClient.DigestCreate(digest)
 			if resp.Error != nil {
-				result.AddError(DPNTypeDigest, resp.Error)
+				result.AddError(dpn.DPNTypeDigest, resp.Error)
 				return
 			}
 		}
-		result.AddToSyncCount(DPNTypeDigest, 1)
+		result.AddToSyncCount(dpn.DPNTypeDigest, 1)
 	}
 }
 
-func (dpnSync *DPNSync) getDigests(remoteClient *DPNRestClient, pageNumber int) (*DPNResponse) {
+func (dpnSync *DPNSync) getDigests(remoteClient *network.DPNRestClient, pageNumber int) (*network.DPNResponse) {
 	// We want digests only from the node that calculated them.
 	remoteNode := dpnSync.RemoteNodes[remoteClient.Node]
 	params := url.Values{}
@@ -399,26 +402,26 @@ func (dpnSync *DPNSync) getDigests(remoteClient *DPNRestClient, pageNumber int) 
 	return remoteClient.DigestList(&params)
 }
 
-func (dpnSync *DPNSync) SyncIngests(bag *DPNBag) {
+func (dpnSync *DPNSync) SyncIngests(bag *models.DPNBag) {
 	pageNumber := 1
 	log := dpnSync.Context.MessageLog
 	result := dpnSync.Results[bag.AdminNode]
 	remoteClient := dpnSync.RemoteClients[bag.AdminNode]
 	if remoteClient == nil {
-		dpnSync.logNoClient(DPNTypeIngest, bag.AdminNode)
+		dpnSync.logNoClient(dpn.DPNTypeIngest, bag.AdminNode)
 		return
 	}
 	for {
 		log.Debug("Getting page %d of ingests from remote %s for bag %s", pageNumber, bag.AdminNode, bag.UUID)
 		resp := dpnSync.getIngests(remoteClient, pageNumber, bag.UUID)
 		if resp.Error != nil {
-			result.AddError(DPNTypeIngest, resp.Error)
+			result.AddError(dpn.DPNTypeIngest, resp.Error)
 			break
 		}
-		result.AddToFetchCount(DPNTypeIngest, resp.Count)
+		result.AddToFetchCount(dpn.DPNTypeIngest, resp.Count)
 		log.Debug("Got %d ingests for bag %s from %s", resp.Count, bag.UUID, bag.AdminNode)
 		dpnSync.syncIngests(resp.Ingests(), result)
-		if result.HasErrors(DPNTypeIngest) {
+		if result.HasErrors(dpn.DPNTypeIngest) {
 			break
 		}
 		if resp.Next == nil || *resp.Next == "" {
@@ -428,11 +431,11 @@ func (dpnSync *DPNSync) SyncIngests(bag *DPNBag) {
 		pageNumber += 1
 	}
 	log.Debug("Ingests from %s: fetched %d, synched %d", bag.AdminNode,
-		result.FetchCounts[DPNTypeIngest], result.SyncCounts[DPNTypeIngest])
+		result.FetchCounts[dpn.DPNTypeIngest], result.SyncCounts[dpn.DPNTypeIngest])
 
 }
 
-func (dpnSync *DPNSync) syncIngests(ingests []*Ingest, result *SyncResult) {
+func (dpnSync *DPNSync) syncIngests(ingests []*models.Ingest, result *models.SyncResult) {
 	log := dpnSync.Context.MessageLog
 	for _, ingest := range(ingests) {
 		resp := dpnSync.LocalClient.IngestCreate(ingest)
@@ -440,16 +443,16 @@ func (dpnSync *DPNSync) syncIngests(ingests []*Ingest, result *SyncResult) {
 			// Do nothing. This ingest record already exists
 			// on our local server.
 		} else if resp.Error != nil {
-			result.AddError(DPNTypeIngest, resp.Error)
+			result.AddError(dpn.DPNTypeIngest, resp.Error)
 			return
 		} else {
 			log.Debug("Created new ingest %s (bag %s)", ingest.IngestId, ingest.Bag)
 		}
-		result.AddToSyncCount(DPNTypeIngest, 1)
+		result.AddToSyncCount(dpn.DPNTypeIngest, 1)
 	}
 }
 
-func (dpnSync *DPNSync) getIngests(remoteClient *DPNRestClient, pageNumber int, bagUUID string) (*DPNResponse) {
+func (dpnSync *DPNSync) getIngests(remoteClient *network.DPNRestClient, pageNumber int, bagUUID string) (*network.DPNResponse) {
 	params := url.Values{}
 	params.Set("bag", bagUUID)
 	params.Set("latest", "true")
@@ -458,26 +461,26 @@ func (dpnSync *DPNSync) getIngests(remoteClient *DPNRestClient, pageNumber int, 
 	return remoteClient.IngestList(&params)
 }
 
-func (dpnSync *DPNSync) SyncFixities(remoteNode *Node) {
+func (dpnSync *DPNSync) SyncFixities(remoteNode *models.Node) {
 	pageNumber := 1
 	log := dpnSync.Context.MessageLog
 	result := dpnSync.Results[remoteNode.Namespace]
 	remoteClient := dpnSync.RemoteClients[remoteNode.Namespace]
 	if remoteClient == nil {
-		dpnSync.logNoClient(DPNTypeFixityCheck, remoteNode.Namespace)
+		dpnSync.logNoClient(dpn.DPNTypeFixityCheck, remoteNode.Namespace)
 		return
 	}
 	for {
 		log.Debug("Getting page %d of fixities from %s", pageNumber, remoteNode.Namespace)
 		resp := dpnSync.getFixities(remoteClient, pageNumber)
 		if resp.Error != nil {
-			result.AddError(DPNTypeFixityCheck, resp.Error)
+			result.AddError(dpn.DPNTypeFixityCheck, resp.Error)
 			break
 		}
-		result.AddToFetchCount(DPNTypeFixityCheck, resp.Count)
+		result.AddToFetchCount(dpn.DPNTypeFixityCheck, resp.Count)
 		log.Debug("Got %d fixities from %s", resp.Count, remoteNode.Namespace)
 		dpnSync.syncFixities(resp.FixityChecks(), result)
-		if result.HasErrors(DPNTypeFixityCheck) {
+		if result.HasErrors(dpn.DPNTypeFixityCheck) {
 			break
 		}
 		if resp.Next == nil || *resp.Next == "" {
@@ -487,10 +490,10 @@ func (dpnSync *DPNSync) SyncFixities(remoteNode *Node) {
 		pageNumber += 1
 	}
 	log.Debug("Fixities from %s: fetched %d, synched %d", remoteNode.Namespace,
-		result.FetchCounts[DPNTypeFixityCheck], result.SyncCounts[DPNTypeFixityCheck])
+		result.FetchCounts[dpn.DPNTypeFixityCheck], result.SyncCounts[dpn.DPNTypeFixityCheck])
 }
 
-func (dpnSync *DPNSync) syncFixities(fixities []*FixityCheck, result *SyncResult) {
+func (dpnSync *DPNSync) syncFixities(fixities []*models.FixityCheck, result *models.SyncResult) {
 	log := dpnSync.Context.MessageLog
 	for _, fixity := range(fixities) {
 		resp := dpnSync.LocalClient.FixityCheckCreate(fixity)
@@ -498,16 +501,16 @@ func (dpnSync *DPNSync) syncFixities(fixities []*FixityCheck, result *SyncResult
 			// Do nothing. This fixity record already exists
 			// on our local server.
 		} else if resp.Error != nil {
-			result.AddError(DPNTypeFixityCheck, resp.Error)
+			result.AddError(dpn.DPNTypeFixityCheck, resp.Error)
 			return
 		} else {
 			log.Debug("Created new fixity %s (bag %s)", fixity.FixityCheckId, fixity.Bag)
 		}
-		result.AddToSyncCount(DPNTypeFixityCheck, 1)
+		result.AddToSyncCount(dpn.DPNTypeFixityCheck, 1)
 	}
 }
 
-func (dpnSync *DPNSync) getFixities(remoteClient *DPNRestClient, pageNumber int) (*DPNResponse) {
+func (dpnSync *DPNSync) getFixities(remoteClient *network.DPNRestClient, pageNumber int) (*network.DPNResponse) {
 	// Get fixities for the remote node *calculated by that node*
 	remoteNode := dpnSync.RemoteNodes[remoteClient.Node]
 	params := url.Values{}
@@ -520,26 +523,26 @@ func (dpnSync *DPNSync) getFixities(remoteClient *DPNRestClient, pageNumber int)
 
 // SyncReplicationRequests copies ReplicationTransfer records from
 // remote nodes to our own local node.
-func (dpnSync *DPNSync) SyncReplicationRequests(remoteNode *Node) {
+func (dpnSync *DPNSync) SyncReplicationRequests(remoteNode *models.Node) {
 	pageNumber := 1
 	log := dpnSync.Context.MessageLog
 	result := dpnSync.Results[remoteNode.Namespace]
 	remoteClient := dpnSync.RemoteClients[remoteNode.Namespace]
 	if remoteClient == nil {
-		dpnSync.logNoClient(DPNTypeReplication, remoteNode.Namespace)
+		dpnSync.logNoClient(dpn.DPNTypeReplication, remoteNode.Namespace)
 		return
 	}
 	for {
 		log.Debug("Getting page %d of replication transfers from %s", pageNumber, remoteNode.Namespace)
 		resp := dpnSync.getReplicationRequests(remoteClient, pageNumber)
 		if resp.Error != nil {
-			result.AddError(DPNTypeReplication, resp.Error)
+			result.AddError(dpn.DPNTypeReplication, resp.Error)
 			break
 		}
-		result.AddToFetchCount(DPNTypeReplication, resp.Count)
+		result.AddToFetchCount(dpn.DPNTypeReplication, resp.Count)
 		log.Debug("Got %d replication requests from %s", resp.Count, remoteNode.Namespace)
 		dpnSync.syncReplicationRequests(resp.ReplicationTransfers(), result)
-		if result.HasErrors(DPNTypeReplication) {
+		if result.HasErrors(dpn.DPNTypeReplication) {
 			break
 		}
 		if resp.Next == nil || *resp.Next == "" {
@@ -549,17 +552,17 @@ func (dpnSync *DPNSync) SyncReplicationRequests(remoteNode *Node) {
 		pageNumber += 1
 	}
 	log.Debug("Replications from %s: fetched %d, synched %d", remoteNode.Namespace,
-		result.FetchCounts[DPNTypeReplication], result.SyncCounts[DPNTypeReplication])
+		result.FetchCounts[dpn.DPNTypeReplication], result.SyncCounts[dpn.DPNTypeReplication])
 }
 
-func (dpnSync *DPNSync) syncReplicationRequests(xfers []*ReplicationTransfer, result *SyncResult) {
+func (dpnSync *DPNSync) syncReplicationRequests(xfers []*models.ReplicationTransfer, result *models.SyncResult) {
 	log := dpnSync.Context.MessageLog
 	for _, xfer := range(xfers) {
 		log.Debug("Processing replication %s from %s (bag %s)", xfer.ReplicationId,
 			xfer.FromNode, xfer.Bag)
 		resp := dpnSync.LocalClient.ReplicationTransferGet(xfer.ReplicationId)
 		if resp.Error != nil {
-			result.AddError(DPNTypeReplication, resp.Error)
+			result.AddError(dpn.DPNTypeReplication, resp.Error)
 			return
 		}
 		existingXfer := resp.ReplicationTransfer()
@@ -567,7 +570,7 @@ func (dpnSync *DPNSync) syncReplicationRequests(xfers []*ReplicationTransfer, re
 			log.Debug("Creating new replication request %s", xfer.ReplicationId)
 			resp = dpnSync.LocalClient.ReplicationTransferCreate(xfer)
 			if resp.Error != nil {
-				result.AddError(DPNTypeReplication, resp.Error)
+				result.AddError(dpn.DPNTypeReplication, resp.Error)
 				return
 			}
 		} else if !existingXfer.UpdatedAt.Before(xfer.UpdatedAt) {
@@ -576,15 +579,15 @@ func (dpnSync *DPNSync) syncReplicationRequests(xfers []*ReplicationTransfer, re
 			log.Debug("Updating replication %s", xfer.ReplicationId)
 			resp = dpnSync.LocalClient.ReplicationTransferUpdate(xfer)
 			if resp.Error != nil {
-				result.AddError(DPNTypeReplication, resp.Error)
+				result.AddError(dpn.DPNTypeReplication, resp.Error)
 				return
 			}
 		}
-		result.AddToSyncCount(DPNTypeReplication, 1)
+		result.AddToSyncCount(dpn.DPNTypeReplication, 1)
 	}
 }
 
-func (dpnSync *DPNSync) getReplicationRequests(remoteClient *DPNRestClient, pageNumber int) (*DPNResponse) {
+func (dpnSync *DPNSync) getReplicationRequests(remoteClient *network.DPNRestClient, pageNumber int) (*network.DPNResponse) {
 	// Get requests updated since the last time we pulled
 	// from this node, where this node is the from_node.
 	remoteNode := dpnSync.RemoteNodes[remoteClient.Node]
@@ -598,26 +601,26 @@ func (dpnSync *DPNSync) getReplicationRequests(remoteClient *DPNRestClient, page
 
 // SyncRestoreRequests copies RestoreTransfer records from remote
 // nodes to our local node.
-func (dpnSync *DPNSync) SyncRestoreRequests(remoteNode *Node) {
+func (dpnSync *DPNSync) SyncRestoreRequests(remoteNode *models.Node) {
 	pageNumber := 1
 	log := dpnSync.Context.MessageLog
 	result := dpnSync.Results[remoteNode.Namespace]
 	remoteClient := dpnSync.RemoteClients[remoteNode.Namespace]
 	if remoteClient == nil {
-		dpnSync.logNoClient(DPNTypeRestore, remoteNode.Namespace)
+		dpnSync.logNoClient(dpn.DPNTypeRestore, remoteNode.Namespace)
 		return
 	}
 	for {
 		log.Debug("Getting page %d of restore transfers from %s", pageNumber, remoteNode.Namespace)
 		resp := dpnSync.getRestoreRequests(remoteClient, pageNumber)
 		if resp.Error != nil {
-			result.AddError(DPNTypeRestore, resp.Error)
+			result.AddError(dpn.DPNTypeRestore, resp.Error)
 			break
 		}
-		result.AddToFetchCount(DPNTypeRestore, resp.Count)
+		result.AddToFetchCount(dpn.DPNTypeRestore, resp.Count)
 		log.Debug("Got %d restore requests from %s", resp.Count, remoteNode.Namespace)
 		dpnSync.syncRestoreRequests(resp.RestoreTransfers(), result)
-		if result.HasErrors(DPNTypeRestore) {
+		if result.HasErrors(dpn.DPNTypeRestore) {
 			break
 		}
 		if resp.Next == nil || *resp.Next == "" {
@@ -627,17 +630,17 @@ func (dpnSync *DPNSync) SyncRestoreRequests(remoteNode *Node) {
 		pageNumber += 1
 	}
 	log.Debug("Restores from %s: fetched %d, synched %d", remoteNode.Namespace,
-		result.FetchCounts[DPNTypeRestore], result.SyncCounts[DPNTypeRestore])
+		result.FetchCounts[dpn.DPNTypeRestore], result.SyncCounts[dpn.DPNTypeRestore])
 }
 
-func (dpnSync *DPNSync) syncRestoreRequests(xfers []*RestoreTransfer, result *SyncResult) {
+func (dpnSync *DPNSync) syncRestoreRequests(xfers []*models.RestoreTransfer, result *models.SyncResult) {
 	log := dpnSync.Context.MessageLog
 	for _, xfer := range(xfers) {
 		log.Debug("Processing restore %s from %s (bag %s)", xfer.RestoreId,
 			xfer.FromNode, xfer.Bag)
 		resp := dpnSync.LocalClient.RestoreTransferGet(xfer.RestoreId)
 		if resp.Error != nil {
-			result.AddError(DPNTypeRestore, resp.Error)
+			result.AddError(dpn.DPNTypeRestore, resp.Error)
 			return
 		}
 		existingXfer := resp.RestoreTransfer()
@@ -645,7 +648,7 @@ func (dpnSync *DPNSync) syncRestoreRequests(xfers []*RestoreTransfer, result *Sy
 			log.Debug("Creating new restore request %s", xfer.RestoreId)
 			resp = dpnSync.LocalClient.RestoreTransferCreate(xfer)
 			if resp.Error != nil {
-				result.AddError(DPNTypeRestore, resp.Error)
+				result.AddError(dpn.DPNTypeRestore, resp.Error)
 				return
 			}
 		} else if !existingXfer.UpdatedAt.Before(xfer.UpdatedAt) {
@@ -654,15 +657,15 @@ func (dpnSync *DPNSync) syncRestoreRequests(xfers []*RestoreTransfer, result *Sy
 			log.Debug("Updating restore %s", xfer.RestoreId)
 			resp = dpnSync.LocalClient.RestoreTransferUpdate(xfer)
 			if resp.Error != nil {
-				result.AddError(DPNTypeRestore, resp.Error)
+				result.AddError(dpn.DPNTypeRestore, resp.Error)
 				return
 			}
 		}
-		result.AddToSyncCount(DPNTypeRestore, 1)
+		result.AddToSyncCount(dpn.DPNTypeRestore, 1)
 	}
 }
 
-func (dpnSync *DPNSync) getRestoreRequests(remoteClient *DPNRestClient, pageNumber int) (*DPNResponse) {
+func (dpnSync *DPNSync) getRestoreRequests(remoteClient *network.DPNRestClient, pageNumber int) (*network.DPNResponse) {
 	// Get requests updated since the last time we pulled
 	// from this node, where this node is the to_node.
 	// E.g. We ask TDR for restore requests going TO TDR.
@@ -675,18 +678,18 @@ func (dpnSync *DPNSync) getRestoreRequests(remoteClient *DPNRestClient, pageNumb
 	return remoteClient.RestoreTransferList(&params)
 }
 
-func (dpnSync *DPNSync) logNoClient(dpnType DPNObjectType, nodeName string) {
+func (dpnSync *DPNSync) logNoClient(dpnType dpn.DPNObjectType, nodeName string) {
 	dpnSync.Context.MessageLog.Error("Skipping %s for node %s: REST client is nil",
 		dpnType, nodeName)
 }
 
-func (dpnSync *DPNSync) logResult(syncResult *SyncResult) {
-	for _, dpnType := range DPNTypes {
+func (dpnSync *DPNSync) logResult(syncResult *models.SyncResult) {
+	for _, dpnType := range dpn.DPNTypes {
 		dpnSync.Context.MessageLog.Info("Node %s %s: Fetched %d, Synched %d",
 			syncResult.NodeName, dpnType, syncResult.FetchCounts[dpnType],
 			syncResult.SyncCounts[dpnType])
 	}
-	for _, dpnType := range DPNTypes {
+	for _, dpnType := range dpn.DPNTypes {
 		errors := syncResult.Errors[dpnType]
 		if errors != nil {
 			for _, err := range errors {
