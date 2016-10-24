@@ -2,14 +2,17 @@ package workers
 
 import (
 	"fmt"
+	"github.com/APTrust/exchange/constants"
 	"github.com/APTrust/exchange/context"
 	"github.com/APTrust/exchange/dpn/models"
 	"github.com/APTrust/exchange/dpn/network"
+	"github.com/APTrust/exchange/util"
 	apt_models "github.com/APTrust/exchange/models"
 	"github.com/nsqio/go-nsq"
 //	"os"
 	"os/exec"
 //	"path/filepath"
+	"strconv"
 //	"time"
 )
 
@@ -34,6 +37,12 @@ type CopyManifest struct {
 	LocalPath           string
 	RsyncStdout         string
 	RsyncStderr         string
+}
+
+func NewCopyManifest() (*CopyManifest) {
+	return &CopyManifest{
+		WorkSummary: apt_models.NewWorkSummary(),
+	}
 }
 
 func NewCopier(_context *context.Context) (*Copier, error) {
@@ -119,6 +128,7 @@ func (copier *Copier) verifyChecksum() {
 	//}
 }
 
+// buildCopyManifest creates a CopyManifest for this job.
 func (copier *Copier) buildCopyManifest(message *nsq.Message) (*CopyManifest) {
 	// 1. Get the DPNWorkItem from Pharos.
 	//    Stop if it's marked complete.
@@ -127,8 +137,127 @@ func (copier *Copier) buildCopyManifest(message *nsq.Message) (*CopyManifest) {
 	// 3. Get the DPNBag record from the remote node.
 	//    We need to know its size.
 	// 4. Build and return the CopyManifest.
-	return nil
+	copyManifest := NewCopyManifest()
+	copyManifest.NsqMessage = message
+	copier.getDPNWorkItem(copyManifest)
+	if copyManifest.WorkSummary.HasErrors() {
+		return copyManifest
+	}
+	copier.getXferRequest(copyManifest)
+	if copyManifest.WorkSummary.HasErrors() {
+		return copyManifest
+	}
+	copier.getDPNBag(copyManifest)
+	return copyManifest
 }
+
+// getDPNWorkItem returns the DPNWorkItem associated with this message,
+// and a boolean indicating whether or not processing should continue.
+func (copier *Copier) getDPNWorkItem(copyManifest *CopyManifest) {
+	workItemId, err := strconv.Atoi(string(copyManifest.NsqMessage.Body))
+	if err != nil {
+		msg := fmt.Sprintf("Could not get DPNWorkItemId from" +
+			"NSQ message body '%s': %v", copyManifest.NsqMessage.Body, err)
+		copyManifest.WorkSummary.AddError(msg)
+		copyManifest.WorkSummary.ErrorIsFatal = true
+		return
+	}
+	resp := copier.Context.PharosClient.DPNWorkItemGet(workItemId)
+	if resp.Error != nil {
+		msg := fmt.Sprintf("Could not get DPNWorkItem (id %d) " +
+			"from Pharos: %v", workItemId, resp.Error)
+		copyManifest.WorkSummary.AddError(msg)
+		copyManifest.WorkSummary.ErrorIsFatal = true
+		return
+	}
+	dpnWorkItem := resp.DPNWorkItem()
+	copyManifest.DPNWorkItem = dpnWorkItem
+	if dpnWorkItem == nil {
+		msg := fmt.Sprintf("Pharos returned nil for DPNWorkItem %d",
+			workItemId)
+		copyManifest.WorkSummary.AddError(msg)
+		copyManifest.WorkSummary.ErrorIsFatal = true
+		return
+	}
+	if dpnWorkItem.Task != constants.DPNTaskReplication {
+		msg := fmt.Sprintf("DPNWorkItem %d has task type %s, " +
+			"and does not belong in this queue!", workItemId, dpnWorkItem.Task)
+		copyManifest.WorkSummary.AddError(msg)
+		copyManifest.WorkSummary.ErrorIsFatal = true
+	}
+	if !util.LooksLikeUUID(dpnWorkItem.Identifier) {
+		msg := fmt.Sprintf("DPNWorkItem %d has identifier '%s', " +
+			"which does not look like a UUID", workItemId, dpnWorkItem.Identifier)
+		copyManifest.WorkSummary.AddError(msg)
+		copyManifest.WorkSummary.ErrorIsFatal = true
+	}
+}
+
+func (copier *Copier) getXferRequest(copyManifest *CopyManifest) {
+	if copyManifest == nil || copyManifest.DPNWorkItem == nil {
+		msg := fmt.Sprintf("getXferRequest: CopyManifest.DPNWorkItem cannot be nil.")
+		copyManifest.WorkSummary.AddError(msg)
+		copyManifest.WorkSummary.ErrorIsFatal = true
+		return
+	}
+	resp := copier.LocalClient.ReplicationTransferGet(copyManifest.DPNWorkItem.Identifier)
+	if resp.Error != nil {
+		msg := fmt.Sprintf("Could not get ReplicationTransfer %s " +
+			"from DPN server: %v", copyManifest.DPNWorkItem.Identifier, resp.Error)
+		copyManifest.WorkSummary.AddError(msg)
+		copyManifest.WorkSummary.ErrorIsFatal = true
+		return
+	}
+	xfer := resp.ReplicationTransfer()
+	copyManifest.ReplicationTransfer = xfer
+	if xfer == nil {
+		msg := fmt.Sprintf("DPN server returned nil for ReplicationId %s",
+			copyManifest.DPNWorkItem.Identifier)
+		copyManifest.WorkSummary.AddError(msg)
+		copyManifest.WorkSummary.ErrorIsFatal = true
+		return
+	}
+	if xfer.Stored {
+		msg := fmt.Sprintf("ReplicationId %s is already marked as Stored. Nothing left to do.",
+			copyManifest.DPNWorkItem.Identifier)
+		copyManifest.WorkSummary.AddError(msg)
+		copyManifest.WorkSummary.ErrorIsFatal = true
+		return
+	}
+	if xfer.Cancelled {
+		msg := fmt.Sprintf("ReplicationId %s was cancelled. Nothing left to do.",
+			copyManifest.DPNWorkItem.Identifier)
+		copyManifest.WorkSummary.AddError(msg)
+		copyManifest.WorkSummary.ErrorIsFatal = true
+	}
+}
+
+func (copier *Copier) getDPNBag(copyManifest *CopyManifest) {
+	if copyManifest == nil || copyManifest.ReplicationTransfer == nil {
+		msg := fmt.Sprintf("getDPNBag: CopyManifest.ReplicationTransfer cannot be nil.")
+		copyManifest.WorkSummary.ErrorIsFatal = true
+		copyManifest.WorkSummary.AddError(msg)
+		return
+	}
+	resp := copier.LocalClient.DPNBagGet(copyManifest.ReplicationTransfer.Bag)
+	if resp.Error != nil {
+		msg := fmt.Sprintf("Could not get ReplicationTransfer %s " +
+			"from DPN server: %v", copyManifest.DPNWorkItem.Identifier, resp.Error)
+		copyManifest.WorkSummary.AddError(msg)
+		copyManifest.WorkSummary.ErrorIsFatal = true
+		return
+	}
+	dpnBag := resp.Bag()
+	copyManifest.DPNBag = dpnBag
+	if dpnBag == nil {
+		msg := fmt.Sprintf("DPN server returned nil for Bag %s",
+			copyManifest.ReplicationTransfer.Bag)
+		copyManifest.WorkSummary.AddError(msg)
+		copyManifest.WorkSummary.ErrorIsFatal = true
+		return
+	}
+}
+
 
 // Make sure we have space to copy this item from the remote node.
 // We will be validating this bag in a later step without untarring it,
