@@ -13,7 +13,7 @@ import (
 	"os/exec"
 //	"path/filepath"
 	"strconv"
-//	"time"
+	"time"
 )
 
 // dpn_copier copies tarred bags from other nodes via rsync.
@@ -79,6 +79,16 @@ func (copier *Copier) HandleMessage(message *nsq.Message) error {
 
 	// Get the DPNWorkItem, the ReplicationTransfer, and the DPNBag
 	copyManifest := copier.buildCopyManifest(message)
+	if copyManifest.WorkSummary.HasErrors() {
+		copier.finishWithError(copyManifest)
+		return nil
+	}
+
+	if !copier.reserveSpaceOnVolume(copyManifest) {
+		copyManifest.WorkSummary.AddError("Cannot reserve disk space to process this bag.")
+		copyManifest.WorkSummary.Finish()
+		message.Requeue(10 * time.Minute)
+	}
 
 	// Start processing.
 	copier.CopyChannel <- copyManifest
@@ -130,15 +140,11 @@ func (copier *Copier) verifyChecksum() {
 
 // buildCopyManifest creates a CopyManifest for this job.
 func (copier *Copier) buildCopyManifest(message *nsq.Message) (*CopyManifest) {
-	// 1. Get the DPNWorkItem from Pharos.
-	//    Stop if it's marked complete.
-	// 2. Get the ReplicationTransfer from the remote node.
-	//    Stop if it's completed or cancelled.
-	// 3. Get the DPNBag record from the remote node.
-	//    We need to know its size.
-	// 4. Build and return the CopyManifest.
 	copyManifest := NewCopyManifest()
 	copyManifest.NsqMessage = message
+	copyManifest.WorkSummary.Attempted = true
+	copyManifest.WorkSummary.AttemptNumber = 1
+	copyManifest.WorkSummary.Start()
 	copier.getDPNWorkItem(copyManifest)
 	if copyManifest.WorkSummary.HasErrors() {
 		return copyManifest
@@ -258,7 +264,6 @@ func (copier *Copier) getDPNBag(copyManifest *CopyManifest) {
 	}
 }
 
-
 // Make sure we have space to copy this item from the remote node.
 // We will be validating this bag in a later step without untarring it,
 // so we just have to reserve enough room for the tar file.
@@ -289,7 +294,26 @@ func (copier *Copier) reserveSpaceOnVolume(copyManifest *CopyManifest) (bool) {
 	return okToCopy
 }
 
-
+func (copier *Copier) finishWithError(copyManifest *CopyManifest) {
+	xferId := "[unknown]"
+	if copyManifest.ReplicationTransfer != nil {
+		xferId = copyManifest.ReplicationTransfer.ReplicationId
+	} else if copyManifest.DPNWorkItem != nil {
+		xferId = copyManifest.DPNWorkItem.Identifier
+	}
+	if copyManifest.WorkSummary.ErrorIsFatal {
+		msg := fmt.Sprintf("Xfer %s has fatal error: %s",
+			xferId, copyManifest.WorkSummary.Errors[0])
+		copyManifest.WorkSummary.AddError(msg)
+		copyManifest.NsqMessage.Finish()
+	} else {
+		msg := fmt.Sprintf("Xfer %s has non-fatal error: %s",
+			xferId, copyManifest.WorkSummary.Errors[0])
+		copyManifest.WorkSummary.AddError(msg)
+		copyManifest.NsqMessage.Requeue(1 * time.Minute)
+	}
+	copyManifest.WorkSummary.Finish()
+}
 
 // GetRsyncCommand returns a command object for copying from the remote
 // location to the local filesystem. The copy is done via rsync over ssh,
