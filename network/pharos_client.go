@@ -732,7 +732,7 @@ func (client *PharosClient) DPNWorkItemList(params url.Values) (*PharosResponse)
 // this performs a POST to create a new record. For non-zero IDs, this
 // performs a PUT to update the existing record. The response object
 // will include a new copy of the WorkItem if it was saved successfully.
-func (client *PharosClient) DPNWorkItemSave(obj *models.WorkItem) (*PharosResponse) {
+func (client *PharosClient) DPNWorkItemSave(obj *models.DPNWorkItem) (*PharosResponse) {
 	// Set up the response object
 	resp := NewPharosResponse(PharosDPNWorkItem)
 	resp.dpnWorkItems = make([]*models.DPNWorkItem, 1)
@@ -748,7 +748,7 @@ func (client *PharosClient) DPNWorkItemSave(obj *models.WorkItem) (*PharosRespon
 	absoluteUrl := client.BuildUrl(relativeUrl)
 
 	// Prepare the JSON data
-	postData, err := obj.SerializeForPharos()
+	postData, err := json.Marshal(obj)
 	if err != nil {
 		resp.Error = err
 	}
