@@ -189,11 +189,21 @@ func (copier *Copier) finishWithError(manifest *models.ReplicationManifest) {
 		os.Remove(manifest.LocalPath)
 	}
 	manifest.CopySummary.Finish()
+
+	// Tell Pharos what happened, and then dump the JSON to a log file.
+	*manifest.DPNWorkItem.Note = "Copy failed."
+	SaveWorkItemState(copier.Context, manifest, manifest.CopySummary)
+	LogReplicationJson(manifest, copier.Context.JsonLog)
 }
 
 func (copier *Copier) finishWithSuccess(manifest *models.ReplicationManifest) {
-
 	manifest.CopySummary.Finish()
+	*manifest.DPNWorkItem.Note = "Copy succeeded."
+
+	// Save DPNWorkItem.State BEFORE pushing to next queue, because
+	// the next worker may pick this up immediately, and it needs
+	// up-to-date info.
+	SaveWorkItemState(copier.Context, manifest, manifest.CopySummary)
 	topic := copier.Context.Config.DPN.DPNValidationWorker.NsqTopic
 	err := copier.Context.NSQClient.Enqueue(topic, manifest.DPNWorkItem.Id)
 	if err != nil {
@@ -201,8 +211,11 @@ func (copier *Copier) finishWithSuccess(manifest *models.ReplicationManifest) {
 			manifest.DPNWorkItem.Id, manifest.DPNWorkItem.Identifier, topic, err)
 		manifest.CopySummary.AddError(msg)
 		copier.Context.MessageLog.Error(msg)
+		*manifest.DPNWorkItem.Note = "Copy succeeded but could not push to validation queue."
+		SaveWorkItemState(copier.Context, manifest, manifest.CopySummary)
 	}
 	LogReplicationJson(manifest, copier.Context.JsonLog)
+	manifest.NsqMessage.Finish()
 }
 
 
