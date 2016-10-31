@@ -2,15 +2,12 @@ package workers
 
 import (
 	"fmt"
-	"github.com/APTrust/exchange/constants"
 	"github.com/APTrust/exchange/context"
 	"github.com/APTrust/exchange/dpn/models"
 	"github.com/APTrust/exchange/dpn/network"
-	"github.com/APTrust/exchange/util"
 	"github.com/nsqio/go-nsq"
 	"os/exec"
 	"path/filepath"
-	"strconv"
 	"strings"
 	"time"
 )
@@ -69,7 +66,7 @@ func (copier *Copier) HandleMessage(message *nsq.Message) error {
 		return nil
 	}
 
-	if !copier.reserveSpaceOnVolume(manifest) {
+	if !ReserveSpaceOnVolume(copier.Context, manifest) {
 		manifest.CopySummary.AddError("Cannot reserve disk space to process this bag.")
 		manifest.CopySummary.Finish()
 		message.Requeue(10 * time.Minute)
@@ -148,11 +145,11 @@ func (copier *Copier) buildReplicationManifest(message *nsq.Message) (*models.Re
 	manifest.CopySummary.Attempted = true
 	manifest.CopySummary.AttemptNumber = 1
 	manifest.CopySummary.Start()
-	copier.getDPNWorkItem(manifest)
+	GetDPNWorkItem(copier.Context, manifest, manifest.CopySummary)
 	if manifest.CopySummary.HasErrors() {
 		return manifest
 	}
-	copier.getXferRequest(manifest)
+	GetXferRequest(copier.LocalClient, manifest, manifest.CopySummary)
 	if manifest.CopySummary.HasErrors() {
 		return manifest
 	}
@@ -161,151 +158,8 @@ func (copier *Copier) buildReplicationManifest(message *nsq.Message) (*models.Re
 		copier.Context.Config.DPN.StagingDirectory,
 		manifest.ReplicationTransfer.Bag)
 
-	copier.getDPNBag(manifest)
+	GetDPNBag(copier.LocalClient, manifest, manifest.CopySummary)
 	return manifest
-}
-
-// getDPNWorkItem returns the DPNWorkItem associated with this message,
-// and a boolean indicating whether or not processing should continue.
-func (copier *Copier) getDPNWorkItem(manifest *models.ReplicationManifest) {
-	workItemId, err := strconv.Atoi(string(manifest.NsqMessage.Body))
-	if err != nil {
-		msg := fmt.Sprintf("Could not get DPNWorkItemId from" +
-			"NSQ message body '%s': %v", manifest.NsqMessage.Body, err)
-		manifest.CopySummary.AddError(msg)
-		manifest.CopySummary.ErrorIsFatal = true
-		return
-	}
-	resp := copier.Context.PharosClient.DPNWorkItemGet(workItemId)
-	if resp.Error != nil {
-		msg := fmt.Sprintf("Could not get DPNWorkItem (id %d) " +
-			"from Pharos: %v", workItemId, resp.Error)
-		manifest.CopySummary.AddError(msg)
-		manifest.CopySummary.ErrorIsFatal = true
-		return
-	}
-	dpnWorkItem := resp.DPNWorkItem()
-	manifest.DPNWorkItem = dpnWorkItem
-	if dpnWorkItem == nil {
-		msg := fmt.Sprintf("Pharos returned nil for DPNWorkItem %d",
-			workItemId)
-		manifest.CopySummary.AddError(msg)
-		manifest.CopySummary.ErrorIsFatal = true
-		return
-	}
-	if dpnWorkItem.Task != constants.DPNTaskReplication {
-		msg := fmt.Sprintf("DPNWorkItem %d has task type %s, " +
-			"and does not belong in this queue!", workItemId, dpnWorkItem.Task)
-		manifest.CopySummary.AddError(msg)
-		manifest.CopySummary.ErrorIsFatal = true
-	}
-	if !util.LooksLikeUUID(dpnWorkItem.Identifier) {
-		msg := fmt.Sprintf("DPNWorkItem %d has identifier '%s', " +
-			"which does not look like a UUID", workItemId, dpnWorkItem.Identifier)
-		manifest.CopySummary.AddError(msg)
-		manifest.CopySummary.ErrorIsFatal = true
-	}
-}
-
-// getXferRequest gets the ReplicationTransfer request from our local
-// DPN REST server that describes the replication we're about to
-// perform.
-func (copier *Copier) getXferRequest(manifest *models.ReplicationManifest) {
-	if manifest == nil || manifest.DPNWorkItem == nil {
-		msg := fmt.Sprintf("getXferRequest: ReplicationManifest.DPNWorkItem cannot be nil.")
-		manifest.CopySummary.AddError(msg)
-		manifest.CopySummary.ErrorIsFatal = true
-		return
-	}
-	resp := copier.LocalClient.ReplicationTransferGet(manifest.DPNWorkItem.Identifier)
-	if resp.Error != nil {
-		msg := fmt.Sprintf("Could not get ReplicationTransfer %s " +
-			"from DPN server: %v", manifest.DPNWorkItem.Identifier, resp.Error)
-		manifest.CopySummary.AddError(msg)
-		manifest.CopySummary.ErrorIsFatal = true
-		return
-	}
-	xfer := resp.ReplicationTransfer()
-	manifest.ReplicationTransfer = xfer
-	if xfer == nil {
-		msg := fmt.Sprintf("DPN server returned nil for ReplicationId %s",
-			manifest.DPNWorkItem.Identifier)
-		manifest.CopySummary.AddError(msg)
-		manifest.CopySummary.ErrorIsFatal = true
-		return
-	}
-	if xfer.Stored {
-		msg := fmt.Sprintf("ReplicationId %s is already marked as Stored. Nothing left to do.",
-			manifest.DPNWorkItem.Identifier)
-		manifest.CopySummary.AddError(msg)
-		manifest.CopySummary.ErrorIsFatal = true
-		return
-	}
-	if xfer.Cancelled {
-		msg := fmt.Sprintf("ReplicationId %s was cancelled. Nothing left to do.",
-			manifest.DPNWorkItem.Identifier)
-		manifest.CopySummary.AddError(msg)
-		manifest.CopySummary.ErrorIsFatal = true
-	}
-}
-
-// getDPNBag gets the bag record fom the local DPN REST server that
-// describes the bag we are being asked to copy.
-func (copier *Copier) getDPNBag(manifest *models.ReplicationManifest) {
-	if manifest == nil || manifest.ReplicationTransfer == nil {
-		msg := fmt.Sprintf("getDPNBag: ReplicationManifest.ReplicationTransfer cannot be nil.")
-		manifest.CopySummary.ErrorIsFatal = true
-		manifest.CopySummary.AddError(msg)
-		return
-	}
-	resp := copier.LocalClient.DPNBagGet(manifest.ReplicationTransfer.Bag)
-	if resp.Error != nil {
-		msg := fmt.Sprintf("Could not get ReplicationTransfer %s " +
-			"from DPN server: %v", manifest.DPNWorkItem.Identifier, resp.Error)
-		manifest.CopySummary.AddError(msg)
-		manifest.CopySummary.ErrorIsFatal = true
-		return
-	}
-	dpnBag := resp.Bag()
-	manifest.DPNBag = dpnBag
-	if dpnBag == nil {
-		msg := fmt.Sprintf("DPN server returned nil for Bag %s",
-			manifest.ReplicationTransfer.Bag)
-		manifest.CopySummary.AddError(msg)
-		manifest.CopySummary.ErrorIsFatal = true
-		return
-	}
-}
-
-// reserveSpaceOnVolume does just what it says.
-// Make sure we have space to copy this item from the remote node.
-// We will be validating this bag in a later step without untarring it,
-// so we just have to reserve enough room for the tar file.
-func (copier *Copier) reserveSpaceOnVolume(manifest *models.ReplicationManifest) (bool) {
-	okToCopy := false
-	err := copier.Context.VolumeClient.Ping(500)
-	if err == nil {
-		path := manifest.LocalPath
-		ok, err := copier.Context.VolumeClient.Reserve(path, uint64(manifest.DPNBag.Size))
-		if err != nil {
-			copier.Context.MessageLog.Warning("Volume service returned an error. " +
-				"Will requeue ReplicationTransfer %s bag (%s) because we may not " +
-				"have enough space to copy %d bytes from %s.",
-				manifest.ReplicationTransfer.ReplicationId,
-				manifest.ReplicationTransfer.Bag,
-				manifest.DPNBag.Size,
-				manifest.ReplicationTransfer.FromNode)
-		} else if ok {
-			// VolumeService says we have enough space for this.
-			okToCopy = ok
-		}
-	} else {
-		copier.Context.MessageLog.Warning("Volume service is not running or returned an error. " +
-			"Continuing as if we have enough space to download %d bytes.",
-			manifest.DPNBag.Size,)
-		okToCopy = true
-	}
-	return okToCopy
 }
 
 func (copier *Copier) finishWithError(manifest *models.ReplicationManifest) {
@@ -319,7 +173,8 @@ func (copier *Copier) finishWithError(manifest *models.ReplicationManifest) {
 		msg := fmt.Sprintf("Xfer %s has fatal error: %s",
 			xferId, manifest.CopySummary.Errors[0])
 		copier.Context.MessageLog.Error(msg)
-		copier.cancelTransfer(manifest)
+		remoteClient := copier.RemoteClients[xferId]
+		CancelTransfer(copier.Context, remoteClient, manifest)
 		manifest.NsqMessage.Finish()
 	} else {
 		msg := fmt.Sprintf("Requeueing xfer %s due to non-fatal error: %s",
@@ -335,44 +190,6 @@ func (copier *Copier) finishWithSuccess(manifest *models.ReplicationManifest) {
 	manifest.CopySummary.Finish()
 }
 
-
-func (copier *Copier) cancelTransfer(manifest *models.ReplicationManifest) {
-	if manifest.ReplicationTransfer != nil {
-		manifest.ReplicationTransfer.Cancelled = true
-		manifest.ReplicationTransfer.CancelReason = manifest.CopySummary.Errors[0]
-		client := copier.RemoteClients[manifest.ReplicationTransfer.FromNode]
-		if client == nil {
-			msg := fmt.Sprintf("Cannot cancel ReplicationTransfer %s " +
-				"because no REST client exists for node %s.",
-				manifest.ReplicationTransfer.ReplicationId,
-				manifest.ReplicationTransfer.FromNode)
-			manifest.CopySummary.AddError(msg)
-			copier.Context.MessageLog.Error(msg)
-		} else {
-			resp := copier.LocalClient.ReplicationTransferUpdate(manifest.ReplicationTransfer)
-			if resp.Error != nil {
-				rawRespData, _ := resp.RawResponseData()
-				respBody := "[response body not available]"
-				if rawRespData != nil {
-					respBody = string(rawRespData)
-				}
-				msg := fmt.Sprintf("When trying to cancel ReplicationTransfer %s," +
-					"got error %v. Response body: %s",
-					manifest.ReplicationTransfer.ReplicationId,
-					resp.Error, respBody)
-				manifest.CopySummary.AddError(msg)
-				copier.Context.MessageLog.Error(msg)
-			} else {
-				// Cancellation succeeded.
-				copier.Context.MessageLog.Info("Cancelled xfer %s at %s",
-					manifest.ReplicationTransfer.ReplicationId,
-					manifest.ReplicationTransfer.FromNode)
-			}
-		}
-	} else {
-		copier.Context.MessageLog.Warning("Cannot cancel nil ReplicationTransfer.")
-	}
-}
 
 // GetRsyncCommand returns a command object for copying from the remote
 // location to the local filesystem. The copy is done via rsync over ssh,
