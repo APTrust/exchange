@@ -13,6 +13,7 @@ import (
 	"os/exec"
 //	"path/filepath"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -105,12 +106,22 @@ func (copier *Copier) doCopy() {
 		rsyncCommand := GetRsyncCommand(copyManifest.ReplicationTransfer.Link,
 			localPath, copier.Context.Config.DPN.UseSSHWithRsync)
 
+		copier.Context.MessageLog.Info("Starting copy of ReplicationTransfer %s " +
+			"with command %s %s", copyManifest.ReplicationTransfer.ReplicationId,
+			rsyncCommand.Path, strings.Join(rsyncCommand.Args, ""))
+
 		// Touch message on both sides of rsync, so NSQ doesn't time out.
 		if copyManifest.NsqMessage != nil {
 			copyManifest.NsqMessage.Touch()
 		}
 		output, err := rsyncCommand.CombinedOutput()
-		copier.Context.MessageLog.Info("Rsync Output: %s", output)
+		if err != nil {
+			msg := fmt.Sprintf("ReplicationTransfer %s failed with rsync error '%s'",
+				copyManifest.ReplicationTransfer.ReplicationId, err.Error())
+			copyManifest.WorkSummary.AddError(msg)
+			// TODO: copier.finishWithError() or move to next channel
+		}
+		copier.Context.MessageLog.Info("Rsync Output: %s", string(output))
 		if copyManifest.NsqMessage != nil {
 			copyManifest.NsqMessage.Touch()
 		}
@@ -199,6 +210,9 @@ func (copier *Copier) getDPNWorkItem(copyManifest *CopyManifest) {
 	}
 }
 
+// getXferRequest gets the ReplicationTransfer request from our local
+// DPN REST server that describes the replication we're about to
+// perform.
 func (copier *Copier) getXferRequest(copyManifest *CopyManifest) {
 	if copyManifest == nil || copyManifest.DPNWorkItem == nil {
 		msg := fmt.Sprintf("getXferRequest: CopyManifest.DPNWorkItem cannot be nil.")
@@ -238,6 +252,8 @@ func (copier *Copier) getXferRequest(copyManifest *CopyManifest) {
 	}
 }
 
+// getDPNBag gets the bag record fom the local DPN REST server that
+// describes the bag we are being asked to copy.
 func (copier *Copier) getDPNBag(copyManifest *CopyManifest) {
 	if copyManifest == nil || copyManifest.ReplicationTransfer == nil {
 		msg := fmt.Sprintf("getDPNBag: CopyManifest.ReplicationTransfer cannot be nil.")
@@ -264,6 +280,7 @@ func (copier *Copier) getDPNBag(copyManifest *CopyManifest) {
 	}
 }
 
+// reserveSpaceOnVolume does just what it says.
 // Make sure we have space to copy this item from the remote node.
 // We will be validating this bag in a later step without untarring it,
 // so we just have to reserve enough room for the tar file.
