@@ -20,6 +20,8 @@ type ReplicationManifest struct {
 	RsyncStderr         string
 }
 
+// NewReplicationManifest creates a new ReplicationManifest.
+// Param nsqMessage is the nsqMessage being processed.
 func NewReplicationManifest(nsqMessage *nsq.Message) (*ReplicationManifest) {
 	return &ReplicationManifest{
 		NsqMessage: nsqMessage,
