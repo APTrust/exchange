@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/APTrust/exchange/dpn/models"
 	apt_testutil "github.com/APTrust/exchange/util/testutil"
+	"github.com/nsqio/go-nsq"
 	"github.com/icrowley/fake"
 	"github.com/satori/go.uuid"
 	"time"
@@ -127,4 +128,12 @@ func MakeIngest(bagUUID string) (*models.Ingest) {
 		ReplicatingNodes: []string { "tdr", "sdr" },
 		CreatedAt: time.Now().UTC(),
 	}
+}
+
+// Creates an NSQ Message with the specified body. For our
+// purposes, param body should be an integer in string format,
+// like "1234" or "999".
+func MakeNsqMessage(body string) (*nsq.Message) {
+	messageId := [nsq.MsgIDLength]byte{'0','1','2','3','4','5','6','7','8','9','A','B','C','D','E','F'}
+	return nsq.NewMessage(messageId, []byte(body))
 }
