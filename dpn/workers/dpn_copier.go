@@ -5,7 +5,9 @@ import (
 	"github.com/APTrust/exchange/context"
 	"github.com/APTrust/exchange/dpn/models"
 	"github.com/APTrust/exchange/dpn/network"
+	"github.com/APTrust/exchange/util/fileutil"
 	"github.com/nsqio/go-nsq"
+	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
@@ -182,12 +184,25 @@ func (copier *Copier) finishWithError(manifest *models.ReplicationManifest) {
 		copier.Context.MessageLog.Warning(msg)
 		manifest.NsqMessage.Requeue(1 * time.Minute)
 	}
+	// Delete the file, which may not even have been completely copied.
+	if fileutil.LooksSafeToDelete(manifest.LocalPath, 12, 3) {
+		os.Remove(manifest.LocalPath)
+	}
 	manifest.CopySummary.Finish()
 }
 
 func (copier *Copier) finishWithSuccess(manifest *models.ReplicationManifest) {
 
 	manifest.CopySummary.Finish()
+	topic := copier.Context.Config.DPN.DPNValidationWorker.NsqTopic
+	err := copier.Context.NSQClient.Enqueue(topic, manifest.DPNWorkItem.Id)
+	if err != nil {
+		msg := fmt.Sprintf("Error pushing DPNWorkItem %d (replication %s) into NSQ topic %s: %v",
+			manifest.DPNWorkItem.Id, manifest.DPNWorkItem.Identifier, topic, err)
+		manifest.CopySummary.AddError(msg)
+		copier.Context.MessageLog.Error(msg)
+	}
+	LogReplicationJson(manifest, copier.Context.JsonLog)
 }
 
 

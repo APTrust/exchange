@@ -1,6 +1,7 @@
 package workers
 
 import (
+	"encoding/json"
 	"fmt"
 	"github.com/APTrust/exchange/constants"
 	"github.com/APTrust/exchange/context"
@@ -8,7 +9,9 @@ import (
 	"github.com/APTrust/exchange/dpn/network"
 	apt_models "github.com/APTrust/exchange/models"
 	"github.com/APTrust/exchange/util"
+	"log"
 	"strconv"
+	"time"
 )
 
 // GetDPNWorkItem returns the DPNWorkItem associated with this message.
@@ -201,5 +204,46 @@ func CancelTransfer(_context *context.Context, remoteClient *network.DPNRestClie
 		}
 	} else {
 		_context.MessageLog.Warning("Cannot cancel nil ReplicationTransfer.")
+	}
+}
+
+// Dump the WorkItemState.State into the JSON log, surrounded my markers that
+// make it easy to find. This log gets big.
+func LogReplicationJson (manifest *models.ReplicationManifest, jsonLog *log.Logger) {
+	timestamp := time.Now().UTC().Format(time.RFC3339)
+	startMessage := fmt.Sprintf("-------- BEGIN DPNWorkItem %d | XferId: %s | Time: %s --------",
+		manifest.DPNWorkItem.Id, manifest.DPNWorkItem.Identifier, timestamp)
+	endMessage := fmt.Sprintf("-------- END DPNWorkItem %d | XferId: %s | Time: %s --------",
+		manifest.DPNWorkItem.Id, manifest.DPNWorkItem.Identifier, timestamp)
+	jsonLog.Println(startMessage, "\n",
+		manifest.DPNWorkItem.State, "\n",
+		endMessage, "\n")
+}
+
+func SaveWorkItemState(_context *context.Context, manifest *models.ReplicationManifest, workSummary *apt_models.WorkSummary) {
+	dpnWorkItem := manifest.DPNWorkItem
+	priorState := dpnWorkItem.State
+	*dpnWorkItem.State = ""
+	jsonData, err := json.Marshal(manifest)
+	if err != nil {
+		msg := fmt.Sprintf("Could not marshal ReplicationManifest " +
+			"for replication %s to JSON: %v", manifest.DPNWorkItem.Identifier,  err)
+		_context.MessageLog.Error(msg)
+		workSummary.AddError(msg)
+		dpnWorkItem.State = priorState
+		if dpnWorkItem.Note == nil {
+			note := ""
+			dpnWorkItem.Note = &note
+		}
+		*dpnWorkItem.Note += "[JSON serialization error]"
+	}
+	*dpnWorkItem.State = string(jsonData)
+	resp := _context.PharosClient.DPNWorkItemSave(dpnWorkItem)
+	if resp.Error != nil {
+		msg := fmt.Sprintf("Could not save DPNWorkItem %d " +
+			"for replication %s to Pharos: %v",
+			manifest.DPNWorkItem.Id, manifest.DPNWorkItem.Identifier, err)
+		_context.MessageLog.Error(msg)
+		workSummary.AddError(msg)
 	}
 }
