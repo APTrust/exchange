@@ -14,4 +14,5 @@ type DPNWorkItem struct {
 	QueuedAt               *time.Time           `json:"queued_at"`
 	CompletedAt            *time.Time           `json:"completed_at"`
 	Note                   *string              `json:"note"`
+	State                  *string              `json:"state"`
 }
