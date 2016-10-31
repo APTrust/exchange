@@ -11,7 +11,7 @@ import (
 	"github.com/nsqio/go-nsq"
 //	"os"
 	"os/exec"
-//	"path/filepath"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -24,6 +24,7 @@ import (
 type Copier struct {
 	CopyChannel         chan *CopyManifest
 	ChecksumChannel     chan *CopyManifest
+	PostProcessChannel  chan *CopyManifest
 	Context             *context.Context
 	LocalClient         *network.DPNRestClient
 	RemoteClients       map[string]*network.DPNRestClient
@@ -68,9 +69,11 @@ func NewCopier(_context *context.Context) (*Copier, error) {
 	workerBufferSize := _context.Config.DPN.DPNCopyWorker.Workers * 4
 	copier.CopyChannel = make(chan *CopyManifest, workerBufferSize)
 	copier.ChecksumChannel = make(chan *CopyManifest, workerBufferSize)
+	copier.PostProcessChannel = make(chan *CopyManifest, workerBufferSize)
 	for i := 0; i < _context.Config.DPN.DPNCopyWorker.Workers; i++ {
 		go copier.doCopy()
 		go copier.verifyChecksum()
+		go copier.postProcess()
 	}
 	return copier, nil
 }
@@ -81,7 +84,7 @@ func (copier *Copier) HandleMessage(message *nsq.Message) error {
 	// Get the DPNWorkItem, the ReplicationTransfer, and the DPNBag
 	copyManifest := copier.buildCopyManifest(message)
 	if copyManifest.WorkSummary.HasErrors() {
-		copier.finishWithError(copyManifest)
+		copier.PostProcessChannel <- copyManifest
 		return nil
 	}
 
@@ -102,10 +105,8 @@ func (copier *Copier) HandleMessage(message *nsq.Message) error {
 // Copy the file from the remote node to our local staging area.
 func (copier *Copier) doCopy() {
 	for copyManifest := range copier.CopyChannel {
-		localPath := "?"
 		rsyncCommand := GetRsyncCommand(copyManifest.ReplicationTransfer.Link,
-			localPath, copier.Context.Config.DPN.UseSSHWithRsync)
-
+			copyManifest.LocalPath, copier.Context.Config.DPN.UseSSHWithRsync)
 		copier.Context.MessageLog.Info("Starting copy of ReplicationTransfer %s " +
 			"with command %s %s", copyManifest.ReplicationTransfer.ReplicationId,
 			rsyncCommand.Path, strings.Join(rsyncCommand.Args, ""))
@@ -115,20 +116,20 @@ func (copier *Copier) doCopy() {
 			copyManifest.NsqMessage.Touch()
 		}
 		output, err := rsyncCommand.CombinedOutput()
-		if err != nil {
-			msg := fmt.Sprintf("ReplicationTransfer %s failed with rsync error '%s'",
-				copyManifest.ReplicationTransfer.ReplicationId, err.Error())
-			copyManifest.WorkSummary.AddError(msg)
-			// TODO: copier.finishWithError() or move to next channel
-		}
 		copier.Context.MessageLog.Info("Rsync Output: %s", string(output))
 		if copyManifest.NsqMessage != nil {
 			copyManifest.NsqMessage.Touch()
 		}
 		if err != nil {
-			// Something went wrong
+			// Copy failed. Don't cancel replication on rsync error.
+			// This is usually a network problem or a config problem.
+			msg := fmt.Sprintf("ReplicationTransfer %s failed with rsync error '%s'",
+				copyManifest.ReplicationTransfer.ReplicationId, err.Error())
+			copyManifest.WorkSummary.AddError(msg)
+			copier.PostProcessChannel <- copyManifest
 		} else {
-			// OK
+			// Copy succeeded.
+			copier.ChecksumChannel <- copyManifest
 		}
 	}
 }
@@ -149,6 +150,16 @@ func (copier *Copier) verifyChecksum() {
 	//}
 }
 
+func (copier *Copier) postProcess() {
+	for copyManifest := range copier.PostProcessChannel {
+		if copyManifest.WorkSummary.HasErrors() {
+			copier.finishWithError(copyManifest)
+		} else {
+			copier.finishWithSuccess(copyManifest)
+		}
+	}
+}
+
 // buildCopyManifest creates a CopyManifest for this job.
 func (copier *Copier) buildCopyManifest(message *nsq.Message) (*CopyManifest) {
 	copyManifest := NewCopyManifest()
@@ -164,6 +175,11 @@ func (copier *Copier) buildCopyManifest(message *nsq.Message) (*CopyManifest) {
 	if copyManifest.WorkSummary.HasErrors() {
 		return copyManifest
 	}
+	// This is where we will store our local copy of this bag.
+	copyManifest.LocalPath = filepath.Join(
+		copier.Context.Config.DPN.StagingDirectory,
+		copyManifest.ReplicationTransfer.Bag)
+
 	copier.getDPNBag(copyManifest)
 	return copyManifest
 }
@@ -321,15 +337,60 @@ func (copier *Copier) finishWithError(copyManifest *CopyManifest) {
 	if copyManifest.WorkSummary.ErrorIsFatal {
 		msg := fmt.Sprintf("Xfer %s has fatal error: %s",
 			xferId, copyManifest.WorkSummary.Errors[0])
-		copyManifest.WorkSummary.AddError(msg)
+		copier.Context.MessageLog.Error(msg)
+		copier.cancelTransfer(copyManifest)
 		copyManifest.NsqMessage.Finish()
 	} else {
-		msg := fmt.Sprintf("Xfer %s has non-fatal error: %s",
+		msg := fmt.Sprintf("Requeueing xfer %s due to non-fatal error: %s",
 			xferId, copyManifest.WorkSummary.Errors[0])
-		copyManifest.WorkSummary.AddError(msg)
+		copier.Context.MessageLog.Warning(msg)
 		copyManifest.NsqMessage.Requeue(1 * time.Minute)
 	}
 	copyManifest.WorkSummary.Finish()
+}
+
+func (copier *Copier) finishWithSuccess(copyManifest *CopyManifest) {
+
+	copyManifest.WorkSummary.Finish()
+}
+
+
+func (copier *Copier) cancelTransfer(copyManifest *CopyManifest) {
+	if copyManifest.ReplicationTransfer != nil {
+		copyManifest.ReplicationTransfer.Cancelled = true
+		copyManifest.ReplicationTransfer.CancelReason = copyManifest.WorkSummary.Errors[0]
+		client := copier.RemoteClients[copyManifest.ReplicationTransfer.FromNode]
+		if client == nil {
+			msg := fmt.Sprintf("Cannot cancel ReplicationTransfer %s " +
+				"because no REST client exists for node %s.",
+				copyManifest.ReplicationTransfer.ReplicationId,
+				copyManifest.ReplicationTransfer.FromNode)
+			copyManifest.WorkSummary.AddError(msg)
+			copier.Context.MessageLog.Error(msg)
+		} else {
+			resp := copier.LocalClient.ReplicationTransferUpdate(copyManifest.ReplicationTransfer)
+			if resp.Error != nil {
+				rawRespData, _ := resp.RawResponseData()
+				respBody := "[response body not available]"
+				if rawRespData != nil {
+					respBody = string(rawRespData)
+				}
+				msg := fmt.Sprintf("When trying to cancel ReplicationTransfer %s," +
+					"got error %v. Response body: %s",
+					copyManifest.ReplicationTransfer.ReplicationId,
+					resp.Error, respBody)
+				copyManifest.WorkSummary.AddError(msg)
+				copier.Context.MessageLog.Error(msg)
+			} else {
+				// Cancellation succeeded.
+				copier.Context.MessageLog.Info("Cancelled xfer %s at %s",
+					copyManifest.ReplicationTransfer.ReplicationId,
+					copyManifest.ReplicationTransfer.FromNode)
+			}
+		}
+	} else {
+		copier.Context.MessageLog.Warning("Cannot cancel nil ReplicationTransfer.")
+	}
 }
 
 // GetRsyncCommand returns a command object for copying from the remote
