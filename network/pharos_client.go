@@ -738,7 +738,7 @@ func (client *PharosClient) DPNWorkItemSave(obj *models.DPNWorkItem) (*PharosRes
 	resp.dpnWorkItems = make([]*models.DPNWorkItem, 1)
 
 	// URL and method
-	relativeUrl := fmt.Sprintf("/api/%s/items/", client.apiVersion)
+	relativeUrl := fmt.Sprintf("/api/%s/dpn_items/", client.apiVersion)
 	httpMethod := "POST"
 	if obj.Id > 0 {
 		// URL should look like /api/v2/items/46956/

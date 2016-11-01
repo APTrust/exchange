@@ -824,6 +824,136 @@ func TestWorkItemStateSave(t *testing.T) {
 	assert.NotEqual(t, origModTime, obj.UpdatedAt)
 }
 
+func TestDPNWorkItemGet(t *testing.T) {
+	testServer := httptest.NewServer(http.HandlerFunc(dpnWorkItemGetHandler))
+	defer testServer.Close()
+
+	client, err := network.NewPharosClient(testServer.URL, "v2", "user", "key")
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	response := client.DPNWorkItemGet(999)
+
+	// Check the request URL and method
+	assert.Equal(t, "GET", response.Request.Method)
+	assert.Equal(t, "/api/v2/dpn_items/999/", response.Request.URL.Opaque)
+
+	// Basic sanity check on response values
+	assert.Nil(t, response.Error)
+
+	obj := response.DPNWorkItem()
+	assert.EqualValues(t, "DPNWorkItem", response.ObjectType())
+	if obj == nil {
+		t.Errorf("DPNWorkItem should not be nil")
+	}
+	assert.NotEqual(t, "", obj.Task)
+	assert.NotEqual(t, "", obj.Identifier)
+}
+
+func TestDPNWorkItemList(t *testing.T) {
+	testServer := httptest.NewServer(http.HandlerFunc(dpnWorkItemListHandler))
+	defer testServer.Close()
+
+	client, err := network.NewPharosClient(testServer.URL, "v2", "user", "key")
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	response := client.DPNWorkItemList(nil)
+
+	// Check the request URL and method
+	assert.Equal(t, "GET", response.Request.Method)
+	assert.Equal(t, "/api/v2/dpn_items/?", response.Request.URL.Opaque)
+
+	// Basic sanity check on response values
+	assert.Nil(t, response.Error)
+	assert.EqualValues(t, "DPNWorkItem", response.ObjectType())
+
+	list := response.DPNWorkItems()
+	if list == nil {
+		t.Errorf("DPNWorkItem list should not be nil")
+		return
+	}
+	if len(list) != 4 {
+		t.Errorf("DPNWorkItems list should have four items. Found %d.", len(list))
+		return
+	}
+	for _, obj := range list {
+		assert.NotEqual(t, "", obj.Task)
+		assert.NotEqual(t, "", obj.Identifier)
+	}
+
+	// Make sure params are added to URL
+	params := sampleParams()
+	response = client.DPNWorkItemList(params)
+	expectedUrl := fmt.Sprintf("/api/v2/dpn_items/?%s", params.Encode())
+	assert.Equal(t, expectedUrl, response.Request.URL.Opaque)
+}
+
+func TestDPNWorkItemSave(t *testing.T) {
+	testServer := httptest.NewServer(http.HandlerFunc(dpnWorkItemSaveHandler))
+	defer testServer.Close()
+
+	client, err := network.NewPharosClient(testServer.URL, "v2", "user", "key")
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	// ---------------------------------------------
+	// First, test create...
+	// ---------------------------------------------
+	obj := testutil.MakeDPNWorkItem()
+	obj.Id = 0
+	response := client.DPNWorkItemSave(obj)
+
+	// Check the request URL and method
+	assert.Equal(t, "POST", response.Request.Method)
+	assert.Equal(t, "/api/v2/dpn_items/", response.Request.URL.Opaque)
+
+	// Basic sanity check on response values
+	assert.Nil(t, response.Error)
+
+	obj = response.DPNWorkItem()
+	assert.EqualValues(t, "DPNWorkItem", response.ObjectType())
+	if obj == nil {
+		t.Errorf("DPNWorkItem should not be nil")
+	}
+	assert.NotEqual(t, "", obj.Task)
+	assert.NotEqual(t, "", obj.Identifier)
+
+	// Make sure the client returns the SAVED object,
+	// not the unsaved one we sent.
+	assert.NotEqual(t, 0, obj.Id)
+
+
+	// ---------------------------------------------
+	// Now test with an update...
+	// ---------------------------------------------
+	obj = testutil.MakeDPNWorkItem()
+	origModTime := obj.UpdatedAt
+	response = client.DPNWorkItemSave(obj)
+
+	// Check the request URL and method
+	expectedUrl := fmt.Sprintf("/api/v2/dpn_items/%d/", obj.Id)
+	assert.Equal(t, "PUT", response.Request.Method)
+	assert.Equal(t, expectedUrl, response.Request.URL.Opaque)
+
+	// Basic sanity check on response values
+	assert.Nil(t, response.Error)
+
+	obj = response.DPNWorkItem()
+	assert.EqualValues(t, "DPNWorkItem", response.ObjectType())
+	if obj == nil {
+		t.Errorf("DPNWorkItem should not be nil")
+	}
+	assert.Equal(t, 1000, obj.Id)
+	assert.NotEqual(t, origModTime, obj.UpdatedAt)
+}
+
 
 // -------------------------------------------------------------------------
 // -------------------------------------------------------------------------

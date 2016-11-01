@@ -15,4 +15,6 @@ type DPNWorkItem struct {
 	CompletedAt            *time.Time           `json:"completed_at"`
 	Note                   *string              `json:"note"`
 	State                  *string              `json:"state"`
+	CreatedAt              time.Time            `json:"created_at"`
+	UpdatedAt              time.Time            `json:"updated_at"`
 }
