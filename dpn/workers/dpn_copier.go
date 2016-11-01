@@ -18,7 +18,7 @@ import (
 // This is used when replicating content from other nodes.
 // For putting together DPN bags from APTrust files, see fetcher.go.
 
-type Copier struct {
+type DPNCopier struct {
 	CopyChannel         chan *models.ReplicationManifest
 	ChecksumChannel     chan *models.ReplicationManifest
 	PostProcessChannel  chan *models.ReplicationManifest
@@ -27,7 +27,7 @@ type Copier struct {
 	RemoteClients       map[string]*network.DPNRestClient
 }
 
-func NewCopier(_context *context.Context) (*Copier, error) {
+func NewDPNCopier(_context *context.Context) (*DPNCopier, error) {
 	localClient, err := network.NewDPNRestClient(
 		_context.Config.DPN.RestClient.LocalServiceURL,
 		_context.Config.DPN.RestClient.LocalAPIRoot,
@@ -41,7 +41,7 @@ func NewCopier(_context *context.Context) (*Copier, error) {
 	if err != nil {
 		return nil, err
 	}
-	copier := &Copier {
+	copier := &DPNCopier {
 		Context: _context,
 		LocalClient: localClient,
 		RemoteClients: remoteClients,
@@ -58,7 +58,7 @@ func NewCopier(_context *context.Context) (*Copier, error) {
 	return copier, nil
 }
 
-func (copier *Copier) HandleMessage(message *nsq.Message) error {
+func (copier *DPNCopier) HandleMessage(message *nsq.Message) error {
 	message.DisableAutoResponse()
 
 	// Get the DPNWorkItem, the ReplicationTransfer, and the DPNBag
@@ -83,7 +83,7 @@ func (copier *Copier) HandleMessage(message *nsq.Message) error {
 }
 
 // Copy the file from the remote node to our local staging area.
-func (copier *Copier) doCopy() {
+func (copier *DPNCopier) doCopy() {
 	for manifest := range copier.CopyChannel {
 		rsyncCommand := GetRsyncCommand(manifest.ReplicationTransfer.Link,
 			manifest.LocalPath, copier.Context.Config.DPN.UseSSHWithRsync)
@@ -120,7 +120,7 @@ func (copier *Copier) doCopy() {
 // and we should store the bag. If the checksum is bad, the remote
 // node will set StoreRequested to false, and we should delete
 // the tar file.
-func (copier *Copier) verifyChecksum() {
+func (copier *DPNCopier) verifyChecksum() {
 	//for manifest := range copier.ChecksumChannel {
 		// 1. Calculate the sha256 digest of the tag manifest.
 		// 2. Send the result the ReplicationTransfer.FromNode.
@@ -130,7 +130,7 @@ func (copier *Copier) verifyChecksum() {
 	//}
 }
 
-func (copier *Copier) postProcess() {
+func (copier *DPNCopier) postProcess() {
 	for manifest := range copier.PostProcessChannel {
 		if manifest.CopySummary.HasErrors() {
 			copier.finishWithError(manifest)
@@ -141,7 +141,7 @@ func (copier *Copier) postProcess() {
 }
 
 // buildReplicationManifest creates a ReplicationManifest for this job.
-func (copier *Copier) buildReplicationManifest(message *nsq.Message) (*models.ReplicationManifest) {
+func (copier *DPNCopier) buildReplicationManifest(message *nsq.Message) (*models.ReplicationManifest) {
 	manifest := models.NewReplicationManifest(message)
 	manifest.NsqMessage = message
 	manifest.CopySummary.Attempted = true
@@ -164,7 +164,7 @@ func (copier *Copier) buildReplicationManifest(message *nsq.Message) (*models.Re
 	return manifest
 }
 
-func (copier *Copier) finishWithError(manifest *models.ReplicationManifest) {
+func (copier *DPNCopier) finishWithError(manifest *models.ReplicationManifest) {
 	xferId := "[unknown]"
 	if manifest.ReplicationTransfer != nil {
 		xferId = manifest.ReplicationTransfer.ReplicationId
@@ -196,7 +196,7 @@ func (copier *Copier) finishWithError(manifest *models.ReplicationManifest) {
 	LogReplicationJson(manifest, copier.Context.JsonLog)
 }
 
-func (copier *Copier) finishWithSuccess(manifest *models.ReplicationManifest) {
+func (copier *DPNCopier) finishWithSuccess(manifest *models.ReplicationManifest) {
 	manifest.CopySummary.Finish()
 	*manifest.DPNWorkItem.Note = "Copy succeeded."
 

@@ -541,6 +541,7 @@ type DPNConfig struct {
 	StagingDirectory     string
 
 	// When copying bags from remote nodes, should we use rsync
-	// over SSH (true) or just plain rsync (false)?
+	// over SSH (true) or just plain rsync (false)? For local
+	// integration testing, this should be false.
 	UseSSHWithRsync        bool
 }
