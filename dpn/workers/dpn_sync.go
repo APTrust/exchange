@@ -245,7 +245,7 @@ func (dpnSync *DPNSync) getMembers(remoteClient *network.DPNRestClient, pageNumb
 	params.Set("after", remoteNode.LastPullDate.Format(time.RFC3339Nano))
 	params.Set("page", fmt.Sprintf("%d", pageNumber))
 	params.Set("per_page", strconv.Itoa(SYNC_BATCH_SIZE))
-	return remoteClient.FixityCheckList(&params)
+	return remoteClient.FixityCheckList(params)
 }
 
 
@@ -335,7 +335,7 @@ func (dpnSync *DPNSync) getBags(remoteClient *network.DPNRestClient, pageNumber 
 	params.Set("admin_node", remoteNode.Namespace)
 	params.Set("page", fmt.Sprintf("%d", pageNumber))
 	params.Set("per_page", strconv.Itoa(SYNC_BATCH_SIZE))
-	return remoteClient.DPNBagList(&params)
+	return remoteClient.DPNBagList(params)
 }
 
 func (dpnSync *DPNSync) SyncDigests(remoteNode *models.Node) {
@@ -399,7 +399,7 @@ func (dpnSync *DPNSync) getDigests(remoteClient *network.DPNRestClient, pageNumb
 	params.Set("node", remoteNode.Namespace)
 	params.Set("page", fmt.Sprintf("%d", pageNumber))
 	params.Set("per_page", strconv.Itoa(SYNC_BATCH_SIZE))
-	return remoteClient.DigestList(&params)
+	return remoteClient.DigestList(params)
 }
 
 func (dpnSync *DPNSync) SyncIngests(bag *models.DPNBag) {
@@ -458,7 +458,7 @@ func (dpnSync *DPNSync) getIngests(remoteClient *network.DPNRestClient, pageNumb
 	params.Set("latest", "true")
 	params.Set("page", fmt.Sprintf("%d", pageNumber))
 	params.Set("per_page", strconv.Itoa(SYNC_BATCH_SIZE))
-	return remoteClient.IngestList(&params)
+	return remoteClient.IngestList(params)
 }
 
 func (dpnSync *DPNSync) SyncFixities(remoteNode *models.Node) {
@@ -518,7 +518,7 @@ func (dpnSync *DPNSync) getFixities(remoteClient *network.DPNRestClient, pageNum
 	params.Set("node", remoteNode.Namespace)
 	params.Set("page", fmt.Sprintf("%d", pageNumber))
 	params.Set("per_page", strconv.Itoa(SYNC_BATCH_SIZE))
-	return remoteClient.FixityCheckList(&params)
+	return remoteClient.FixityCheckList(params)
 }
 
 // SyncReplicationRequests copies ReplicationTransfer records from
@@ -596,7 +596,7 @@ func (dpnSync *DPNSync) getReplicationRequests(remoteClient *network.DPNRestClie
 	params.Set("from_node", remoteNode.Namespace)
 	params.Set("page", fmt.Sprintf("%d", pageNumber))
 	params.Set("per_page", strconv.Itoa(SYNC_BATCH_SIZE))
-	return remoteClient.ReplicationList(&params)
+	return remoteClient.ReplicationTransferList(params)
 }
 
 // SyncRestoreRequests copies RestoreTransfer records from remote
@@ -675,7 +675,7 @@ func (dpnSync *DPNSync) getRestoreRequests(remoteClient *network.DPNRestClient, 
 	params.Set("to_node", remoteNode.Namespace)
 	params.Set("page", fmt.Sprintf("%d", pageNumber))
 	params.Set("per_page", strconv.Itoa(SYNC_BATCH_SIZE))
-	return remoteClient.RestoreTransferList(&params)
+	return remoteClient.RestoreTransferList(params)
 }
 
 func (dpnSync *DPNSync) logNoClient(dpnType dpn.DPNObjectType, nodeName string) {

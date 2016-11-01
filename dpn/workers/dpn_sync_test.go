@@ -247,7 +247,7 @@ func TestFixitiesWereSynched(t *testing.T) {
 	// The first was loaded with the basic fixture
 	// set, and the second was loaded in the
 	// dpn_sync process.
-	params := &url.Values{}
+	params := url.Values{}
 	params.Set("node", "chron")
 	resp = client.FixityCheckList(params)
 	assert.Equal(t, 2, len(resp.FixityChecks()))
@@ -270,7 +270,7 @@ func TestReplicationsWereSynched(t *testing.T) {
 		return
 	}
 	client := getPostTestClient(t)
-	resp := client.ReplicationList(nil)
+	resp := client.ReplicationTransferList(nil)
 	require.Nil(t, resp.Error)
 	xfers:= resp.ReplicationTransfers()
 	require.Equal(t, 20, len(xfers))

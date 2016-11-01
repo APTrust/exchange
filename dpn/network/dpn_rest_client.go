@@ -111,7 +111,7 @@ func (client *DPNRestClient) GetRemoteClients() (map[string]*DPNRestClient, erro
 // relativeUrl to create an absolute URL. For example, if client.HostUrl
 // is "http://localhost:3456", then client.BuildUrl("/path/to/action.json")
 // would return "http://localhost:3456/path/to/action.json".
-func (client *DPNRestClient) BuildUrl(relativeUrl string, queryParams *url.Values) string {
+func (client *DPNRestClient) BuildUrl(relativeUrl string, queryParams url.Values) string {
 	fullUrl := client.HostUrl + relativeUrl
 	if queryParams != nil {
 		fullUrl = fmt.Sprintf("%s?%s", fullUrl, queryParams.Encode())
@@ -159,7 +159,7 @@ func (client *DPNRestClient) MemberGet(identifier string) (*DPNResponse) {
 // MemberList returns a DPNResponse members that match the specific
 // params. Valid params include before, after, page, page_size
 // and order_by.
-func (client *DPNRestClient) MemberList(params *url.Values) (*DPNResponse) {
+func (client *DPNRestClient) MemberList(params url.Values) (*DPNResponse) {
 	resp := NewDPNResponse(dpn.DPNTypeMember)
 	resp.members = make([]*models.Member, 1)
 
@@ -246,7 +246,7 @@ func (client *DPNRestClient) NodeGet(identifier string) (*DPNResponse) {
 // specified params. Valid params include before, after, page,
 // page_size, and order_by. This call is deprecated in DPN 2.0
 // and may disappear in later versions.
-func (client *DPNRestClient) NodeList(params *url.Values) (*DPNResponse) {
+func (client *DPNRestClient) NodeList(params url.Values) (*DPNResponse) {
 	resp := NewDPNResponse(dpn.DPNTypeNode)
 	resp.nodes = make([]*models.Node, 1)
 
@@ -314,7 +314,7 @@ func (client *DPNRestClient) NodeGetLastPullDate(identifier string) (time.Time, 
 	params.Set("order_by", "updated_at")
 	params.Set("page", "1")
 	params.Set("page_size", "1")
-	resp := client.DPNBagList(&params)
+	resp := client.DPNBagList(params)
 	if resp.Error != nil || resp.Count == 0 {
 		return time.Time{}, resp.Error
 	}
@@ -348,7 +348,7 @@ func (client *DPNRestClient) DPNBagGet(identifier string) (*DPNResponse) {
 // Valid parameters include before, after, bag_type, admin_node,
 // ingest_node, member, replicated_by, first_version_uuid, page,
 // page_size, order_by.
-func (client *DPNRestClient) DPNBagList(params *url.Values) (*DPNResponse) {
+func (client *DPNRestClient) DPNBagList(params url.Values) (*DPNResponse) {
 	resp := NewDPNResponse(dpn.DPNTypeBag)
 	resp.bags = make([]*models.DPNBag, 1)
 
@@ -430,11 +430,11 @@ func (client *DPNRestClient) ReplicationTransferGet(identifier string) (*DPNResp
 	return resp
 }
 
-// ReplicationList returns a list of ReplicationTransfers matching
+// ReplicationTransferList returns a list of ReplicationTransfers matching
 // the specified criteria. Valid params include before, after, bag,
 // to_node, from_node, store_requested, stored, cancelled, cancel_reason,
 // page, page_size, order_by.
-func (client *DPNRestClient) ReplicationList(params *url.Values) (*DPNResponse) {
+func (client *DPNRestClient) ReplicationTransferList(params url.Values) (*DPNResponse) {
 	resp := NewDPNResponse(dpn.DPNTypeReplication)
 	resp.replications = make([]*models.ReplicationTransfer, 1)
 
@@ -521,7 +521,7 @@ func (client *DPNRestClient) RestoreTransferGet(identifier string) (*DPNResponse
 // specified criteria. Valid params include before, after, bag, to_node,
 // from_node, accepted, finished, cancelled, cancel_reason, page, page_size,
 // order_by.
-func (client *DPNRestClient) RestoreTransferList(params *url.Values) (*DPNResponse) {
+func (client *DPNRestClient) RestoreTransferList(params url.Values) (*DPNResponse) {
 	resp := NewDPNResponse(dpn.DPNTypeRestore)
 	resp.restores = make([]*models.RestoreTransfer, 1)
 
@@ -609,7 +609,7 @@ func (client *DPNRestClient) DigestGet(bagUUID, algorithm string) (*DPNResponse)
 // is required according to DPN REST server docs, though server may respond
 // without error. Optional params include before, after, page, page_size,
 // and order_by.
-func (client *DPNRestClient) DigestList(params *url.Values) (*DPNResponse) {
+func (client *DPNRestClient) DigestList(params url.Values) (*DPNResponse) {
 	resp := NewDPNResponse(dpn.DPNTypeDigest)
 	resp.digests = make([]*models.MessageDigest, 1)
 
@@ -663,7 +663,7 @@ func (client *DPNRestClient) digestSave(digest *models.MessageDigest, httpMethod
 // before, after, bag, latest, node, page, page_size, order_by. Param latest
 // is a boolean. If true, only the latest fixity check(s) for each bag will
 // be returned. Note that the DPN 2.0 server does not implement FixityCheckGet.
-func (client *DPNRestClient) FixityCheckList(params *url.Values) (*DPNResponse) {
+func (client *DPNRestClient) FixityCheckList(params url.Values) (*DPNResponse) {
 	resp := NewDPNResponse(dpn.DPNTypeFixityCheck)
 	resp.fixities = make([]*models.FixityCheck, 1)
 
@@ -717,7 +717,7 @@ func (client *DPNRestClient) fixityCheckSave(fixity *models.FixityCheck, httpMet
 // criteria. Valid params include before, after, bag, ingested, latest,
 // page, page_size, order_by. See the swagger docs for more info.
 // Note that the DPN 2.0 server does not implement IngestGet.
-func (client *DPNRestClient) IngestList(params *url.Values) (*DPNResponse) {
+func (client *DPNRestClient) IngestList(params url.Values) (*DPNResponse) {
 	resp := NewDPNResponse(dpn.DPNTypeIngest)
 	resp.ingests = make([]*models.Ingest, 1)
 

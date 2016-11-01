@@ -111,7 +111,7 @@ func TestBuildUrl(t *testing.T) {
 	params.Set("color", "blue")
 	params.Set("material", "cotton")
 	params.Set("size", "extra medium")
-	actualUrl := client.BuildUrl(relativeUrl, &params)
+	actualUrl := client.BuildUrl(relativeUrl, params)
 	expectedUrl = expectedUrl + "?color=blue&material=cotton&size=extra+medium"
 	assert.Equal(t, expectedUrl, actualUrl)
 }
@@ -218,7 +218,7 @@ func TestMemberList(t *testing.T) {
 	assert.EqualValues(t, 5, len(memberList.Members()))
 	params := url.Values{}
 	params.Set("name", "Faber College")
-	memberList  = client.MemberList(&params)
+	memberList  = client.MemberList(params)
 	assert.Nil(t, memberList.Error)
 	assert.NotNil(t, memberList.Request)
 	assert.NotNil(t, memberList.Response)
@@ -333,14 +333,14 @@ func TestDPNBagList(t *testing.T) {
 	aLongTimeAgo := time.Date(1999, time.December, 31, 23, 0, 0, 0, time.UTC)
 	params := url.Values{}
 	params.Set("after", aLongTimeAgo.Format(time.RFC3339Nano))
-	resp = client.DPNBagList(&params)
+	resp = client.DPNBagList(params)
 	require.NotNil(t, resp)
 	require.Nil(t, resp.Error)
 	assert.Equal(t, unfilteredCount, resp.Count)
 
 	// Get all bags updated after 1 hour from now
 	params.Set("after", time.Now().Add(1 * time.Hour).Format(time.RFC3339Nano))
-	resp = client.DPNBagList(&params)
+	resp = client.DPNBagList(params)
 	require.NotNil(t, resp)
 	require.Nil(t, resp.Error)
 	assert.EqualValues(t, 0, resp.Count)
@@ -433,12 +433,12 @@ func TestReplicationTransferGet(t *testing.T) {
 	assert.Equal(t, "2015-09-15T19:38:31Z", xfer.UpdatedAt.Format(time.RFC3339))
 }
 
-func TestReplicationList(t *testing.T) {
+func TestReplicationTransferList(t *testing.T) {
 	if runRestTests(t) == false {
 		return
 	}
 	client := getClient(t)
-	resp := client.ReplicationList(nil)
+	resp := client.ReplicationTransferList(nil)
 	require.NotNil(t, resp)
 	require.Nil(t, resp.Error)
 	assert.True(t, resp.Count > 0)
@@ -446,25 +446,25 @@ func TestReplicationList(t *testing.T) {
 
 	totalRecordCount := resp.Count
 
-	params := &url.Values{}
+	params := url.Values{}
 	params.Set("bag_valid", "true")
-	resp = client.ReplicationList(params)
+	resp = client.ReplicationTransferList(params)
 	require.NotNil(t, resp)
 	require.Nil(t, resp.Error)
 
 	params.Set("bag_valid", "false")
-	resp = client.ReplicationList(params)
+	resp = client.ReplicationTransferList(params)
 	require.NotNil(t, resp)
 	require.Nil(t, resp.Error)
 
 	params.Del("bag_valid")
 	params.Set("fixity_accept", "true")
-	resp = client.ReplicationList(params)
+	resp = client.ReplicationTransferList(params)
 	require.NotNil(t, resp)
 	require.Nil(t, resp.Error)
 
 	params.Set("fixity_accept", "false")
-	resp  = client.ReplicationList(params)
+	resp  = client.ReplicationTransferList(params)
 	require.NotNil(t, resp)
 	require.Nil(t, resp.Error)
 
@@ -472,14 +472,14 @@ func TestReplicationList(t *testing.T) {
 
 	aLongTimeAgo := time.Date(1999, time.December, 31, 23, 0, 0, 0, time.UTC)
 	params.Set("after", aLongTimeAgo.Format(time.RFC3339Nano))
-	resp = client.ReplicationList(params)
+	resp = client.ReplicationTransferList(params)
 	require.NotNil(t, resp)
 	require.Nil(t, resp.Error)
 
 	assert.Equal(t, totalRecordCount, resp.Count)
 
 	params.Set("after", time.Now().Add(1 * time.Hour).Format(time.RFC3339Nano))
-	resp = client.ReplicationList(params)
+	resp = client.ReplicationTransferList(params)
 	require.NotNil(t, resp)
 	require.Nil(t, resp.Error)
 	assert.EqualValues(t, 0, resp.Count)
@@ -595,7 +595,7 @@ func TestRestoreTransferList(t *testing.T) {
 
 	totalRecordCount := resp.Count
 
-	params := &url.Values{}
+	params := url.Values{}
 	params.Set("bag_valid", "true")
 	resp  = client.RestoreTransferList(params)
 	require.NotNil(t, resp)
@@ -774,7 +774,7 @@ func TestDigestList(t *testing.T) {
 		return
 	}
 	client := getClient(t)
-	params := &url.Values{}
+	params := url.Values{}
 	params.Set("page", "1")
 	params.Set("per_page", "10")
 	params.Set("order_by", "created_at")
@@ -812,7 +812,7 @@ func TestFixityCheckList(t *testing.T) {
 	if runRestTests(t) == false {
 		return
 	}
-	params := &url.Values{}
+	params := url.Values{}
 	params.Set("page", "1")
 	params.Set("per_page", "10")
 	params.Set("order_by", "created_at")
@@ -841,7 +841,7 @@ func TestIngestList(t *testing.T) {
 	if runRestTests(t) == false {
 		return
 	}
-	params := &url.Values{}
+	params := url.Values{}
 	params.Set("ingested", "true")
 	client := getClient(t)
 	resp := client.IngestList(params)
