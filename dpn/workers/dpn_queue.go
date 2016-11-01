@@ -1,6 +1,7 @@
 package workers
 
 import (
+	"encoding/json"
 	"fmt"
 	"github.com/APTrust/exchange/constants"
 	"github.com/APTrust/exchange/context"
@@ -82,6 +83,10 @@ func (dpnQueue *DPNQueue) Run() {
 	dpnQueue.logJsonResults()
 }
 
+/***************************************************************************
+ ReplicationTransfer Methods
+***************************************************************************/
+
 // queueReplicationRequests collects ReplicationTransfer requests from
 // the local DPN server and if necessary 1) creates a DPNWorkItem record
 // in our Pharos server for the replication request, and 2) creates an
@@ -100,9 +105,7 @@ func (dpnQueue *DPNQueue) queueReplicationRequests() {
 	for {
 		dpnResp := dpnQueue.LocalClient.ReplicationTransferList(params)
 		if dpnResp.Error != nil {
-			msg := fmt.Sprintf("Error getting ReplicationTransfers from local node: %v", dpnResp.Error)
-			dpnQueue.Context.MessageLog.Error(msg)
-			dpnQueue.QueueResult.AddError(msg)
+			dpnQueue.err("Error getting ReplicationTransfers from local node: %v", dpnResp.Error)
 			break
 		}
 		xfers := dpnResp.ReplicationTransfers()
@@ -134,9 +137,7 @@ func (dpnQueue *DPNQueue) getOrCreateReplicationWorkItem(xfer *models.Replicatio
 	params.Set("Task", constants.DPNTaskReplication)
 	getResp := dpnQueue.Context.PharosClient.DPNWorkItemList(params)
 	if getResp.Error != nil {
-		errMsg := fmt.Sprintf("Error getting DPNWorkItemList from Pharos: %v", getResp.Error)
-		dpnQueue.Context.MessageLog.Error(errMsg)
-		dpnQueue.QueueResult.AddError(errMsg)
+		dpnQueue.err("Error getting DPNWorkItemList from Pharos: %v", getResp.Error)
 		return nil
 	}
 	existingItem := getResp.DPNWorkItem()
@@ -149,18 +150,14 @@ func (dpnQueue *DPNQueue) getOrCreateReplicationWorkItem(xfer *models.Replicatio
 		}
 		createResp := dpnQueue.Context.PharosClient.DPNWorkItemSave(dpnWorkItem)
 		if createResp.Error != nil {
-			errMsg := fmt.Sprintf("Error creating DPNWorkItem for ReplicationXfer %s from %s: %v",
+			dpnQueue.err("Error creating DPNWorkItem for ReplicationXfer %s from %s: %v",
 				xfer.ReplicationId, xfer.FromNode, getResp.Error)
-			dpnQueue.Context.MessageLog.Error(errMsg)
-			dpnQueue.QueueResult.AddError(errMsg)
 			return nil
 		}
 		newItem := createResp.DPNWorkItem()
 		if newItem == nil {
-			errMsg := fmt.Sprintf("DPNWorkItemSave returned nil for ReplicationXfer %s from %s: %v",
+			dpnQueue.err("DPNWorkItemSave returned nil for ReplicationXfer %s from %s: %v",
 				xfer.ReplicationId, xfer.FromNode, getResp.Error)
-			dpnQueue.Context.MessageLog.Error(errMsg)
-			dpnQueue.QueueResult.AddError(errMsg)
 		}
 		return newItem
 	}
@@ -189,33 +186,93 @@ func (dpnQueue *DPNQueue) queueReplication(dpnWorkItem *apt_models.DPNWorkItem, 
 		dpnQueue.Context.Config.DPN.DPNCopyWorker.NsqTopic,
 		dpnWorkItem.Id)
 	if err != nil {
-		errMsg := fmt.Sprintf("Error getting DPNWorkItemList from Pharos: %v", err)
-		dpnQueue.Context.MessageLog.Error(errMsg)
-		dpnQueue.QueueResult.AddError(errMsg)
+		dpnQueue.err("Error getting DPNWorkItemList from Pharos: %v", err)
 	} else {
 		*dpnWorkItem.QueuedAt = time.Now().UTC()
 		resp := dpnQueue.Context.PharosClient.DPNWorkItemSave(dpnWorkItem)
 		if resp.Error != nil {
-			errMsg := fmt.Sprintf("Error updating DPNWorkItem for ReplicationXfer %s from %s: %v",
+			dpnQueue.err("Error updating DPNWorkItem for ReplicationXfer %s from %s: %v",
 				xfer.ReplicationId, xfer.FromNode, resp.Error)
-			dpnQueue.Context.MessageLog.Error(errMsg)
-			dpnQueue.QueueResult.AddError(errMsg)
 			return
 		}
 		dpnWorkItem = resp.DPNWorkItem()
 	}
 }
 
+/***************************************************************************
+ RestoreTransfer Methods
+***************************************************************************/
+
+// queueRestoreRequests collects RestoreTransfer requests from
+// the local DPN server and if necessary 1) creates a DPNWorkItem record
+// in our Pharos server for the replication request, and 2) creates an
+// entry in NSQ telling our replication workers to copy the bag.
+//
+// We query our local DPN node after synching data from other nodes, and
+// we're looking for RestoreTransfers where the from_node is our node.
+// We want to skip transfers that are cancelled or already finished. We
+// also want to skip transfers where accepted is true, because
+// those transfers are already in progress.
 func (dpnQueue *DPNQueue) queueRestoreRequests() {
 
 }
 
-func (dpnQueue *DPNQueue) createRestoreWorkItem(xfer *models.RestoreTransfer) {
+// getOrCreateRestoreWorkItem returns the DPNWorkItem for the specified
+// RestoreTransfer from Pharos. If no DPNWorkItem for the specified
+// transfer exists, this creates it in Pharos and returns a copy of it.
+func (dpnQueue *DPNQueue) getOrCreateRestoreWorkItem(xfer *models.RestoreTransfer) {
 
 }
 
+// restoreParams returns the URL parameters we need to query our local
+// DPN REST server for RestoreTransfer requests that we will need to
+// service.
+func (dpnQueue *DPNQueue) restoreParams(pageNumber int) (url.Values) {
+	return nil
+}
+
+// queueRestore adds a RestoreTransfer to NSQ and records info about
+// when the item was queued in DPNWorkItem.QueuedAt, which is saved to Pharos.
+func (dpnQueue *DPNQueue) queueRestore(dpnWorkItem *apt_models.DPNWorkItem, xfer *models.RestoreTransfer) {
+
+}
+
+/***************************************************************************
+ Ingest Methods
+***************************************************************************/
+
+// queueIngestRequests queues ingest requests that are sitting in Pharos'
+// WorkItems table. Users request DPN ingest directly in Pharos, and that's
+// the only place those requests exist. (You won't find them in the DPN REST
+// server.) We want to queue DPN ingest requests that have no QueuedAt timestamp.
+// The DPN REST server will have no record of these items until we finish
+// ingesting them into DPN.
 func (dpnQueue *DPNQueue) queueIngestRequests() {
 
+}
+
+// ingestParams returns the URL params we need to query Pharos about
+// unserviced DPN Ingest requests. These are WorkItems where the action
+// is "DPN" and the queued_at timestamp is empty.
+func (dpnQueue *DPNQueue) ingestParams(pageNumber int) (url.Values) {
+	return nil
+}
+
+// queueIngest adds the id of a DPN Ingest WorkItem to NSQ and records info about
+// when the item was queued in WorkItem.QueuedAt, which is saved to Pharos.
+func (dpnQueue *DPNQueue) queueIngest(workItem *apt_models.WorkItem) {
+
+}
+
+/***************************************************************************
+ Misc Utility Methods
+***************************************************************************/
+
+// err logs an error and adds it to the QueueResult.Errors list.
+func (dpnQueue *DPNQueue) err(format string, a ...interface{}) {
+	errMsg := fmt.Sprintf(format, a...)
+	dpnQueue.Context.MessageLog.Error(errMsg)
+	dpnQueue.QueueResult.AddError(errMsg)
 }
 
 // logJsonResults dumps the results of this queue run to a machine-readable
@@ -223,5 +280,10 @@ func (dpnQueue *DPNQueue) queueIngestRequests() {
 // items were processed, and can be used in production to run automated
 // audits and spot checks.
 func (dpnQueue *DPNQueue) logJsonResults() {
-
+	jsonData, err := json.MarshalIndent(dpnQueue.QueueResult, "", "  ")
+	if err != nil {
+		dpnQueue.Context.MessageLog.Warning("Could not dump QueueResult to JSON log: %v", err)
+	} else {
+		dpnQueue.Context.JsonLog.Println(jsonData)
+	}
 }
