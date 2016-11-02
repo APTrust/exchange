@@ -42,7 +42,6 @@ echo "Building apt_record"
 cd $EXCHANGE_ROOT/apps/apt_record
 go build -o ~/tmp/bin/apt_record apt_record.go
 
-
 echo "Starting NSQ"
 cd ~/tmp/bin
 ./nsq_service -config $EXCHANGE_ROOT/config/nsq/integration.config &>/dev/null &

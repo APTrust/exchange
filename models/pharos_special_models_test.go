@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 )
 
 
@@ -77,4 +78,31 @@ func TestNewChecksumForPharos(t *testing.T) {
 	assert.Equal(t, cs.Algorithm, pharosChecksum.Algorithm)
 	assert.Equal(t, cs.DateTime, pharosChecksum.DateTime)
 	assert.Equal(t, cs.Digest, pharosChecksum.Digest)
+}
+
+func TestNewDPNWorkItemForPharos(t *testing.T) {
+	timestamp, _ := time.Parse(time.RFC3339, "2016-11-15T15:33:00+00:00")
+	note := "All done"
+	state := "Nebraska"
+	item := &models.DPNWorkItem{
+		Id: 1000,
+		Node: "dpn.aptrust.org",
+		Task: "Replication",
+		Identifier: "1234-5678",
+		QueuedAt: &timestamp,
+		CompletedAt: &timestamp,
+		Note: &note,
+		State: &state,
+		CreatedAt: timestamp,
+		UpdatedAt: timestamp,
+	}
+	pharosItem := models.NewDPNWorkItemForPharos(item)
+	require.NotNil(t, pharosItem)
+	assert.Equal(t, item.Node, pharosItem.Node)
+	assert.Equal(t, item.Task, pharosItem.Task)
+	assert.Equal(t, item.Identifier, pharosItem.Identifier)
+	assert.Equal(t, item.QueuedAt, pharosItem.QueuedAt)
+	assert.Equal(t, item.CompletedAt, pharosItem.CompletedAt)
+	assert.Equal(t, item.Note, pharosItem.Note)
+	assert.Equal(t, item.State, pharosItem.State)
 }

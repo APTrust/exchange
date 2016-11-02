@@ -7,6 +7,7 @@
 
 [ -z "$DPN_SERVER_ROOT" ] && echo "Set env var DPN_SERVER_ROOT" && exit 1;
 [ -z "$EXCHANGE_ROOT" ] && echo "Set env var EXCHANGE_ROOT" && exit 1;
+[ -z "$PHAROS_ROOT" ] && echo "Set env var PHAROS_ROOT" && exit 1;
 
 # echo "Getting rid of old logs and data files"
 # rm -r ~/tmp/*
@@ -64,6 +65,7 @@ NSQ_PID=$!
 # RAILS_ENV=integration bundle exec rake db:fixtures:load
 
 echo "Starting Pharos server"
+cd $PHAROS_ROOT
 RAILS_ENV=integration rails server &>~/tmp/test_logs/pharos.log &
 
 echo "Starting Volume Service"
@@ -75,7 +77,7 @@ echo "Starting dpn_sync"
 ./dpn_sync -config=config/integration.json
 
 echo "Starting dpn_queue"
-./dpn_queue -config=config/integration.json -hours=12
+./dpn_queue -config=config/integration.json -hours=240000
 
 # echo "Starting dpn_copy"
 # ./dpn_copy -config=config/integration.json &

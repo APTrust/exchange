@@ -838,7 +838,7 @@ func TestDPNWorkItemGet(t *testing.T) {
 
 	// Check the request URL and method
 	assert.Equal(t, "GET", response.Request.Method)
-	assert.Equal(t, "/api/v2/dpn_items/999/", response.Request.URL.Opaque)
+	assert.Equal(t, "/api/v2/dpn_item/999/", response.Request.URL.Opaque)
 
 	// Basic sanity check on response values
 	assert.Nil(t, response.Error)
@@ -866,7 +866,7 @@ func TestDPNWorkItemList(t *testing.T) {
 
 	// Check the request URL and method
 	assert.Equal(t, "GET", response.Request.Method)
-	assert.Equal(t, "/api/v2/dpn_items/?", response.Request.URL.Opaque)
+	assert.Equal(t, "/api/v2/dpn_item/?", response.Request.URL.Opaque)
 
 	// Basic sanity check on response values
 	assert.Nil(t, response.Error)
@@ -889,7 +889,7 @@ func TestDPNWorkItemList(t *testing.T) {
 	// Make sure params are added to URL
 	params := sampleParams()
 	response = client.DPNWorkItemList(params)
-	expectedUrl := fmt.Sprintf("/api/v2/dpn_items/?%s", params.Encode())
+	expectedUrl := fmt.Sprintf("/api/v2/dpn_item/?%s", params.Encode())
 	assert.Equal(t, expectedUrl, response.Request.URL.Opaque)
 }
 
@@ -912,7 +912,7 @@ func TestDPNWorkItemSave(t *testing.T) {
 
 	// Check the request URL and method
 	assert.Equal(t, "POST", response.Request.Method)
-	assert.Equal(t, "/api/v2/dpn_items/", response.Request.URL.Opaque)
+	assert.Equal(t, "/api/v2/dpn_item/", response.Request.URL.Opaque)
 
 	// Basic sanity check on response values
 	assert.Nil(t, response.Error)
@@ -922,6 +922,7 @@ func TestDPNWorkItemSave(t *testing.T) {
 	if obj == nil {
 		t.Errorf("DPNWorkItem should not be nil")
 	}
+	fmt.Println(obj)
 	assert.NotEqual(t, "", obj.Task)
 	assert.NotEqual(t, "", obj.Identifier)
 
@@ -938,7 +939,7 @@ func TestDPNWorkItemSave(t *testing.T) {
 	response = client.DPNWorkItemSave(obj)
 
 	// Check the request URL and method
-	expectedUrl := fmt.Sprintf("/api/v2/dpn_items/%d/", obj.Id)
+	expectedUrl := fmt.Sprintf("/api/v2/dpn_item/%d/", obj.Id)
 	assert.Equal(t, "PUT", response.Request.Method)
 	assert.Equal(t, expectedUrl, response.Request.URL.Opaque)
 
@@ -1346,13 +1347,14 @@ func dpnWorkItemListHandler(w http.ResponseWriter, r *http.Request) {
 func dpnWorkItemSaveHandler(w http.ResponseWriter, r *http.Request) {
 	decoder := json.NewDecoder(r.Body)
 	decoder.UseNumber()
-	data := make(map[string]interface{})
-	err := decoder.Decode(&data)
+	topLevelData := make(map[string]interface{})
+	err := decoder.Decode(&topLevelData)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error decoding JSON data: %v", err)
 		fmt.Fprintln(w, "")
 		return
 	}
+	data := topLevelData["dpn_work_item"].(map[string]interface{})
 
 	// Assign ID and timestamps, as if the object has been saved.
 	data["id"] = 1000
