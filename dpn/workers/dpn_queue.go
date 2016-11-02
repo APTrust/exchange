@@ -214,20 +214,66 @@ func (dpnQueue *DPNQueue) restoreParams(pageNumber int) (url.Values) {
 // The DPN REST server will have no record of these items until we finish
 // ingesting them into DPN.
 func (dpnQueue *DPNQueue) queueIngestRequests() {
-
+	pageNumber := 1
+	params := dpnQueue.ingestParams(pageNumber)
+	for {
+		resp := dpnQueue.Context.PharosClient.WorkItemList(params)
+		if resp.Error != nil {
+			dpnQueue.err("Error getting ingest WorkItems from Pharos: %v", resp.Error)
+			break
+		}
+		ingestItems := resp.WorkItems()
+		for _, ingestItem := range ingestItems {
+			queueItem := models.NewQueueItem(ingestItem.ObjectIdentifier)
+			queueItem.ItemId = ingestItem.Id
+			if ingestItem.QueuedAt.IsZero() {
+				dpnQueue.queueIngest(ingestItem)
+			}
+			queueItem.QueuedAt = *ingestItem.QueuedAt
+			dpnQueue.QueueResult.AddIngest(queueItem)
+		}
+		if resp.Next == nil {
+			break
+		} else {
+			pageNumber += 1
+			params = dpnQueue.ingestParams(pageNumber)
+		}
+	}
 }
 
 // ingestParams returns the URL params we need to query Pharos about
 // unserviced DPN Ingest requests. These are WorkItems where the action
 // is "DPN" and the queued_at timestamp is empty.
 func (dpnQueue *DPNQueue) ingestParams(pageNumber int) (url.Values) {
-	return nil
+	params := url.Values{}
+	params.Set("action", "DPN")
+	params.Set("queued", "false")
+	params.Set("order_by", "updated_at")
+	params.Set("page_size", "100")
+	params.Set("page", strconv.Itoa(pageNumber))
+	return params
 }
 
 // queueIngest adds the id of a DPN Ingest WorkItem to NSQ and records info about
 // when the item was queued in WorkItem.QueuedAt, which is saved to Pharos.
 func (dpnQueue *DPNQueue) queueIngest(workItem *apt_models.WorkItem) {
-
+	// Put the item into NSQ. First step for DPN ingest is DPNPackage.
+	err := dpnQueue.Context.NSQClient.Enqueue(
+		dpnQueue.Context.Config.DPN.DPNPackageWorker.NsqTopic,
+		workItem.Id)
+	if err != nil {
+		dpnQueue.err("Error queueing DPNWorkItem %d for ingest: %v", workItem.Id, err)
+	} else {
+		// Let Pharos know this item has been queued
+		*workItem.QueuedAt = time.Now().UTC()
+		resp := dpnQueue.Context.PharosClient.WorkItemSave(workItem)
+		if resp.Error != nil {
+			dpnQueue.err("Error updating WorkItem %d for ingest: %v",
+				workItem.Id, resp.Error)
+			return
+		}
+		workItem = resp.WorkItem()
+	}
 }
 
 /***************************************************************************
