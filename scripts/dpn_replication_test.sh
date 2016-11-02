@@ -8,10 +8,10 @@
 [ -z "$DPN_SERVER_ROOT" ] && echo "Set env var DPN_SERVER_ROOT" && exit 1;
 [ -z "$EXCHANGE_ROOT" ] && echo "Set env var EXCHANGE_ROOT" && exit 1;
 
-echo "Getting rid of old logs and data files"
-rm -r ~/tmp/*
-mkdir -p ~/tmp/test_logs
-mkdir -p ~/tmp/bin
+# echo "Getting rid of old logs and data files"
+# rm -r ~/tmp/*
+# mkdir -p ~/tmp/test_logs
+# mkdir -p ~/tmp/bin
 
 quit_on_build_error()
 {
@@ -56,12 +56,12 @@ cd ~/tmp/bin
 ./nsq_service -config $EXCHANGE_ROOT/config/nsq/integration.config &>/dev/null &
 NSQ_PID=$!
 
-echo "Deleting old Rails data"
-cd $PHAROS_ROOT
-RAILS_ENV=integration bundle exec rake pharos:empty_db
+# echo "Deleting old Rails data"
+# cd $PHAROS_ROOT
+# RAILS_ENV=integration bundle exec rake pharos:empty_db
 
-echo "Loading Rails fixtures"
-RAILS_ENV=integration bundle exec rake db:fixtures:load
+# echo "Loading Rails fixtures"
+# RAILS_ENV=integration bundle exec rake db:fixtures:load
 
 echo "Starting Pharos server"
 RAILS_ENV=integration rails server &>~/tmp/test_logs/pharos.log &
