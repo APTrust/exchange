@@ -34,6 +34,11 @@ cd $EXCHANGE_ROOT/apps/dpn_sync
 go build -o ~/tmp/bin/dpn_sync dpn_sync.go
 quit_on_build_error
 
+echo "Building dpn_queue"
+cd $EXCHANGE_ROOT/apps/dpn_queue
+go build -o ~/tmp/bin/dpn_queue dpn_queue.go
+quit_on_build_error
+
 echo "Building dpn_copy"
 cd $EXCHANGE_ROOT/apps/dpn_copy
 go build -o ~/tmp/bin/dpn_copy dpn_copy.go
@@ -66,8 +71,10 @@ cd ~/tmp/bin
 sleep 10
 
 echo "Starting dpn_sync"
-cd ~/tmp/bin
 ./dpn_sync -config=config/integration.json
+
+echo "Starting dpn_queue"
+./dpn_queue -config=config/integration.json -hours=12
 
 echo "Starting dpn_copy"
 ./dpn_copy -config=config/integration.json &
@@ -75,11 +82,11 @@ echo "Starting dpn_copy"
 
 run_post_tests()
 {
-    echo "Running sync post tests"
-    cd $EXCHANGE_ROOT/dpn/workers
-    echo -e "\n\n***********************************************"
-    RUN_DPN_SYNC_POST_TEST=true go test dpn_sync_test.go
-    echo -e "***********************************************\n\n"
+    # echo "Running sync post tests"
+    # cd $EXCHANGE_ROOT/dpn/workers
+    # echo -e "\n\n***********************************************"
+    # RUN_DPN_SYNC_POST_TEST=true go test dpn_sync_test.go
+    # echo -e "***********************************************\n\n"
     kill_all
 }
 

@@ -113,7 +113,7 @@ func (dpnQueue *DPNQueue) queueReplicationRequests() {
 			queueItem := models.NewQueueItem(xfer.ReplicationId)
 			dpnWorkItem := dpnQueue.getOrCreateWorkItem(xfer.ReplicationId, constants.DPNTaskReplication)
 			queueItem.ItemId = dpnWorkItem.Id
-			if dpnWorkItem.QueuedAt.IsZero() {
+			if dpnWorkItem.QueuedAt == nil || dpnWorkItem.QueuedAt.IsZero() {
 				dpnQueue.queueTransfer(dpnWorkItem, constants.DPNTaskReplication)
 			}
 			queueItem.QueuedAt = *dpnWorkItem.QueuedAt
@@ -226,7 +226,7 @@ func (dpnQueue *DPNQueue) queueIngestRequests() {
 		for _, ingestItem := range ingestItems {
 			queueItem := models.NewQueueItem(ingestItem.ObjectIdentifier)
 			queueItem.ItemId = ingestItem.Id
-			if ingestItem.QueuedAt.IsZero() {
+			if ingestItem.QueuedAt == nil || ingestItem.QueuedAt.IsZero() {
 				dpnQueue.queueIngest(ingestItem)
 			}
 			queueItem.QueuedAt = *ingestItem.QueuedAt
@@ -265,7 +265,8 @@ func (dpnQueue *DPNQueue) queueIngest(workItem *apt_models.WorkItem) {
 		dpnQueue.err("Error queueing DPNWorkItem %d for ingest: %v", workItem.Id, err)
 	} else {
 		// Let Pharos know this item has been queued
-		*workItem.QueuedAt = time.Now().UTC()
+		utcNow := time.Now().UTC()
+		workItem.QueuedAt = &utcNow
 		resp := dpnQueue.Context.PharosClient.WorkItemSave(workItem)
 		if resp.Error != nil {
 			dpnQueue.err("Error updating WorkItem %d for ingest: %v",
@@ -300,7 +301,8 @@ func (dpnQueue *DPNQueue) queueTransfer(dpnWorkItem *apt_models.DPNWorkItem, tas
 			dpnWorkItem.Id, taskType, dpnWorkItem.Identifier, err)
 	} else {
 		// Let Pharos know this item has been queued
-		*dpnWorkItem.QueuedAt = time.Now().UTC()
+		utcNow := time.Now().UTC()
+		dpnWorkItem.QueuedAt = &utcNow
 		resp := dpnQueue.Context.PharosClient.DPNWorkItemSave(dpnWorkItem)
 		if resp.Error != nil {
 			dpnQueue.err("Error updating DPNWorkItem %d for %s %s to %s: %v",
@@ -362,6 +364,6 @@ func (dpnQueue *DPNQueue) logJsonResults() {
 	if err != nil {
 		dpnQueue.Context.MessageLog.Warning("Could not dump QueueResult to JSON log: %v", err)
 	} else {
-		dpnQueue.Context.JsonLog.Println(jsonData)
+		dpnQueue.Context.JsonLog.Println(string(jsonData))
 	}
 }

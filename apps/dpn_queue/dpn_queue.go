@@ -23,8 +23,6 @@ func main() {
 		fmt.Fprintf(os.Stderr, err.Error())
 		os.Exit(1)
 	}
-	_context.MessageLog.Info("dpn_queue started with config %s", pathToConfigFile)
-	_context.MessageLog.Info("Checking requests over the past %d hours", hours)
 	dpnQueue.Run()
 }
 
