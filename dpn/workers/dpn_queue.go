@@ -80,7 +80,7 @@ func (dpnQueue *DPNQueue) Run() {
 	dpnQueue.queueRestoreRequests()
 	dpnQueue.queueIngestRequests()
 	dpnQueue.QueueResult.EndTime = time.Now().UTC()
-	dpnQueue.logJsonResults()
+	dpnQueue.logResults()
 }
 
 /***************************************************************************
@@ -172,7 +172,7 @@ func (dpnQueue *DPNQueue) queueRestoreRequests() {
 			queueItem := models.NewQueueItem(xfer.RestoreId)
 			dpnWorkItem := dpnQueue.getOrCreateWorkItem(xfer.RestoreId, constants.DPNTaskRestore)
 			queueItem.ItemId = dpnWorkItem.Id
-			if dpnWorkItem.QueuedAt.IsZero() {
+			if dpnWorkItem.QueuedAt == nil || dpnWorkItem.QueuedAt.IsZero() {
 				dpnQueue.queueTransfer(dpnWorkItem, constants.DPNTaskRestore)
 			}
 			queueItem.QueuedAt = *dpnWorkItem.QueuedAt
@@ -358,12 +358,16 @@ func (dpnQueue *DPNQueue) err(format string, a ...interface{}) {
 // logJsonResults dumps the results of this queue run to a machine-readable
 // JSON file. This is used in integration post tests to verify that certain
 // items were processed, and can be used in production to run automated
-// audits and spot checks.
-func (dpnQueue *DPNQueue) logJsonResults() {
+// audits and spot checks. Also dumps a very brief summary to the application
+// log.
+func (dpnQueue *DPNQueue) logResults() {
 	jsonData, err := json.MarshalIndent(dpnQueue.QueueResult, "", "  ")
 	if err != nil {
 		dpnQueue.Context.MessageLog.Warning("Could not dump QueueResult to JSON log: %v", err)
 	} else {
 		dpnQueue.Context.JsonLog.Println(string(jsonData))
 	}
+	dpnQueue.Context.MessageLog.Info("Processed %d replication requests", len(dpnQueue.QueueResult.Replications))
+	dpnQueue.Context.MessageLog.Info("Processed %d restore requests", len(dpnQueue.QueueResult.Restores))
+	dpnQueue.Context.MessageLog.Info("Processed %d ingest requests", len(dpnQueue.QueueResult.Ingests))
 }
