@@ -114,7 +114,7 @@ func (dpnQueue *DPNQueue) queueReplicationRequests() {
 			dpnWorkItem := dpnQueue.getOrCreateWorkItem(xfer.ReplicationId, constants.DPNTaskReplication)
 			queueItem.ItemId = dpnWorkItem.Id
 			if dpnWorkItem.QueuedAt.IsZero() {
-				dpnQueue.queueReplication(dpnWorkItem, xfer)
+				dpnQueue.queueTransfer(dpnWorkItem, constants.DPNTaskReplication)
 			}
 			queueItem.QueuedAt = *dpnWorkItem.QueuedAt
 			dpnQueue.QueueResult.AddReplication(queueItem)
@@ -142,26 +142,6 @@ func (dpnQueue *DPNQueue) replicationParams(pageNumber int) (url.Values) {
 	params.Set("page_size", "100")
 	params.Set("page", strconv.Itoa(pageNumber))
 	return params
-}
-
-// queueReplication adds a ReplicationTransfer to NSQ and records info about
-// when the item was queued in DPNWorkItem.QueuedAt, which is saved to Pharos.
-func (dpnQueue *DPNQueue) queueReplication(dpnWorkItem *apt_models.DPNWorkItem, xfer *models.ReplicationTransfer) {
-	err := dpnQueue.Context.NSQClient.Enqueue(
-		dpnQueue.Context.Config.DPN.DPNCopyWorker.NsqTopic,
-		dpnWorkItem.Id)
-	if err != nil {
-		dpnQueue.err("Error getting DPNWorkItemList from Pharos: %v", err)
-	} else {
-		*dpnWorkItem.QueuedAt = time.Now().UTC()
-		resp := dpnQueue.Context.PharosClient.DPNWorkItemSave(dpnWorkItem)
-		if resp.Error != nil {
-			dpnQueue.err("Error updating DPNWorkItem for ReplicationXfer %s from %s: %v",
-				xfer.ReplicationId, xfer.FromNode, resp.Error)
-			return
-		}
-		dpnWorkItem = resp.DPNWorkItem()
-	}
 }
 
 /***************************************************************************
@@ -193,7 +173,7 @@ func (dpnQueue *DPNQueue) queueRestoreRequests() {
 			dpnWorkItem := dpnQueue.getOrCreateWorkItem(xfer.RestoreId, constants.DPNTaskRestore)
 			queueItem.ItemId = dpnWorkItem.Id
 			if dpnWorkItem.QueuedAt.IsZero() {
-				dpnQueue.queueRestore(dpnWorkItem, xfer)
+				dpnQueue.queueTransfer(dpnWorkItem, constants.DPNTaskRestore)
 			}
 			queueItem.QueuedAt = *dpnWorkItem.QueuedAt
 			dpnQueue.QueueResult.AddRestore(queueItem)
@@ -221,26 +201,6 @@ func (dpnQueue *DPNQueue) restoreParams(pageNumber int) (url.Values) {
 	params.Set("page_size", "100")
 	params.Set("page", strconv.Itoa(pageNumber))
 	return params
-}
-
-// queueRestore adds a RestoreTransfer to NSQ and records info about
-// when the item was queued in DPNWorkItem.QueuedAt, which is saved to Pharos.
-func (dpnQueue *DPNQueue) queueRestore(dpnWorkItem *apt_models.DPNWorkItem, xfer *models.RestoreTransfer) {
-	err := dpnQueue.Context.NSQClient.Enqueue(
-		dpnQueue.Context.Config.DPN.DPNRestoreWorker.NsqTopic,
-		dpnWorkItem.Id)
-	if err != nil {
-		dpnQueue.err("Error getting DPNWorkItemList from Pharos: %v", err)
-	} else {
-		*dpnWorkItem.QueuedAt = time.Now().UTC()
-		resp := dpnQueue.Context.PharosClient.DPNWorkItemSave(dpnWorkItem)
-		if resp.Error != nil {
-			dpnQueue.err("Error updating DPNWorkItem for RestoreXfer %s to %s: %v",
-				xfer.RestoreId, xfer.ToNode, resp.Error)
-			return
-		}
-		dpnWorkItem = resp.DPNWorkItem()
-	}
 }
 
 /***************************************************************************
@@ -273,6 +233,37 @@ func (dpnQueue *DPNQueue) queueIngest(workItem *apt_models.WorkItem) {
 /***************************************************************************
  Misc Utility Methods
 ***************************************************************************/
+
+// queueTransfer adds a transfer task to NSQ and records info about
+// when the item was queued in DPNWorkItem.QueuedAt, which is saved to Pharos.
+func (dpnQueue *DPNQueue) queueTransfer(dpnWorkItem *apt_models.DPNWorkItem, taskType string) {
+	queueTopic := ""
+	if taskType == constants.DPNTaskReplication {
+		// Copy is first step of replication
+		queueTopic = dpnQueue.Context.Config.DPN.DPNCopyWorker.NsqTopic
+	} else if taskType == constants.DPNTaskRestore {
+		queueTopic = dpnQueue.Context.Config.DPN.DPNRestoreWorker.NsqTopic
+	} else {
+		dpnQueue.Context.MessageLog.Error("Illegal taskType '%s'", taskType)
+		return
+	}
+	// Put the item into NSQ
+	err := dpnQueue.Context.NSQClient.Enqueue(queueTopic, dpnWorkItem.Id)
+	if err != nil {
+		dpnQueue.err("Error queueing DPNWorkItem %d, %s %s: %v",
+			dpnWorkItem.Id, taskType, dpnWorkItem.Identifier, err)
+	} else {
+		// Let Pharos know this item has been queued
+		*dpnWorkItem.QueuedAt = time.Now().UTC()
+		resp := dpnQueue.Context.PharosClient.DPNWorkItemSave(dpnWorkItem)
+		if resp.Error != nil {
+			dpnQueue.err("Error updating DPNWorkItem %d for %s %s to %s: %v",
+				dpnWorkItem.Id, taskType, dpnWorkItem.Identifier, resp.Error)
+			return
+		}
+		dpnWorkItem = resp.DPNWorkItem()
+	}
+}
 
 // getOrCreateWorkItem returns the DPNWorkItem for the specified
 // replication/restore transfer from Pharos. If no DPNWorkItem for the specified
