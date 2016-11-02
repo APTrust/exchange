@@ -8,9 +8,10 @@
 [ -z "$DPN_SERVER_ROOT" ] && echo "Set env var DPN_SERVER_ROOT" && exit 1;
 [ -z "$EXCHANGE_ROOT" ] && echo "Set env var EXCHANGE_ROOT" && exit 1;
 
-rm ~/tmp/bin/*
+echo "Getting rid of old logs and data files"
+rm -r ~/tmp/*
+mkdir -p ~/tmp/test_logs
 mkdir -p ~/tmp/bin
-
 
 quit_on_build_error()
 {
@@ -76,17 +77,18 @@ echo "Starting dpn_sync"
 echo "Starting dpn_queue"
 ./dpn_queue -config=config/integration.json -hours=12
 
-echo "Starting dpn_copy"
-./dpn_copy -config=config/integration.json &
+# echo "Starting dpn_copy"
+# ./dpn_copy -config=config/integration.json &
+
+echo "Running sync post tests"
+cd $EXCHANGE_ROOT/dpn/workers
+echo -e "\n\n***********************************************"
+RUN_DPN_SYNC_POST_TEST=true go test dpn_sync_test.go
+echo -e "***********************************************\n\n"
 
 
 run_post_tests()
 {
-    # echo "Running sync post tests"
-    # cd $EXCHANGE_ROOT/dpn/workers
-    # echo -e "\n\n***********************************************"
-    # RUN_DPN_SYNC_POST_TEST=true go test dpn_sync_test.go
-    # echo -e "***********************************************\n\n"
     kill_all
 }
 
