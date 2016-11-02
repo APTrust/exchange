@@ -224,6 +224,35 @@ func TestIntellectualObjectSave(t *testing.T) {
 	assert.NotEqual(t, origModTime, obj.UpdatedAt)
 }
 
+func TestIntellectualObjectPushToDPN(t *testing.T) {
+	// Note the handler. That's not an error, because this call returns
+	// a WorkItem object.
+	testServer := httptest.NewServer(http.HandlerFunc(workItemGetHandler))
+	defer testServer.Close()
+
+	client, err := network.NewPharosClient(testServer.URL, "v2", "user", "key")
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	// This method is used only in integration tests.
+	response := client.IntellectualObjectPushToDPN("college.edu/object")
+
+	// Check the request URL and method
+	assert.Equal(t, "PUT", response.Request.Method)
+	assert.Equal(t, "/api/v2/objects/college.edu%2Fobject/dpn", response.Request.URL.Opaque)
+
+	// Basic sanity check on response values
+	assert.Nil(t, response.Error)
+
+	assert.EqualValues(t, "WorkItem", response.ObjectType())
+	item := response.WorkItem()
+	require.NotNil(t, item)
+	assert.NotEqual(t, 0, item.Id)
+	assert.NotEqual(t, "", item.ObjectIdentifier)
+}
+
 func TestGenericFileGet(t *testing.T) {
 	testServer := httptest.NewServer(http.HandlerFunc(genericFileGetHandler))
 	defer testServer.Close()
@@ -922,7 +951,6 @@ func TestDPNWorkItemSave(t *testing.T) {
 	if obj == nil {
 		t.Errorf("DPNWorkItem should not be nil")
 	}
-	fmt.Println(obj)
 	assert.NotEqual(t, "", obj.Task)
 	assert.NotEqual(t, "", obj.Identifier)
 

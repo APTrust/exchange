@@ -46,6 +46,11 @@ cd $EXCHANGE_ROOT/apps/dpn_copy
 go build -o ~/tmp/bin/dpn_copy dpn_copy.go
 quit_on_build_error
 
+echo "Building test_push_to_dpn"
+cd $EXCHANGE_ROOT/apps/test_push_to_dpn
+go build -o ~/tmp/bin/test_push_to_dpn test_push_to_dpn.go
+quit_on_build_error
+
 echo "Starting DPN cluster. This takes a minute or so..."
 cd $DPN_SERVER_ROOT
 rm log/impersonate*
@@ -75,6 +80,9 @@ sleep 10
 
 echo "Starting dpn_sync"
 ./dpn_sync -config=config/integration.json
+
+echo "Starting test_push_to_dpn"
+./test_push_to_dpn -config=config/integration.json
 
 echo "Starting dpn_queue"
 ./dpn_queue -config=config/integration.json -hours=240000

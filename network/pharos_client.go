@@ -195,6 +195,34 @@ func (client *PharosClient) IntellectualObjectSave(obj *models.IntellectualObjec
 	return resp
 }
 
+// IntellectualObjectPushToDPN is used only in integration tests. It creates
+// a WorkItem in Pharos requesting that the IntellectualObject with the
+// specified identifier be ingested into DPN. Check the value of WorkItem()
+// (not IntellectualObject()) in the response.
+func (client *PharosClient) IntellectualObjectPushToDPN(identifier string) (*PharosResponse) {
+	// Set up the response object
+	resp := NewPharosResponse(PharosWorkItem)
+	resp.workItems = make([]*models.WorkItem, 1)
+
+	// Build the url and the request object
+	relativeUrl := fmt.Sprintf("/api/%s/objects/%s/dpn", client.apiVersion, escapeSlashes(identifier))
+	absoluteUrl := client.BuildUrl(relativeUrl)
+
+	// Run the request
+	client.DoRequest(resp, "PUT", absoluteUrl, nil)
+	if resp.Error != nil {
+		return resp
+	}
+
+	// Note that we're getting a WorkItem back.
+	workItem := &models.WorkItem{}
+	resp.Error = json.Unmarshal(resp.data, workItem)
+	if resp.Error == nil {
+		resp.workItems[0] = workItem
+	}
+	return resp
+}
+
 // Returns the GenericFile having the specified identifier. The identifier
 // should be in the format "institution.edu/object_name/path/to/file.ext"
 func (client *PharosClient) GenericFileGet(identifier string) (*PharosResponse) {
