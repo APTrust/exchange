@@ -111,7 +111,7 @@ func (dpnQueue *DPNQueue) queueReplicationRequests() {
 		xfers := dpnResp.ReplicationTransfers()
 		for _, xfer := range xfers {
 			queueItem := models.NewQueueItem(xfer.ReplicationId)
-			dpnWorkItem := dpnQueue.getOrCreateReplicationWorkItem(xfer)
+			dpnWorkItem := dpnQueue.getOrCreateWorkItem(xfer.ReplicationId, constants.DPNTaskReplication)
 			queueItem.ItemId = dpnWorkItem.Id
 			if dpnWorkItem.QueuedAt.IsZero() {
 				dpnQueue.queueReplication(dpnWorkItem, xfer)
@@ -125,41 +125,6 @@ func (dpnQueue *DPNQueue) queueReplicationRequests() {
 			pageNumber += 1
 			params = dpnQueue.replicationParams(pageNumber)
 		}
-	}
-}
-
-// getOrCreateReplicationWorkItem returns the DPNWorkItem for the specified
-// ReplicationTransfer from Pharos. If no DPNWorkItem for the specified
-// transfer exists, this creates it in Pharos and returns a copy of it.
-func (dpnQueue *DPNQueue) getOrCreateReplicationWorkItem(xfer *models.ReplicationTransfer) (*apt_models.DPNWorkItem) {
-	params := url.Values{}
-	params.Set("Identifier", xfer.ReplicationId)
-	params.Set("Task", constants.DPNTaskReplication)
-	getResp := dpnQueue.Context.PharosClient.DPNWorkItemList(params)
-	if getResp.Error != nil {
-		dpnQueue.err("Error getting DPNWorkItemList from Pharos: %v", getResp.Error)
-		return nil
-	}
-	existingItem := getResp.DPNWorkItem()
-	if existingItem != nil {
-		return existingItem
-	} else {
-		dpnWorkItem := &apt_models.DPNWorkItem{
-			Task: constants.DPNTaskReplication,
-			Identifier: xfer.ReplicationId,
-		}
-		createResp := dpnQueue.Context.PharosClient.DPNWorkItemSave(dpnWorkItem)
-		if createResp.Error != nil {
-			dpnQueue.err("Error creating DPNWorkItem for ReplicationXfer %s from %s: %v",
-				xfer.ReplicationId, xfer.FromNode, getResp.Error)
-			return nil
-		}
-		newItem := createResp.DPNWorkItem()
-		if newItem == nil {
-			dpnQueue.err("DPNWorkItemSave returned nil for ReplicationXfer %s from %s: %v",
-				xfer.ReplicationId, xfer.FromNode, getResp.Error)
-		}
-		return newItem
 	}
 }
 
@@ -214,27 +179,68 @@ func (dpnQueue *DPNQueue) queueReplication(dpnWorkItem *apt_models.DPNWorkItem, 
 // also want to skip transfers where accepted is true, because
 // those transfers are already in progress.
 func (dpnQueue *DPNQueue) queueRestoreRequests() {
-
-}
-
-// getOrCreateRestoreWorkItem returns the DPNWorkItem for the specified
-// RestoreTransfer from Pharos. If no DPNWorkItem for the specified
-// transfer exists, this creates it in Pharos and returns a copy of it.
-func (dpnQueue *DPNQueue) getOrCreateRestoreWorkItem(xfer *models.RestoreTransfer) {
-
+	pageNumber := 1
+	params := dpnQueue.restoreParams(pageNumber)
+	for {
+		dpnResp := dpnQueue.LocalClient.RestoreTransferList(params)
+		if dpnResp.Error != nil {
+			dpnQueue.err("Error getting RestoreTransfers from local node: %v", dpnResp.Error)
+			break
+		}
+		xfers := dpnResp.RestoreTransfers()
+		for _, xfer := range xfers {
+			queueItem := models.NewQueueItem(xfer.RestoreId)
+			dpnWorkItem := dpnQueue.getOrCreateWorkItem(xfer.RestoreId, constants.DPNTaskRestore)
+			queueItem.ItemId = dpnWorkItem.Id
+			if dpnWorkItem.QueuedAt.IsZero() {
+				dpnQueue.queueRestore(dpnWorkItem, xfer)
+			}
+			queueItem.QueuedAt = *dpnWorkItem.QueuedAt
+			dpnQueue.QueueResult.AddRestore(queueItem)
+		}
+		if dpnResp.Next == nil {
+			break
+		} else {
+			pageNumber += 1
+			params = dpnQueue.restoreParams(pageNumber)
+		}
+	}
 }
 
 // restoreParams returns the URL parameters we need to query our local
 // DPN REST server for RestoreTransfer requests that we will need to
 // service.
 func (dpnQueue *DPNQueue) restoreParams(pageNumber int) (url.Values) {
-	return nil
+	params := url.Values{}
+	params.Set("after", dpnQueue.ExamineItemsSince.Format(time.RFC3339))
+	params.Set("from_node", dpnQueue.Context.Config.DPN.LocalNode)
+	params.Set("cancelled", "false")
+	params.Set("finished", "false")
+	params.Set("accepted", "false")
+	params.Set("order_by", "updated_at")
+	params.Set("page_size", "100")
+	params.Set("page", strconv.Itoa(pageNumber))
+	return params
 }
 
 // queueRestore adds a RestoreTransfer to NSQ and records info about
 // when the item was queued in DPNWorkItem.QueuedAt, which is saved to Pharos.
 func (dpnQueue *DPNQueue) queueRestore(dpnWorkItem *apt_models.DPNWorkItem, xfer *models.RestoreTransfer) {
-
+	err := dpnQueue.Context.NSQClient.Enqueue(
+		dpnQueue.Context.Config.DPN.DPNRestoreWorker.NsqTopic,
+		dpnWorkItem.Id)
+	if err != nil {
+		dpnQueue.err("Error getting DPNWorkItemList from Pharos: %v", err)
+	} else {
+		*dpnWorkItem.QueuedAt = time.Now().UTC()
+		resp := dpnQueue.Context.PharosClient.DPNWorkItemSave(dpnWorkItem)
+		if resp.Error != nil {
+			dpnQueue.err("Error updating DPNWorkItem for RestoreXfer %s to %s: %v",
+				xfer.RestoreId, xfer.ToNode, resp.Error)
+			return
+		}
+		dpnWorkItem = resp.DPNWorkItem()
+	}
 }
 
 /***************************************************************************
@@ -267,6 +273,41 @@ func (dpnQueue *DPNQueue) queueIngest(workItem *apt_models.WorkItem) {
 /***************************************************************************
  Misc Utility Methods
 ***************************************************************************/
+
+// getOrCreateWorkItem returns the DPNWorkItem for the specified
+// replication/restore transfer from Pharos. If no DPNWorkItem for the specified
+// transfer exists, this creates it in Pharos and returns a copy of it.
+func (dpnQueue *DPNQueue) getOrCreateWorkItem(identifier, taskType string) (*apt_models.DPNWorkItem) {
+	params := url.Values{}
+	params.Set("identifier", identifier)
+	params.Set("task", taskType)
+	getResp := dpnQueue.Context.PharosClient.DPNWorkItemList(params)
+	if getResp.Error != nil {
+		dpnQueue.err("Error getting DPNWorkItemList from Pharos: %v", getResp.Error)
+		return nil
+	}
+	existingItem := getResp.DPNWorkItem()
+	if existingItem != nil {
+		return existingItem
+	} else {
+		dpnWorkItem := &apt_models.DPNWorkItem{
+			Task: taskType,
+			Identifier: identifier,
+		}
+		createResp := dpnQueue.Context.PharosClient.DPNWorkItemSave(dpnWorkItem)
+		if createResp.Error != nil {
+			dpnQueue.err("Error creating DPNWorkItem for %s Xfer %s: %v",
+				taskType, identifier, getResp.Error)
+			return nil
+		}
+		newItem := createResp.DPNWorkItem()
+		if newItem == nil {
+			dpnQueue.err("DPNWorkItemSave returned nil for %s Xfer %s: %v",
+				taskType, identifier, getResp.Error)
+		}
+		return newItem
+	}
+}
 
 // err logs an error and adds it to the QueueResult.Errors list.
 func (dpnQueue *DPNQueue) err(format string, a ...interface{}) {

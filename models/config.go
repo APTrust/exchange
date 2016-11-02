@@ -483,6 +483,9 @@ type DPNConfig struct {
 	// and through the DPN REST API.
 	DPNRecordWorker         WorkerConfig
 
+	// DPNRestoreWorker processed RestoreTransfer requests.
+	DPNRestoreWorker        WorkerConfig
+
 	// DPNStoreWorker copies DPN bags to AWS Glacier.
 	DPNStoreWorker          WorkerConfig
 
