@@ -98,7 +98,11 @@ class Context
 
   def start_volume_service
     if @volume_service_pid == 0
-
+      env = env_hash
+      cmd = "./apt_volume_service -config #{@exchange_root}/config/integration.json"
+      @volume_service_pid = Process.spawn(env, cmd, chdir: @go_bin_dir)
+      Process.detach @volume_service_pid
+      puts "Started volume service with command '#{cmd}' and pid #{@volume_service_pid}"
     end
   end
 
@@ -144,7 +148,7 @@ if __FILE__ == $0
   #c.reset_pharos_db
   #c.load_pharos_fixtures
 
-  c.start_nsq
-  sleep 20
-  c.stop_nsq
+  c.start_volume_service
+  sleep 10
+  c.stop_volume_service
 end
