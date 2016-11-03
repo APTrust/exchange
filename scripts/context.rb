@@ -75,7 +75,16 @@ class Context
 
   def start_nsq
     if @nsq_pid == 0
-
+      env = env_hash
+      cmd = "./nsq_service -config #{@exchange_root}/config/nsq/integration.config"
+      log_file = '/dev/null'
+      @nsq_pid = Process.spawn(env,
+                                  cmd,
+                                  chdir: @go_bin_dir,
+                                  out: [log_file, 'w'],
+                                  err: [log_file, 'w'])
+      Process.detach @nsq_pid
+      puts "Started NSQ service with command '#{cmd}' and pid #{@nsq_pid}"
     end
   end
 
@@ -135,7 +144,7 @@ if __FILE__ == $0
   #c.reset_pharos_db
   #c.load_pharos_fixtures
 
-  c.start_dpn_cluster
-  sleep 30
-  c.stop_dpn_cluster
+  c.start_nsq
+  sleep 20
+  c.stop_nsq
 end
