@@ -1,8 +1,10 @@
 require 'fileutils'
 
-# Context provides contextual information for the IntegrationTest module
-# that runs APTrust and DPN integration tests.
-class Context
+# The Serice class provides a means to start and stop services
+# for APTrust and DPN integration tests. It also provides access
+# to rake tasks that load fixtures and perform other fuctions
+# required for integration testing.
+class Service
 
   attr_reader :dpn_server_root, :exchange_root, :pharos_root
 
@@ -114,9 +116,33 @@ class Context
     end
   end
 
-  def start_dpn_cluster
-    # If this fails, you may have to call the DPN script setup_cluster.rb first.
+  def init_dpn_cluster
     if @dpn_cluster_pid == 0
+      env = env_hash
+      puts "Setting up DPN cluster"
+      cmd = "bundle exec ./script/setup_cluster.rb"
+      log_file = "#{@log_dir}/dpn_cluster_setup.log"
+      pid = Process.spawn(env,
+                          cmd,
+                          chdir: @dpn_server_root,
+                          out: [log_file, 'w'],
+                          err: [log_file, 'w'])
+      Process.wait pid
+      puts "Migrating DPN cluster"
+      cmd = "bundle exec ./script/migrate_cluster.rb"
+      log_file = "#{@log_dir}/dpn_cluster_migrate.log"
+      pid = Process.spawn(env,
+                          cmd,
+                          chdir: @dpn_server_root,
+                          out: [log_file, 'w'],
+                          err: [log_file, 'w'])
+      Process.wait pid
+    end
+  end
+
+  def start_dpn_cluster
+    if @dpn_cluster_pid == 0
+      self.init_dpn_cluster
       puts "Deleting old DPN cluster log files"
       FileUtils.rm Dir.glob("#{@dpn_server_root}/impersonate*")
       env = env_hash
@@ -144,11 +170,11 @@ class Context
 end
 
 if __FILE__ == $0
-  c = Context.new
+  s = Service.new
   #c.reset_pharos_db
   #c.load_pharos_fixtures
 
-  c.start_volume_service
-  sleep 10
-  c.stop_volume_service
+  s.start_dpn_cluster
+  sleep 30
+  s.stop_dpn_cluster
 end
