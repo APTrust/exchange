@@ -1,3 +1,5 @@
+// +build !windows
+
 package main
 
 import (
@@ -9,8 +11,12 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"os/signal"
 	"strings"
+	"syscall"
 )
+
+var children []*exec.Cmd
 
 // Start the NSQ services. You can kill then all with Control-C
 func main() {
@@ -24,19 +30,34 @@ func main() {
 		fmt.Println("    Ctrl-C stops all of those processes")
 		os.Exit(1)
 	}
+	children = make([]*exec.Cmd, 3)
+
+	sigchan := make(chan os.Signal, 1)
+	signal.Notify(sigchan,
+		syscall.SIGHUP,
+		syscall.SIGINT,
+		syscall.SIGTERM,
+		syscall.SIGQUIT)
+	go func() {
+		_ = <-sigchan
+		for _, cmd := range children {
+			cmd.Process.Kill()
+		}
+		os.Exit(0)
+	}()
+
 	run(*configFile)
 }
 
 // Run each of the services...
 func run(configFile string) {
-	fmt.Println("Starting NSQ processes. Use Control-C to quit all")
-	nsqlookupd := startProcess("nsqlookupd", "")
-
 	expandedDataDir, err := expandedDataDir(configFile)
 	if err != nil {
 		fmt.Println(err.Error())
 		os.Exit(1)
 	}
+	fmt.Println("Starting NSQ processes. Use Control-C to quit all")
+	nsqlookupd := startProcess("nsqlookupd", "")
 	var nsqd *exec.Cmd
 	configArg := fmt.Sprintf("--config=%s", configFile)
 	if expandedDataDir != "" {
@@ -46,6 +67,10 @@ func run(configFile string) {
 		nsqd = startProcess("nsqd", configArg)
 	}
 	nsqadmin := startProcess("nsqadmin", "--lookupd-http-address=127.0.0.1:4161")
+
+	children[0] = nsqlookupd
+	children[1] = nsqd
+	children[2] = nsqadmin
 
 	nsqlookupd.Wait()
 	nsqd.Wait()
