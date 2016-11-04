@@ -17,7 +17,7 @@ class IntegrationTest
     @context.clear_binaries
   end
 
-  def test_apt_ingest
+  def test_apt_ingest(more_tests_follow)
     begin
       # Build everything anew
       @build.build(@context.apps['nsq_service'])
@@ -49,7 +49,7 @@ class IntegrationTest
       sleep 10  # let nsq record topic fill before client connects
       @service.app_start(@context.apps['apt_record'])
       sleep 40  # allow fetch/store/record time to finish
-      @service.stop_everything
+      @service.stop_everything unless more_tests_follow
       sleep 5
 
       # Run the post tests.
@@ -60,9 +60,9 @@ class IntegrationTest
     rescue Exception => ex
       print_exception(ex)
     ensure
-      @service.stop_everything
+      @service.stop_everything unless more_tests_follow
     end
-    print_results
+    print_results unless more_tests_follow
   end
 
   def test_apt_send_to_dpn
@@ -102,7 +102,7 @@ class IntegrationTest
   # The DPN sync post test checks to ensure that all remote records
   # were synched as expected to the local node. Returns true/false
   # to indicate whether all tests passed.
-  def test_dpn_sync
+  def test_dpn_sync(more_tests_follow)
     begin
       dpn_sync = @context.apps['dpn_sync']
       @build.build(dpn_sync)
@@ -112,13 +112,52 @@ class IntegrationTest
     rescue Exception => ex
       print_exception(ex)
     ensure
-      @service.stop_everything
+      @service.stop_everything unless more_tests_follow
     end
-    print_results
+    print_results unless more_tests_follow
   end
 
-  def test_dpn_queue
+  # test_dpn_queue tests the dpn_queue application, which is responsible
+  # for finding and queueing 1) replication requests recently synched
+  # to our local DPN node that APTrust is responsible for fulfilling
+  # (i.e. APTrust is the to_node in those requests), and 2) WorkItems
+  # in Pharos that request an APTrust bag be pushed to DPN. Those are
+  # DPN ingests performed by APTrust. This test just checks to see that
+  # dpn_queue actually finds and queues all the right items.
+  #
+  # This runs apt_fetch, apt_store, and apt_record before dpn_queue,
+  # because we need to ingest the APTrust bags that we're going to
+  # mark for DPN.
+  def test_dpn_queue(more_tests_follow)
+    begin
+      @build.build(@context.apps['dpn_sync'])
+      @build.build(@context.apps['dpn_queue'])
+      #@build.build(@context.apps['dpn_copy']) # TODO: Test this when we can
+      @build.build(@context.apps['test_push_to_dpn'])
 
+      # Run all the ingest code first, so Pharos has
+      # bags that can be pushed to DPN. If ingest is OK,
+      # test_push_bags_to_dpn will mark a few APTrust
+      # bags for DPN ingest.
+      ingest_ok = test_apt_ingest(true)
+      if ingest_ok
+        @service.app_start(@context.apps['test_push_to_dpn'])
+        push_to_dpn_ok = test_dpn_sync(true)
+      else
+        puts "Skipping push_to_dpn test because of prior failures."
+      end
+      if push_to_dpn_ok
+        @service.app_start(@context.apps['dpn_queue'])
+        # TODO: Need dpn_queue post test here.
+      else
+        puts "Skipping dpn_queue test because of prior failures."
+      end
+    rescue Exception => ex
+      print_exception(ex)
+    ensure
+      @service.stop_everything unless more_tests_follow
+    end
+    print_results unless more_tests_follow
   end
 
   def test_dpn_ingest
@@ -168,5 +207,5 @@ if __FILE__ == $0
   #test.test_dpn_rest_client
   #test.test_dpn_sync
   #test.test_units
-  test.test_apt_ingest
+  test.test_dpn_queue(false)
 end

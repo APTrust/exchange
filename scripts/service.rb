@@ -217,7 +217,10 @@ class Service
   def stop_apt_and_dpn_services()
     @pids.each do |app_name, pid|
       begin
-        Process.kill('TERM', pid) unless pid.nil? || pid <= 0
+        if !pid.nil? && pid > 0
+          Process.kill('TERM', pid)
+          puts "Stopped #{app_name}"
+        end
       rescue
         # Process wasn't running
       end

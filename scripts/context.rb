@@ -15,7 +15,7 @@ class Context
     @nsq_data_dir = "#{ENV['HOME']}/tmp/nsq"
     @go_bin_dir = "#{ENV['HOME']}/tmp/bin"
 
-    @verbose = true # make this a command-line option
+    @verbose = false # make this a command-line option
 
     # This is the list of apps we can compile. The key is the app name,
     # and the value is the directory that contains the app's source code.
