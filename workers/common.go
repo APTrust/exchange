@@ -95,7 +95,7 @@ func GetWorkItem(message *nsq.Message, _context *context.Context) (*models.WorkI
 	}
 	resp := _context.PharosClient.WorkItemGet(workItemId)
 	if resp.Error != nil {
-		return nil, fmt.Errorf("Error getting WorkItem %d from Pharos: %v", err)
+		return nil, fmt.Errorf("Error getting WorkItem %d from Pharos: %v", workItemId, resp.Error)
 	}
 	workItem := resp.WorkItem()
 	if workItem == nil {
