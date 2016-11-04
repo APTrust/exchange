@@ -1,10 +1,10 @@
 {
     "Comment": "Configuration for APTrust integration testing.",
 
-    "TarDirectory": "~/tmp/test_tar",
-    "LogDirectory": "~/tmp/test_logs",
-    "RestoreDirectory": "~/tmp/test_restore",
-    "ReplicationDirectory": "~/tmp/test_replicate",
+    "TarDirectory": "~/tmp/tar",
+    "LogDirectory": "~/tmp/logs",
+    "RestoreDirectory": "~/tmp/restore",
+    "ReplicationDirectory": "~/tmp/replicate",
     "MaxFileSize": 100000000,
     "SkipAlreadyProcessed": true,
     "DeleteOnSuccess": false,
