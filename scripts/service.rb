@@ -5,6 +5,9 @@ require_relative 'context'
 # for APTrust and DPN integration tests. It also provides access
 # to rake tasks that load fixtures and perform other fuctions
 # required for integration testing.
+#
+# Note: Currently, for this to work, `rbenv local` must be 2.3.0
+# in the exchange root dir, the pharos root dir and the dpn root dir.
 class Service
 
   def initialize(context)
@@ -70,7 +73,7 @@ class Service
       log_file = "#{@ctx.log_dir}/dpn_cluster_setup.log"
       pid = Process.spawn(env,
                           cmd,
-                          chdir: @dpn_server_root,
+                          chdir: @ctx.dpn_server_root,
                           out: [log_file, 'w'],
                           err: [log_file, 'w'])
       Process.wait pid
@@ -79,7 +82,7 @@ class Service
       log_file = "#{@ctx.log_dir}/dpn_cluster_migrate.log"
       pid = Process.spawn(env,
                           cmd,
-                          chdir: @dpn_server_root,
+                          chdir: @ctx.dpn_server_root,
                           out: [log_file, 'w'],
                           err: [log_file, 'w'])
       Process.wait pid
@@ -88,15 +91,17 @@ class Service
 
   def dpn_cluster_start
     if @dpn_cluster_pid == 0
-      self.init_dpn_cluster
+      dpn_cluster_init
       puts "Deleting old DPN cluster log files"
-      FileUtils.rm Dir.glob("#{@dpn_server_root}/impersonate*")
+      FileUtils.rm Dir.glob("#{@ctx.dpn_server_root}/impersonate*")
       env = env_hash
-      cmd = "bundle exec ./script/run_cluster.rb"
+      # The -f flag tells Rails to load the test data fixtures
+      # before it starts the cluster.
+      cmd = "bundle exec ./script/run_cluster.rb -f"
       log_file = "#{@ctx.log_dir}/dpn_cluster.log"
       @dpn_cluster_pid = Process.spawn(env,
                                   cmd,
-                                  chdir: @dpn_server_root,
+                                  chdir: @ctx.dpn_server_root,
                                   out: [log_file, 'w'],
                                   err: [log_file, 'w'])
       Process.detach @dpn_cluster_pid
