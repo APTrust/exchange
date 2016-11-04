@@ -44,5 +44,31 @@ class TestRunner
     return $?.exitstatus == 0
   end
 
+  def run_bucket_reader_post_test
+    return run_integration_post_test('go test apt_bucket_reader_test.go')
+  end
+
+  def run_apt_fetch_post_test
+    return run_integration_post_test('go test apt_fetch_test.go')
+  end
+
+  def run_apt_store_post_test
+    return run_integration_post_test('go test apt_store_test.go')
+  end
+
+  def run_apt_record_post_test
+    return run_integration_post_test('go test apt_record_test.go')
+  end
+
+  private
+
+  def run_integration_post_test(cmd)
+    env = @context.env_hash
+    env['RUN_EXCHANGE_INTEGRATION'] = 'true'
+    dir = "#{@context.exchange_root}/integration"
+    pid = Process.spawn(env, cmd, chdir: dir)
+    Process.wait pid
+    return $?.exitstatus == 0
+  end
 
 end

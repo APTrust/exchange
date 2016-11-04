@@ -13,15 +13,56 @@ class IntegrationTest
     @results = {}
     @context.make_test_dirs
     @context.clear_logs
+    @context.clear_nsq_data
     @context.clear_binaries
   end
 
-  def test_bucket_reader
-
-  end
-
   def test_apt_ingest
+    begin
+      # Build everything anew
+      @build.build(@context.apps['nsq_service'])
+      @build.build(@context.apps['apt_volume_service'])
+      @build.build(@context.apps['apt_bucket_reader'])
+      @build.build(@context.apps['apt_fetch'])
+      @build.build(@context.apps['apt_store'])
+      @build.build(@context.apps['apt_record'])
 
+      # Start all required services.
+      # Some sleep statements below all NSQ topics to fill before
+      # a worker connects. This speeds up testing because when a
+      # worker queries an empty or non-existent NSQ channel, it will
+      # doze off and not re-check that channel for a minute or so.
+      # We don't really want that minute lag time for each worker.
+      # If the workers query an existing, populated channel, they'll
+      # get right to work. That shaves 2-3 minutes off our integration
+      # test time.
+      @service.pharos_reset_db
+      @service.pharos_load_fixtures
+      @service.pharos_start
+      @service.app_start(@context.apps['apt_volume_service'])
+      @service.nsq_start
+      sleep 10  # give all services time to start
+      @service.app_start(@context.apps['apt_bucket_reader'])
+      @service.app_start(@context.apps['apt_fetch'])
+      sleep 10  # let nsq store topic fill before client connects
+      @service.app_start(@context.apps['apt_store'])
+      sleep 10  # let nsq record topic fill before client connects
+      @service.app_start(@context.apps['apt_record'])
+      sleep 40  # allow fetch/store/record time to finish
+      @service.stop_everything
+      sleep 5
+
+      # Run the post tests.
+      @results['apt_bucket_reader_test'] = @test_runner.run_bucket_reader_post_test
+      @results['apt_fetch_test'] = @test_runner.run_apt_fetch_post_test
+      @results['apt_store_test'] = @test_runner.run_apt_store_post_test
+      @results['apt_record_test'] = @test_runner.run_apt_record_post_test
+    rescue Exception => ex
+      print_exception(ex)
+    ensure
+      @service.stop_everything
+    end
+    print_results
   end
 
   def test_apt_send_to_dpn
@@ -33,6 +74,10 @@ class IntegrationTest
   end
 
   def test_apt_delete
+
+  end
+
+  def test_bucket_reader
 
   end
 
@@ -122,5 +167,6 @@ if __FILE__ == $0
   test = IntegrationTest.new(context)
   #test.test_dpn_rest_client
   #test.test_dpn_sync
-  test.test_units
+  #test.test_units
+  test.test_apt_ingest
 end

@@ -32,7 +32,15 @@ class Service
     if pid == 0
       env = @context.env_hash
       cmd = "./#{app.name} -config #{@context.exchange_root}/config/integration.json"
-      pid = Process.spawn(env, cmd, chdir: @context.go_bin_dir, out: '/dev/null', err: '/dev/null')
+      if app.name == 'apt_bucket_reader'
+        cmd += " -stats=#{@context.log_dir}/bucket_reader_stats.json"
+      end
+
+      if @context.verbose
+        pid = Process.spawn(env, cmd, chdir: @context.go_bin_dir)
+      else
+        pid = Process.spawn(env, cmd, chdir: @context.go_bin_dir, out: '/dev/null', err: '/dev/null')
+      end
 
       if app.run_as == 'service'
         Process.detach pid
