@@ -105,13 +105,19 @@ class Service
                                   err: [log_file, 'w'])
       Process.detach @dpn_cluster_pid
       puts "Started DPN cluster with command '#{cmd}' and pid #{@dpn_cluster_pid}"
+      puts "Waiting 30 seconds for all nodes to come online"
+      sleep 30
     end
   end
 
   def dpn_cluster_stop
     if @dpn_cluster_pid != 0
-      puts "Stopping DPN cluster (pid #{@dpn_cluster_pid})"
-      Process.kill('TERM', @dpn_cluster_pid)
+      begin
+        Process.kill('TERM', @dpn_cluster_pid)
+        puts "Stopped DPN cluster (pid #{@dpn_cluster_pid})"
+      rescue
+        # DPN cluster wasn't running.
+      end
       @dpn_cluster_pid = 0
     end
   end
@@ -133,8 +139,12 @@ class Service
 
   def nsq_stop
     if @nsq_pid != 0
-      puts "Stopping NSQ service (pid #{@nsq_pid})"
-      Process.kill('TERM', @nsq_pid)
+      begin
+        Process.kill('TERM', @nsq_pid)
+        puts "Stopped NSQ service (pid #{@nsq_pid})"
+      rescue
+        # nsqd wasn't running.
+      end
       @nsq_pid = 0
     end
   end
@@ -176,9 +186,34 @@ class Service
 
   def pharos_stop
     if @pharos_pid != 0
-      puts "Stopping Pharos (pid #{@pharos_pid})"
-      Process.kill('TERM', @pharos_pid)
+      begin
+        Process.kill('TERM', @pharos_pid)
+        puts "Stopped Pharos (pid #{@pharos_pid})"
+      rescue
+        # Service wasn't running
+      end
       @pharos_pid = 0
+    end
+  end
+
+  # Stops all services
+  def stop_everything
+    stop_apt_and_dpn_services
+    dpn_cluster_stop
+    pharos_stop
+    nsq_stop
+  end
+
+  # Stops all apt_* and dpn_* services, but leaves external services
+  # like NSQ, DPN REST and Pharos running.
+  def stop_apt_and_dpn_services()
+    @pids.each do |app_name, pid|
+      begin
+        Process.kill('TERM', pid) unless pid.nil? || pid <= 0
+      rescue
+        # Process wasn't running
+      end
+      @pids[app_name] = 0
     end
   end
 

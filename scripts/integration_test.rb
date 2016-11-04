@@ -40,11 +40,11 @@ class IntegrationTest
   def test_dpn_rest_client
     begin
       @service.dpn_cluster_start
-      puts "Waiting 30 seconds for cluster to start..."
-      sleep 30
       @test_runner.run_dpn_rest_client_test
+    rescue Exception => ex
+      print_exception(ex)
     ensure
-      @service.dpn_cluster_stop
+      @service.stop_everything
     end
   end
 
@@ -58,14 +58,12 @@ class IntegrationTest
       dpn_sync = @context.apps['dpn_sync']
       @build.build(dpn_sync)
       @service.dpn_cluster_start
-      puts "Waiting 30 seconds for cluster to start..."
-      sleep 30
       @service.app_start(dpn_sync)
       @test_runner.run_dpn_sync_post_test
     rescue Exception => ex
-      puts ex
-      puts ex.backtrace
-      @service.dpn_cluster_stop
+      print_exception(ex)
+    ensure
+      @service.stop_everything
     end
   end
 
@@ -80,10 +78,17 @@ class IntegrationTest
   def test_dpn_replicate
 
   end
+
+  def print_exception(ex)
+    puts ex
+    puts ex.backtrace
+  end
+
 end
 
 if __FILE__ == $0
   context = Context.new
   test = IntegrationTest.new(context)
+  #test.test_dpn_rest_client
   test.test_dpn_sync
 end
