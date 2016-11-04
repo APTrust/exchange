@@ -62,7 +62,11 @@ class IntegrationTest
     ensure
       @service.stop_everything unless more_tests_follow
     end
-    print_results unless more_tests_follow
+    if more_tests_follow
+      return all_tests_passed?
+    else
+      return print_results
+    end
   end
 
   def test_apt_send_to_dpn
@@ -84,16 +88,20 @@ class IntegrationTest
   # test_dpn_rest_client tests the DPN REST client against a
   # locally-running DPN cluster. Returns true if all tests passed,
   # false otherwise.
-  def test_dpn_rest_client
+  def test_dpn_rest_client(more_tests_follow)
     begin
       @service.dpn_cluster_start
       @results['dpn_rest_client_test'] = @test_runner.run_dpn_rest_client_test
     rescue Exception => ex
       print_exception(ex)
     ensure
-      @service.stop_everything
+      @service.stop_everything unless more_tests_follow
     end
-    print_results
+    if more_tests_follow
+      return all_tests_passed?
+    else
+      return print_results
+    end
   end
 
   # test_dpn_sync tests the dpn_sync app against a locally-running
@@ -114,7 +122,11 @@ class IntegrationTest
     ensure
       @service.stop_everything unless more_tests_follow
     end
-    print_results unless more_tests_follow
+    if more_tests_follow
+      return all_tests_passed?
+    else
+      return print_results
+    end
   end
 
   # test_dpn_queue tests the dpn_queue application, which is responsible
@@ -157,7 +169,11 @@ class IntegrationTest
     ensure
       @service.stop_everything unless more_tests_follow
     end
-    print_results unless more_tests_follow
+    if more_tests_follow
+      return all_tests_passed?
+    else
+      return print_results
+    end
   end
 
   def test_dpn_ingest
@@ -197,6 +213,13 @@ class IntegrationTest
     end
     puts "\n"
     return all_tests_passed
+  end
+
+  def all_tests_passed?
+    @results.each do |test_name, passed|
+      return false unless passed
+    end
+    return true
   end
 
 end
