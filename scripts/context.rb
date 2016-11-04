@@ -33,6 +33,17 @@ class Context
     }
   end
 
+  # env_hash returns a hash of environment variables that can be passed
+  # to processes we spawn, such as REST services or go tests.
+  def env_hash
+    env = {}
+    ENV.each{ |k,v| env[k] = v }
+    # Are APTrust and DPN on the same ruby verson?
+    env['RBENV_VERSION'] = `cat #{@pharos_root}/.ruby-version`.chomp
+    env['RAILS_ENV'] = 'integration'
+    env
+  end
+
   def make_test_dirs
     FileUtils.mkdir_p @log_dir
     FileUtils.mkdir_p @go_bin_dir

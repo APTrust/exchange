@@ -5,27 +5,26 @@ require_relative 'context'
 class Build
 
   def initialize(context)
-    @ctx = context
+    @context = context
   end
 
-  def build(app_name)
-    app = @ctx.apps[app_name]
+  def build(app)
     if app == nil
-      raise "Cannot build unknown app #{app_name}"
+      raise "App cannot be nil"
     end
-    cmd = "go build -o #{@ctx.go_bin_dir}/#{app_name} #{app_name}.go"
-    source_dir = "#{@ctx.exchange_root}/apps/#{app_name}"
+    cmd = "go build -o #{@context.go_bin_dir}/#{app.name} #{app.name}.go"
+    source_dir = "#{@context.exchange_root}/apps/#{app.name}"
     puts cmd
     pid = Process.spawn(cmd, chdir: source_dir)
     Process.wait pid
     if $?.exitstatus != 0
-      raise "Build failed for #{app_name}"
+      raise "Build failed for #{app.name}"
     end
   end
 
   def build_all()
-    @ctx.apps.values.each do |app|
-      build(app.name)
+    @context.apps.values.each do |app|
+      build(app)
     end
   end
 

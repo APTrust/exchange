@@ -1,5 +1,6 @@
 require_relative 'build'
 require_relative 'service'
+require_relative 'test_runner'
 
 # IntegrationTest runs integration tests for APTrust and DPN code.
 class IntegrationTest
@@ -8,6 +9,7 @@ class IntegrationTest
     @context = context
     @build = Build.new(context)
     @service = Service.new(context)
+    @test_runner = TestRunner.new(context)
     @context.make_test_dirs
     @context.clear_logs
     @context.clear_binaries
@@ -33,23 +35,38 @@ class IntegrationTest
 
   end
 
-  # Test the DPN REST client against a locally-running DPN cluster.
+  # test_dpn_rest_client tests the DPN REST client against a
+  # locally-running DPN cluster.
   def test_dpn_rest_client
     begin
       @service.dpn_cluster_start
       puts "Waiting 30 seconds for cluster to start..."
       sleep 30
-      cmd = "go test dpn_rest_client_test.go"
-      dir = "#{@context.exchange_root}/dpn/network"
-      pid = Process.spawn(cmd, chdir: dir)
-      Process.wait pid
+      @test_runner.run_dpn_rest_client_test
     ensure
       @service.dpn_cluster_stop
     end
   end
 
+  # test_dpn_sync tests the dpn_sync app against a locally-running
+  # DPN cluster. dpn_sync runs as a cron job in our staging and
+  # production environments, and exits on its own when it's done.
+  # The DPN sync post test checks to ensure that all remote records
+  # were synched as expected to the local node.
   def test_dpn_sync
-
+    begin
+      dpn_sync = @context.apps['dpn_sync']
+      @build.build(dpn_sync)
+      @service.dpn_cluster_start
+      puts "Waiting 30 seconds for cluster to start..."
+      sleep 30
+      @service.app_start(dpn_sync)
+      @test_runner.run_dpn_sync_post_test
+    rescue Exception => ex
+      puts ex
+      puts ex.backtrace
+      @service.dpn_cluster_stop
+    end
   end
 
   def test_dpn_queue
@@ -68,5 +85,5 @@ end
 if __FILE__ == $0
   context = Context.new
   test = IntegrationTest.new(context)
-  test.test_dpn_rest_client
+  test.test_dpn_sync
 end

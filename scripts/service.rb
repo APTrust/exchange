@@ -11,23 +11,14 @@ require_relative 'context'
 class Service
 
   def initialize(context)
-    @ctx = context
+    @context = context
     @dpn_cluster_pid = 0
     @nsq_pid = 0
     @pharos_pid = 0
     @pids = {}
-    @ctx.apps.values.each do |app|
+    @context.apps.values.each do |app|
       @pids[app.name] = 0 unless app.run_as == 'special'
     end
-  end
-
-  def env_hash
-    env = {}
-    ENV.each{ |k,v| env[k] = v }
-    # Are APTrust and DPN on the same ruby verson?
-    env['RBENV_VERSION'] = `cat #{@ctx.pharos_root}/.ruby-version`.chomp
-    env['RAILS_ENV'] = 'integration'
-    env
   end
 
   def app_start(app)
@@ -39,10 +30,18 @@ class Service
       raise "Cannot start unknown app #{app.name}"
     end
     if pid == 0
-      env = env_hash
-      cmd = "./#{app.name} -config #{@ctx.exchange_root}/config/integration.json"
-      pid = Process.spawn(env, cmd, chdir: @ctx.go_bin_dir)
-      Process.detach pid
+      env = @context.env_hash
+      cmd = "./#{app.name} -config #{@context.exchange_root}/config/integration.json"
+      pid = Process.spawn(env, cmd, chdir: @context.go_bin_dir, out: '/dev/null', err: '/dev/null')
+
+      if app.run_as == 'service'
+        Process.detach pid
+      elsif app.run_as == 'application'
+        Process.wait pid
+      else
+        puts "Don't know what to do with #{app.name}, run_as #{app.run_as}, so waiting..."
+        Process.wait pid
+      end
       puts "Started #{app.name} with command '#{cmd}' and pid #{pid}"
       @pids[app.name] = pid
     end
@@ -67,22 +66,22 @@ class Service
 
   def dpn_cluster_init
     if @dpn_cluster_pid == 0
-      env = env_hash
+      env = @context.env_hash
       puts "Setting up DPN cluster"
       cmd = "bundle exec ./script/setup_cluster.rb"
-      log_file = "#{@ctx.log_dir}/dpn_cluster_setup.log"
+      log_file = "#{@context.log_dir}/dpn_cluster_setup.log"
       pid = Process.spawn(env,
                           cmd,
-                          chdir: @ctx.dpn_server_root,
+                          chdir: @context.dpn_server_root,
                           out: [log_file, 'w'],
                           err: [log_file, 'w'])
       Process.wait pid
       puts "Migrating DPN cluster"
       cmd = "bundle exec ./script/migrate_cluster.rb"
-      log_file = "#{@ctx.log_dir}/dpn_cluster_migrate.log"
+      log_file = "#{@context.log_dir}/dpn_cluster_migrate.log"
       pid = Process.spawn(env,
                           cmd,
-                          chdir: @ctx.dpn_server_root,
+                          chdir: @context.dpn_server_root,
                           out: [log_file, 'w'],
                           err: [log_file, 'w'])
       Process.wait pid
@@ -93,15 +92,15 @@ class Service
     if @dpn_cluster_pid == 0
       dpn_cluster_init
       puts "Deleting old DPN cluster log files"
-      FileUtils.rm Dir.glob("#{@ctx.dpn_server_root}/impersonate*")
-      env = env_hash
+      FileUtils.rm Dir.glob("#{@context.dpn_server_root}/impersonate*")
+      env = @context.env_hash
       # The -f flag tells Rails to load the test data fixtures
       # before it starts the cluster.
       cmd = "bundle exec ./script/run_cluster.rb -f"
-      log_file = "#{@ctx.log_dir}/dpn_cluster.log"
+      log_file = "#{@context.log_dir}/dpn_cluster.log"
       @dpn_cluster_pid = Process.spawn(env,
                                   cmd,
-                                  chdir: @ctx.dpn_server_root,
+                                  chdir: @context.dpn_server_root,
                                   out: [log_file, 'w'],
                                   err: [log_file, 'w'])
       Process.detach @dpn_cluster_pid
@@ -119,12 +118,12 @@ class Service
 
   def nsq_start
     if @nsq_pid == 0
-      env = env_hash
-      cmd = "./nsq_service -config #{@ctx.exchange_root}/config/nsq/integration.config"
+      env = @context.env_hash
+      cmd = "./nsq_service -config #{@context.exchange_root}/config/nsq/integration.config"
       log_file = '/dev/null'
       @nsq_pid = Process.spawn(env,
                                   cmd,
-                                  chdir: @ctx.go_bin_dir,
+                                  chdir: @context.go_bin_dir,
                                   out: [log_file, 'w'],
                                   err: [log_file, 'w'])
       Process.detach @nsq_pid
@@ -142,32 +141,32 @@ class Service
 
   def pharos_reset_db
     puts "Resetting Pharos DB"
-    env = env_hash
+    env = @context.env_hash
     cmd = 'rbenv exec rake pharos:empty_db'
-    log_file = "#{@ctx.log_dir}/pharos.log"
-    pid = Process.spawn(env, cmd, chdir: @ctx.pharos_root)
+    log_file = "#{@context.log_dir}/pharos.log"
+    pid = Process.spawn(env, cmd, chdir: @context.pharos_root)
     Process.wait pid
     puts "Finished resetting Pharos DB"
   end
 
   def pharos_load_fixtures
     puts "Loading Pharos fixtures"
-    env = env_hash
+    env = @context.env_hash
     cmd = 'rbenv exec rake db:fixtures:load'
-    log_file = "#{@ctx.log_dir}/pharos.log"
-    pid = Process.spawn(env, cmd, chdir: @ctx.pharos_root)
+    log_file = "#{@context.log_dir}/pharos.log"
+    pid = Process.spawn(env, cmd, chdir: @context.pharos_root)
     Process.wait pid
     puts "Finished loading Pharos fixtures"
   end
 
   def pharos_start
     if @pharos_pid == 0
-      env = env_hash
+      env = @context.env_hash
       cmd = 'rbenv exec rails server'
-      log_file = "#{@ctx.log_dir}/pharos.log"
+      log_file = "#{@context.log_dir}/pharos.log"
       @pharos_pid = Process.spawn(env,
                                   cmd,
-                                  chdir: @ctx.pharos_root,
+                                  chdir: @context.pharos_root,
                                   out: [log_file, 'w'],
                                   err: [log_file, 'w'])
       Process.detach @pharos_pid
