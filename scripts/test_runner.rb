@@ -5,6 +5,17 @@ class TestRunner
     @context = context
   end
 
+  # run_all_unit_tests runs all of the APTrust and DPN unit tests.
+  # These tests do not require any outside services to run, and
+  # they omit a handful of tests that do require outside services.
+  def run_all_unit_tests
+    env = @context.env_hash
+    cmd = "go test $(go list ./... | grep -v /vendor/)"
+    pid = Process.spawn(env, cmd, chdir: @context.exchange_root)
+    Process.wait pid
+    return $?.exitstatus == 0
+  end
+
   # dpn_rest_client test runs our Go DPN REST client against a locally-running
   # DPN cluster. The DPN REST client is in exchange/dpn/network.
   # Returns true if tests passed.
