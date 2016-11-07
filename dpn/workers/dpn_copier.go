@@ -61,6 +61,8 @@ func NewDPNCopier(_context *context.Context) (*DPNCopier, error) {
 func (copier *DPNCopier) HandleMessage(message *nsq.Message) error {
 	message.DisableAutoResponse()
 
+	copier.Context.MessageLog.Info("Checking NSQ message %s", string(message.Body))
+
 	// Get the DPNWorkItem, the ReplicationTransfer, and the DPNBag
 	manifest := copier.buildReplicationManifest(message)
 	if manifest.CopySummary.HasErrors() {

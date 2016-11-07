@@ -13,6 +13,7 @@ import (
 	"net/http"
 	"net/url"
 	"testing"
+	"time"
 )
 
 var port = 8818
@@ -25,6 +26,7 @@ func runService(t *testing.T) {
 		volumeService = service.NewVolumeService(port, log)
 		require.NotNil(t, volumeService)
 		go volumeService.Serve()
+		time.Sleep(800 * time.Millisecond)
 	}
 }
 

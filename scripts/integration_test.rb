@@ -176,15 +176,15 @@ class IntegrationTest
 
   def test_dpn_copy(more_tests_follow)
     begin
-      @build.build(@context.apps['dpn_copy']) # TODO: Test this when we can
+      @build.build(@context.apps['dpn_copy'])
       # Run the prerequisite code first.
       queue_ok = test_dpn_queue(true)
       if queue_ok
         @service.app_start(@context.apps['dpn_copy'])
         sleep 30
-        # TODO: Need dpn_queue post test here.
+        # TODO: Need dpn_copy post test here.
       else
-        puts "Skipping dpn_queue test because of prior failures."
+        puts "Skipping dpn_copy test because of prior failures."
       end
     rescue Exception => ex
       print_exception(ex)
