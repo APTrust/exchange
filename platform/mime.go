@@ -13,9 +13,9 @@ import (
 
 var IsPartnerBuild = false
 
-// magicMime is the MimeMagic database. We want
+// decoder is the MimeMagic database. We want
 // just one copy of this open at a time.
-var magicMime *magicmime.Magic
+var decoder *magicmime.Decoder
 
 // We need to restrict access to the underlying MagicMime
 // C library, because it sometimes fails or returns nonsense
@@ -27,8 +27,8 @@ var validMimeType = regexp.MustCompile(`^\w+/\w+$`)
 
 func GuessMimeType(absPath string) (mimeType string, err error) {
 	// Open the Mime Magic DB only once.
-	if magicMime == nil {
-		magicMime, err = magicmime.New(magicmime.MAGIC_MIME_TYPE)
+	if decoder == nil {
+		decoder, err = magicmime.NewDecoder(magicmime.MAGIC_MIME_TYPE)
 		if err != nil {
 			return "", fmt.Errorf("Error opening MimeMagic database: %v", err)
 		}
@@ -42,7 +42,7 @@ func GuessMimeType(absPath string) (mimeType string, err error) {
 	// MagicMime returned something that looks legit.
 	mimeType = "application/binary"
 	mutex.Lock()
-	guessedType, _ := magicMime.TypeByFile(absPath)
+	guessedType, _ := decoder.TypeByFile(absPath)
 	mutex.Unlock()
 	if guessedType != "" && validMimeType.MatchString(guessedType) {
 		mimeType = guessedType
@@ -52,8 +52,8 @@ func GuessMimeType(absPath string) (mimeType string, err error) {
 
 func GuessMimeTypeByBuffer(buf []byte) (mimeType string, err error) {
 	// Open the Mime Magic DB only once.
-	if magicMime == nil {
-		magicMime, err = magicmime.New(magicmime.MAGIC_MIME_TYPE)
+	if decoder == nil {
+		decoder, err = magicmime.NewDecoder(magicmime.MAGIC_MIME_TYPE)
 		if err != nil {
 			return "", fmt.Errorf("Error opening MimeMagic database: %v", err)
 		}
@@ -67,7 +67,7 @@ func GuessMimeTypeByBuffer(buf []byte) (mimeType string, err error) {
 	// MagicMime returned something that looks legit.
 	mimeType = "application/binary"
 	mutex.Lock()
-	guessedType, _ := magicMime.TypeByBuffer(buf)
+	guessedType, _ := decoder.TypeByBuffer(buf)
 	mutex.Unlock()
 	if guessedType != "" && validMimeType.MatchString(guessedType) {
 		mimeType = guessedType
