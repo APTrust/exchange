@@ -98,7 +98,12 @@ class Service
 
   def dpn_cluster_start
     if @dpn_cluster_pid == 0
-      dpn_cluster_init
+
+      # NOTE: We need to run dpn_cluster_init only if we've never run
+      # the DPN cluster before on this machine, or if there are pending
+      # DPN migrations.
+      dpn_cluster_init if @context.run_dpn_cluster_init
+
       puts "Deleting old DPN cluster log files"
       FileUtils.rm Dir.glob("#{@context.dpn_server_root}/impersonate*")
       env = @context.env_hash
