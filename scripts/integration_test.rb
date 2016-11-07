@@ -142,9 +142,7 @@ class IntegrationTest
   # mark for DPN.
   def test_dpn_queue(more_tests_follow)
     begin
-      @build.build(@context.apps['dpn_sync'])
       @build.build(@context.apps['dpn_queue'])
-      #@build.build(@context.apps['dpn_copy']) # TODO: Test this when we can
       @build.build(@context.apps['test_push_to_dpn'])
 
       # Run all the ingest code first, so Pharos has
@@ -175,6 +173,31 @@ class IntegrationTest
       return print_results
     end
   end
+
+  def test_dpn_copy(more_tests_follow)
+    begin
+      @build.build(@context.apps['dpn_copy']) # TODO: Test this when we can
+      # Run the prerequisite code first.
+      queue_ok = test_dpn_queue(true)
+      if queue_ok
+        @service.app_start(@context.apps['dpn_copy'])
+        sleep 30
+        # TODO: Need dpn_queue post test here.
+      else
+        puts "Skipping dpn_queue test because of prior failures."
+      end
+    rescue Exception => ex
+      print_exception(ex)
+    ensure
+      @service.stop_everything unless more_tests_follow
+    end
+    if more_tests_follow
+      return all_tests_passed?
+    else
+      return print_results
+    end
+  end
+
 
   def test_dpn_ingest
 
@@ -230,5 +253,5 @@ if __FILE__ == $0
   #test.test_dpn_rest_client
   #test.test_dpn_sync
   #test.test_units
-  test.test_dpn_queue(false)
+  test.test_dpn_copy(false)
 end
