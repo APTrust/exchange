@@ -2,14 +2,33 @@ package network
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
+	"github.com/nsqio/nsq/nsqd"
 	"io/ioutil"
 	"net/http"
 	"strconv"
 )
 
+// NSQStats contains info about the status of NSQ and its topics
+// and queues. This info comes from a GET call to the /stats endpoint.
+type NSQStats struct {
+	StatusCode int          `json:"status_code"`
+	StatusText string       `json:"status_txt"`
+	Data       NSQStatsData `json:"data"`
+
+}
+// NSQStats data contains the important info returned by a call
+// to NSQ's /stats endpoint, including the number of items in each
+// topic and queue.
+type NSQStatsData struct {
+	Version string           `json:"version"`
+	Health string            `json:"status_code"`
+	Topics []nsqd.TopicStats `json:"topics"`
+}
+
 type NSQClient struct {
-	URL string
+       URL string
 }
 
 // Returns a new NSQ client that will connect to the NSQ server
@@ -54,4 +73,35 @@ func (client *NSQClient)Enqueue(topic string, workItemId int) error {
 			"Response body: %s", resp.StatusCode, bodyText)
 	}
 	return nil
+}
+
+// GetStats allows us to get some basic stats from NSQ. The NSQ /stats endpoint
+// returns a richer set of stats than what this fuction returns, but we only
+// need some basic data for integration tests, so that's all we're parsing.
+// The return value is a map whose key is the topic name and whose value is
+// an NSQTopicStats object. NSQ is supposed to support topic_name as a query
+// param, but this doesn't seem to be working in NSQ 0.3.0, so we're just
+// returning stats for all topics right now. Also note that requests to
+// /stats/ (with trailing slash) produce a 404.
+func (client *NSQClient) GetStats() (*NSQStats, error) {
+	url := fmt.Sprintf("%s/stats", client.URL)
+	resp, err := http.Post(url, "text/html", nil)
+	if err != nil {
+		return nil, err
+	}
+	body, err := ioutil.ReadAll(resp.Body)
+	resp.Body.Close()
+	if err != nil {
+		return nil, err
+	}
+	if resp.StatusCode != 200 {
+		return nil, fmt.Errorf("NSQ returned status code %d, body: %s",
+			resp.StatusCode, body)
+	}
+	stats := &NSQStats{}
+	err = json.Unmarshal(body, stats)
+	if err != nil {
+		return nil, err
+	}
+	return stats, nil
 }
