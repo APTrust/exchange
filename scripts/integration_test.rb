@@ -158,7 +158,7 @@ class IntegrationTest
       end
       if push_to_dpn_ok
         @service.app_start(@context.apps['dpn_queue'])
-        # TODO: Need dpn_queue post test here.
+        @results['dpn_queue_test'] = @test_runner.run_dpn_queue_post_test
       else
         puts "Skipping dpn_queue test because of prior failures."
       end

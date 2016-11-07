@@ -44,6 +44,19 @@ class TestRunner
     return $?.exitstatus == 0
   end
 
+  # This runs the the dpn_queue post test, to ensure that items
+  # marked for DPN by apps/test_push_to_dpn have WorkItems created
+  # and have been pushed into NSQ.
+  def run_dpn_queue_post_test
+    env = @context.env_hash
+    env['RUN_EXCHANGE_INTEGRATION'] = 'true'
+    cmd = "go test dpn_queue_test.go"
+    dir = "#{@context.exchange_root}/integration"
+    pid = Process.spawn(env, cmd, chdir: dir)
+    Process.wait pid
+    return $?.exitstatus == 0
+  end
+
   def run_bucket_reader_post_test
     return run_integration_post_test('go test apt_bucket_reader_test.go')
   end
