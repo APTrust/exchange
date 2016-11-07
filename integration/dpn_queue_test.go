@@ -33,6 +33,7 @@ func getContext(t *testing.T) (*context.Context) {
 	return context.NewContext(config)
 }
 
+// We should have created one WorkItem for each DPN ingest request.
 func TestWorkItemsCreatedAndQueued(t *testing.T) {
 	if !testutil.ShouldRunIntegrationTests() {
 		t.Skip("Skipping integration test. Set ENV var RUN_EXCHANGE_INTEGRATION=true if you want to run them.")
@@ -63,4 +64,35 @@ func TestWorkItemsCreatedAndQueued(t *testing.T) {
 		assert.True(t, found, "No WorkItem for object %s", currentIdentifier)
 		assert.True(t, queued, "Object %s was not queued", currentIdentifier)
 	}
+
+	// In addition to checking whether Pharos thinks the items are queued,
+	// let's ask NSQ as well.
+	stats, err := _context.NSQClient.GetStats()
+	require.Nil(t, err)
+	for _, topic := range stats.Data.Topics {
+		if topic.TopicName == "fetch_topic" {
+			// We fetch 16 bags in our integration tests.
+			// They're not all valid, but we should have that many in the queue.
+			assert.EqualValues(t, uint64(16), topic.MessageCount)
+		} else if topic.TopicName == "store_topic" {
+			// All of the 11 valid bags should have made it into the store topic.
+			assert.EqualValues(t, uint64(11), topic.MessageCount)
+		} else if topic.TopicName == "record_topic" {
+			// All of the 11 valid bags should have made it into the record topic.
+			assert.EqualValues(t, uint64(11), topic.MessageCount)
+		}
+	}
+}
+
+// We should have created one DPNWorkItem for each replication request
+// that we synched from the other nodes.
+func TestDPNWorkItemsCreatedAndQueued(t *testing.T) {
+	if !testutil.ShouldRunIntegrationTests() {
+		t.Skip("Skipping integration test. Set ENV var RUN_EXCHANGE_INTEGRATION=true if you want to run them.")
+	}
+	// Use local DPN REST client to check for all replication requests
+	// where ToNode is our LocalNode.
+	//
+	// Then check Pharos for a DPNWorkItem for each of these replications.
+	// The DPNWorkItem should exist, and should have a QueuedAt timestamp.
 }

@@ -84,8 +84,8 @@ func (client *NSQClient)Enqueue(topic string, workItemId int) error {
 // returning stats for all topics right now. Also note that requests to
 // /stats/ (with trailing slash) produce a 404.
 func (client *NSQClient) GetStats() (*NSQStats, error) {
-	url := fmt.Sprintf("%s/stats", client.URL)
-	resp, err := http.Post(url, "text/html", nil)
+	url := fmt.Sprintf("%s/stats?format=json", client.URL)
+	resp, err := http.Get(url)
 	if err != nil {
 		return nil, err
 	}
