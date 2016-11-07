@@ -1,12 +1,12 @@
-hash: 37b6705d51803b5dd02853ad6057f8b8ae84586e91f0149367fdd3f6e17b197c
-updated: 2016-10-05T16:23:54.871579084-04:00
+hash: 5c6b96abae7b9fd13888b28a7449212be335f7e25d226a147da088820bf0b948
+updated: 2016-11-07T15:56:02.773187715-05:00
 imports:
 - name: github.com/APTrust/bagins
   version: 14b07b4f79dfe7c804c00db61df4ccec7d1c416a
   subpackages:
   - bagutil
 - name: github.com/aws/aws-sdk-go
-  version: 74a703abb31ea9faf7622930e5daba1559b01b37
+  version: 45d21707a58c6bfdf7cf12197d054769d88f7d13
   subpackages:
   - aws
   - aws/awserr
@@ -60,12 +60,14 @@ imports:
   - snappy-go
 - name: github.com/nsqio/go-nsq
   version: d71fb89c9e0263aaed89645b0b168e11ccf597b1
+- name: github.com/nsqio/nsq
+  version: c53f30f8ea0cbe3bf95116cc0d6f603f5a387620
 - name: github.com/nu7hatch/gouuid
   version: 179d4d0c4d8d407a32af483c2354df1d2c91e6c3
 - name: github.com/op/go-logging
   version: b2cb9fa56473e98db8caba80237377e83fe44db5
 - name: github.com/rakyll/magicmime
-  version: 672bd9146d1802abfd8a851fb428e6070d524e3d
+  version: 2b8b8f91948c4307f40a8f86ac6f3b26e27b7389
 - name: github.com/satori/go.uuid
   version: 879c5887cd475cd7864858769793b2ceb0d44feb
 - name: github.com/smartystreets/assertions

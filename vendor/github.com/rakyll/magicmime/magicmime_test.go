@@ -12,25 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// +build linux darwin
+
 package magicmime
 
 import (
 	"encoding/base64"
 	"testing"
 )
-
-var (
-	m *Magic
-)
-
-func TestNew(t *testing.T) {
-	var err error
-
-	m, err = New(MAGIC_MIME_TYPE | MAGIC_SYMLINK | MAGIC_ERROR)
-	if err != nil {
-		t.Fatal(err)
-	}
-}
 
 // Tests a gif file.
 func TestGifFile(t *testing.T) {
@@ -69,13 +58,18 @@ func TestZipFile(t *testing.T) {
 
 // Tests a gif buffer.
 func TestGifBuffer(t *testing.T) {
+	if err := Open(MAGIC_MIME_TYPE | MAGIC_SYMLINK | MAGIC_ERROR); err != nil {
+		t.Fatal(err)
+	}
+	defer Close()
+
 	b64Gif := "R0lGODlhAQABAIAAAAUEBAAAACwAAAAAAQABAAACAkQBADs="
 	expected := "image/gif"
 	gif, err := base64.StdEncoding.DecodeString(b64Gif)
 	if err != nil {
 		panic(err)
 	}
-	mimetype, err := m.TypeByBuffer(gif)
+	mimetype, err := TypeByBuffer(gif)
 	if err != nil {
 		panic(err)
 	}
@@ -85,7 +79,12 @@ func TestGifBuffer(t *testing.T) {
 }
 
 func testFile(tb testing.TB, path string, expected string) {
-	mimetype, err := m.TypeByFile(path)
+	if err := Open(MAGIC_MIME_TYPE | MAGIC_SYMLINK | MAGIC_ERROR); err != nil {
+		tb.Fatal(err)
+	}
+	defer Close()
+
+	mimetype, err := TypeByFile(path)
 	if err != nil {
 		panic(err)
 	}
@@ -95,7 +94,12 @@ func testFile(tb testing.TB, path string, expected string) {
 }
 
 func TestMissingFile(t *testing.T) {
-	_, err := m.TypeByFile("missingFile.txt")
+	if err := Open(MAGIC_MIME_TYPE | MAGIC_SYMLINK | MAGIC_ERROR); err != nil {
+		t.Fatal(err)
+	}
+	defer Close()
+
+	_, err := TypeByFile("missingFile.txt")
 	if err == nil {
 		t.Error("no error for missing file")
 	}

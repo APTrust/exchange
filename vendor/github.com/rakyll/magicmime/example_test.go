@@ -1,29 +1,37 @@
+// Copyright 2013 Google Inc. All Rights Reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+// +build linux darwin
+
 package magicmime_test
 
 import (
-	"fmt"
-	"testing"
+	"log"
 
 	"github.com/rakyll/magicmime"
 )
 
-// TODO: Remove after Go 1.4.
-// Related to https://codereview.appspot.com/107320046
-func TestA(t *testing.T) {}
+func ExampleTypeByFile() {
+	if err := magicmime.Open(magicmime.MAGIC_MIME_TYPE | magicmime.MAGIC_SYMLINK | magicmime.MAGIC_ERROR); err != nil {
+		log.Fatal(err)
+	}
+	defer magicmime.Close()
 
-func Example_1() {
-	mm, err := magicmime.New(magicmime.MAGIC_MIME_TYPE | magicmime.MAGIC_SYMLINK | magicmime.MAGIC_ERROR)
+	mimetype, err := magicmime.TypeByFile("/path/to/file")
 	if err != nil {
-		panic(err)
+		log.Fatalf("error occured during type lookup: %v", err)
 	}
 
-	filepath := "/bin/ls"
-
-	mimetype, err := mm.TypeByFile(filepath)
-	if err != nil {
-		fmt.Printf("Something went wrong: %s", err)
-		return
-	}
-
-	fmt.Printf("%s -> %s\n", filepath, mimetype)
+	log.Printf("mime-type: %v", mimetype)
 }
