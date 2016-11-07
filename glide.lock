@@ -1,5 +1,5 @@
 hash: 5c6b96abae7b9fd13888b28a7449212be335f7e25d226a147da088820bf0b948
-updated: 2016-11-07T15:56:02.773187715-05:00
+updated: 2016-11-07T16:37:22.132751924-05:00
 imports:
 - name: github.com/APTrust/bagins
   version: 14b07b4f79dfe7c804c00db61df4ccec7d1c416a
@@ -37,8 +37,14 @@ imports:
   - service/sts
 - name: github.com/bitly/go-simplejson
   version: aabad6e819789e569bd6aabf444c935aa9ba1e44
+- name: github.com/blang/semver
+  version: 9bf7bff48b0388cb75991e58c6df7d13e982f1f2
 - name: github.com/bmizerany/assert
   version: b7ed37b82869576c289d7d97fb2bbd8b64a0cb28
+- name: github.com/bmizerany/perks
+  version: d9a9656a3a4b1c2864fdb44db2ef8619772d92aa
+  subpackages:
+  - quantile
 - name: github.com/crowdmob/goamz
   version: 3a06871fe9fc0281ca90f3a7d97258d042ed64c0
   subpackages:
@@ -52,6 +58,8 @@ imports:
   version: bd40a432e4c76585ef6b72d3fd96fb9b6dc7b68d
 - name: github.com/jtolds/gls
   version: 8ddce2a84170772b95dd5d576c48d517b22cac63
+- name: github.com/julienschmidt/httprouter
+  version: 6aacfd5ab513e34f7e64ea9627ab9670371b34e7
 - name: github.com/kr/pretty
   version: cfb55aafdaf3ec08f0db22699ab822c50091b1c4
 - name: github.com/mreiferson/go-snappystream
@@ -62,6 +70,20 @@ imports:
   version: d71fb89c9e0263aaed89645b0b168e11ccf597b1
 - name: github.com/nsqio/nsq
   version: c53f30f8ea0cbe3bf95116cc0d6f603f5a387620
+  subpackages:
+  - internal/app
+  - internal/auth
+  - internal/clusterinfo
+  - internal/dirlock
+  - internal/http_api
+  - internal/pqueue
+  - internal/protocol
+  - internal/quantile
+  - internal/statsd
+  - internal/stringy
+  - internal/util
+  - internal/version
+  - nsqd
 - name: github.com/nu7hatch/gouuid
   version: 179d4d0c4d8d407a32af483c2354df1d2c91e6c3
 - name: github.com/op/go-logging
