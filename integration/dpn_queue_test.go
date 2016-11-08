@@ -2,6 +2,7 @@ package integration_test
 
 import (
 	"github.com/APTrust/exchange/context"
+	"github.com/APTrust/exchange/dpn/network"
 	"github.com/APTrust/exchange/models"
 	"github.com/APTrust/exchange/util/testutil"
 	"github.com/stretchr/testify/assert"
@@ -95,4 +96,27 @@ func TestDPNWorkItemsCreatedAndQueued(t *testing.T) {
 	//
 	// Then check Pharos for a DPNWorkItem for each of these replications.
 	// The DPNWorkItem should exist, and should have a QueuedAt timestamp.
+	_context := getContext(t)
+	dpnClient, err := network.NewDPNRestClient(
+		_context.Config.DPN.RestClient.LocalServiceURL,
+		_context.Config.DPN.RestClient.LocalAPIRoot,
+		_context.Config.DPN.RestClient.LocalAuthToken,
+		_context.Config.DPN.LocalNode,
+		_context.Config.DPN)
+	require.Nil(t, err)
+	xferParams := url.Values{}
+	xferParams.Set("to_node", _context.Config.DPN.LocalNode)
+	dpnResp := dpnClient.ReplicationTransferList(xferParams)
+	require.Nil(t, dpnResp.Error)
+	for _, xfer := range dpnResp.ReplicationTransfers() {
+		params := url.Values{}
+		params.Set("identifier", xfer.ReplicationId)
+		params.Set("task", "replication")
+		pharosResp := _context.PharosClient.DPNWorkItemList(params)
+		require.Nil(t, pharosResp.Error)
+		require.Equal(t, 1, pharosResp.Count)
+		dpnWorkItem := pharosResp.DPNWorkItem()
+		require.NotNil(t, dpnWorkItem.QueuedAt)
+		assert.False(t, dpnWorkItem.QueuedAt.IsZero())
+	}
 }

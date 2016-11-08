@@ -250,7 +250,7 @@ class IntegrationTest
 
       # Start services
       @service.dpn_cluster_start  # sleeps to wait for all nodes to come up
-      @service.app_start(dpn_sync)
+      @service.app_start(@context.apps['dpn_sync'])
 
       # Post test
       @results['dpn_sync_test'] = @test_runner.run_dpn_sync_post_test
