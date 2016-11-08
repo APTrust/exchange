@@ -17,7 +17,7 @@ class IntegrationTest
     @context.clear_binaries
   end
 
-  def test_apt_ingest(more_tests_follow)
+  def apt_ingest(more_tests_follow)
     begin
       # Build everything anew
       @build.build(@context.apps['nsq_service'])
@@ -69,26 +69,26 @@ class IntegrationTest
     end
   end
 
-  def test_apt_send_to_dpn
+  def apt_send_to_dpn(more_tests_follow)
 
   end
 
-  def test_apt_restore
+  def apt_restore(more_tests_follow)
 
   end
 
-  def test_apt_delete
+  def apt_delete(more_tests_follow)
 
   end
 
-  def test_bucket_reader
+  def bucket_reader(more_tests_follow)
 
   end
 
-  # test_dpn_rest_client tests the DPN REST client against a
+  # dpn_rest_client tests the DPN REST client against a
   # locally-running DPN cluster. Returns true if all tests passed,
   # false otherwise.
-  def test_dpn_rest_client(more_tests_follow)
+  def dpn_rest_client(more_tests_follow)
     begin
       @service.dpn_cluster_start
       @results['dpn_rest_client_test'] = @test_runner.run_dpn_rest_client_test
@@ -104,13 +104,13 @@ class IntegrationTest
     end
   end
 
-  # test_dpn_sync tests the dpn_sync app against a locally-running
+  # dpn_sync tests the dpn_sync app against a locally-running
   # DPN cluster. dpn_sync runs as a cron job in our staging and
   # production environments, and exits on its own when it's done.
   # The DPN sync post test checks to ensure that all remote records
   # were synched as expected to the local node. Returns true/false
   # to indicate whether all tests passed.
-  def test_dpn_sync(more_tests_follow)
+  def dpn_sync(more_tests_follow)
     begin
       dpn_sync = @context.apps['dpn_sync']
       @build.build(dpn_sync)
@@ -129,7 +129,7 @@ class IntegrationTest
     end
   end
 
-  # test_dpn_queue tests the dpn_queue application, which is responsible
+  # dpn_queue tests the dpn_queue application, which is responsible
   # for finding and queueing 1) replication requests recently synched
   # to our local DPN node that APTrust is responsible for fulfilling
   # (i.e. APTrust is the to_node in those requests), and 2) WorkItems
@@ -140,7 +140,7 @@ class IntegrationTest
   # This runs apt_fetch, apt_store, and apt_record before dpn_queue,
   # because we need to ingest the APTrust bags that we're going to
   # mark for DPN.
-  def test_dpn_queue(more_tests_follow)
+  def dpn_queue(more_tests_follow)
     begin
       @build.build(@context.apps['dpn_queue'])
       @build.build(@context.apps['test_push_to_dpn'])
@@ -174,7 +174,7 @@ class IntegrationTest
     end
   end
 
-  def test_dpn_copy(more_tests_follow)
+  def dpn_copy(more_tests_follow)
     begin
       @build.build(@context.apps['dpn_copy'])
       # Run the prerequisite code first.
@@ -199,18 +199,18 @@ class IntegrationTest
   end
 
 
-  def test_dpn_ingest
+  def dpn_ingest(more_tests_follow)
 
   end
 
-  def test_dpn_replicate
+  def dpn_replicate(more_tests_follow)
 
   end
 
   # Runs all the APTrust and DPN unit tests. Does not run any tests that
   # rely on external services. Returns true/false to indicate whether all
   # tests passed.
-  def test_units
+  def units(more_tests_follow)
     @results['unit_tests'] = @test_runner.run_all_unit_tests
     print_results
   end
@@ -245,13 +245,4 @@ class IntegrationTest
     return true
   end
 
-end
-
-if __FILE__ == $0
-  context = Context.new
-  test = IntegrationTest.new(context)
-  #test.test_dpn_rest_client
-  #test.test_dpn_sync
-  #test.test_units
-  test.test_dpn_copy(false)
 end
