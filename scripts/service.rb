@@ -32,8 +32,11 @@ class Service
     if pid == 0
       env = @context.env_hash
       cmd = "./#{app.name} -config #{@context.exchange_root}/config/integration.json"
+      # HACK!
       if app.name == 'apt_bucket_reader'
         cmd += " -stats=#{@context.log_dir}/bucket_reader_stats.json"
+      elsif app.name == 'dpn_queue'
+        cmd += " -hours=240000"
       end
 
       if @context.verbose
