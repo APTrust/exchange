@@ -2,7 +2,113 @@ require_relative 'build'
 require_relative 'service'
 require_relative 'test_runner'
 
-# IntegrationTest runs integration tests for APTrust and DPN code.
+# --------------------------------------------------------------------------
+# IntegrationTest runs integration tests for APTrust and DPN code,
+# as well as the APTrust Go services unit test suite. Integration
+# tests run against a local Pharos server and a local DPN cluster,
+# both of which are emptied and then re-seeded with essential fixture
+# data before each test run.
+#
+# Most integration tests depend on the outcome of prior integration tests.
+# For example, it's impossible to run the test that marks APTrust
+# bags for DPN unless prior tests have actually loaded those bags into
+# Pharos. Integration tests that require other tests to run first will
+# run those test automatically. The general chain of events here, which
+# mirrors the chaing of events in production, looks like this for APTrust
+# Ingest:
+#
+# 1. The bucket reader scans receiving buckets and creates new WorkItems
+#    in Pharos and then adds the ids of those WorkItems to the NSQ
+#    fetch_topic.
+# 2. apt_fetch reads the WorkItem ids from NSQ fetch_channel, copies tar
+#    files from the receiving buckets, and validates them. If a bag is
+#    valid, the WorkItem id is pushed into store_topic in NSQ. Whether
+#    the bag is valid or not, apt_fetch records information about the
+#    status of its work in the WorkItem record, and it stores a JSON
+#    representation of the state of its work in WorkItemState.
+# 3. apt_store reads WorkItem ids from the NSQ store_channel. It stores
+#    GenericFiles in the APTrust preservation storage bucket (S3 Virginia)
+#    and in Glacier preservation storage in Oregon. Then it pushes the
+#    WorkItem id into the record_topic.
+# 4. apt_record reads WorkItem ids from the NSQ record_channel. From there
+#    it gets the WorkItemState (a JSON representation of the state of the
+#    entire IntellectualObject and its files and events), and begins
+#    recording that state in Pharos (creating an IntellectualObject record,
+#    GenericFile records, and PREMIS event records).
+#
+# After Ingest, we can do any of the following:
+#
+# * Mark bags for DPN by creating a WorkItem for the bag with action='DPN'.
+#   In integration tests, the method apt_send_to_dpn marks a number of
+#   ingested test bags to go to DPN. The dpn_queue cron job will create
+#   NSQ entries for each of these items. (In demo and production, it's a
+#   cron job. Here, it's a method.)
+#
+# * Mark bags to be restored by creating a WorkItem for the bag where
+#   action='Restore'.
+#
+# * Mark IntellectualObjects and/or GenericFiles to be deleted by creating
+#   a WorkItem where action='Delete'. Note that one delete WorkItem will be
+#   created for the bag, and one for EACH GenericFile in the bag.
+#
+# For DPN Ingest, the process goes as follows. Note that, like the apt
+# processes, the dpn processes always update an item's WorkItem and
+# WorkItemState records in Pharos before moving on to the next item.
+#
+# 1. The cron job dpn_queue finds WorkItems in Pharos describing which
+#    bags should be pushed to DPN. It pushes the id of each of these
+#    WorkItems into NSQ's dpn_ingest topic.
+# 2. dpn_package pulls items from the dpn_ingest channel, fetches all
+#    of the files that make up the bag, and packs them all into a DPN
+#    bag. A DPN bag is slightly different from an APTrust bag, containing
+#    DPN-specific manifests, tag files, and tag manifests. The packager
+#    then pushes the WorkItem id into the dpn_store topic in NSQ.
+# 3. dpn_store pulls the WorkItem id from NSQ's dpn_store channel and
+#    copies the entire tarred bag as a single file into our DPN preservation
+#    storage area in Glacier/Virginia. dpn_store then pushes the WorkItem
+#    id into the dpn_record topic.
+# 4. dpn_record reads from the dpn_record channel. It creates a new DPN
+#    bag record in the local DPN REST service, and it creates replication
+#    requests in the local DPN REST service for two other nodes to
+#    replicate the new bag. It creates symlinks to the copy of the bag
+#    in our staging area, so the other nodes can copy via rsync. This
+#    means a copy of the bag will sit in our staging area (local EBS
+#    or EFS volume) until two other nodes have replicated it.
+# 5. dpn_cleanup runs as a cron job, deleting all DPN bags from our
+#    staging area that have been replicated twice. The deletion removes
+#    the tar file iteself (which can be hundreds of GB in size) as well
+#    as the symlinks to that bag in /home/dpn.tdr, /home/dpn.sdr, etc.
+#
+# For DPN replication, the process goes like this:
+#
+# 1. The cron job dpn_sync copies new bag records and replication requests
+#    from remote nodes into our local DPN REST service.
+# 2. The cron job dpn_queue queries our local DPN REST service and creates a
+#    DPNWorkItem in Pharos for each new replication request where the to_node
+#    is APTrust. These are requests where other nodes want to copy bags to
+#    our node. dpn_queue then puts the id of each of these new DPNWorkItems
+#    into NSQ's dpn_copy topic.
+# 3. dpn_copy reads from the dpn_copy channel and copies bags via rsync from
+#    the remote nodes. It calculates the checksum of the tag manifest of each
+#    bag, and sends that checksum back to the originating node. If the
+#    originating says the checksum is good, dpn_copy will perform a full
+#    validation on the bag (which can take hours). If the bag is valid,
+#    dpn_copy pushes its DPNWorkItem id into the dpn_store queue.
+# 4. dpn_store stores the bag in Glacier/VA, as described above, and then
+#    pushes the DPNWorkItem into the dpn_record topic of NSQ.
+# 5. dpn_record tell the remote node that the bag was stored. Note that our
+#    own node will not know that the bag has been stored until next time
+#    dpn_sync pulls data from the remote node.
+#
+# These integration tests [will soon] perform all of these operations
+# against locally-running services. The only outside services these integration
+# tests touch are S3 and Glacier. Integration test bags are in the S3 bucket
+# aptrust.receiving.test.test.edu, and if those are ever deleted, they can
+# be restored from testdata/s3_bags/TestBags.zip. These tests store ingested
+# and replicated bags in the APTrust and DPN preservation test buckets, which
+# should be emptied periodically.
+#
+# --------------------------------------------------------------------------
 class IntegrationTest
 
   def initialize(context)
@@ -13,50 +119,110 @@ class IntegrationTest
     @results = {}
     @context.make_test_dirs
     @context.clear_logs
-    @context.clear_nsq_data
     @context.clear_binaries
+    @context.clear_nsq_data
   end
 
-  def apt_ingest(more_tests_follow)
+
+  def bucket_reader(more_tests_follow)
     begin
       # Build everything anew
       @build.build(@context.apps['nsq_service'])
-      @build.build(@context.apps['apt_volume_service'])
       @build.build(@context.apps['apt_bucket_reader'])
-      @build.build(@context.apps['apt_fetch'])
-      @build.build(@context.apps['apt_store'])
-      @build.build(@context.apps['apt_record'])
 
-      # Start all required services.
-      # Some sleep statements below all NSQ topics to fill before
-      # a worker connects. This speeds up testing because when a
-      # worker queries an empty or non-existent NSQ channel, it will
-      # doze off and not re-check that channel for a minute or so.
-      # We don't really want that minute lag time for each worker.
-      # If the workers query an existing, populated channel, they'll
-      # get right to work. That shaves 2-3 minutes off our integration
-      # test time.
+      # Start services with a little extra time for startup and shutdown
       @service.pharos_reset_db
       @service.pharos_load_fixtures
       @service.pharos_start
-      @service.app_start(@context.apps['apt_volume_service'])
       @service.nsq_start
-      sleep 10  # give all services time to start
+      sleep 10
       @service.app_start(@context.apps['apt_bucket_reader'])
-      @service.app_start(@context.apps['apt_fetch'])
-      sleep 10  # let nsq store topic fill before client connects
-      @service.app_start(@context.apps['apt_store'])
-      sleep 10  # let nsq record topic fill before client connects
-      @service.app_start(@context.apps['apt_record'])
-      sleep 40  # allow fetch/store/record time to finish
       @service.stop_everything unless more_tests_follow
       sleep 5
 
       # Run the post tests.
       @results['apt_bucket_reader_test'] = @test_runner.run_bucket_reader_post_test
+    rescue Exception => ex
+      print_exception(ex)
+      return false
+    ensure
+      @service.stop_everything unless more_tests_follow
+    end
+    if more_tests_follow
+      return all_tests_passed?
+    else
+      return print_results
+    end
+  end
+
+  def apt_ingest(more_tests_follow)
+    begin
+      # Rebuild binaries
+      @build.build(@context.apps['apt_volume_service'])
+      @build.build(@context.apps['apt_fetch'])
+      @build.build(@context.apps['apt_store'])
+      @build.build(@context.apps['apt_record'])
+
+      # Run the prerequisite process (with tests)
+      # Note that the prereq starts most of the required services.
+      bucket_reader_ok = bucket_reader(true)
+      if !bucket_reader_ok
+        puts "Skipping apt_ingest test because of prior failures."
+        print_results
+        return false
+      end
+
+      # Start services required for this specific set of tests.
+      @service.app_start(@context.apps['apt_volume_service'])
+      sleep 5
+      @service.app_start(@context.apps['apt_fetch'])
+      sleep 10  # let nsq store topic fill before client connects
+      @service.app_start(@context.apps['apt_store'])
+      sleep 10  # let nsq record topic fill before client connects
+      @service.app_start(@context.apps['apt_record'])
+      sleep 30  # allow fetch/store/record time to finish
+      @service.stop_everything unless more_tests_follow
+      sleep 5
+
+      # Run the post tests. This is where we check to see if the
+      # ingest services (fetch, store, record) correctly performed
+      # all of the expected work.
       @results['apt_fetch_test'] = @test_runner.run_apt_fetch_post_test
       @results['apt_store_test'] = @test_runner.run_apt_store_post_test
       @results['apt_record_test'] = @test_runner.run_apt_record_post_test
+    rescue Exception => ex
+      print_exception(ex)
+      return false
+    ensure
+      @service.stop_everything unless more_tests_follow
+    end
+    if more_tests_follow
+      return all_tests_passed?
+    else
+      return print_results
+    end
+  end
+
+  def apt_send_to_dpn(more_tests_follow)
+    begin
+      # Build
+      @build.build(@context.apps['test_push_to_dpn'])
+
+      # Run prerequisites, so we have some ingested bags
+      # that we can mark for DPN.
+      ingest_ok = apt_ingest(true)
+      if !ingest_ok
+        puts "Skipping apt_send_to_dpn test because of prior failures."
+        print_results
+        return false
+      end
+
+      # Run the test app that will mark some IntellectualObjects
+      # for DPN ingest.
+      @service.app_start(@context.apps['test_push_to_dpn'])
+
+      # TODO: Post test, shutdown?
+
     rescue Exception => ex
       print_exception(ex)
     ensure
@@ -69,20 +235,12 @@ class IntegrationTest
     end
   end
 
-  def apt_send_to_dpn(more_tests_follow)
-
-  end
-
   def apt_restore(more_tests_follow)
-
+    # Can't test this yet because the restore service hasn't been written.
   end
 
   def apt_delete(more_tests_follow)
-
-  end
-
-  def bucket_reader(more_tests_follow)
-
+    # Can't test this yet because the delete service hasn't been written.
   end
 
   # dpn_rest_client tests the DPN REST client against a
@@ -112,10 +270,23 @@ class IntegrationTest
   # to indicate whether all tests passed.
   def dpn_sync(more_tests_follow)
     begin
+      Build
       dpn_sync = @context.apps['dpn_sync']
       @build.build(dpn_sync)
-      @service.dpn_cluster_start
+
+      # Run prerequisites
+      send_to_dpn_ok = apt_send_to_dpn(true)
+      if !send_to_dpn_ok
+        puts "Skipping dpn_sync test because of prior failures."
+        print_results
+        return false
+      end
+
+      # Start services
+      @service.dpn_cluster_start  # sleeps to wait for all nodes to come up
       @service.app_start(dpn_sync)
+
+      # Post test
       @results['dpn_sync_test'] = @test_runner.run_dpn_sync_post_test
     rescue Exception => ex
       print_exception(ex)
@@ -142,26 +313,22 @@ class IntegrationTest
   # mark for DPN.
   def dpn_queue(more_tests_follow)
     begin
+      # Build
       @build.build(@context.apps['dpn_queue'])
-      @build.build(@context.apps['test_push_to_dpn'])
 
-      # Run all the ingest code first, so Pharos has
-      # bags that can be pushed to DPN. If ingest is OK,
-      # test_push_bags_to_dpn will mark a few APTrust
-      # bags for DPN ingest.
-      ingest_ok = test_apt_ingest(true)
-      if ingest_ok
-        @service.app_start(@context.apps['test_push_to_dpn'])
-        push_to_dpn_ok = test_dpn_sync(true)
-      else
-        puts "Skipping push_to_dpn test because of prior failures."
-      end
-      if push_to_dpn_ok
-        @service.app_start(@context.apps['dpn_queue'])
-        @results['dpn_queue_test'] = @test_runner.run_dpn_queue_post_test
-      else
+      # Run prerequisites.
+      dpn_sync_ok = dpn_sync(true)
+      if !dpn_sync_ok
         puts "Skipping dpn_queue test because of prior failures."
+        print_results
+        return false
       end
+
+      # Start services
+      @service.app_start(@context.apps['dpn_queue'])
+
+      # Run the post test
+      @results['dpn_queue_test'] = @test_runner.run_dpn_queue_post_test
     rescue Exception => ex
       print_exception(ex)
     ensure
@@ -176,16 +343,23 @@ class IntegrationTest
 
   def dpn_copy(more_tests_follow)
     begin
+      # Build
       @build.build(@context.apps['dpn_copy'])
-      # Run the prerequisite code first.
-      queue_ok = test_dpn_queue(true)
-      if queue_ok
-        @service.app_start(@context.apps['dpn_copy'])
-        sleep 30
-        # TODO: Need dpn_copy post test here.
-      else
+
+      # Run prerequisites
+      queue_ok = dpn_queue(true)
+      if !queue_ok
         puts "Skipping dpn_copy test because of prior failures."
+        print_results
+        return false
       end
+
+      # Start service
+      @service.app_start(@context.apps['dpn_copy'])
+      sleep 30
+
+      # TODO: Need dpn_copy post test here.
+
     rescue Exception => ex
       print_exception(ex)
     ensure
@@ -200,11 +374,11 @@ class IntegrationTest
 
 
   def dpn_ingest(more_tests_follow)
-
+    # depends on dpn_queue
   end
 
   def dpn_replicate(more_tests_follow)
-
+    # depents on dpn_copy
   end
 
   # Runs all the APTrust and DPN unit tests. Does not run any tests that
