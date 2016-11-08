@@ -39,7 +39,7 @@ require_relative 'test_runner'
 # After Ingest, we can do any of the following:
 #
 # * Mark bags for DPN by creating a WorkItem for the bag with action='DPN'.
-#   In integration tests, the method apt_send_to_dpn marks a number of
+#   In integration tests, the test app apt_send_to_dpn marks a number of
 #   ingested test bags to go to DPN. The dpn_queue cron job will create
 #   NSQ entries for each of these items. (In demo and production, it's a
 #   cron job. Here, it's a method.)
@@ -203,38 +203,6 @@ class IntegrationTest
     end
   end
 
-  def apt_send_to_dpn(more_tests_follow)
-    begin
-      # Build
-      @build.build(@context.apps['test_push_to_dpn'])
-
-      # Run prerequisites, so we have some ingested bags
-      # that we can mark for DPN.
-      ingest_ok = apt_ingest(true)
-      if !ingest_ok
-        puts "Skipping apt_send_to_dpn test because of prior failures."
-        print_results
-        return false
-      end
-
-      # Run the test app that will mark some IntellectualObjects
-      # for DPN ingest.
-      @service.app_start(@context.apps['test_push_to_dpn'])
-
-      # TODO: Post test, shutdown?
-
-    rescue Exception => ex
-      print_exception(ex)
-    ensure
-      @service.stop_everything unless more_tests_follow
-    end
-    if more_tests_follow
-      return all_tests_passed?
-    else
-      return print_results
-    end
-  end
-
   def apt_restore(more_tests_follow)
     # Can't test this yet because the restore service hasn't been written.
   end
@@ -270,13 +238,11 @@ class IntegrationTest
   # to indicate whether all tests passed.
   def dpn_sync(more_tests_follow)
     begin
-      Build
-      dpn_sync = @context.apps['dpn_sync']
-      @build.build(dpn_sync)
+      # Build
+      @build.build(@context.apps['dpn_sync'])
 
       # Run prerequisites
-      send_to_dpn_ok = apt_send_to_dpn(true)
-      if !send_to_dpn_ok
+      if !apt_ingest(true)
         puts "Skipping dpn_sync test because of prior failures."
         print_results
         return false
@@ -314,6 +280,7 @@ class IntegrationTest
   def dpn_queue(more_tests_follow)
     begin
       # Build
+      @build.build(@context.apps['test_push_to_dpn'])
       @build.build(@context.apps['dpn_queue'])
 
       # Run prerequisites.
@@ -325,6 +292,7 @@ class IntegrationTest
       end
 
       # Start services
+      @service.app_start(@context.apps['test_push_to_dpn'])
       @service.app_start(@context.apps['dpn_queue'])
 
       # Run the post test

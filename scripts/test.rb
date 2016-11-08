@@ -33,7 +33,6 @@ end
 def tests
   {
     'apt_ingest' => 'Test the APTrust ingest process.',
-    'apt_send_to_dpn' => 'Test marking APTrust bags for DPN',
     'apt_restore' => 'Test the APTrust restore process',
     'apt_delete' => 'Test APTrust file deletion',
     'bucket_reader' => 'Test the APTrust bucket reader',
