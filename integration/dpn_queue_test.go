@@ -119,4 +119,16 @@ func TestDPNWorkItemsCreatedAndQueued(t *testing.T) {
 		require.NotNil(t, dpnWorkItem.QueuedAt)
 		assert.False(t, dpnWorkItem.QueuedAt.IsZero())
 	}
+
+	// Check NSQ as well.
+	stats, err := _context.NSQClient.GetStats()
+	require.Nil(t, err)
+	for _, topic := range stats.Data.Topics {
+		if topic.TopicName == "dpn_package_topic" {
+			// apps/test_push_to_dpn.go requests that items
+			// testutil.INTEGRATION_GOOD_BAGS[0:7] be sent to DPN,
+			// so we should find seven items in the package queue
+			assert.EqualValues(t, uint64(7), topic.MessageCount)
+		}
+	}
 }
