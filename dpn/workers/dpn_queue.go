@@ -301,6 +301,8 @@ func (dpnQueue *DPNQueue) queueTransfer(dpnWorkItem *apt_models.DPNWorkItem, tas
 			dpnWorkItem.Id, taskType, dpnWorkItem.Identifier, err)
 	} else {
 		// Let Pharos know this item has been queued
+		dpnQueue.Context.MessageLog.Info("Added %s %s (DPNWorkItem %d) to NSQ topic %s",
+			taskType, dpnWorkItem.Identifier, dpnWorkItem.Id, queueTopic)
 		utcNow := time.Now().UTC()
 		dpnWorkItem.QueuedAt = &utcNow
 		resp := dpnQueue.Context.PharosClient.DPNWorkItemSave(dpnWorkItem)
@@ -310,12 +312,19 @@ func (dpnQueue *DPNQueue) queueTransfer(dpnWorkItem *apt_models.DPNWorkItem, tas
 			return
 		}
 		dpnWorkItem = resp.DPNWorkItem()
+		dpnQueue.Context.MessageLog.Info("Set QueuedAt for %s %s (DPNWorkItem %d) to %s",
+			taskType, dpnWorkItem.Identifier, dpnWorkItem.Id,
+			dpnWorkItem.QueuedAt.Format(time.RFC3339))
 	}
 }
 
 // getOrCreateWorkItem returns the DPNWorkItem for the specified
-// replication/restore transfer from Pharos. If no DPNWorkItem for the specified
-// transfer exists, this creates it in Pharos and returns a copy of it.
+// replication/restore transfer from Pharos. If no DPNWorkItem for
+// the specified transfer exists, this creates it in Pharos and
+// returns a copy of it.
+//
+// This code is cluttered with logging to help diagnose issues in
+// integration tests.
 func (dpnQueue *DPNQueue) getOrCreateWorkItem(identifier, taskType string) (*apt_models.DPNWorkItem) {
 	params := url.Values{}
 	params.Set("identifier", identifier)
@@ -327,12 +336,20 @@ func (dpnQueue *DPNQueue) getOrCreateWorkItem(identifier, taskType string) (*apt
 	}
 	existingItem := getResp.DPNWorkItem()
 	if existingItem != nil {
+		queuedAt := "[never]"
+		if existingItem.QueuedAt != nil {
+			queuedAt = existingItem.QueuedAt.Format(time.RFC3339)
+		}
+		dpnQueue.Context.MessageLog.Info("Found DPNWorkItem %d for %s %s with QueuedAt = %s",
+			existingItem.Id, taskType, existingItem.Identifier, queuedAt)
 		return existingItem
 	} else {
 		dpnWorkItem := &apt_models.DPNWorkItem{
 			Task: taskType,
 			Identifier: identifier,
+			QueuedAt: nil,
 		}
+
 		createResp := dpnQueue.Context.PharosClient.DPNWorkItemSave(dpnWorkItem)
 		if createResp.Error != nil {
 			dpnQueue.err("Error creating DPNWorkItem for %s Xfer %s: %v",
@@ -343,6 +360,13 @@ func (dpnQueue *DPNQueue) getOrCreateWorkItem(identifier, taskType string) (*apt
 		if newItem == nil {
 			dpnQueue.err("DPNWorkItemSave returned nil for %s Xfer %s: %v",
 				taskType, identifier, getResp.Error)
+		} else {
+			queuedAt := "[never]"
+			if newItem.QueuedAt != nil {
+				queuedAt = newItem.QueuedAt.Format(time.RFC3339)
+			}
+			dpnQueue.Context.MessageLog.Info("Created DPNWorkItem %d for %s %s with QueuedAt = %s",
+				newItem.Id, taskType, newItem.Identifier, queuedAt)
 		}
 		return newItem
 	}

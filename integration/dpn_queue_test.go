@@ -70,19 +70,28 @@ func TestWorkItemsCreatedAndQueued(t *testing.T) {
 	// let's ask NSQ as well.
 	stats, err := _context.NSQClient.GetStats()
 	require.Nil(t, err)
+	foundFetchTopic := false
+	foundStoreTopic := false
+	foundRecordTopic := false
 	for _, topic := range stats.Data.Topics {
 		if topic.TopicName == "fetch_topic" {
 			// We fetch 16 bags in our integration tests.
 			// They're not all valid, but we should have that many in the queue.
+			foundFetchTopic = true
 			assert.EqualValues(t, uint64(16), topic.MessageCount)
 		} else if topic.TopicName == "store_topic" {
 			// All of the 11 valid bags should have made it into the store topic.
+			foundStoreTopic = true
 			assert.EqualValues(t, uint64(11), topic.MessageCount)
 		} else if topic.TopicName == "record_topic" {
 			// All of the 11 valid bags should have made it into the record topic.
+			foundRecordTopic = true
 			assert.EqualValues(t, uint64(11), topic.MessageCount)
 		}
 	}
+	assert.True(t, foundFetchTopic, "Nothing was queued in fetch_topic")
+	assert.True(t, foundStoreTopic, "Nothing was queued in store_topic")
+	assert.True(t, foundRecordTopic, "Nothing was queued in record_topic")
 }
 
 // We should have created one DPNWorkItem for each replication request
@@ -97,6 +106,8 @@ func TestDPNWorkItemsCreatedAndQueued(t *testing.T) {
 	// Then check Pharos for a DPNWorkItem for each of these replications.
 	// The DPNWorkItem should exist, and should have a QueuedAt timestamp.
 	_context := getContext(t)
+
+	// Check DPNWorkItems for ReplicationTransfers
 	dpnClient, err := network.NewDPNRestClient(
 		_context.Config.DPN.RestClient.LocalServiceURL,
 		_context.Config.DPN.RestClient.LocalAPIRoot,
@@ -120,15 +131,46 @@ func TestDPNWorkItemsCreatedAndQueued(t *testing.T) {
 		assert.False(t, dpnWorkItem.QueuedAt.IsZero())
 	}
 
+	// Check DPNWorkItems RestoreTransfers
+	xferParams.Set("from_node", _context.Config.DPN.LocalNode)
+	dpnResp = dpnClient.RestoreTransferList(xferParams)
+	require.Nil(t, dpnResp.Error)
+	for _, xfer := range dpnResp.RestoreTransfers() {
+		params := url.Values{}
+		params.Set("identifier", xfer.RestoreId)
+		params.Set("task", "restore")
+		pharosResp := _context.PharosClient.DPNWorkItemList(params)
+		require.Nil(t, pharosResp.Error)
+		require.Equal(t, 1, pharosResp.Count)
+		dpnWorkItem := pharosResp.DPNWorkItem()
+		require.NotNil(t, dpnWorkItem.QueuedAt)
+		assert.False(t, dpnWorkItem.QueuedAt.IsZero())
+	}
+
 	// Check NSQ as well.
 	stats, err := _context.NSQClient.GetStats()
 	require.Nil(t, err)
+	foundPackageTopic := false
+	foundCopyTopic := false
+	foundRestoreTopic := false
 	for _, topic := range stats.Data.Topics {
 		if topic.TopicName == "dpn_package_topic" {
 			// apps/test_push_to_dpn.go requests that items
 			// testutil.INTEGRATION_GOOD_BAGS[0:7] be sent to DPN,
 			// so we should find seven items in the package queue
+			foundPackageTopic = true
 			assert.EqualValues(t, uint64(7), topic.MessageCount)
+		} else if topic.TopicName == "dpn_copy_topic" {
+			// Fixture data has 4 replications: one from each remote node
+			foundCopyTopic = true
+			assert.EqualValues(t, uint64(4), topic.MessageCount)
+		} else if topic.TopicName == "dpn_restore_topic" {
+			// Fixture data has 4 restores: one from each remote node
+			foundRestoreTopic = true
+			assert.EqualValues(t, uint64(4), topic.MessageCount)
 		}
 	}
+	assert.True(t, foundPackageTopic, "Nothing was queued in dpn_package_topic")
+	assert.True(t, foundCopyTopic, "Nothing was queued in dpn_copy_topic")
+	assert.True(t, foundRestoreTopic, "Nothing was queued in dpn_restore_topic")
 }
