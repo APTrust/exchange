@@ -1,10 +1,10 @@
 {
     "Comment": "Configuration automated testing of APTrust services. Run `go test ./...`",
 
-    "TarDirectory": "~/tmp/test_tar",
-    "LogDirectory": "~/tmp/test_log",
-    "RestoreDirectory": "~/tmp/test_restore",
-    "ReplicationDirectory": "~/tmp/test_replicate",
+    "TarDirectory": "~/tmp/tar",
+    "LogDirectory": "~/tmp/logs",
+    "RestoreDirectory": "~/tmp/restore",
+    "ReplicationDirectory": "~/tmp/replicate",
     "MaxFileSize": 100000000,
     "SkipAlreadyProcessed": true,
     "DeleteOnSuccess": false,
