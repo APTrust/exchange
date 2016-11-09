@@ -57,6 +57,19 @@ class TestRunner
     return $?.exitstatus == 0
   end
 
+  # This runs the the dpn_copy post test, to ensure that DPN
+  # replication items were copied, DPNWorkItems updated, and
+  # dpn_validation_topic entries created in NSQ.
+  def run_dpn_copy_post_test
+    env = @context.env_hash
+    env['RUN_EXCHANGE_INTEGRATION'] = 'true'
+    cmd = "go test dpn_copy_test.go"
+    dir = "#{@context.exchange_root}/integration"
+    pid = Process.spawn(env, cmd, chdir: dir)
+    Process.wait pid
+    return $?.exitstatus == 0
+  end
+
   def run_bucket_reader_post_test
     return run_integration_post_test('go test apt_bucket_reader_test.go')
   end

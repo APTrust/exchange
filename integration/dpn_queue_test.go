@@ -1,14 +1,11 @@
 package integration_test
 
 import (
-	"github.com/APTrust/exchange/context"
 	"github.com/APTrust/exchange/dpn/network"
-	"github.com/APTrust/exchange/models"
 	"github.com/APTrust/exchange/util/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"net/url"
-	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -26,21 +23,14 @@ func identifiersPushedToDPN() ([]string) {
 	return identifiers
 }
 
-func getContext(t *testing.T) (*context.Context) {
-	configFile := filepath.Join("config", "integration.json")
-	config, err := models.LoadConfigFile(configFile)
-	require.Nil(t, err)
-	config.ExpandFilePaths()
-	return context.NewContext(config)
-}
-
 // We should have created one WorkItem for each DPN ingest request.
 func TestWorkItemsCreatedAndQueued(t *testing.T) {
 	if !testutil.ShouldRunIntegrationTests() {
 		t.Skip("Skipping integration test. Set ENV var RUN_EXCHANGE_INTEGRATION=true if you want to run them.")
 	}
 	expectedIdentifiers := identifiersPushedToDPN()
-	_context := getContext(t)
+	_context, err := testutil.GetContext("integration.json")
+	require.Nil(t, err, "Could not create context")
 	params := url.Values{}
 	params.Set("item_action", "DPN")
 	params.Set("page", "1")
@@ -74,24 +64,27 @@ func TestWorkItemsCreatedAndQueued(t *testing.T) {
 	foundStoreTopic := false
 	foundRecordTopic := false
 	for _, topic := range stats.Data.Topics {
-		if topic.TopicName == "fetch_topic" {
+		if topic.TopicName == _context.Config.FetchWorker.NsqTopic {
 			// We fetch 16 bags in our integration tests.
 			// They're not all valid, but we should have that many in the queue.
 			foundFetchTopic = true
 			assert.EqualValues(t, uint64(16), topic.MessageCount)
-		} else if topic.TopicName == "store_topic" {
+		} else if topic.TopicName == _context.Config.StoreWorker.NsqTopic {
 			// All of the 11 valid bags should have made it into the store topic.
 			foundStoreTopic = true
 			assert.EqualValues(t, uint64(11), topic.MessageCount)
-		} else if topic.TopicName == "record_topic" {
+		} else if topic.TopicName == _context.Config.RecordWorker.NsqTopic {
 			// All of the 11 valid bags should have made it into the record topic.
 			foundRecordTopic = true
 			assert.EqualValues(t, uint64(11), topic.MessageCount)
 		}
 	}
-	assert.True(t, foundFetchTopic, "Nothing was queued in fetch_topic")
-	assert.True(t, foundStoreTopic, "Nothing was queued in store_topic")
-	assert.True(t, foundRecordTopic, "Nothing was queued in record_topic")
+	assert.True(t, foundFetchTopic, "Nothing was queued in %s",
+		_context.Config.FetchWorker.NsqTopic)
+	assert.True(t, foundStoreTopic, "Nothing was queued in %s",
+		_context.Config.StoreWorker.NsqTopic)
+	assert.True(t, foundRecordTopic, "Nothing was queued in %s",
+		_context.Config.RecordWorker.NsqTopic)
 }
 
 // We should have created one DPNWorkItem for each replication request
@@ -105,7 +98,8 @@ func TestDPNWorkItemsCreatedAndQueued(t *testing.T) {
 	//
 	// Then check Pharos for a DPNWorkItem for each of these replications.
 	// The DPNWorkItem should exist, and should have a QueuedAt timestamp.
-	_context := getContext(t)
+	_context, err := testutil.GetContext("integration.json")
+	require.Nil(t, err, "Could not create context")
 
 	// Check DPNWorkItems for ReplicationTransfers
 	dpnClient, err := network.NewDPNRestClient(
@@ -154,23 +148,26 @@ func TestDPNWorkItemsCreatedAndQueued(t *testing.T) {
 	foundCopyTopic := false
 	foundRestoreTopic := false
 	for _, topic := range stats.Data.Topics {
-		if topic.TopicName == "dpn_package_topic" {
+		if topic.TopicName == _context.Config.DPN.DPNPackageWorker.NsqTopic {
 			// apps/test_push_to_dpn.go requests that items
 			// testutil.INTEGRATION_GOOD_BAGS[0:7] be sent to DPN,
 			// so we should find seven items in the package queue
 			foundPackageTopic = true
 			assert.EqualValues(t, uint64(7), topic.MessageCount)
-		} else if topic.TopicName == "dpn_copy_topic" {
+		} else if topic.TopicName == _context.Config.DPN.DPNCopyWorker.NsqTopic {
 			// Fixture data has 4 replications: one from each remote node
 			foundCopyTopic = true
 			assert.EqualValues(t, uint64(4), topic.MessageCount)
-		} else if topic.TopicName == "dpn_restore_topic" {
+		} else if topic.TopicName == _context.Config.DPN.DPNRestoreWorker.NsqTopic {
 			// Fixture data has 4 restores: one from each remote node
 			foundRestoreTopic = true
 			assert.EqualValues(t, uint64(4), topic.MessageCount)
 		}
 	}
-	assert.True(t, foundPackageTopic, "Nothing was queued in dpn_package_topic")
-	assert.True(t, foundCopyTopic, "Nothing was queued in dpn_copy_topic")
-	assert.True(t, foundRestoreTopic, "Nothing was queued in dpn_restore_topic")
+	assert.True(t, foundPackageTopic, "Nothing was queued in %s",
+		_context.Config.DPN.DPNPackageWorker.NsqTopic)
+	assert.True(t, foundCopyTopic, "Nothing was queued in %s",
+		_context.Config.DPN.DPNCopyWorker.NsqTopic)
+	assert.True(t, foundRestoreTopic, "Nothing was queued in %s",
+		_context.Config.DPN.DPNRestoreWorker.NsqTopic)
 }

@@ -326,8 +326,8 @@ class IntegrationTest
       @service.app_start(@context.apps['dpn_copy'])
       sleep 30
 
-      # TODO: Need dpn_copy post test here.
-
+      # Run the post test
+      @results['dpn_copy_test'] = @test_runner.run_dpn_copy_post_test
     rescue Exception => ex
       print_exception(ex)
     ensure
