@@ -1,12 +1,14 @@
 package workers
 
 import (
+	"crypto/sha256"
 	"fmt"
 	"github.com/APTrust/exchange/context"
 	"github.com/APTrust/exchange/dpn/models"
 	"github.com/APTrust/exchange/dpn/network"
 	"github.com/APTrust/exchange/util/fileutil"
 	"github.com/nsqio/go-nsq"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -80,7 +82,7 @@ func (copier *DPNCopier) HandleMessage(message *nsq.Message) error {
 	copier.CopyChannel <- manifest
 	copier.Context.MessageLog.Info("Put xfer request %s (bag %s) from %s " +
 		" into the copy channel", manifest.ReplicationTransfer.ReplicationId,
-		manifest.ReplicationTransfer, manifest.ReplicationTransfer.FromNode)
+		manifest.ReplicationTransfer.Bag, manifest.ReplicationTransfer.FromNode)
 	return nil
 }
 
@@ -91,7 +93,7 @@ func (copier *DPNCopier) doCopy() {
 			manifest.LocalPath, copier.Context.Config.DPN.UseSSHWithRsync)
 		copier.Context.MessageLog.Info("Starting copy of ReplicationTransfer %s " +
 			"with command %s %s", manifest.ReplicationTransfer.ReplicationId,
-			rsyncCommand.Path, strings.Join(rsyncCommand.Args, ""))
+			rsyncCommand.Path, strings.Join(rsyncCommand.Args, " "))
 
 		// Touch message on both sides of rsync, so NSQ doesn't time out.
 		if manifest.NsqMessage != nil {
@@ -123,13 +125,19 @@ func (copier *DPNCopier) doCopy() {
 // node will set StoreRequested to false, and we should delete
 // the tar file.
 func (copier *DPNCopier) verifyChecksum() {
-	//for manifest := range copier.ChecksumChannel {
+	for manifest := range copier.ChecksumChannel {
 		// 1. Calculate the sha256 digest of the tag manifest.
 		// 2. Send the result the ReplicationTransfer.FromNode.
 		// 3. If the updated ReplicationTransfer.StoreRequested is true,
 		//    push this item into the validation queue. Otherwise,
 		//    delete the bag from the local staging area.
-	//}
+		copier.calculateTagManifestDigest(manifest)
+		if !manifest.CopySummary.HasErrors() {
+			remoteClient := copier.RemoteClients[manifest.ReplicationTransfer.FromNode]
+			UpdateTransfer(copier.Context, remoteClient, manifest)
+		}
+		copier.PostProcessChannel <- manifest
+	}
 }
 
 func (copier *DPNCopier) postProcess() {
@@ -140,6 +148,52 @@ func (copier *DPNCopier) postProcess() {
 			copier.finishWithSuccess(manifest)
 		}
 	}
+}
+
+// calculateTagManifestDigest calculates the sha256 digest of the bag's
+// tagmanifest-sha256.txt file.
+func (copier *DPNCopier) calculateTagManifestDigest(manifest *models.ReplicationManifest) {
+	tarFileIterator, err := fileutil.NewTarFileIterator(manifest.LocalPath)
+	if err != nil {
+		manifest.CopySummary.AddError("Can't get TarFileIterator for %s: %v",
+			manifest.LocalPath, err.Error)
+		return
+	}
+	// DPN BagIt spec says that the top-level dir inside the bag should
+	// have the same name as the bag itself (a UUID).
+    // https://wiki.duraspace.org/display/DPN/BagIt+Specification#BagItSpecification-DPNBagitStructure
+	tagManifestPath := filepath.Join(manifest.ReplicationTransfer.Bag, "tagmanifest-sha256.txt")
+	readCloser, err := tarFileIterator.Find(tagManifestPath)
+	if readCloser != nil {
+		defer readCloser.Close()
+	}
+	if err != nil {
+		manifest.CopySummary.AddError("Can't get tagmanifest from bag: %v",
+			err.Error)
+		return
+	}
+	digest, err := copier.calculateSha256(readCloser)
+	if err != nil {
+		manifest.CopySummary.AddError("Error calculating tagmanifest digest: %v",
+			err.Error)
+		return
+	}
+	manifest.ReplicationTransfer.FixityValue = digest
+	copier.Context.MessageLog.Info("Xfer %s has digest %s",
+		manifest.ReplicationTransfer.ReplicationId,
+		*manifest.ReplicationTransfer.FixityValue)
+}
+
+// calculateSha256 calculates the sha256 digest of the contents of the
+// supplied reader. It returns the digest as a hex-encoded string.
+func (copier *DPNCopier) calculateSha256(reader io.Reader) (*string, error) {
+	sha256Hash := sha256.New()
+	_, err := io.Copy(sha256Hash, reader)
+	if err != nil {
+		return nil, err
+	}
+	digest := fmt.Sprintf("%x", sha256Hash.Sum(nil))
+	return &digest, nil
 }
 
 // buildReplicationManifest creates a ReplicationManifest for this job.
@@ -168,8 +222,10 @@ func (copier *DPNCopier) buildReplicationManifest(message *nsq.Message) (*models
 
 func (copier *DPNCopier) finishWithError(manifest *models.ReplicationManifest) {
 	xferId := "[unknown]"
+	fromNode := ""
 	if manifest.ReplicationTransfer != nil {
 		xferId = manifest.ReplicationTransfer.ReplicationId
+		fromNode = manifest.ReplicationTransfer.FromNode
 	} else if manifest.DPNWorkItem != nil {
 		xferId = manifest.DPNWorkItem.Identifier
 	}
@@ -177,8 +233,10 @@ func (copier *DPNCopier) finishWithError(manifest *models.ReplicationManifest) {
 		msg := fmt.Sprintf("Xfer %s has fatal error: %s",
 			xferId, manifest.CopySummary.Errors[0])
 		copier.Context.MessageLog.Error(msg)
-		remoteClient := copier.RemoteClients[xferId]
-		CancelTransfer(copier.Context, remoteClient, manifest)
+		manifest.ReplicationTransfer.Cancelled = true
+		manifest.ReplicationTransfer.CancelReason = &manifest.CopySummary.Errors[0]
+		remoteClient := copier.RemoteClients[fromNode]
+		UpdateTransfer(copier.Context, remoteClient, manifest)
 		manifest.NsqMessage.Finish()
 	} else {
 		msg := fmt.Sprintf("Requeueing xfer %s due to non-fatal error: %s",
