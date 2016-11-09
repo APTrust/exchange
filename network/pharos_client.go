@@ -9,7 +9,6 @@ import (
 	"net/http"
 	"net/http/cookiejar"
 	"net/url"
-	"runtime/debug"  // DEBUG
 	"strings"
 )
 
@@ -762,12 +761,6 @@ func (client *PharosClient) DPNWorkItemList(params url.Values) (*PharosResponse)
 // performs a PUT to update the existing record. The response object
 // will include a new copy of the WorkItem if it was saved successfully.
 func (client *PharosClient) DPNWorkItemSave(obj *models.DPNWorkItem) (*PharosResponse) {
-
-	// DEBUG
-	fmt.Println("Saving %s", obj.Identifier)
-	debug.PrintStack()
-	// DEBUG
-
 	// Set up the response object
 	resp := NewPharosResponse(PharosDPNWorkItem)
 	resp.dpnWorkItems = make([]*models.DPNWorkItem, 1)
