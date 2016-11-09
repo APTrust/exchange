@@ -126,11 +126,6 @@ func (copier *DPNCopier) doCopy() {
 // the tar file.
 func (copier *DPNCopier) verifyChecksum() {
 	for manifest := range copier.ChecksumChannel {
-		// 1. Calculate the sha256 digest of the tag manifest.
-		// 2. Send the result the ReplicationTransfer.FromNode.
-		// 3. If the updated ReplicationTransfer.StoreRequested is true,
-		//    push this item into the validation queue. Otherwise,
-		//    delete the bag from the local staging area.
 		copier.calculateTagManifestDigest(manifest)
 		if !manifest.CopySummary.HasErrors() {
 			remoteClient := copier.RemoteClients[manifest.ReplicationTransfer.FromNode]
@@ -258,7 +253,10 @@ func (copier *DPNCopier) finishWithError(manifest *models.ReplicationManifest) {
 
 func (copier *DPNCopier) finishWithSuccess(manifest *models.ReplicationManifest) {
 	manifest.CopySummary.Finish()
-	*manifest.DPNWorkItem.Note = "Copy succeeded."
+	note := "Copy succeeded."
+	manifest.DPNWorkItem.Note = &note
+	copier.Context.MessageLog.Info("Copy succeeded for Replication %s",
+		manifest.ReplicationTransfer.ReplicationId)
 
 	// Save DPNWorkItem.State BEFORE pushing to next queue, because
 	// the next worker may pick this up immediately, and it needs
@@ -271,9 +269,14 @@ func (copier *DPNCopier) finishWithSuccess(manifest *models.ReplicationManifest)
 			manifest.DPNWorkItem.Id, manifest.DPNWorkItem.Identifier, topic, err)
 		manifest.CopySummary.AddError(msg)
 		copier.Context.MessageLog.Error(msg)
-		*manifest.DPNWorkItem.Note = "Copy succeeded but could not push to validation queue."
+		warning := "Copy succeeded but could not push to validation queue."
+		manifest.DPNWorkItem.Note = &warning
+		copier.Context.MessageLog.Info("Copy succeeded for Replication %s " +
+			"but could not push to validation queue.",
+			manifest.ReplicationTransfer.ReplicationId)
 		SaveWorkItemState(copier.Context, manifest, manifest.CopySummary)
 	}
+
 	LogReplicationJson(manifest, copier.Context.JsonLog)
 	manifest.NsqMessage.Finish()
 }

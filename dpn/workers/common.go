@@ -262,15 +262,20 @@ func LogReplicationJson (manifest *models.ReplicationManifest, jsonLog *log.Logg
 		manifest.DPNWorkItem.Id, manifest.DPNWorkItem.Identifier, timestamp)
 	endMessage := fmt.Sprintf("-------- END DPNWorkItem %d | XferId: %s | Time: %s --------",
 		manifest.DPNWorkItem.Id, manifest.DPNWorkItem.Identifier, timestamp)
+	state := "{}"
+	if manifest.DPNWorkItem.State != nil {
+		state = *manifest.DPNWorkItem.State
+	}
 	jsonLog.Println(startMessage, "\n",
-		manifest.DPNWorkItem.State, "\n",
+		state, "\n",
 		endMessage, "\n")
 }
 
 func SaveWorkItemState(_context *context.Context, manifest *models.ReplicationManifest, workSummary *apt_models.WorkSummary) {
 	dpnWorkItem := manifest.DPNWorkItem
 	priorState := dpnWorkItem.State
-	*dpnWorkItem.State = ""
+	empty := ""
+	dpnWorkItem.State = &empty
 	jsonData, err := json.Marshal(manifest)
 	if err != nil {
 		msg := fmt.Sprintf("Could not marshal ReplicationManifest " +
@@ -284,7 +289,8 @@ func SaveWorkItemState(_context *context.Context, manifest *models.ReplicationMa
 		}
 		*dpnWorkItem.Note += "[JSON serialization error]"
 	}
-	*dpnWorkItem.State = string(jsonData)
+	newState := string(jsonData)
+	dpnWorkItem.State = &newState
 	resp := _context.PharosClient.DPNWorkItemSave(dpnWorkItem)
 	if resp.Error != nil {
 		msg := fmt.Sprintf("Could not save DPNWorkItem %d " +
