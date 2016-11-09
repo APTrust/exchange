@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/APTrust/exchange/constants"
+	"github.com/APTrust/exchange/context"
 	"github.com/APTrust/exchange/models"
 	"github.com/APTrust/exchange/util/fileutil"
 	"github.com/icrowley/fake"
@@ -11,6 +12,7 @@ import (
 	"math"
 	"math/rand"
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
 )
@@ -317,4 +319,18 @@ func LoadIntelObjFixture(filename string) (*models.IntellectualObject, error) {
 		return nil, err
 	}
 	return intelObj, nil
+}
+
+// GetContext returns a context object initialized with the specifed
+// config file. Param configFile should be the name of a JSON config
+// file in the exchange/config directory. For example, "test.json"
+// or "integration.json".
+func GetContext(configFile string) (*context.Context, error) {
+	configPath := filepath.Join("config", configFile)
+	config, err := models.LoadConfigFile(configPath)
+	if err != nil {
+		return nil, err
+	}
+	config.ExpandFilePaths()
+	return context.NewContext(config), nil
 }

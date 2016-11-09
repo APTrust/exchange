@@ -206,3 +206,9 @@ func TestLoadIntelObjFixture(t *testing.T) {
 	}
 	assert.NotEmpty(t, obj.Identifier)
 }
+
+func TestGetContext(t *testing.T) {
+	_context, err := testutil.GetContext("test.json")
+	assert.Nil(t, err)
+	assert.NotNil(t, _context)
+}
