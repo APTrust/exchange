@@ -107,7 +107,7 @@ func ExpandTilde(filePath string) (string, error) {
 func RecursiveFileList(dir string) ([]string, error) {
 	files := make([]string, 0)
 	err := filepath.Walk(dir, func(filePath string, f os.FileInfo, err error) error {
-		if f.IsDir() == false {
+		if f != nil && f.IsDir() == false {
 			files = append(files, filePath)
 		}
 		return nil
