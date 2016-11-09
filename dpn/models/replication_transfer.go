@@ -53,7 +53,7 @@ type ReplicationTransfer struct {
 
 	// CancelReason is free-form text describing why this replication
 	// request was cancelled.
-	CancelReason	string       `json:"cancel_reason"`
+	CancelReason	*string      `json:"cancel_reason"`
 
 	// CreatedAt is the datetime when this record was created.
 	CreatedAt       time.Time    `json:"created_at"`

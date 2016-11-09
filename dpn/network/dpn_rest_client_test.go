@@ -517,7 +517,7 @@ func TestReplicationTransferCreate(t *testing.T) {
 	assert.Equal(t, xfer.Stored, newXfer.Stored)
 	assert.Equal(t, xfer.StoreRequested, newXfer.StoreRequested)
 	assert.Equal(t, xfer.Cancelled, newXfer.Cancelled)
-	assert.Equal(t, xfer.CancelReason, newXfer.CancelReason)
+	assert.Equal(t, xfer.CancelReason, &newXfer.CancelReason)
 	assert.Equal(t, xfer.Protocol, newXfer.Protocol)
 	assert.Equal(t, xfer.Link, newXfer.Link)
 	assert.NotEmpty(t, newXfer.CreatedAt)

@@ -41,7 +41,7 @@ type RestoreTransfer struct {
 
 	// CancelReason is free-form text describing why this restore
 	// request was cancelled.
-	CancelReason	string       `json:"cancel_reason"`
+	CancelReason	*string      `json:"cancel_reason"`
 
 
 	// CreatedAt is the datetime when this record was created.
