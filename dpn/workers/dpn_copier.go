@@ -160,7 +160,7 @@ func (copier *DPNCopier) buildReplicationManifest(message *nsq.Message) (*models
 	// This is where we will store our local copy of this bag.
 	manifest.LocalPath = filepath.Join(
 		copier.Context.Config.DPN.StagingDirectory,
-		manifest.ReplicationTransfer.Bag)
+		manifest.ReplicationTransfer.Bag + ".tar")
 
 	GetDPNBag(copier.LocalClient, manifest, manifest.CopySummary)
 	return manifest
