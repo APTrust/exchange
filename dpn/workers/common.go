@@ -170,44 +170,7 @@ func ReserveSpaceOnVolume(_context *context.Context, manifest *models.Replicatio
 	return okToCopy
 }
 
-// func CancelTransfer(_context *context.Context, remoteClient *network.DPNRestClient, manifest *models.ReplicationManifest) {
-// 	if manifest.ReplicationTransfer != nil {
-// 		manifest.ReplicationTransfer.Cancelled = true
-// 		manifest.ReplicationTransfer.CancelReason = manifest.CopySummary.Errors[0]
-// 		if remoteClient == nil {
-// 			msg := fmt.Sprintf("Cannot cancel ReplicationTransfer %s " +
-// 				"because REST client for node %s is nil.",
-// 				manifest.ReplicationTransfer.ReplicationId,
-// 				manifest.ReplicationTransfer.FromNode)
-// 			manifest.CopySummary.AddError(msg)
-// 			_context.MessageLog.Error(msg)
-// 		} else {
-// 			resp := remoteClient.ReplicationTransferUpdate(manifest.ReplicationTransfer)
-// 			if resp.Error != nil {
-// 				rawRespData, _ := resp.RawResponseData()
-// 				respBody := "[response body not available]"
-// 				if rawRespData != nil {
-// 					respBody = string(rawRespData)
-// 				}
-// 				msg := fmt.Sprintf("When trying to cancel ReplicationTransfer %s," +
-// 					"got error %v. Response body: %s",
-// 					manifest.ReplicationTransfer.ReplicationId,
-// 					resp.Error, respBody)
-// 				manifest.CopySummary.AddError(msg)
-// 				_context.MessageLog.Error(msg)
-// 			} else {
-// 				// Cancellation succeeded.
-// 				_context.MessageLog.Info("Cancelled xfer %s at %s",
-// 					manifest.ReplicationTransfer.ReplicationId,
-// 					manifest.ReplicationTransfer.FromNode)
-// 			}
-// 		}
-// 	} else {
-// 		_context.MessageLog.Warning("Cannot cancel nil ReplicationTransfer.")
-// 	}
-// }
-
-func UpdateTransfer(_context *context.Context, remoteClient *network.DPNRestClient, manifest *models.ReplicationManifest) {
+func UpdateReplicationTransfer(_context *context.Context, remoteClient *network.DPNRestClient, manifest *models.ReplicationManifest) {
 	if manifest.ReplicationTransfer != nil {
 		if remoteClient == nil {
 			msg := fmt.Sprintf("Cannot update ReplicationTransfer %s " +

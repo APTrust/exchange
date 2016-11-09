@@ -129,7 +129,7 @@ func (copier *DPNCopier) verifyChecksum() {
 		copier.calculateTagManifestDigest(manifest)
 		if !manifest.CopySummary.HasErrors() {
 			remoteClient := copier.RemoteClients[manifest.ReplicationTransfer.FromNode]
-			UpdateTransfer(copier.Context, remoteClient, manifest)
+			UpdateReplicationTransfer(copier.Context, remoteClient, manifest)
 		}
 		copier.PostProcessChannel <- manifest
 	}
@@ -231,7 +231,7 @@ func (copier *DPNCopier) finishWithError(manifest *models.ReplicationManifest) {
 		manifest.ReplicationTransfer.Cancelled = true
 		manifest.ReplicationTransfer.CancelReason = &manifest.CopySummary.Errors[0]
 		remoteClient := copier.RemoteClients[fromNode]
-		UpdateTransfer(copier.Context, remoteClient, manifest)
+		UpdateReplicationTransfer(copier.Context, remoteClient, manifest)
 		manifest.NsqMessage.Finish()
 	} else {
 		msg := fmt.Sprintf("Requeueing xfer %s due to non-fatal error: %s",
