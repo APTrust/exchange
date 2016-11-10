@@ -68,8 +68,8 @@ func (validator *DPNValidator) loadBagValidationConfig() {
 		fmt.Fprintln(os.Stderr, msg)
 		validator.Context.MessageLog.Fatal(msg)
 	} else {
-		fetcher.Context.MessageLog.Info("Loaded bag validation config file %s",
-			fetcher.Context.Config.DPN.BagValidationConfigFile)
+		validator.Context.MessageLog.Info("Loaded bag validation config file %s",
+			validator.Context.Config.DPN.BagValidationConfigFile)
 	}
 
 	validator.BagValidationConfig = bagValidationConfig
