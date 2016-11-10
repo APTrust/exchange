@@ -340,6 +340,37 @@ class IntegrationTest
     end
   end
 
+  def dpn_validate(more_tests_follow)
+    begin
+      # Build
+      @build.build(@context.apps['dpn_validate'])
+
+      # Run prerequisites
+      copy_ok = dpn_copy(true)
+      if !copy_ok
+        puts "Skipping dpn_validate test because of prior failures."
+        print_results
+        return false
+      end
+
+      # Start service
+      @service.app_start(@context.apps['dpn_validate'])
+      sleep 30
+
+      # TODO: Write post test
+      # @results['dpn_validate_test'] = @test_runner.run_dpn_validate_post_test
+    rescue Exception => ex
+      print_exception(ex)
+    ensure
+      @service.stop_everything unless more_tests_follow
+    end
+    if more_tests_follow
+      return all_tests_passed?
+    else
+      return print_results
+    end
+  end
+
 
   def dpn_ingest(more_tests_follow)
     # depends on dpn_queue

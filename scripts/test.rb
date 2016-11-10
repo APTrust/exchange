@@ -40,8 +40,9 @@ def tests
     'dpn_sync' => 'Test synching data from other nodes',
     'dpn_queue' => 'Test queueing ingest and transfer requests',
     'dpn_copy' => 'Test copying bags from remote nodes',
-    'dpn_ingest' => 'Test ingesting APTrust bags into DPN',
-    'dpn_replicate' => 'Test replicating bags from other DPN nodes',
+    'dpn_validate' => 'Test validation of bags from remote nodes',
+    #'dpn_ingest' => 'Test ingesting APTrust bags into DPN',
+    #'dpn_replicate' => 'Test replicating bags from other DPN nodes',
     'units' => 'Run all unit tests. Starts no external services.',
   }
 end
