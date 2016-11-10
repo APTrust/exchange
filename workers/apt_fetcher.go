@@ -289,6 +289,9 @@ func (fetcher *APTFetcher) loadBagValidationConfig() {
 		}
 		fmt.Fprintln(os.Stderr, msg)
 		fetcher.Context.MessageLog.Fatal(msg)
+	} else {
+		fetcher.Context.MessageLog.Info("Loaded bag validation config file %s",
+			fetcher.Context.Config.BagValidationConfigFile)
 	}
 	fetcher.BagValidationConfig = bagValidationConfig
 }
