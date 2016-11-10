@@ -42,6 +42,7 @@ func NewDPNValidator(_context *context.Context) (*DPNValidator, error) {
 		LocalClient: localClient,
 		RemoteClients: remoteClients,
 	}
+	validator.loadBagValidationConfig()
 	workerBufferSize := _context.Config.DPN.DPNValidationWorker.Workers * 4
 	validator.ValidationChannel = make(chan *models.ReplicationManifest, workerBufferSize)
 	validator.PostProcessChannel = make(chan *models.ReplicationManifest, workerBufferSize)
@@ -51,6 +52,29 @@ func NewDPNValidator(_context *context.Context) (*DPNValidator, error) {
 	}
 	return validator, nil
 }
+
+// Loads the bag validation config file specified in the general config
+// options. This will die if the bag validation config cannot be loaded
+// or is invalid.
+func (validator *DPNValidator) loadBagValidationConfig() {
+	bagValidationConfig, errors := validation.LoadBagValidationConfig(
+		validator.Context.Config.DPN.BagValidationConfigFile)
+	if errors != nil && len(errors) > 0 {
+		msg := fmt.Sprintf("Could not load bag validation config from %s",
+			validator.Context.Config.BagValidationConfigFile)
+		for _, err := range errors {
+			msg += fmt.Sprintf("%s ... ", err.Error())
+		}
+		fmt.Fprintln(os.Stderr, msg)
+		validator.Context.MessageLog.Fatal(msg)
+	} else {
+		fetcher.Context.MessageLog.Info("Loaded bag validation config file %s",
+			fetcher.Context.Config.DPN.BagValidationConfigFile)
+	}
+
+	validator.BagValidationConfig = bagValidationConfig
+}
+
 
 func (validator *DPNValidator) HandleMessage(message *nsq.Message) error {
 	message.DisableAutoResponse()
