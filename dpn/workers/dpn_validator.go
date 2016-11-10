@@ -7,6 +7,7 @@ import (
 	"github.com/APTrust/exchange/dpn/network"
 	"github.com/APTrust/exchange/validation"
 	"github.com/nsqio/go-nsq"
+	"os"
 	"path/filepath"
 	"strconv"
 )
@@ -77,8 +78,10 @@ func (validator *DPNValidator) validate() {
 		manifest.NsqMessage.Touch()
 
 		// Tell Pharos that we've started to validate item.
-		// Set DPNWorkItem to whatever
-		// UpdateDPNWorkItem
+		manifest.DPNWorkItem.Node, _ = os.Hostname()
+		note := "Validating bag"
+		manifest.DPNWorkItem.Note = &note
+		SaveDPNWorkItemState(validator.Context, manifest, manifest.ValidateSummary)
 
 		// Set up a new validator to check this bag.
 		bagValidator, err := validation.NewBagValidator(manifest.LocalPath,
@@ -116,17 +119,53 @@ func (validator *DPNValidator) finishWithError(manifest *models.ReplicationManif
 	// Validate errors are fatal. We won't store an invalid bag.
 	manifest.ValidateSummary.ErrorIsFatal = true
 	manifest.ValidateSummary.Retry = false
-	// 1. Cancel transfer on remote node.
-	// 2. Delete bag (tar file).
-	// 3. Update DPNWorkItem.
-	// 4. Finish NSQ message.
-	// 5. Dump JSON
+
+	// Get the remote client that talks to this transfer's FromNode
+	remoteClient := validator.RemoteClients[manifest.ReplicationTransfer.FromNode]
+
+	// Tell the FromNode that we're cancelling replication of an invalid bag.
+	manifest.ReplicationTransfer.Cancelled = true
+	reason := fmt.Sprintf("Bag failed validation. %s", manifest.ValidateSummary.Errors[0])
+	manifest.ReplicationTransfer.CancelReason = &reason
+	UpdateReplicationTransfer(validator.Context, remoteClient, manifest)
+
+	// Tell Pharos that this DPNWorkItem failed.
+	note := "Bag failed validation"
+	manifest.DPNWorkItem.Node = ""
+	manifest.DPNWorkItem.Note = &note
+	SaveDPNWorkItemState(validator.Context, manifest, manifest.ValidateSummary)
+	validator.Context.MessageLog.Error(manifest.ValidateSummary.AllErrorsAsString())
+
+	// Delete the tar file from our staging area.
+	validator.Context.MessageLog.Info("Deleting %s", manifest.LocalPath)
+	os.Remove(manifest.LocalPath)
+
+	// Dump the JSON info about this validation attempt,
+	// and tell NSQ we're done.
+	LogReplicationJson(manifest, validator.Context.JsonLog)
+	manifest.NsqMessage.Finish()
 }
 
 func (validator *DPNValidator) finishWithSuccess(manifest *models.ReplicationManifest) {
-	// 1. Update DPNWorkItem
-	// 2. Push item into dpn_record_queue.
-	// 3. Dump JSON
+	// Tell Pharos we're done working on this.
+	note := "Bag passed validation"
+	manifest.DPNWorkItem.Node = ""
+	manifest.DPNWorkItem.Note = &note
+	SaveDPNWorkItemState(validator.Context, manifest, manifest.ValidateSummary)
+
+	// Push this DPNWorkItem Id into the next queue, so it can be stored.
+	topic := validator.Context.Config.DPN.DPNStoreWorker.NsqTopic
+	err := validator.Context.NSQClient.Enqueue(topic, manifest.DPNWorkItem.Id)
+	if err != nil {
+		msg := fmt.Sprintf("Error pushing into NSQ %s: %v", err)
+		manifest.ValidateSummary.AddError(msg)
+		validator.Context.MessageLog.Error(msg)
+	}
+
+	// Dump the JSON info about this validation attempt,
+	// and tell NSQ we're done.
+	LogReplicationJson(manifest, validator.Context.JsonLog)
+	manifest.NsqMessage.Finish()
 }
 
 // setupReplicationManifest creates a ReplicationManifest for this job.

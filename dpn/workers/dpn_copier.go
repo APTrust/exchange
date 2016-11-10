@@ -249,7 +249,7 @@ func (copier *DPNCopier) finishWithError(manifest *models.ReplicationManifest) {
 
 	// Tell Pharos what happened, and then dump the JSON to a log file.
 	*manifest.DPNWorkItem.Note = "Copy failed."
-	SaveWorkItemState(copier.Context, manifest, manifest.CopySummary)
+	SaveDPNWorkItemState(copier.Context, manifest, manifest.CopySummary)
 	LogReplicationJson(manifest, copier.Context.JsonLog)
 }
 
@@ -263,7 +263,7 @@ func (copier *DPNCopier) finishWithSuccess(manifest *models.ReplicationManifest)
 	// Save DPNWorkItem.State BEFORE pushing to next queue, because
 	// the next worker may pick this up immediately, and it needs
 	// up-to-date info.
-	SaveWorkItemState(copier.Context, manifest, manifest.CopySummary)
+	SaveDPNWorkItemState(copier.Context, manifest, manifest.CopySummary)
 	topic := copier.Context.Config.DPN.DPNValidationWorker.NsqTopic
 	err := copier.Context.NSQClient.Enqueue(topic, manifest.DPNWorkItem.Id)
 	if err != nil {
@@ -276,7 +276,7 @@ func (copier *DPNCopier) finishWithSuccess(manifest *models.ReplicationManifest)
 		copier.Context.MessageLog.Info("Copy succeeded for Replication %s " +
 			"but could not push to validation queue.",
 			manifest.ReplicationTransfer.ReplicationId)
-		SaveWorkItemState(copier.Context, manifest, manifest.CopySummary)
+		SaveDPNWorkItemState(copier.Context, manifest, manifest.CopySummary)
 	}
 
 	LogReplicationJson(manifest, copier.Context.JsonLog)

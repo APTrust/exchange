@@ -170,6 +170,9 @@ func ReserveSpaceOnVolume(_context *context.Context, manifest *models.Replicatio
 	return okToCopy
 }
 
+// UpdateReplicationTransfer updates manifest.ReplicationTransfer at the
+// remote DPN node that remoteClient is connected to. That must be the
+// FromNode of the ReplicationTransfer.
 func UpdateReplicationTransfer(_context *context.Context, remoteClient *network.DPNRestClient, manifest *models.ReplicationManifest) {
 	if manifest.ReplicationTransfer != nil {
 		if remoteClient == nil {
@@ -234,7 +237,9 @@ func LogReplicationJson (manifest *models.ReplicationManifest, jsonLog *log.Logg
 		endMessage, "\n")
 }
 
-func SaveWorkItemState(_context *context.Context, manifest *models.ReplicationManifest, workSummary *apt_models.WorkSummary) {
+// SaveDPNWorkItemState saves the manifest.DPNWorkItem to Pharos,
+// after it's State property to a JSON serialization of the manifest.
+func SaveDPNWorkItemState(_context *context.Context, manifest *models.ReplicationManifest, workSummary *apt_models.WorkSummary) {
 	dpnWorkItem := manifest.DPNWorkItem
 	priorState := dpnWorkItem.State
 	empty := ""
