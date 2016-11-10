@@ -96,6 +96,8 @@ func (copier *DPNCopier) doCopy() {
 			rsyncCommand.Path, strings.Join(rsyncCommand.Args, " "))
 
 		// Touch message on both sides of rsync, so NSQ doesn't time out.
+		// The copy process may take a few hours, depending on the size
+		// of the bag.
 		if manifest.NsqMessage != nil {
 			manifest.NsqMessage.Touch()
 		}
