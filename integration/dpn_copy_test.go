@@ -67,16 +67,22 @@ func TestCopyResultSentToRemoteNodes(t *testing.T) {
 		_context.Config.DPN)
 	require.Nil(t, err, "Couldn't build DPN REST client: %v", err)
 
+	remoteClients, err := dpnClient.GetRemoteClients()
+	require.Nil(t, err, "Couldn't build remote DPN clients: %v", err)
+
 	// These identifiers are in the fixture data for dpn-server.
-	xferIdentifiers := []string {
-		"20000000-0000-4000-a000-000000000007", // from chron
-		"30000000-0000-4000-a000-000000000001", // from hathi
-		"40000000-0000-4000-a000-000000000013", // from sdr
-		"50000000-0000-4000-a000-000000000019", // from tdr
+	// Key is the FromNode, value is the ReplicationId
+	xferIdentifiers := map[string]string {
+		"chron": "20000000-0000-4000-a000-000000000007",
+		"hathi": "30000000-0000-4000-a000-000000000001",
+		"sdr":   "40000000-0000-4000-a000-000000000013",
+		"tdr":   "50000000-0000-4000-a000-000000000019",
 	}
 
-	for _, identifier := range xferIdentifiers {
-		resp := dpnClient.ReplicationTransferGet(identifier)
+	for fromNode, identifier := range xferIdentifiers {
+		client := remoteClients[fromNode]
+		require.NotNil(t, client, "No DPN REST client for %s", fromNode)
+		resp := client.ReplicationTransferGet(identifier)
 		require.Nil(t, resp.Error)
 		xfer := resp.ReplicationTransfer()
 		require.NotNil(t, xfer, "ReplicationTransfer %s is missing", identifier)
