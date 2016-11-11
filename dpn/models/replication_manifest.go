@@ -18,6 +18,7 @@ type ReplicationManifest struct {
 	LocalPath           string
 	RsyncStdout         string
 	RsyncStderr         string
+	Cancelled           bool
 }
 
 // NewReplicationManifest creates a new ReplicationManifest.
@@ -28,5 +29,6 @@ func NewReplicationManifest(nsqMessage *nsq.Message) (*ReplicationManifest) {
 		CopySummary: apt_models.NewWorkSummary(),
 		ValidateSummary: apt_models.NewWorkSummary(),
 		StoreSummary: apt_models.NewWorkSummary(),
+		Cancelled: false,
 	}
 }
