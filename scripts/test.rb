@@ -1,3 +1,5 @@
+#!/usr/bin/env ruby
+
 require 'optparse'
 require_relative 'context'
 require_relative 'integration_test'
