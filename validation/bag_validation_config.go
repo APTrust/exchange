@@ -154,7 +154,7 @@ func LoadBagValidationConfig(pathToConfigFile string) (*BagValidationConfig, []e
 	err = json.Unmarshal(file, bagValidationConfig)
 	if err != nil {
 		detailedError := fmt.Errorf(
-			"Error parsing JSON from bag validation config file '%s':",
+			"Error parsing JSON from bag validation config file '%s': %v",
 			pathToConfigFile, err)
 		errors = append(errors, detailedError)
 		return nil, errors
