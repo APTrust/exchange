@@ -355,7 +355,8 @@ class IntegrationTest
 
       # Start service
       @service.app_start(@context.apps['dpn_validate'])
-      sleep 30
+      puts 'Waiting 90 seconds for dpn_validate'
+      sleep 90
 
       # TODO: Write post test
       # @results['dpn_validate_test'] = @test_runner.run_dpn_validate_post_test
