@@ -60,21 +60,21 @@ func GetDPNWorkItem(_context *context.Context, manifest *models.ReplicationManif
 	}
 }
 
-// GetXferRequest gets the ReplicationTransfer request from our local
+// GetXferRequest gets the ReplicationTransfer request from the
 // DPN REST server that describes the replication we're about to
 // perform. Param _context is a context object, manifest is a ReplicationManifest,
 // and workSummary should be the WorkSummary pertinent to the current
 // operation. So, on copy, workSummary should be manifest.CopySummary;
 // on validation, it should be manifest.ValidationSummary; and on store
 // it should be manifest.StoreSummary.
-func GetXferRequest(localClient *network.DPNRestClient, manifest *models.ReplicationManifest, workSummary *apt_models.WorkSummary) {
+func GetXferRequest(dpnClient *network.DPNRestClient, manifest *models.ReplicationManifest, workSummary *apt_models.WorkSummary) {
 	if manifest == nil || manifest.DPNWorkItem == nil {
 		msg := fmt.Sprintf("getXferRequest: ReplicationManifest.DPNWorkItem cannot be nil.")
 		workSummary.AddError(msg)
 		workSummary.ErrorIsFatal = true
 		return
 	}
-	resp := localClient.ReplicationTransferGet(manifest.DPNWorkItem.Identifier)
+	resp := dpnClient.ReplicationTransferGet(manifest.DPNWorkItem.Identifier)
 	if resp.Error != nil {
 		msg := fmt.Sprintf("Could not get ReplicationTransfer %s " +
 			"from DPN server: %v", manifest.DPNWorkItem.Identifier, resp.Error)
@@ -106,21 +106,21 @@ func GetXferRequest(localClient *network.DPNRestClient, manifest *models.Replica
 	}
 }
 
-// GetDPNBag gets the bag record fom the local DPN REST server that
+// GetDPNBag gets the bag record fom the DPN REST server that
 // describes the bag we are being asked to copy.
 // Param _context is a context object, manifest is a ReplicationManifest,
 // and workSummary should be the WorkSummary pertinent to the current
 // operation. So, on copy, workSummary should be manifest.CopySummary;
 // on validation, it should be manifest.ValidationSummary; and on store
 // it should be manifest.StoreSummary.
-func GetDPNBag(localClient *network.DPNRestClient, manifest *models.ReplicationManifest, workSummary *apt_models.WorkSummary) {
+func GetDPNBag(dpnClient *network.DPNRestClient, manifest *models.ReplicationManifest, workSummary *apt_models.WorkSummary) {
 	if manifest == nil || manifest.ReplicationTransfer == nil {
 		msg := fmt.Sprintf("getDPNBag: ReplicationManifest.ReplicationTransfer cannot be nil.")
 		workSummary.ErrorIsFatal = true
 		workSummary.AddError(msg)
 		return
 	}
-	resp := localClient.DPNBagGet(manifest.ReplicationTransfer.Bag)
+	resp := dpnClient.DPNBagGet(manifest.ReplicationTransfer.Bag)
 	if resp.Error != nil {
 		msg := fmt.Sprintf("Could not get ReplicationTransfer %s " +
 			"from DPN server: %v", manifest.DPNWorkItem.Identifier, resp.Error)
