@@ -7,7 +7,6 @@
         "tagmanifest-sha256.txt": { "Presence": "required" },
         "bagit.txt": { "Presence": "required", "ParseAsTagFile": true },
         "bag-info.txt": { "Presence": "required", "ParseAsTagFile": true },
-        "aptrust-info.txt": { "Presence": "required", "ParseAsTagFile": true },
         "dpn-tags/dpn-info.txt": { "Presence": "required", "ParseAsTagFile": true }
     },
     "FileNamePattern_Comment": "Use APTRUST or POSIX for pre-defined patterns, or write your own custom regex.",
