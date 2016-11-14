@@ -12,7 +12,7 @@ import (
 /*
 PremisEvent contains information about events that occur during
 the processing of a file or intellectual object, such as the
-verfication of checksums, generation of unique identifiers, etc.
+verification of checksums, generation of unique identifiers, etc.
 We use this struct to exchange data in JSON format with the
 Pharos API.
 */

@@ -10,7 +10,7 @@ type ReplicationTransfer struct {
 	// The FromNode initiates the replication request.
 	FromNode        string       `json:"from_node"`
 
-	// ToNode is the node the bag is being transfered to
+	// ToNode is the node the bag is being transferred to
 	ToNode          string       `json:"to_node"`
 
 	// Bag is the UUID of the bag to be replicated

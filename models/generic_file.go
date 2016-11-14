@@ -206,7 +206,7 @@ type GenericFile struct {
 	// pulled down from S3. This should match the known sha256 digest.
 	FetchSha256Value            string         `json:"fetch_sha256_value,omitempty"`
 
-	// FetchErrorMessage describes any error that occured during the
+	// FetchErrorMessage describes any error that occurred during the
 	// fetch process, including network errors, object not found, no disk
 	// space, fixity mismatches, etc.
 	FetchErrorMessage           string         `json:"fetch_error_message,omitempty"`

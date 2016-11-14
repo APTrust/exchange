@@ -321,7 +321,7 @@ func LoadIntelObjFixture(filename string) (*models.IntellectualObject, error) {
 	return intelObj, nil
 }
 
-// GetContext returns a context object initialized with the specifed
+// GetContext returns a context object initialized with the specified
 // config file. Param configFile should be the name of a JSON config
 // file in the exchange/config directory. For example, "test.json"
 // or "integration.json".
