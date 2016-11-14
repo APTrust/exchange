@@ -9,6 +9,7 @@ import (
 	apt_network "github.com/APTrust/exchange/network"
 	"github.com/nsqio/go-nsq"
 	"os"
+	"time"
 )
 
 // dpn_storer copies bags from our staging area to Glacier
@@ -194,7 +195,12 @@ func (storer *DPNStorer) finishWithError(manifest *models.ReplicationManifest) {
 	// Dump the JSON info about this validation attempt,
 	// and tell NSQ we're done.
 	LogReplicationJson(manifest, storer.Context.JsonLog)
-	manifest.NsqMessage.Finish()
+
+	if manifest.StoreSummary.ErrorIsFatal {
+		manifest.NsqMessage.Finish()
+	} else {
+		manifest.NsqMessage.Requeue(1 * time.Minute)
+	}
 }
 
 func (storer *DPNStorer) finishWithSuccess(manifest *models.ReplicationManifest) {
@@ -203,18 +209,34 @@ func (storer *DPNStorer) finishWithSuccess(manifest *models.ReplicationManifest)
 		manifest.ReplicationTransfer.Bag,
 		manifest.StorageURL)
 
-	// TODO: Tell the remote node that we stored this item.
+	// Tell the remote node that we stored this item.
+	manifest.ReplicationTransfer.Stored = true
+	remoteClient := storer.RemoteClients[manifest.ReplicationTransfer.FromNode]
+	if remoteClient == nil {
+		manifest.StoreSummary.AddError("Cannot get remote client for %s",
+			manifest.ReplicationTransfer.FromNode)
+	} else {
+		UpdateReplicationTransfer(storer.Context, remoteClient, manifest)
+	}
 
-	// Tell Pharos we're done working on this.
-	manifest.StoreSummary.Finish()
 	note := "Bag copied to long-term storage"
+	if manifest.StoreSummary.HasErrors() {
+		note += " but could not set Stored=true on FromNode."
+	} else {
+		// Tell Pharos we're done working on this.
+		manifest.StoreSummary.Finish()
+		manifest.DPNWorkItem.CompletedAt = &manifest.StoreSummary.FinishedAt
+	}
 	manifest.DPNWorkItem.Node = ""
 	manifest.DPNWorkItem.Note = &note
-	manifest.DPNWorkItem.CompletedAt = &manifest.StoreSummary.FinishedAt
 	SaveDPNWorkItemState(storer.Context, manifest, manifest.StoreSummary)
 
 	// Dump the JSON info about this validation attempt,
 	// and tell NSQ we're done.
 	LogReplicationJson(manifest, storer.Context.JsonLog)
-	manifest.NsqMessage.Finish()
+	if manifest.StoreSummary.HasErrors() == false {
+		manifest.NsqMessage.Finish()
+	} else {
+		manifest.NsqMessage.Requeue(1 * time.Minute)
+	}
 }
