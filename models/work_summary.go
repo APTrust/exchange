@@ -58,7 +58,7 @@ func NewWorkSummary() *WorkSummary {
 }
 
 func (summary *WorkSummary) Start() {
-	summary.StartedAt = time.Now()
+	summary.StartedAt = time.Now().UTC()
 }
 
 func (summary *WorkSummary) Started() bool {
@@ -66,7 +66,7 @@ func (summary *WorkSummary) Started() bool {
 }
 
 func (summary *WorkSummary) Finish()  {
-	summary.FinishedAt = time.Now()
+	summary.FinishedAt = time.Now().UTC()
 }
 
 func (summary *WorkSummary) Finished() bool {
