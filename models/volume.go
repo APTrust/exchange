@@ -15,7 +15,7 @@ import (
 // as well as the amount of space claimed for pending operations.
 // The purpose is to allow the bag processor to try to determine
 // ahead of time whether the underlying disk has enough space to
-// accomodate the file it just pulled off the queue. We want to
+// accommodate the file it just pulled off the queue. We want to
 // avoid downloading 100GB files when we know ahead of time that
 // we don't have enough space to process them.
 type Volume struct {
@@ -86,7 +86,7 @@ func (volume *Volume) AvailableSpace() (uint64, error) {
 // Reserving space does not have any effect on the file system. It
 // simply allows the Volume struct to maintain some internal bookkeeping.
 // Reserve will return an error if there is not enough free disk space to
-// accomodate the requested number of bytes.
+// accommodate the requested number of bytes.
 func (volume *Volume) Reserve(path string, numBytes uint64) (error) {
 	available, err := volume.AvailableSpace()
 	if err != nil {

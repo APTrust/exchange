@@ -166,7 +166,7 @@ func (obj *IntellectualObject) FindTag(tagName string) ([]*Tag) {
 
 // Returns true if all the GenericFiles that needed to be saved
 // were successfully saved to both primary and secondary storage.
-// Note that GenericFiles maked as IngestNeedsSave = false do
+// Note that GenericFiles marked as IngestNeedsSave = false do
 // not need to be saved.
 func (obj *IntellectualObject) AllFilesSaved() (bool) {
 	allSaved := true

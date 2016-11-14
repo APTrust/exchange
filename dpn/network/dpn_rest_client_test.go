@@ -23,7 +23,7 @@ This file contains integration that rely on a locally-running instance
 of the DPN REST service. The tests will not run if runRestTests()
 determines that the DPN REST server is unreachable.
 
-The dpn-server respository includes a set of test fixures under
+The dpn-server repository includes a set of test fixures under
 test/fixtures/integration that contains the test data we're expecting
 to find in these tests.
 
