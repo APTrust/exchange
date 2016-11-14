@@ -69,6 +69,9 @@ func (copier *DPNCopier) HandleMessage(message *nsq.Message) error {
 	// manifest := copier.buildReplicationManifest(message)
 	manifest := SetupReplicationManifest(message, "copy", copier.Context,
 		copier.LocalClient, copier.RemoteClients)
+	manifest.CopySummary.Start()
+	manifest.CopySummary.Attempted = true
+	manifest.CopySummary.AttemptNumber += 1
 
 	if manifest.CopySummary.HasErrors() {
 		copier.PostProcessChannel <- manifest
@@ -226,6 +229,15 @@ func (copier *DPNCopier) finishWithError(manifest *models.ReplicationManifest) {
 		copier.Context.MessageLog.Error(msg)
 		manifest.ReplicationTransfer.Cancelled = true
 		manifest.ReplicationTransfer.CancelReason = &manifest.CopySummary.Errors[0]
+		remoteClient := copier.RemoteClients[fromNode]
+		UpdateReplicationTransfer(copier.Context, remoteClient, manifest)
+		manifest.NsqMessage.Finish()
+	} else if manifest.CopySummary.AttemptNumber > copier.Context.Config.DPN.DPNCopyWorker.MaxAttempts {
+		msg := fmt.Sprintf("Attempt to copy Replication %s failed %d times. %s",
+			xferId, manifest.CopySummary.AttemptNumber, manifest.CopySummary.Errors[0])
+		copier.Context.MessageLog.Error(msg)
+		manifest.ReplicationTransfer.Cancelled = true
+		manifest.ReplicationTransfer.CancelReason = &msg
 		remoteClient := copier.RemoteClients[fromNode]
 		UpdateReplicationTransfer(copier.Context, remoteClient, manifest)
 		manifest.NsqMessage.Finish()
