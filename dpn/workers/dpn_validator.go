@@ -1,6 +1,7 @@
 package workers
 
 import (
+	"encoding/json"
 	"fmt"
 	"github.com/APTrust/exchange/context"
 	"github.com/APTrust/exchange/dpn/models"
@@ -158,6 +159,10 @@ func (validator *DPNValidator) finishWithError(manifest *models.ReplicationManif
 	if manifest.ReplicationTransfer.Cancelled == false {
 		manifest.ReplicationTransfer.Cancelled = true
 		manifest.ReplicationTransfer.CancelReason = &reason
+		validator.Context.MessageLog.Warning("Cancelling Replication %s at %s: %s",
+			manifest.ReplicationTransfer.ReplicationId,
+			manifest.ReplicationTransfer.FromNode,
+			reason)
 		UpdateReplicationTransfer(validator.Context, remoteClient, manifest)
 	}
 
@@ -172,6 +177,7 @@ func (validator *DPNValidator) finishWithError(manifest *models.ReplicationManif
 	validator.Context.MessageLog.Error(manifest.ValidateSummary.AllErrorsAsString())
 
 	// Delete the tar file from our staging area.
+	validator.Context.MessageLog.Info(*manifest.DPNWorkItem.Note)
 	validator.Context.MessageLog.Info("Deleting %s", manifest.LocalPath)
 	os.Remove(manifest.LocalPath)
 
@@ -182,6 +188,10 @@ func (validator *DPNValidator) finishWithError(manifest *models.ReplicationManif
 }
 
 func (validator *DPNValidator) finishWithSuccess(manifest *models.ReplicationManifest) {
+	validator.Context.MessageLog.Info("Replication %s (bag %s) passed validation",
+		manifest.ReplicationTransfer.ReplicationId,
+		manifest.ReplicationTransfer.Bag)
+
 	// Tell Pharos we're done working on this.
 	note := "Bag passed validation"
 	manifest.DPNWorkItem.Node = ""
@@ -195,6 +205,10 @@ func (validator *DPNValidator) finishWithSuccess(manifest *models.ReplicationMan
 		msg := fmt.Sprintf("Error pushing into NSQ %s: %v", err)
 		manifest.ValidateSummary.AddError(msg)
 		validator.Context.MessageLog.Error(msg)
+	} else {
+		validator.Context.MessageLog.Info("Replication %s (bag %s) pushed to NSQ topic %s",
+		manifest.ReplicationTransfer.ReplicationId,
+			manifest.ReplicationTransfer.Bag, topic)
 	}
 
 	// Dump the JSON info about this validation attempt,
@@ -228,7 +242,30 @@ func (validator *DPNValidator) setupReplicationManifest(message *nsq.Message) (*
 		manifest.ValidateSummary.Finish()
 		return manifest
 	}
+
 	manifest.DPNWorkItem = resp.DPNWorkItem()
+
+	savedState := ""
+	if manifest.DPNWorkItem.State != nil {
+		savedState = *manifest.DPNWorkItem.State
+	}
+	savedManifest := &models.ReplicationManifest{}
+	unmarshaFailed := false
+	err = json.Unmarshal([]byte(savedState), &savedManifest)
+	if err != nil {
+		validator.Context.MessageLog.Warning(
+			"Cannot unmarshal saved manifest for ReplicationId %s: %v\n" +
+				"Will re-fetch bag from remote node. Manifest data: %s",
+			err, manifest.DPNWorkItem.Identifier, manifest.DPNWorkItem.State)
+		unmarshaFailed = true
+	} else {
+		manifest.CopySummary = savedManifest.CopySummary
+		manifest.DPNBag = savedManifest.DPNBag
+		manifest.LocalPath = savedManifest.LocalPath
+		manifest.RsyncStdout = savedManifest.RsyncStdout
+		manifest.RsyncStderr = savedManifest.RsyncStderr
+		manifest.Cancelled = savedManifest.Cancelled
+	}
 
 	// Get the latest copy of the ReplicationTransfer from
 	// the remote node. There's a chance this replication may
@@ -239,7 +276,7 @@ func (validator *DPNValidator) setupReplicationManifest(message *nsq.Message) (*
 	// the node that originated the request, to ensure it hasn't
 	// been cancelled.
 	validator.Context.MessageLog.Info("Requesting ReplicationTransfer %s from local DPN server",
-		manifest.DPNWorkItem)
+		manifest.DPNWorkItem.Identifier)
 	GetXferRequest(validator.LocalClient, manifest, manifest.ValidateSummary)
 	if manifest.ValidateSummary.HasErrors() {
 		return manifest
@@ -250,16 +287,22 @@ func (validator *DPNValidator) setupReplicationManifest(message *nsq.Message) (*
 		manifest.ValidateSummary.AddError("Cannot get remote DPN client for %s",
 			manifest.ReplicationTransfer.FromNode)
 	}
+	validator.Context.MessageLog.Info("Requesting ReplicationTransfer %s from remote DPN server %s",
+		manifest.DPNWorkItem.Identifier, manifest.ReplicationTransfer.FromNode)
 	GetXferRequest(remoteClient, manifest, manifest.ValidateSummary)
 	if manifest.ValidateSummary.HasErrors() {
 		return manifest
 	}
 
-	// This is where we have stored our local copy of this bag.
-	manifest.LocalPath = filepath.Join(
-		validator.Context.Config.DPN.StagingDirectory,
-		manifest.ReplicationTransfer.Bag + ".tar")
-	validator.Context.MessageLog.Info("Set manifest.LocalPath to %s", manifest.LocalPath)
+	if unmarshaFailed {
+		// This is where we have stored our local copy of this bag.
+		manifest.LocalPath = filepath.Join(
+			validator.Context.Config.DPN.StagingDirectory,
+			manifest.ReplicationTransfer.Bag + ".tar")
+		validator.Context.MessageLog.Info("Set manifest.LocalPath to %s", manifest.LocalPath)
+		// Get the DPN bag from the remote node.
+		GetDPNBag(remoteClient, manifest, manifest.ValidateSummary)
+	}
 
 	if manifest.ReplicationTransfer.StoreRequested == false {
 		manifest.ValidateSummary.AddError("Aborting replication because StoreRequested is false.")
@@ -269,11 +312,6 @@ func (validator *DPNValidator) setupReplicationManifest(message *nsq.Message) (*
 		manifest.ValidateSummary.AddError("Aborting replication because Cancelled is true.")
 		manifest.Cancelled = true
 	}
-
-	// Get the DPN bag from the remote node. It should not have
-	// changed, but at least we know we have the current version
-	// of it when we fetch it.
-	GetDPNBag(remoteClient, manifest, manifest.ValidateSummary)
 
 	return manifest
 }
