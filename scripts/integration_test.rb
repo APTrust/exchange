@@ -355,7 +355,7 @@ class IntegrationTest
 
       # Start service
       @service.app_start(@context.apps['dpn_validate'])
-      sleep 30
+      sleep 20
 
       # Ensure expected post conditions
       @results['dpn_validate_test'] = @test_runner.run_dpn_validate_post_test
@@ -371,6 +371,36 @@ class IntegrationTest
     end
   end
 
+  def dpn_store(more_tests_follow)
+    begin
+      # Build
+      @build.build(@context.apps['dpn_store'])
+
+      # Run prerequisites
+      validate_ok = dpn_validate(true)
+      if !validate_ok
+        puts "Skipping dpn_store test because of prior failures."
+        print_results
+        return false
+      end
+
+      # Start service
+      @service.app_start(@context.apps['dpn_store'])
+      sleep 20
+
+      # Ensure expected post conditions
+      # @results['dpn_store_test'] = @test_runner.run_dpn_store_post_test
+    rescue Exception => ex
+      print_exception(ex)
+    ensure
+      @service.stop_everything unless more_tests_follow
+    end
+    if more_tests_follow
+      return all_tests_passed?
+    else
+      return print_results
+    end
+  end
 
   def dpn_ingest(more_tests_follow)
     # depends on dpn_queue

@@ -40,6 +40,7 @@ class Context
       'dpn_queue' => App.new('dpn_queue', 'application'),
       'dpn_sync' => App.new('dpn_sync', 'application'),
       'dpn_validate' => App.new('dpn_validate', 'service'),
+      'dpn_store' => App.new('dpn_store', 'service'),
       'nsq_service' => App.new('nsq_service', 'special'),
       'test_push_to_dpn' => App.new('test_push_to_dpn', 'application'),
     }
