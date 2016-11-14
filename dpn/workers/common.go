@@ -337,6 +337,16 @@ func SetupReplicationManifest(message *nsq.Message, stage string, _context *cont
 	// the NSQ message.
 	manifest.NsqMessage = message
 
+	// Clear prior errors for this stage of processing, since we're
+	// about to try again.
+	if stage == "copy" {
+		manifest.CopySummary.ClearErrors()
+	} else if stage == "validate" {
+		manifest.ValidateSummary.ClearErrors()
+	} else if stage == "store" {
+		manifest.StoreSummary.ClearErrors()
+	}
+
 	// Get the latest copy of the ReplicationTransfer from
 	// the remote node. There's a chance this replication may
 	// have been cancelled since we copied the bag from the
