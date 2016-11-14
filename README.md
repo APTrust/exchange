@@ -1,4 +1,5 @@
 [![Go Report Card](https://goreportcard.com/badge/github.com/APTrust/exchange)](https://goreportcard.com/report/github.com/APTrust/exchange)
+[![Build Status](https://travis-ci.org/APTrust/exchange.svg?branch=master)](https://travis-ci.org/APTrust/exchange)
 
 # Exchange
 
