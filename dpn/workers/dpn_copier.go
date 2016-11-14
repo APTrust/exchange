@@ -66,7 +66,10 @@ func (copier *DPNCopier) HandleMessage(message *nsq.Message) error {
 	copier.Context.MessageLog.Info("Checking NSQ message %s", string(message.Body))
 
 	// Get the DPNWorkItem, the ReplicationTransfer, and the DPNBag
-	manifest := copier.buildReplicationManifest(message)
+	// manifest := copier.buildReplicationManifest(message)
+	manifest := SetupReplicationManifest(message, "copy", copier.Context,
+		copier.LocalClient, copier.RemoteClients)
+
 	if manifest.CopySummary.HasErrors() {
 		copier.PostProcessChannel <- manifest
 		return nil
@@ -170,7 +173,16 @@ func (copier *DPNCopier) calculateTagManifestDigest(manifest *models.Replication
 			err.Error)
 		return
 	}
-	digest, err := copier.calculateSha256(readCloser)
+	nonce := ""
+	if manifest.ReplicationTransfer.FixityNonce != nil && *manifest.ReplicationTransfer.FixityNonce != "" {
+		nonce = *manifest.ReplicationTransfer.FixityNonce
+		copier.Context.MessageLog.Info("FixityNonce for replication %s is %s",
+			manifest.ReplicationTransfer.ReplicationId, nonce)
+	} else {
+		copier.Context.MessageLog.Info("No FixityNonce for replication %s",
+			manifest.ReplicationTransfer.ReplicationId)
+	}
+	digest, err := copier.calculateSha256(readCloser, nonce)
 	if err != nil {
 		manifest.CopySummary.AddError("Error calculating tagmanifest digest: %v",
 			err.Error)
@@ -184,38 +196,19 @@ func (copier *DPNCopier) calculateTagManifestDigest(manifest *models.Replication
 
 // calculateSha256 calculates the sha256 digest of the contents of the
 // supplied reader. It returns the digest as a hex-encoded string.
-func (copier *DPNCopier) calculateSha256(reader io.Reader) (*string, error) {
+func (copier *DPNCopier) calculateSha256(reader io.Reader, nonce string) (*string, error) {
 	sha256Hash := sha256.New()
 	_, err := io.Copy(sha256Hash, reader)
 	if err != nil {
 		return nil, err
 	}
-	digest := fmt.Sprintf("%x", sha256Hash.Sum(nil))
+	digest := ""
+	if nonce == "" {
+		digest = fmt.Sprintf("%x", sha256Hash.Sum(nil))
+	} else {
+		digest = fmt.Sprintf("%x", sha256Hash.Sum([]byte(nonce)))
+	}
 	return &digest, nil
-}
-
-// buildReplicationManifest creates a ReplicationManifest for this job.
-func (copier *DPNCopier) buildReplicationManifest(message *nsq.Message) (*models.ReplicationManifest) {
-	manifest := models.NewReplicationManifest(message)
-	manifest.NsqMessage = message
-	manifest.CopySummary.Attempted = true
-	manifest.CopySummary.AttemptNumber = 1
-	manifest.CopySummary.Start()
-	GetDPNWorkItem(copier.Context, manifest, manifest.CopySummary)
-	if manifest.CopySummary.HasErrors() {
-		return manifest
-	}
-	GetXferRequest(copier.LocalClient, manifest, manifest.CopySummary)
-	if manifest.CopySummary.HasErrors() {
-		return manifest
-	}
-	// This is where we will store our local copy of this bag.
-	manifest.LocalPath = filepath.Join(
-		copier.Context.Config.DPN.StagingDirectory,
-		manifest.ReplicationTransfer.Bag + ".tar")
-
-	GetDPNBag(copier.LocalClient, manifest, manifest.CopySummary)
-	return manifest
 }
 
 func (copier *DPNCopier) finishWithError(manifest *models.ReplicationManifest) {
