@@ -262,8 +262,7 @@ func (validator *DPNValidator) setupReplicationManifest(message *nsq.Message) (*
 		manifest.CopySummary = savedManifest.CopySummary
 		manifest.DPNBag = savedManifest.DPNBag
 		manifest.LocalPath = savedManifest.LocalPath
-		manifest.RsyncStdout = savedManifest.RsyncStdout
-		manifest.RsyncStderr = savedManifest.RsyncStderr
+		manifest.RsyncOutput = savedManifest.RsyncOutput
 		manifest.Cancelled = savedManifest.Cancelled
 	}
 

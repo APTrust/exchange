@@ -103,6 +103,7 @@ func (copier *DPNCopier) doCopy() {
 		}
 		output, err := rsyncCommand.CombinedOutput()
 		copier.Context.MessageLog.Info("Rsync Output: %s", string(output))
+		manifest.RsyncOutput = string(output)
 		if manifest.NsqMessage != nil {
 			manifest.NsqMessage.Touch()
 		}

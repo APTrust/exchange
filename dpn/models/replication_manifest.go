@@ -16,8 +16,7 @@ type ReplicationManifest struct {
 	ValidateSummary     *apt_models.WorkSummary
 	StoreSummary        *apt_models.WorkSummary
 	LocalPath           string
-	RsyncStdout         string
-	RsyncStderr         string
+	RsyncOutput         string
 	Cancelled           bool
 }
 
