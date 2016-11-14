@@ -70,6 +70,18 @@ class TestRunner
     return $?.exitstatus == 0
   end
 
+  # Run the dpn_validate post test to ensure Pharos and NSQ
+  # were updated with the expected information.
+  def run_dpn_validate_post_test
+    env = @context.env_hash
+    env['RUN_EXCHANGE_INTEGRATION'] = 'true'
+    cmd = "go test dpn_validate_test.go"
+    dir = "#{@context.exchange_root}/integration"
+    pid = Process.spawn(env, cmd, chdir: dir)
+    Process.wait pid
+    return $?.exitstatus == 0
+  end
+
   def run_bucket_reader_post_test
     return run_integration_post_test('go test apt_bucket_reader_test.go')
   end

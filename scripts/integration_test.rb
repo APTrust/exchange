@@ -357,8 +357,8 @@ class IntegrationTest
       @service.app_start(@context.apps['dpn_validate'])
       sleep 30
 
-      # TODO: Write post test
-      # @results['dpn_validate_test'] = @test_runner.run_dpn_validate_post_test
+      # Ensure expected post conditions
+      @results['dpn_validate_test'] = @test_runner.run_dpn_validate_post_test
     rescue Exception => ex
       print_exception(ex)
     ensure
