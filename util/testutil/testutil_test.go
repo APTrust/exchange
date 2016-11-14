@@ -191,7 +191,7 @@ func TestMakeWorkSummary(t *testing.T) {
 		return
 	}
 	assert.True(t, ws.Attempted)
-	assert.Equal(t, 1, ws.AttemptNumber)
+	assert.EqualValues(t, 1, ws.AttemptNumber)
 	assert.Equal(t, 0, len(ws.Errors))
 	assert.False(t, ws.StartedAt.IsZero())
 	assert.False(t, ws.FinishedAt.IsZero())

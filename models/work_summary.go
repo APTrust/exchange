@@ -12,8 +12,9 @@ type WorkSummary struct {
 	Attempted      bool
 
 	// AttemptNumber is the number of the read attempt.
-	// This starts at one.
-	AttemptNumber  int
+	// This starts at one. This is uint16 to match the datatype
+	// of NsqMessage.Attempt.
+	AttemptNumber  uint16
 
 	// This will be set to true if an error is fatal. In that
 	// case, we should not try to reprocess the item.

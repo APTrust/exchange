@@ -106,7 +106,7 @@ func (recorder *APTRecorder) cleanup () {
 	for ingestState := range recorder.CleanupChannel {
 		// See if we have fatal errors, or too many recurring transient errors
 		attemptNumber := ingestState.IngestManifest.RecordResult.AttemptNumber
-		maxAttempts := int(recorder.Context.Config.RecordWorker.MaxAttempts)
+		maxAttempts := recorder.Context.Config.RecordWorker.MaxAttempts
 		itsTimeToGiveUp := (ingestState.IngestManifest.HasFatalErrors() ||
 			(ingestState.IngestManifest.HasErrors() && attemptNumber >= maxAttempts))
 

@@ -54,7 +54,7 @@ func TestRecordStartOfWork(t *testing.T) {
 	}
 	r.Untar()
 	assert.True(t, r.Manifest.UntarResult.Attempted)
-	assert.Equal(t, 1, r.Manifest.UntarResult.AttemptNumber)
+	assert.EqualValues(t, 1, r.Manifest.UntarResult.AttemptNumber)
 	assert.False(t, r.Manifest.UntarResult.StartedAt.IsZero())
 	assert.False(t, r.Manifest.UntarResult.FinishedAt.IsZero())
 }

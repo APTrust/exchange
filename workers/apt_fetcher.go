@@ -257,7 +257,7 @@ func (fetcher *APTFetcher) record() {
 
 		// Fatal errors, or too many recurring transient errors
 		attemptNumber := ingestState.IngestManifest.FetchResult.AttemptNumber
-		maxAttempts := int(fetcher.Context.Config.FetchWorker.MaxAttempts)
+		maxAttempts := fetcher.Context.Config.FetchWorker.MaxAttempts
 		itsTimeToGiveUp := (ingestState.IngestManifest.HasFatalErrors() ||
 			(ingestState.IngestManifest.HasErrors() && attemptNumber >= maxAttempts))
 
