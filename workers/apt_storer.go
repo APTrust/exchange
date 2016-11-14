@@ -147,7 +147,7 @@ func (storer *APTStorer) record () {
 
 		// See if we have fatal errors, or too many recurring transient errors
 		attemptNumber := ingestState.IngestManifest.StoreResult.AttemptNumber
-		maxAttempts := int(storer.Context.Config.StoreWorker.MaxAttempts)
+		maxAttempts := storer.Context.Config.StoreWorker.MaxAttempts
 		itsTimeToGiveUp := (ingestState.IngestManifest.HasFatalErrors() ||
 			(ingestState.IngestManifest.HasErrors() && attemptNumber >= maxAttempts))
 
