@@ -341,10 +341,16 @@ func SetupReplicationManifest(message *nsq.Message, stage string, _context *cont
 	// about to try again.
 	if stage == "copy" {
 		manifest.CopySummary.ClearErrors()
+		manifest.CopySummary.StartedAt = time.Time{}
+		manifest.CopySummary.FinishedAt = time.Time{}
 	} else if stage == "validate" {
 		manifest.ValidateSummary.ClearErrors()
+		manifest.ValidateSummary.StartedAt = time.Time{}
+		manifest.ValidateSummary.FinishedAt = time.Time{}
 	} else if stage == "store" {
 		manifest.StoreSummary.ClearErrors()
+		manifest.StoreSummary.StartedAt = time.Time{}
+		manifest.StoreSummary.FinishedAt = time.Time{}
 	}
 
 	// Get the latest copy of the ReplicationTransfer from
