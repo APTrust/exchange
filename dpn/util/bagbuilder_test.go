@@ -1,9 +1,9 @@
-package workers_test
+package util_test
 
 import (
 	"github.com/APTrust/bagins"
 	"github.com/APTrust/exchange/dpn"
-	"github.com/APTrust/exchange/dpn/workers"
+	"github.com/APTrust/exchange/dpn/util"
 	"github.com/APTrust/exchange/models"
 	"github.com/APTrust/exchange/util/testutil"
 	"github.com/stretchr/testify/assert"
@@ -32,13 +32,13 @@ func intelObj(t *testing.T) *models.IntellectualObject {
 	return obj
 }
 
-func createBagBuilder(t *testing.T) (builder *workers.BagBuilder) {
+func createBagBuilder(t *testing.T) (builder *util.BagBuilder) {
 	obj := intelObj(t)
 	configFile := filepath.Join("config", "test.json")
 	config, err := models.LoadConfigFile(configFile)
 	require.Nil(t, err)
 
-	builder, err = workers.NewBagBuilder(testBagPath(), obj, config.DPN.DefaultMetadata)
+	builder, err = util.NewBagBuilder(testBagPath(), obj, config.DPN.DefaultMetadata)
 	if err != nil {
 		tearDown()
 		t.Errorf("Could not create bag builder: %s", err.Error())
