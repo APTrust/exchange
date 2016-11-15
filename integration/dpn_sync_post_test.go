@@ -1,4 +1,4 @@
-package integration
+package integration_test
 
 import (
 	"github.com/APTrust/exchange/context"

@@ -280,7 +280,6 @@ class IntegrationTest
   def dpn_queue(more_tests_follow)
     begin
       # Build
-      @build.build(@context.apps['test_push_to_dpn'])
       @build.build(@context.apps['dpn_queue'])
 
       # Run prerequisites.
@@ -291,8 +290,16 @@ class IntegrationTest
         return false
       end
 
+      # Push some APTrust bags to DPN. We want to make sure
+      # that dpn_queue picks these up.
+      @results['apt_push_to_dpn'] = @test_runner.run_apt_push_to_dpn_test
+      if @results['apt_push_to_dpn'] == false
+        puts "Skipping dpn_queue test because apt_push_to_dpn failed."
+        print_results
+        return false
+      end
+
       # Start services
-      @service.app_start(@context.apps['test_push_to_dpn'])
       @service.app_start(@context.apps['dpn_queue'])
 
       # Run the post test
