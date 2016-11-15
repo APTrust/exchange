@@ -30,7 +30,7 @@ func TestS3ObjectGetList(t *testing.T) {
 		testBucket,
 		int64(100),
 	)
-	s3ObjectList.GetList()
+	s3ObjectList.GetList("")
 	assert.Equal(t, "", s3ObjectList.ErrorMessage)
 	assert.NotEmpty(t, s3ObjectList.Response.Contents)
 }

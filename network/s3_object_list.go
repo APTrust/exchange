@@ -39,10 +39,12 @@ func (client *S3ObjectList)GetSession() (*session.Session) {
 }
 
 // Returns a list of objects from this S3 bucket.
+// If param prefix is not an empty string, this returns
+// only keys with the specified prefix.
 // Check *s3ObjectList.Response.IsTruncated to see if
 // you got the complete list. If not, keep calling
 // GetList until IsTruncated == false.
-func (client *S3ObjectList) GetList() {
+func (client *S3ObjectList) GetList(prefix string) {
 	_session := client.GetSession()
 	if _session == nil {
 		return
@@ -53,7 +55,9 @@ func (client *S3ObjectList) GetList() {
 	if client.Response != nil && *client.Response.IsTruncated {
 		client.ListObjectsInput.Marker = client.Response.NextMarker
 	}
-
+	if prefix != "" {
+		client.ListObjectsInput.Prefix = &prefix
+	}
 	client.Response, err = service.ListObjects(client.ListObjectsInput)
 	if err != nil {
 		client.ErrorMessage = err.Error()
