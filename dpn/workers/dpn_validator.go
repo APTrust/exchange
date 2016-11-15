@@ -64,6 +64,9 @@ func (validator *DPNValidator) HandleMessage(message *nsq.Message) error {
 	manifest.ValidateSummary.Start()
 	manifest.ValidateSummary.Attempted = true
 	manifest.ValidateSummary.AttemptNumber += 1
+
+	// Handle the case where we cannot get the WorkItem whose id
+	// is specified in the NSQ message.
 	if manifest.ValidateSummary.HasErrors() {
 		validator.Context.MessageLog.Info("Aargh! Into the bitbucket with NSQ message %s", string(message.Body))
 		validator.PostProcessChannel <- manifest

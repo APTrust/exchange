@@ -273,8 +273,13 @@ func SaveDPNWorkItemState(_context *context.Context, manifest *models.Replicatio
 	}
 }
 
-// SetupReplicationManifest creates a ReplicationManifest for this job.
+// SetupReplicationManifest loads the existing ReplicationManifest associated with
+// the NSQ message, or creates a new one if necessary. Param message should
+// be the NSQ message we're working on. Param stage should be one of "copy",
+// "validate" or "store". Param _context is the context of the worker calling
+// this fuction.
 func SetupReplicationManifest(message *nsq.Message, stage string, _context *context.Context, localClient *network.DPNRestClient, remoteClients map[string]*network.DPNRestClient) *models.ReplicationManifest {
+	// TODO: This function is too long. Break it up.
 	manifest := models.NewReplicationManifest(message)
 	var activeSummary *apt_models.WorkSummary
 	if stage == "copy" {
@@ -436,4 +441,21 @@ func LoadBagValidationConfig(_context *context.Context) *validation.BagValidatio
 			_context.Config.DPN.BagValidationConfigFile)
 	}
 	return bagValidationConfig
+}
+
+// SetupIngestManifest loads the existing DPNIngestManifest associated with
+// the NSQ message, or creates a new one if necessary. Param message should
+// be the NSQ message we're working on. Param stage should be one of "package",
+// "store" or "record". Param _context is the context of the worker calling
+// this fuction.
+func SetupIngestManifest(message *nsq.Message, stage string, _context *context.Context) *models.DPNIngestManifest {
+	// TODO: Implement this.
+	//
+	// 1. Fetch the WorkItem
+	// 2. Fetch the WorkItemState
+	// 3. Unmarshal DPNIngestManifest from WorkItemState, or create a new IngestManifest.
+	//    If creating a new manifest:
+	//    - fetch the IntellectualObject
+	//    - set LocalDir and LocalTarFile
+	return nil
 }

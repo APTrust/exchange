@@ -16,8 +16,14 @@ type DPNIngestManifest struct {
 	// information about this ingest.
 	WorkItem *apt_models.WorkItem
 
+	// WorkItemState is the WorkItemState in Pharos that conntains
+	// a JSON representation of this DPNIngestManifest.
+	WorkItemState *apt_models.WorkItemState
+
 	// IntellectualObject is the object we are pushing into DPN.
-	IntellectualObject *apt_models.IntellectualObject
+	// We don't serialize this because in cases where the object
+	// has tens of thousands of files, this record is huge.
+	IntellectualObject *apt_models.IntellectualObject `json:"-"`
 
 	// LocalDir is the directory in which we are assembling the
 	// contents of the DPN bag.
