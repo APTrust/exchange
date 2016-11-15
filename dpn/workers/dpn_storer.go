@@ -120,7 +120,7 @@ func (storer *DPNStorer) copyToLongTermStorage(manifest *models.ReplicationManif
 	upload := apt_network.NewS3Upload(
 		constants.AWSVirginia,
 		storer.Context.Config.DPN.DPNPreservationBucket,
-		manifest.ReplicationTransfer.Bag,
+		fmt.Sprintf("%s.tar", manifest.ReplicationTransfer.Bag),
 		"application/x-tar")
 	upload.AddMetadata("from_node", manifest.ReplicationTransfer.FromNode)
 	upload.AddMetadata("transfer_id", manifest.ReplicationTransfer.ReplicationId)
