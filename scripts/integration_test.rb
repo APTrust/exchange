@@ -396,7 +396,7 @@ class IntegrationTest
       sleep 20
 
       # Ensure expected post conditions
-      # @results['dpn_store_test'] = @test_runner.run_dpn_store_post_test
+      @results['dpn_store_test'] = @test_runner.run_dpn_store_post_test
     rescue Exception => ex
       print_exception(ex)
     ensure

@@ -68,6 +68,14 @@ class TestRunner
     return run('go test dpn_validate_post_test.go')
   end
 
+  # Run the dpn_store_post_test, which ensures that DPNWorkItems
+  # are correctly closed out, ReplicationTransfers are marked
+  # as stored on the remote nodes, and DPN bags are properly
+  # stored in S3/Glacier.
+  def run_dpn_store_post_test
+    return run('go test dpn_store_post_test.go')
+  end
+
   def run_bucket_reader_post_test
     return run('go test apt_bucket_reader_post_test.go')
   end
