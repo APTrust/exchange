@@ -25,7 +25,6 @@
     "PreservationBucket": "aptrust.test.preservation",
     "ReplicationBucket": "aptrust.test.preservation.oregon",
     "CustomRestoreBucket": "aptrust.test.restore",
-    "DPNPreservationBucket": "aptrust.dpn.test",
     "RestoreToTestBuckets": false,
     "MaxDaysSinceFixityCheck": 60,
 
@@ -189,6 +188,7 @@
         "LogToStderr": false,
         "ReplicateToNumNodes": 2,
         "DPNAPIVersion": "api-v2",
+        "DPNPreservationBucket": "aptrust.dpn.test",
         "AcceptInvalidSSLCerts": true,
         "UseSSHWithRsync": false,
         "DPNGlacierRegion": "us-east-1",
