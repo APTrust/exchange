@@ -9,8 +9,10 @@ import (
 	"github.com/APTrust/exchange/dpn/network"
 	apt_models "github.com/APTrust/exchange/models"
 	"github.com/APTrust/exchange/util"
+	"github.com/APTrust/exchange/validation"
 	"github.com/nsqio/go-nsq"
 	"log"
+	"os"
 	"path/filepath"
 	"strconv"
 	"time"
@@ -413,4 +415,25 @@ func SetupReplicationManifest(message *nsq.Message, stage string, _context *cont
 	}
 
 	return manifest
+}
+
+// LoadBagValidationConfig loads the bag validation config file specified
+// in the general config options. This will die if the bag validation
+// config cannot be loaded or is invalid.
+func LoadBagValidationConfig(_context *context.Context) *validation.BagValidationConfig {
+	bagValidationConfig, errors := validation.LoadBagValidationConfig(
+		_context.Config.DPN.BagValidationConfigFile)
+	if errors != nil && len(errors) > 0 {
+		msg := fmt.Sprintf("Could not load bag validation config from %s",
+			_context.Config.BagValidationConfigFile)
+		for _, err := range errors {
+			msg += fmt.Sprintf("%s ... ", err.Error())
+		}
+		fmt.Fprintln(os.Stderr, msg)
+		_context.MessageLog.Fatal(msg)
+	} else {
+		_context.MessageLog.Info("Loaded bag validation config file %s",
+			_context.Config.DPN.BagValidationConfigFile)
+	}
+	return bagValidationConfig
 }
