@@ -12,20 +12,20 @@ import (
 )
 
 type VolumeClient struct {
-	serviceUrl    string
+	serviceUrl string
 }
 
-func NewVolumeClient(port int) (*VolumeClient) {
+func NewVolumeClient(port int) *VolumeClient {
 	return &VolumeClient{
 		serviceUrl: fmt.Sprintf("http://127.0.0.1:%d", port),
 	}
 }
 
-func (client *VolumeClient) BaseURL() (string) {
+func (client *VolumeClient) BaseURL() string {
 	return client.serviceUrl
 }
 
-func (client *VolumeClient) Ping(msTimeout int) (error) {
+func (client *VolumeClient) Ping(msTimeout int) error {
 	pingUrl := fmt.Sprintf("%s/ping/", client.serviceUrl)
 	timeout := time.Duration(time.Duration(msTimeout) * time.Millisecond)
 	httpClient := http.Client{
@@ -34,7 +34,6 @@ func (client *VolumeClient) Ping(msTimeout int) (error) {
 	_, err := httpClient.Get(pingUrl)
 	return err
 }
-
 
 func (client *VolumeClient) Reserve(path string, bytes uint64) (bool, error) {
 	if path == "" {
@@ -45,13 +44,13 @@ func (client *VolumeClient) Reserve(path string, bytes uint64) (bool, error) {
 	}
 	reserveUrl := fmt.Sprintf("%s/reserve/", client.serviceUrl)
 	params := url.Values{
-		"path": {path},
+		"path":  {path},
 		"bytes": {strconv.FormatUint(bytes, 10)},
 	}
 	return client.doRequest(reserveUrl, params)
 }
 
-func (client *VolumeClient) Release(path string) (error) {
+func (client *VolumeClient) Release(path string) error {
 	releaseUrl := fmt.Sprintf("%s/release/", client.serviceUrl)
 	if path == "" {
 		return fmt.Errorf("Path cannot be empty.")

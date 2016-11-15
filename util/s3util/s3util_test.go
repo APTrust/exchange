@@ -7,7 +7,7 @@ import (
 )
 
 func TestKeyIsComplete(t *testing.T) {
-	key := s3.Key { Key: "filename.txt" }
+	key := s3.Key{Key: "filename.txt"}
 	if s3util.KeyIsComplete(key) {
 		t.Errorf("KeyIsComplete should have returned false")
 	}

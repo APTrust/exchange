@@ -26,7 +26,7 @@ func TestVirtualBagRead_FromDirectory(t *testing.T) {
 	if tempDir != "" {
 		defer os.RemoveAll(tempDir)
 	}
-	files := []string {"bagit.txt", "bag-info.txt", "aptrust-info.txt"}
+	files := []string{"bagit.txt", "bag-info.txt", "aptrust-info.txt"}
 	vbag := models.NewVirtualBag(bagPath, files, true, true)
 	assert.NotNil(t, vbag)
 	obj, summary := vbag.Read()
@@ -35,7 +35,7 @@ func TestVirtualBagRead_FromDirectory(t *testing.T) {
 
 func TestVirtualBagRead_FromTarFile(t *testing.T) {
 	tarFilePath := testhelper.VbagGetPath("example.edu.tagsample_good.tar")
-	files := []string {"bagit.txt", "bag-info.txt", "aptrust-info.txt"}
+	files := []string{"bagit.txt", "bag-info.txt", "aptrust-info.txt"}
 	vbag := models.NewVirtualBag(tarFilePath, files, true, true)
 	assert.NotNil(t, vbag)
 	obj, summary := vbag.Read()
@@ -50,7 +50,7 @@ func TestVirtualBagRead_ChecksumOptions(t *testing.T) {
 	if tempDir != "" {
 		defer os.RemoveAll(tempDir)
 	}
-	files := []string {"bagit.txt", "bag-info.txt", "aptrust-info.txt"}
+	files := []string{"bagit.txt", "bag-info.txt", "aptrust-info.txt"}
 	vbag := models.NewVirtualBag(bagPath, files, true, false)
 	assert.NotNil(t, vbag)
 	obj, _ := vbag.Read()
@@ -86,7 +86,7 @@ func TestVirtualBagRead_ManifestOptions(t *testing.T) {
 	// Delete the md5 manifest
 	os.Remove(filepath.Join(bagPath, "manifest-md5.txt"))
 
-	files := []string {"bagit.txt", "bag-info.txt", "aptrust-info.txt"}
+	files := []string{"bagit.txt", "bag-info.txt", "aptrust-info.txt"}
 	vbag := models.NewVirtualBag(bagPath, files, true, true)
 	assert.NotNil(t, vbag)
 	obj, _ := vbag.Read()
@@ -110,7 +110,7 @@ func TestVirtualBagRead_ManifestOptions(t *testing.T) {
 	// Delete the sha256 manifest
 	os.Remove(filepath.Join(bagPath, "manifest-sha256.txt"))
 
-	files = []string {"bagit.txt", "bag-info.txt", "aptrust-info.txt"}
+	files = []string{"bagit.txt", "bag-info.txt", "aptrust-info.txt"}
 	vbag = models.NewVirtualBag(bagPath, files, true, true)
 	assert.NotNil(t, vbag)
 	obj, _ = vbag.Read()
@@ -128,25 +128,25 @@ func TestVirtualBagRead_ManifestOptions(t *testing.T) {
 // We should not parse other tag files
 func TestVirtualBagTagFileOptions(t *testing.T) {
 	tarFilePath := testhelper.VbagGetPath("example.edu.tagsample_good.tar")
-	files := []string {}
+	files := []string{}
 	vbag := models.NewVirtualBag(tarFilePath, files, true, true)
 	assert.NotNil(t, vbag)
 	obj, _ := vbag.Read()
 	assert.Equal(t, 0, len(obj.IngestTags))
 
-	files = []string {"bagit.txt"}
+	files = []string{"bagit.txt"}
 	vbag = models.NewVirtualBag(tarFilePath, files, true, true)
 	assert.NotNil(t, vbag)
 	obj, _ = vbag.Read()
 	assert.Equal(t, 2, len(obj.IngestTags))
 
-	files = []string {"bagit.txt", "bag-info.txt"}
+	files = []string{"bagit.txt", "bag-info.txt"}
 	vbag = models.NewVirtualBag(tarFilePath, files, true, true)
 	assert.NotNil(t, vbag)
 	obj, _ = vbag.Read()
 	assert.Equal(t, 8, len(obj.IngestTags))
 
-	files = []string {"bagit.txt", "bag-info.txt", "aptrust-info.txt"}
+	files = []string{"bagit.txt", "bag-info.txt", "aptrust-info.txt"}
 	vbag = models.NewVirtualBag(tarFilePath, files, true, true)
 	assert.NotNil(t, vbag)
 	obj, _ = vbag.Read()
@@ -157,7 +157,7 @@ func TestVirtualBagReadReportsMissingFiles(t *testing.T) {
 	// This bad bag has a number of problems.
 	// Here, we're specifically testing to see if a missing file is reported.
 	tarFilePath := testhelper.VbagGetPath("example.edu.tagsample_bad.tar")
-	files := []string {"bagit.txt", "bag-info.txt", "aptrust-info.txt"}
+	files := []string{"bagit.txt", "bag-info.txt", "aptrust-info.txt"}
 	vbag := models.NewVirtualBag(tarFilePath, files, true, true)
 	assert.NotNil(t, vbag)
 	obj, summary := vbag.Read()
@@ -170,7 +170,6 @@ func TestVirtualBagReadReportsMissingFiles(t *testing.T) {
 	assert.Equal(t, "custom_tags/tag_file_xyz.pdf", obj.IngestMissingFiles[1].FilePath)
 	assert.Equal(t, "custom_tags/tag_file_xyz.pdf", obj.IngestMissingFiles[2].FilePath)
 }
-
 
 func runAssertions(t *testing.T, obj *models.IntellectualObject, summary *models.WorkSummary, caller string) {
 	// WorkSummary
@@ -211,7 +210,6 @@ func runAssertions(t *testing.T, obj *models.IntellectualObject, summary *models
 		assert.NotEmpty(t, obj.IngestTopLevelDirNames[0], caller)
 	}
 
-
 	// Tags
 	assert.Equal(t, 10, len(obj.IngestTags))
 	for _, tag := range obj.IngestTags {
@@ -250,10 +248,14 @@ func runAssertions(t *testing.T, obj *models.IntellectualObject, summary *models
 		assert.Empty(t, gf.IngestReplicationURL, caller)
 		assert.True(t, gf.Size > 0, caller)
 		switch gf.IngestFileType {
-		case constants.PAYLOAD_FILE: payloadFileCount++
-		case constants.PAYLOAD_MANIFEST: manifestCount++
-		case constants.TAG_MANIFEST: tagManifestCount++
-		case constants.TAG_FILE: tagFileCount++
+		case constants.PAYLOAD_FILE:
+			payloadFileCount++
+		case constants.PAYLOAD_MANIFEST:
+			manifestCount++
+		case constants.TAG_MANIFEST:
+			tagManifestCount++
+		case constants.TAG_FILE:
+			tagFileCount++
 		}
 	}
 

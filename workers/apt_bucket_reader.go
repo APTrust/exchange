@@ -8,7 +8,7 @@ import (
 	"github.com/APTrust/exchange/network"
 	"github.com/APTrust/exchange/stats"
 	"github.com/APTrust/exchange/util"
-    "github.com/aws/aws-sdk-go/service/s3"
+	"github.com/aws/aws-sdk-go/service/s3"
 	"net/url"
 	"strconv"
 	"strings"
@@ -23,30 +23,29 @@ const DEFAULT_CACHE_HOURS = 24
 // we're getting the contents of a bucket?
 const MAX_KEYS = 1000
 
-
 // APTBucketReader scans APTrust receiving buckets for items
 // that need to be ingested. It creates a WorkItem record and
 // an NSQ entry for each qualifying bag, and is responsible for
 // knowing whether items in the receiving buckets actually need
 // to be queued.
 type APTBucketReader struct {
-	Context                *context.Context
-	Institutions           map[string]*models.Institution
-	RecentIngestItems      map[string]*models.WorkItem
-	stats                  *stats.APTBucketReaderStats
-	statsEnabled           bool
+	Context           *context.Context
+	Institutions      map[string]*models.Institution
+	RecentIngestItems map[string]*models.WorkItem
+	stats             *stats.APTBucketReaderStats
+	statsEnabled      bool
 }
 
 // Creates a new bucket reader with the given context.
 // Param enableStats is generally used for integration tests.
 // Enabling stats in production can cause high memory usage,
 // so keep that off unless you're trying to diagnose specific problems.
-func NewAPTBucketReader(context *context.Context, enableStats bool) (*APTBucketReader){
+func NewAPTBucketReader(context *context.Context, enableStats bool) *APTBucketReader {
 	reader := &APTBucketReader{
-		Context: context,
-		Institutions: make(map[string]*models.Institution),
+		Context:           context,
+		Institutions:      make(map[string]*models.Institution),
 		RecentIngestItems: make(map[string]*models.WorkItem),
-		statsEnabled: enableStats,
+		statsEnabled:      enableStats,
 	}
 	if enableStats {
 		reader.stats = stats.NewAPTBucketReaderStats()
@@ -54,18 +53,22 @@ func NewAPTBucketReader(context *context.Context, enableStats bool) (*APTBucketR
 	return reader
 }
 
-func (reader *APTBucketReader) Run() (error) {
+func (reader *APTBucketReader) Run() error {
 	err := reader.cacheInstitutions()
-	if err != nil { return err }
+	if err != nil {
+		return err
+	}
 	err = reader.cacheRecentIngestItems()
-	if err != nil { return err }
+	if err != nil {
+		return err
+	}
 	reader.readAllBuckets()
 	return nil
 }
 
 // Cache a list of all institutions. There are < 20.
 // Exit on failure.
-func (reader *APTBucketReader) cacheInstitutions() (error) {
+func (reader *APTBucketReader) cacheInstitutions() error {
 	params := url.Values{}
 	params.Add("page", "1")
 	params.Add("per_page", "100")
@@ -94,15 +97,15 @@ func (reader *APTBucketReader) cacheInstitutions() (error) {
 // have to do 1000 lookups. (X is usually around 24, but
 // check Config.BucketReaderCacheHours for the exact value.
 // This function exits on failure.
-func (reader *APTBucketReader) cacheRecentIngestItems() (error) {
+func (reader *APTBucketReader) cacheRecentIngestItems() error {
 	hours := reader.Context.Config.BucketReaderCacheHours
 	if hours < 1 {
 		hours = DEFAULT_CACHE_HOURS
 	}
-	createdAfter := time.Now().Add(time.Duration(-1 * hours) * time.Hour).UTC()
+	createdAfter := time.Now().Add(time.Duration(-1*hours) * time.Hour).UTC()
 	params := url.Values{}
 	params.Add("page", "1")
-	params.Add("per_page", "100")  // change to 4 to test hasMoreResults loop
+	params.Add("per_page", "100") // change to 4 to test hasMoreResults loop
 	params.Add("item_action", constants.ActionIngest)
 	params.Add("created_after", createdAfter.Format(time.RFC3339))
 	hasMoreResults := true
@@ -135,7 +138,7 @@ func (reader *APTBucketReader) cacheRecentIngestItems() (error) {
 				}
 				return fmt.Errorf(msg)
 			}
-			params.Set("page", strconv.Itoa(pageNum + 1))
+			params.Set("page", strconv.Itoa(pageNum+1))
 		} else {
 			hasMoreResults = false
 		}
@@ -144,7 +147,7 @@ func (reader *APTBucketReader) cacheRecentIngestItems() (error) {
 	return nil
 }
 
-func (reader *APTBucketReader) makeHashKey(key, etag, lastModified string) (string) {
+func (reader *APTBucketReader) makeHashKey(key, etag, lastModified string) string {
 	return fmt.Sprintf("%s|%s|%s", key, etag, lastModified)
 }
 
@@ -154,7 +157,7 @@ func (reader *APTBucketReader) readAllBuckets() {
 	}
 }
 
-func (reader *APTBucketReader) processBucket(bucketName string) () {
+func (reader *APTBucketReader) processBucket(bucketName string) {
 	reader.Context.MessageLog.Debug("Checking bucket %s", bucketName)
 	s3ObjList := network.NewS3ObjectList(reader.Context.Config.APTrustS3Region,
 		bucketName, MAX_KEYS)
@@ -176,9 +179,9 @@ func (reader *APTBucketReader) processBucket(bucketName string) () {
 	}
 }
 
-func (reader *APTBucketReader) processS3Object (s3Object *s3.Object, bucketName string) {
+func (reader *APTBucketReader) processS3Object(s3Object *s3.Object, bucketName string) {
 	if reader.Context.Config.MaxFileSize > int64(0) && *s3Object.Size > reader.Context.Config.MaxFileSize {
-		msg := fmt.Sprintf("Skipping %s/%s because size %d is greater than " +
+		msg := fmt.Sprintf("Skipping %s/%s because size %d is greater than "+
 			"current max file size %d", bucketName, *s3Object.Key, *s3Object.Size,
 			reader.Context.Config.MaxFileSize)
 		if reader.stats != nil {
@@ -191,7 +194,7 @@ func (reader *APTBucketReader) processS3Object (s3Object *s3.Object, bucketName 
 	if err != nil {
 		// Don't create a work item, because one may already exist.
 		// Error will be logged and added to stats at source.
-		msg := fmt.Sprintf("Not creating WorkItem for %s/%s because " +
+		msg := fmt.Sprintf("Not creating WorkItem for %s/%s because "+
 			"we can't tell if one already exists.", bucketName, *s3Object.Key)
 		reader.Context.MessageLog.Warning(msg)
 		if reader.stats != nil {
@@ -253,11 +256,11 @@ func (reader *APTBucketReader) findWorkItem(key, etag string, lastModified time.
 	return workItem, nil
 }
 
-func (reader *APTBucketReader) createWorkItem(bucket string, s3Object *s3.Object) (*models.WorkItem) {
+func (reader *APTBucketReader) createWorkItem(bucket string, s3Object *s3.Object) *models.WorkItem {
 	// Create a WorkItem in Pharos
 	institution := reader.Institutions[util.OwnerOf(bucket)]
 	if institution == nil {
-		errMsg := fmt.Sprintf("Cannot find institution record for item %s/%s. " +
+		errMsg := fmt.Sprintf("Cannot find institution record for item %s/%s. "+
 			"Owner computes to '%s'", bucket, *s3Object.Key, util.OwnerOf(bucket))
 		reader.Context.MessageLog.Error(errMsg)
 		if reader.stats != nil {
@@ -325,7 +328,7 @@ func (reader *APTBucketReader) addToNSQ(workItem *models.WorkItem) {
 	return
 }
 
-func (reader *APTBucketReader) markAsQueued(workItem *models.WorkItem) (*models.WorkItem) {
+func (reader *APTBucketReader) markAsQueued(workItem *models.WorkItem) *models.WorkItem {
 	utcNow := time.Now().UTC()
 	workItem.QueuedAt = &utcNow
 	resp := reader.Context.PharosClient.WorkItemSave(workItem)
@@ -349,7 +352,7 @@ func (reader *APTBucketReader) markAsQueued(workItem *models.WorkItem) (*models.
 	return resp.WorkItem()
 }
 
-func (reader *APTBucketReader) processPharosError(resp *network.PharosResponse) (error) {
+func (reader *APTBucketReader) processPharosError(resp *network.PharosResponse) error {
 	respBody := ""
 	bytesRead, readErr := resp.RawResponseData()
 	if readErr == nil {
@@ -366,6 +369,6 @@ func (reader *APTBucketReader) processPharosError(resp *network.PharosResponse) 
 	return fmt.Errorf(msg)
 }
 
-func (reader *APTBucketReader) GetStats() (*stats.APTBucketReaderStats) {
+func (reader *APTBucketReader) GetStats() *stats.APTBucketReaderStats {
 	return reader.stats
 }

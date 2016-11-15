@@ -19,7 +19,7 @@ import (
 func TestDPNWorkItemsCompleted(t *testing.T) {
 	if !apt_testutil.ShouldRunIntegrationTests() {
 		t.Skip("Skipping integration test. Set ENV var RUN_EXCHANGE_INTEGRATION=true if you want to run them.")
-    }
+	}
 	_context, err := apt_testutil.GetContext("integration.json")
 	require.Nil(t, err, "Could not create context")
 	params := url.Values{}
@@ -104,7 +104,7 @@ func TestItemsAreInLongTermStorage(t *testing.T) {
 		dpnBag := resp.Bag()
 		require.NotNil(t, dpnBag)
 		if dpnBag.IngestNode == _context.Config.DPN.LocalNode {
-			continue  // we would not have replicated our own bag
+			continue // we would not have replicated our own bag
 		}
 		tarFileName := fmt.Sprintf("%s.tar", identifier)
 		s3ObjectList.GetList(tarFileName)

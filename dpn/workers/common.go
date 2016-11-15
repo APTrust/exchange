@@ -25,7 +25,7 @@ import (
 func GetDPNWorkItem(_context *context.Context, manifest *models.ReplicationManifest, workSummary *apt_models.WorkSummary) {
 	workItemId, err := strconv.Atoi(string(manifest.NsqMessage.Body))
 	if err != nil {
-		msg := fmt.Sprintf("Could not get DPNWorkItemId from" +
+		msg := fmt.Sprintf("Could not get DPNWorkItemId from"+
 			"NSQ message body '%s': %v", manifest.NsqMessage.Body, err)
 		workSummary.AddError(msg)
 		workSummary.ErrorIsFatal = true
@@ -33,7 +33,7 @@ func GetDPNWorkItem(_context *context.Context, manifest *models.ReplicationManif
 	}
 	resp := _context.PharosClient.DPNWorkItemGet(workItemId)
 	if resp.Error != nil {
-		msg := fmt.Sprintf("Could not get DPNWorkItem (id %d) " +
+		msg := fmt.Sprintf("Could not get DPNWorkItem (id %d) "+
 			"from Pharos: %v", workItemId, resp.Error)
 		workSummary.AddError(msg)
 		workSummary.ErrorIsFatal = true
@@ -49,13 +49,13 @@ func GetDPNWorkItem(_context *context.Context, manifest *models.ReplicationManif
 		return
 	}
 	if dpnWorkItem.Task != constants.DPNTaskReplication {
-		msg := fmt.Sprintf("DPNWorkItem %d has task type %s, " +
+		msg := fmt.Sprintf("DPNWorkItem %d has task type %s, "+
 			"and does not belong in this queue!", workItemId, dpnWorkItem.Task)
 		workSummary.AddError(msg)
 		workSummary.ErrorIsFatal = true
 	}
 	if !util.LooksLikeUUID(dpnWorkItem.Identifier) {
-		msg := fmt.Sprintf("DPNWorkItem %d has identifier '%s', " +
+		msg := fmt.Sprintf("DPNWorkItem %d has identifier '%s', "+
 			"which does not look like a UUID", workItemId, dpnWorkItem.Identifier)
 		workSummary.AddError(msg)
 		workSummary.ErrorIsFatal = true
@@ -78,7 +78,7 @@ func GetXferRequest(dpnClient *network.DPNRestClient, manifest *models.Replicati
 	}
 	resp := dpnClient.ReplicationTransferGet(manifest.DPNWorkItem.Identifier)
 	if resp.Error != nil {
-		msg := fmt.Sprintf("Could not get ReplicationTransfer %s " +
+		msg := fmt.Sprintf("Could not get ReplicationTransfer %s "+
 			"from DPN server: %v", manifest.DPNWorkItem.Identifier, resp.Error)
 		workSummary.AddError(msg)
 		workSummary.ErrorIsFatal = true
@@ -124,7 +124,7 @@ func GetDPNBag(dpnClient *network.DPNRestClient, manifest *models.ReplicationMan
 	}
 	resp := dpnClient.DPNBagGet(manifest.ReplicationTransfer.Bag)
 	if resp.Error != nil {
-		msg := fmt.Sprintf("Could not get ReplicationTransfer %s " +
+		msg := fmt.Sprintf("Could not get ReplicationTransfer %s "+
 			"from DPN server: %v", manifest.DPNWorkItem.Identifier, resp.Error)
 		workSummary.AddError(msg)
 		workSummary.ErrorIsFatal = true
@@ -145,15 +145,15 @@ func GetDPNBag(dpnClient *network.DPNRestClient, manifest *models.ReplicationMan
 // Make sure we have space to copy this item from the remote node.
 // We will be validating this bag in a later step without untarring it,
 // so we just have to reserve enough room for the tar file.
-func ReserveSpaceOnVolume(_context *context.Context, manifest *models.ReplicationManifest) (bool) {
+func ReserveSpaceOnVolume(_context *context.Context, manifest *models.ReplicationManifest) bool {
 	okToCopy := false
 	err := _context.VolumeClient.Ping(500)
 	if err == nil {
 		path := manifest.LocalPath
 		ok, err := _context.VolumeClient.Reserve(path, uint64(manifest.DPNBag.Size))
 		if err != nil {
-			_context.MessageLog.Warning("Volume service returned an error. " +
-				"Will requeue ReplicationTransfer %s bag (%s) because we may not " +
+			_context.MessageLog.Warning("Volume service returned an error. "+
+				"Will requeue ReplicationTransfer %s bag (%s) because we may not "+
 				"have enough space to copy %d bytes from %s.",
 				manifest.ReplicationTransfer.ReplicationId,
 				manifest.ReplicationTransfer.Bag,
@@ -164,9 +164,9 @@ func ReserveSpaceOnVolume(_context *context.Context, manifest *models.Replicatio
 			okToCopy = ok
 		}
 	} else {
-		_context.MessageLog.Warning("Volume service is not running or returned an error. " +
+		_context.MessageLog.Warning("Volume service is not running or returned an error. "+
 			"Continuing as if we have enough space to download %d bytes.",
-			manifest.DPNBag.Size,)
+			manifest.DPNBag.Size)
 		okToCopy = true
 	}
 	return okToCopy
@@ -178,7 +178,7 @@ func ReserveSpaceOnVolume(_context *context.Context, manifest *models.Replicatio
 func UpdateReplicationTransfer(_context *context.Context, remoteClient *network.DPNRestClient, manifest *models.ReplicationManifest) {
 	if manifest.ReplicationTransfer != nil {
 		if remoteClient == nil {
-			msg := fmt.Sprintf("Cannot update ReplicationTransfer %s " +
+			msg := fmt.Sprintf("Cannot update ReplicationTransfer %s "+
 				"because REST client for node %s is nil.",
 				manifest.ReplicationTransfer.ReplicationId,
 				manifest.ReplicationTransfer.FromNode)
@@ -192,15 +192,15 @@ func UpdateReplicationTransfer(_context *context.Context, remoteClient *network.
 				respBody = string(rawRespData)
 			}
 			if resp.Error != nil {
-				msg := fmt.Sprintf("When trying to update ReplicationTransfer %s," +
+				msg := fmt.Sprintf("When trying to update ReplicationTransfer %s,"+
 					"got error %v. Response body: %s",
 					manifest.ReplicationTransfer.ReplicationId,
 					resp.Error, respBody)
 				manifest.CopySummary.AddError(msg)
 				_context.MessageLog.Error(msg)
 			} else if resp.ReplicationTransfer() == nil {
-				msg := fmt.Sprintf("When updating ReplicationTransfer %s, " +
-					"remote server did not return an updated transfer record. " +
+				msg := fmt.Sprintf("When updating ReplicationTransfer %s, "+
+					"remote server did not return an updated transfer record. "+
 					"Response body: %s",
 					manifest.ReplicationTransfer.ReplicationId,
 					respBody)
@@ -224,7 +224,7 @@ func UpdateReplicationTransfer(_context *context.Context, remoteClient *network.
 
 // Dump the WorkItemState.State into the JSON log, surrounded my markers that
 // make it easy to find. This log gets big.
-func LogReplicationJson (manifest *models.ReplicationManifest, jsonLog *log.Logger) {
+func LogReplicationJson(manifest *models.ReplicationManifest, jsonLog *log.Logger) {
 	timestamp := time.Now().UTC().Format(time.RFC3339)
 	startMessage := fmt.Sprintf("-------- BEGIN DPNWorkItem %d | XferId: %s | Time: %s --------",
 		manifest.DPNWorkItem.Id, manifest.DPNWorkItem.Identifier, timestamp)
@@ -248,8 +248,8 @@ func SaveDPNWorkItemState(_context *context.Context, manifest *models.Replicatio
 	dpnWorkItem.State = &empty
 	jsonData, err := json.Marshal(manifest)
 	if err != nil {
-		msg := fmt.Sprintf("Could not marshal ReplicationManifest " +
-			"for replication %s to JSON: %v", manifest.DPNWorkItem.Identifier,  err)
+		msg := fmt.Sprintf("Could not marshal ReplicationManifest "+
+			"for replication %s to JSON: %v", manifest.DPNWorkItem.Identifier, err)
 		_context.MessageLog.Error(msg)
 		workSummary.AddError(msg)
 		dpnWorkItem.State = priorState
@@ -263,7 +263,7 @@ func SaveDPNWorkItemState(_context *context.Context, manifest *models.Replicatio
 	dpnWorkItem.State = &newState
 	resp := _context.PharosClient.DPNWorkItemSave(dpnWorkItem)
 	if resp.Error != nil {
-		msg := fmt.Sprintf("Could not save DPNWorkItem %d " +
+		msg := fmt.Sprintf("Could not save DPNWorkItem %d "+
 			"for replication %s to Pharos: %v",
 			manifest.DPNWorkItem.Id, manifest.DPNWorkItem.Identifier, err)
 		_context.MessageLog.Error(msg)
@@ -272,7 +272,7 @@ func SaveDPNWorkItemState(_context *context.Context, manifest *models.Replicatio
 }
 
 // SetupReplicationManifest creates a ReplicationManifest for this job.
-func SetupReplicationManifest(message *nsq.Message, stage string, _context *context.Context, localClient *network.DPNRestClient, remoteClients map[string]*network.DPNRestClient) (*models.ReplicationManifest) {
+func SetupReplicationManifest(message *nsq.Message, stage string, _context *context.Context, localClient *network.DPNRestClient, remoteClients map[string]*network.DPNRestClient) *models.ReplicationManifest {
 	manifest := models.NewReplicationManifest(message)
 	var activeSummary *apt_models.WorkSummary
 	if stage == "copy" {
@@ -288,7 +288,7 @@ func SetupReplicationManifest(message *nsq.Message, stage string, _context *cont
 	// Get the DPNWorkItem that describes this replication.
 	workItemId, err := strconv.Atoi(string(manifest.NsqMessage.Body))
 	if err != nil {
-		msg := fmt.Sprintf("Could not get DPNWorkItemId from" +
+		msg := fmt.Sprintf("Could not get DPNWorkItemId from"+
 			"NSQ message body '%s': %v", manifest.NsqMessage.Body, err)
 		activeSummary.AddError(msg)
 		activeSummary.ErrorIsFatal = true
@@ -298,7 +298,7 @@ func SetupReplicationManifest(message *nsq.Message, stage string, _context *cont
 	_context.MessageLog.Info("Requesting DPNWorkItem %d from Pharos", workItemId)
 	resp := _context.PharosClient.DPNWorkItemGet(workItemId)
 	if resp.Error != nil {
-		msg := fmt.Sprintf("Could not get DPNWorkItem (id %d) " +
+		msg := fmt.Sprintf("Could not get DPNWorkItem (id %d) "+
 			"from Pharos: %v", workItemId, resp.Error)
 		activeSummary.AddError(msg)
 		activeSummary.ErrorIsFatal = true
@@ -323,7 +323,7 @@ func SetupReplicationManifest(message *nsq.Message, stage string, _context *cont
 	err = json.Unmarshal([]byte(savedState), &savedManifest)
 	if err != nil {
 		_context.MessageLog.Warning(
-			"Cannot unmarshal saved manifest for ReplicationId %s: %v\n" +
+			"Cannot unmarshal saved manifest for ReplicationId %s: %v\n"+
 				"Will re-fetch bag from remote node. Manifest data: %s",
 			err, manifest.DPNWorkItem.Identifier, savedState)
 		unmarshaFailed = true
@@ -390,7 +390,7 @@ func SetupReplicationManifest(message *nsq.Message, stage string, _context *cont
 		// This is where we have stored our local copy of this bag.
 		manifest.LocalPath = filepath.Join(
 			_context.Config.DPN.StagingDirectory,
-			manifest.ReplicationTransfer.Bag + ".tar")
+			manifest.ReplicationTransfer.Bag+".tar")
 		_context.MessageLog.Info("Set manifest.LocalPath to %s", manifest.LocalPath)
 		// Get the DPN bag from the remote node.
 		GetDPNBag(remoteClient, manifest, activeSummary)

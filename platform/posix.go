@@ -9,6 +9,7 @@ import (
 	"strings"
 	"syscall"
 )
+
 // We have a dummy version of this call in posix.go.
 // Windows does not implement the syscall.Stat_t type we
 // need, but the *nixes do. We use this in util.AddToArchive
@@ -24,7 +25,7 @@ func GetOwnerAndGroup(finfo os.FileInfo, header *tar.Header) {
 // On Linux and OSX, this uses df in a safe way (without passing
 // through any user-supplied input) to find the mountpoint of a
 // given file.
-func GetMountPointFromPath (path string) (string, error) {
+func GetMountPointFromPath(path string) (string, error) {
 	out, err := exec.Command("df").Output()
 	if err != nil {
 		return "", err
@@ -35,7 +36,7 @@ func GetMountPointFromPath (path string) (string, error) {
 	for i, line := range lines {
 		if i > 0 {
 			words := strings.Split(line, " ")
-			mountpoint := words[len(words) - 1]
+			mountpoint := words[len(words)-1]
 			if strings.HasPrefix(path, mountpoint) && len(mountpoint) > maxPrefixLen {
 				matchingMountpoint = mountpoint
 			}

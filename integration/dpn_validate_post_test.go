@@ -13,7 +13,7 @@ func TestValidationDPNWorkItems(t *testing.T) {
 	// ReplicationTransfer.
 	if !testutil.ShouldRunIntegrationTests() {
 		t.Skip("Skipping integration test. Set ENV var RUN_EXCHANGE_INTEGRATION=true if you want to run them.")
-    }
+	}
 	_context, err := testutil.GetContext("integration.json")
 	require.Nil(t, err, "Could not create context")
 	params := url.Values{}
@@ -36,7 +36,7 @@ func TestValidItemInStorageQueue(t *testing.T) {
 	// Make sure the copied DPN bags made it into the validation queue.
 	if !testutil.ShouldRunIntegrationTests() {
 		t.Skip("Skipping integration test. Set ENV var RUN_EXCHANGE_INTEGRATION=true if you want to run them.")
-    }
+	}
 	_context, err := testutil.GetContext("integration.json")
 	require.Nil(t, err, "Could not create context")
 	stats, err := _context.NSQClient.GetStats()

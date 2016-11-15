@@ -26,7 +26,7 @@ func FindResultInLog(pathToLogFile, bagName string) (ingestManifest *models.Inge
 	return ingestManifest, err
 }
 
-func findJsonString(file io.Reader, bagName string) (string) {
+func findJsonString(file io.Reader, bagName string) string {
 	startPrefix := fmt.Sprintf("-------- BEGIN %s", bagName)
 	endPrefix := fmt.Sprintf(" -------- END %s", bagName)
 	inJson := false

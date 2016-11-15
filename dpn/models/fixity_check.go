@@ -11,23 +11,22 @@ type FixityCheck struct {
 
 	// FixityCheckId is the unique id of this fixity check record.
 	// This is a UUID in string format.
-	FixityCheckId  string    `json:"fixity_check_id"`
+	FixityCheckId string `json:"fixity_check_id"`
 
 	// Bag is the UUID of the bag to which this fixity check belongs.
-	Bag            string    `json:"bag"`
+	Bag string `json:"bag"`
 
 	// Node is the namespace of the node that performed the fixity check.
-	Node           string    `json:"node"`
+	Node string `json:"node"`
 
 	// Success indicates whether the calculated fixity matched the
 	// expected fixity value (from MessageDigest).
-	Success        bool      `json:"success"`
+	Success bool `json:"success"`
 
 	// FixityAt describes when this fixity check was performed.
-	FixityAt       time.Time `json:"fixity_at"`
+	FixityAt time.Time `json:"fixity_at"`
 
 	// CreatedAt describes when this fixity check record was saved
 	// to the DPN registry.
-	CreatedAt      time.Time `json:"created_at"`
-
+	CreatedAt time.Time `json:"created_at"`
 }

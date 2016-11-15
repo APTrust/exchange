@@ -34,7 +34,7 @@ func CreateNsqConsumer(config *models.Config, workerConfig *models.WorkerConfig)
 // if we can't find one in the IngestManifest. That should only happen
 // in apt_fetcher, where we're often fetching new bags that Pharos has
 // never seen before. All other workers should pass in false for initIfEmpty.
-func GetIngestState (message *nsq.Message, _context *context.Context, initIfEmpty bool) (*models.IngestState, error) {
+func GetIngestState(message *nsq.Message, _context *context.Context, initIfEmpty bool) (*models.IngestState, error) {
 	workItem, err := GetWorkItem(message, _context)
 	if err != nil {
 		return nil, err
@@ -63,9 +63,9 @@ func GetIngestState (message *nsq.Message, _context *context.Context, initIfEmpt
 		return nil, err
 	}
 	ingestState := &models.IngestState{
-		NSQMessage: message,
-		WorkItem: workItem,
-		WorkItemState: workItemState,
+		NSQMessage:     message,
+		WorkItem:       workItem,
+		WorkItemState:  workItemState,
 		IngestManifest: ingestManifest,
 	}
 
@@ -141,7 +141,7 @@ func GetWorkItemState(workItem *models.WorkItem, _context *context.Context, init
 
 // This is used only by apt_fetcher, when we're working on a brand new
 // ingest bag that doesn't yet have a WorkItemState record.
-func InitWorkItemState (workItem *models.WorkItem) (*models.WorkItemState, error) {
+func InitWorkItemState(workItem *models.WorkItem) (*models.WorkItemState, error) {
 	ingestManifest := models.NewIngestManifest()
 	ingestManifest.WorkItemId = workItem.Id
 	ingestManifest.S3Bucket = workItem.Bucket
@@ -154,7 +154,6 @@ func InitWorkItemState (workItem *models.WorkItem) (*models.WorkItemState, error
 	}
 	return workItemState, nil
 }
-
 
 // This is really only used by apt_fetcher to initialize some barebones data on
 // an empty IntellectualObject. This is only ever called during the fetch stage.
@@ -181,7 +180,7 @@ func SetBasicObjectInfo(ingestState *models.IngestState, _context *context.Conte
 	// APTrust requires that we add the Institution name and a slash to
 	// the beginning of the identifier. So make sure it's there, and propagate
 	// the change all the way down to the GenericFiles.
-	if !strings.HasPrefix(obj.Identifier, obj.Institution + "/") {
+	if !strings.HasPrefix(obj.Identifier, obj.Institution+"/") {
 		obj.Identifier = fmt.Sprintf("%s/%s", obj.Institution, obj.Identifier)
 		for _, gf := range obj.GenericFiles {
 			if !strings.HasPrefix(gf.Identifier, obj.Identifier) {
@@ -191,7 +190,6 @@ func SetBasicObjectInfo(ingestState *models.IngestState, _context *context.Conte
 		}
 	}
 }
-
 
 // Record the WorkItemState for this task. We drop a copy into our
 // JSON log as a backup, and updated the WorkItemState in Pharos,
@@ -211,7 +209,7 @@ func RecordWorkItemState(ingestState *models.IngestState, _context *context.Cont
 		// won't have the info they need to process this bag. We'll have to
 		// requeue this item and start all over.
 		_context.MessageLog.Error(err.Error())
-		activeResult.AddError("Could not convert Ingest Manifest " +
+		activeResult.AddError("Could not convert Ingest Manifest "+
 			"to JSON. This item will have to be re-processed. Error was: %v", err)
 	} else {
 		// OK. We serialized the IngestManifest. Dump a copy into the
@@ -226,7 +224,7 @@ func RecordWorkItemState(ingestState *models.IngestState, _context *context.Cont
 			// need to work on this bag. We'll have to start processing
 			// all over again.
 			_context.MessageLog.Error(resp.Error.Error())
-			activeResult.AddError("Could not save WorkItemState " +
+			activeResult.AddError("Could not save WorkItemState "+
 				"to Pharos. This item will have to be re-processed. Error was: %v", resp.Error)
 		} else {
 			// Saved to Pharos!
@@ -239,7 +237,7 @@ func RecordWorkItemState(ingestState *models.IngestState, _context *context.Cont
 }
 
 // Tell Pharos that this item failed processing due to a fatal error.
-func MarkWorkItemFailed (ingestState *models.IngestState, _context *context.Context) (error) {
+func MarkWorkItemFailed(ingestState *models.IngestState, _context *context.Context) error {
 	_context.MessageLog.Info("Telling Pharos processing failed for %s/%s",
 		ingestState.WorkItem.Bucket, ingestState.WorkItem.Name)
 	ingestState.WorkItem.Node = ""
@@ -260,7 +258,7 @@ func MarkWorkItemFailed (ingestState *models.IngestState, _context *context.Cont
 }
 
 // Tell Pharos that this item has been requeued due to transient errors.
-func MarkWorkItemRequeued (ingestState *models.IngestState, _context *context.Context) (error) {
+func MarkWorkItemRequeued(ingestState *models.IngestState, _context *context.Context) error {
 	_context.MessageLog.Info("Telling Pharos we are requeueing %s/%s",
 		ingestState.WorkItem.Bucket, ingestState.WorkItem.Name)
 	ingestState.WorkItem.Node = ""
@@ -282,7 +280,7 @@ func MarkWorkItemRequeued (ingestState *models.IngestState, _context *context.Co
 }
 
 // Tell Pharos that we've started work on this item.
-func MarkWorkItemStarted (ingestState *models.IngestState, _context *context.Context, stage, message string) (error) {
+func MarkWorkItemStarted(ingestState *models.IngestState, _context *context.Context, stage, message string) error {
 	_context.MessageLog.Info("Telling Pharos we're starting %s for %s/%s",
 		stage, ingestState.WorkItem.Bucket, ingestState.WorkItem.Name)
 	utcNow := time.Now().UTC()
@@ -302,7 +300,7 @@ func MarkWorkItemStarted (ingestState *models.IngestState, _context *context.Con
 }
 
 // Tell Pharos that this item was processed successfully.
-func MarkWorkItemSucceeded (ingestState *models.IngestState, _context *context.Context, nextStage string) (error) {
+func MarkWorkItemSucceeded(ingestState *models.IngestState, _context *context.Context, nextStage string) error {
 	_context.MessageLog.Info("Telling Pharos processing can proceed for %s/%s",
 		ingestState.WorkItem.Bucket, ingestState.WorkItem.Name)
 	ingestState.WorkItem.Node = ""
@@ -328,7 +326,7 @@ func MarkWorkItemSucceeded (ingestState *models.IngestState, _context *context.C
 }
 
 // Push this item into the specified NSQ topic.
-func PushToQueue (ingestState *models.IngestState, _context *context.Context, queueTopic string) {
+func PushToQueue(ingestState *models.IngestState, _context *context.Context, queueTopic string) {
 	err := _context.NSQClient.Enqueue(
 		queueTopic,
 		ingestState.WorkItem.Id)
@@ -346,7 +344,7 @@ func PushToQueue (ingestState *models.IngestState, _context *context.Context, qu
 
 // Dump the WorkItemState.State into the JSON log, surrounded my markers that
 // make it easy to find. This log gets big.
-func LogJson (ingestState *models.IngestState, jsonLog *log.Logger) {
+func LogJson(ingestState *models.IngestState, jsonLog *log.Logger) {
 	timestamp := time.Now().UTC().Format(time.RFC3339)
 	startMessage := fmt.Sprintf("-------- BEGIN %s/%s | Etag: %s | Time: %s --------",
 		ingestState.WorkItem.Bucket, ingestState.WorkItem.Name, ingestState.WorkItem.ETag,
@@ -390,7 +388,7 @@ func DeleteBagFromStaging(ingestState *models.IngestState, _context *context.Con
 			_context.MessageLog.Warning(err.Error())
 		}
 	} else {
-		_context.MessageLog.Info("Skipping deletion of untarred bag dir at %s: " +
+		_context.MessageLog.Info("Skipping deletion of untarred bag dir at %s: "+
 			"Directory does not exist, or is unsafe to delete.", untarredBagPath)
 	}
 

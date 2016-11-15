@@ -21,13 +21,13 @@ import (
 // VirtualBag creates an IntellectualObject from a bag on disk.
 // The IntellectualObject can then be validated by workers.BagValidator.
 type VirtualBag struct {
-	pathToBag        string
-	calculateMd5     bool
-	calculateSha256  bool
-	tagFilesToParse  []string
-	obj              *IntellectualObject
-	summary          *WorkSummary
-	readIterator     fileutil.ReadIterator
+	pathToBag       string
+	calculateMd5    bool
+	calculateSha256 bool
+	tagFilesToParse []string
+	obj             *IntellectualObject
+	summary         *WorkSummary
+	readIterator    fileutil.ReadIterator
 }
 
 // NewVirtualBag creates a new virtual bag. Param pathToBag should
@@ -39,14 +39,14 @@ type VirtualBag struct {
 // "dpn_tags/dpn-info.txt" Params calculateMd5 and calculateSha256
 // indicate whether we should calculate md5 and/or sha256 checksums
 // on the files in the bag.
-func NewVirtualBag(pathToBag string, tagFilesToParse []string, calculateMd5, calculateSha256 bool) (*VirtualBag) {
+func NewVirtualBag(pathToBag string, tagFilesToParse []string, calculateMd5, calculateSha256 bool) *VirtualBag {
 	if tagFilesToParse == nil {
 		tagFilesToParse = make([]string, 0)
 	}
 	return &VirtualBag{
-		calculateMd5: calculateMd5,
+		calculateMd5:    calculateMd5,
 		calculateSha256: calculateSha256,
-		pathToBag: pathToBag,
+		pathToBag:       pathToBag,
 		tagFilesToParse: tagFilesToParse,
 	}
 }
@@ -104,7 +104,7 @@ func (vbag *VirtualBag) Read() (*IntellectualObject, *WorkSummary) {
 }
 
 // Add every file in the bag to the list of generic files.
-func (vbag *VirtualBag) addGenericFiles() () {
+func (vbag *VirtualBag) addGenericFiles() {
 	for {
 		err := vbag.addGenericFile()
 		if err == io.EOF {
@@ -116,7 +116,7 @@ func (vbag *VirtualBag) addGenericFiles() () {
 }
 
 // Adds a single generic file to the bag.
-func (vbag *VirtualBag) addGenericFile() (error) {
+func (vbag *VirtualBag) addGenericFile() error {
 	reader, fileSummary, err := vbag.readIterator.Next()
 	if err != nil {
 		return err
@@ -161,7 +161,7 @@ func (vbag *VirtualBag) setIngestFileType(gf *GenericFile, fileSummary *fileutil
 }
 
 // Calculate the md5 and/or sha256 checksums on a file.
-func (vbag *VirtualBag) calculateChecksums(reader io.Reader, gf *GenericFile) (error) {
+func (vbag *VirtualBag) calculateChecksums(reader io.Reader, gf *GenericFile) error {
 	hashes := make([]io.Writer, 0)
 	var md5Hash hash.Hash
 	var sha256Hash hash.Hash
@@ -189,7 +189,7 @@ func (vbag *VirtualBag) calculateChecksums(reader io.Reader, gf *GenericFile) (e
 	return nil
 }
 
-func (vbag *VirtualBag) setMimeType(reader io.Reader, gf *GenericFile)  {
+func (vbag *VirtualBag) setMimeType(reader io.Reader, gf *GenericFile) {
 	// on err, defaults to application/binary
 	buf := make([]byte, 128)
 	_, err := reader.Read(buf)
@@ -241,7 +241,7 @@ func (vbag *VirtualBag) parseManifestsTagFilesAndMimeTypes() {
 }
 
 // Parse the checksums in a manifest.
-func (vbag *VirtualBag) parseManifest(reader io.Reader, relFilePath string) () {
+func (vbag *VirtualBag) parseManifest(reader io.Reader, relFilePath string) {
 	alg := constants.AlgMd5
 	if strings.Contains(relFilePath, constants.AlgSha256) {
 		alg = constants.AlgSha256
@@ -279,7 +279,7 @@ func (vbag *VirtualBag) parseManifest(reader io.Reader, relFilePath string) () {
 }
 
 // Parse the tag fields in a file.
-func (vbag *VirtualBag) parseTags(reader io.Reader, relFilePath string) () {
+func (vbag *VirtualBag) parseTags(reader io.Reader, relFilePath string) {
 	re := regexp.MustCompile(`^(\S*\:)?(\s.*)?$`)
 	scanner := bufio.NewScanner(reader)
 	var tag *Tag
@@ -314,19 +314,24 @@ func (vbag *VirtualBag) parseTags(reader io.Reader, relFilePath string) () {
 
 // Copy certain values from the aptrust-info.txt file into
 // properties of the IntellectualObject.
-func (vbag *VirtualBag) setIntelObjTagValue(tag *Tag) () {
+func (vbag *VirtualBag) setIntelObjTagValue(tag *Tag) {
 	if tag.SourceFile == "aptrust-info.txt" {
 		label := strings.ToLower(tag.Label)
 		switch label {
-		case "title": vbag.obj.Title = tag.Value
-		case "access": vbag.obj.Access = tag.Value
+		case "title":
+			vbag.obj.Title = tag.Value
+		case "access":
+			vbag.obj.Access = tag.Value
 		}
 	} else if tag.SourceFile == "bag-info.txt" {
 		label := strings.ToLower(tag.Label)
 		switch label {
-		case "source-organization": vbag.obj.Institution = tag.Value
-		case "internal-sender-description": vbag.obj.Description = tag.Value
-		case "internal-sender-identifier": vbag.obj.AltIdentifier = tag.Value
+		case "source-organization":
+			vbag.obj.Institution = tag.Value
+		case "internal-sender-description":
+			vbag.obj.Description = tag.Value
+		case "internal-sender-identifier":
+			vbag.obj.AltIdentifier = tag.Value
 		}
 	}
 

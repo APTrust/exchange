@@ -17,7 +17,7 @@ func TestItemsCopiedToStaging(t *testing.T) {
 	// up in our test staging area.
 	if !testutil.ShouldRunIntegrationTests() {
 		t.Skip("Skipping integration test. Set ENV var RUN_EXCHANGE_INTEGRATION=true if you want to run them.")
-    }
+	}
 	for i := 2; i <= 5; i++ {
 		_context, err := testutil.GetContext("integration.json")
 		require.Nil(t, err, "Could not create context")
@@ -32,7 +32,7 @@ func TestReplicationDPNWorkItems(t *testing.T) {
 	// ReplicationTransfer.
 	if !testutil.ShouldRunIntegrationTests() {
 		t.Skip("Skipping integration test. Set ENV var RUN_EXCHANGE_INTEGRATION=true if you want to run them.")
-    }
+	}
 	_context, err := testutil.GetContext("integration.json")
 	require.Nil(t, err, "Could not create context")
 	params := url.Values{}
@@ -56,7 +56,7 @@ func TestCopyResultSentToRemoteNodes(t *testing.T) {
 	// we sent a fixity value back to the ingest node.
 	if !testutil.ShouldRunIntegrationTests() {
 		t.Skip("Skipping integration test. Set ENV var RUN_EXCHANGE_INTEGRATION=true if you want to run them.")
-    }
+	}
 	_context, err := testutil.GetContext("integration.json")
 	require.Nil(t, err, "Could not create context")
 	dpnClient, err := network.NewDPNRestClient(
@@ -72,7 +72,7 @@ func TestCopyResultSentToRemoteNodes(t *testing.T) {
 
 	// These identifiers are in the fixture data for dpn-server.
 	// Key is the FromNode, value is the ReplicationId
-	xferIdentifiers := map[string]string {
+	xferIdentifiers := map[string]string{
 		"chron": "20000000-0000-4000-a000-000000000007",
 		"hathi": "30000000-0000-4000-a000-000000000001",
 		"sdr":   "40000000-0000-4000-a000-000000000013",
@@ -95,7 +95,7 @@ func TestValidationQueue(t *testing.T) {
 	// Make sure the copied DPN bags made it into the validation queue.
 	if !testutil.ShouldRunIntegrationTests() {
 		t.Skip("Skipping integration test. Set ENV var RUN_EXCHANGE_INTEGRATION=true if you want to run them.")
-    }
+	}
 	_context, err := testutil.GetContext("integration.json")
 	require.Nil(t, err, "Could not create context")
 	stats, err := _context.NSQClient.GetStats()

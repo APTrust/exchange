@@ -28,7 +28,7 @@ func InitLogger(config *models.Config) (*logging.Logger, string) {
 		// If this fails, getRotatingFileWriter will panic in just a second
 		_ = os.Mkdir(config.LogDirectory, 0755)
 	}
-	writer, err := os.OpenFile(filename, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0644);
+	writer, err := os.OpenFile(filename, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0644)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Cannot open log file '%s': %v\n", filename, err)
 		os.Exit(1)
@@ -68,7 +68,7 @@ func InitJsonLogger(config *models.Config) (*stdlog.Logger, string) {
 	}
 	filename := fmt.Sprintf("%s.json", processName)
 	filename = filepath.Join(logDir, filename)
-	writer, err := os.OpenFile(filename, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0644);
+	writer, err := os.OpenFile(filename, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0644)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Cannot open log file '%s': %v", filename, err)
 		os.Exit(1)

@@ -8,23 +8,23 @@ import (
 )
 
 type WorkItemState struct {
-	Id              int       `json:"id"`
-	WorkItemId      int       `json:"work_item_id"`
-	Action          string    `json:"action"`
-	State           string    `json:"state"`
-	CreatedAt       time.Time `json:"created_at"`
-	UpdatedAt       time.Time `json:"updated_at"`
+	Id         int       `json:"id"`
+	WorkItemId int       `json:"work_item_id"`
+	Action     string    `json:"action"`
+	State      string    `json:"state"`
+	CreatedAt  time.Time `json:"created_at"`
+	UpdatedAt  time.Time `json:"updated_at"`
 }
 
-func NewWorkItemState(workItemId int, action, state string) (*WorkItemState) {
+func NewWorkItemState(workItemId int, action, state string) *WorkItemState {
 	return &WorkItemState{
 		WorkItemId: workItemId,
-		Action: action,
-		State: state,
+		Action:     action,
+		State:      state,
 	}
 }
 
-func (state *WorkItemState) HasData() (bool) {
+func (state *WorkItemState) HasData() bool {
 	return state.State != ""
 }
 
@@ -37,7 +37,7 @@ func (state *WorkItemState) IngestManifest() (*IngestManifest, error) {
 		return nil, fmt.Errorf("Cannot convert state to IngestManifest because state is empty.")
 	}
 	if state.Action != constants.ActionIngest {
-		return nil, fmt.Errorf("Cannot convert state to IngestManifest because action is '%s' " +
+		return nil, fmt.Errorf("Cannot convert state to IngestManifest because action is '%s' "+
 			"and must be '%s'.", state.Action, constants.ActionIngest)
 	}
 	ingestManifest := &IngestManifest{}
@@ -47,9 +47,9 @@ func (state *WorkItemState) IngestManifest() (*IngestManifest, error) {
 
 // Converts an IngestManifest into a JSON string and stores it in the State
 // attribute.
-func (state *WorkItemState) SetStateFromIngestManifest(manifest *IngestManifest) (error) {
+func (state *WorkItemState) SetStateFromIngestManifest(manifest *IngestManifest) error {
 	if state.Action != constants.ActionIngest {
-		return fmt.Errorf("Cannot set state from IngestManifest because action is '%s' " +
+		return fmt.Errorf("Cannot set state from IngestManifest because action is '%s' "+
 			"and must be '%s'.", state.Action, constants.ActionIngest)
 	}
 	jsonData, err := json.MarshalIndent(manifest, "", "  ")

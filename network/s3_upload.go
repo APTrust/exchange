@@ -1,8 +1,8 @@
 package network
 
 import (
-	"github.com/aws/aws-sdk-go/service/s3/s3manager"
 	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/s3/s3manager"
 	"io"
 )
 
@@ -27,11 +27,11 @@ import (
 // urlOfNewItem := upload.Response.Location
 //
 type S3Upload struct {
-	AWSRegion       string
-	ErrorMessage    string
-	UploadInput     *s3manager.UploadInput
-	Response        *s3manager.UploadOutput
-	session         *session.Session
+	AWSRegion    string
+	ErrorMessage string
+	UploadInput  *s3manager.UploadInput
+	Response     *s3manager.UploadOutput
+	session      *session.Session
 }
 
 // Creates a new S3 upload object. Params:
@@ -42,21 +42,21 @@ type S3Upload struct {
 // bucket     - The name of the bucket to download from.
 // key        - The name of the file to download.
 // contentType - A standard Content-Type header, like text/html.
-func NewS3Upload(region, bucket, key, contentType string) (*S3Upload) {
+func NewS3Upload(region, bucket, key, contentType string) *S3Upload {
 	uploadInput := &s3manager.UploadInput{
-		Bucket: &bucket,
-		Key: &key,
+		Bucket:      &bucket,
+		Key:         &key,
 		ContentType: &contentType,
 	}
 	uploadInput.Metadata = make(map[string]*string)
 	return &S3Upload{
-		AWSRegion: region,
+		AWSRegion:   region,
 		UploadInput: uploadInput,
 	}
 }
 
 // Returns an S3 session for this upload.
-func (client *S3Upload)GetSession() (*session.Session) {
+func (client *S3Upload) GetSession() *session.Session {
 	if client.session == nil {
 		var err error
 		if err != nil {

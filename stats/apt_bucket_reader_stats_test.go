@@ -13,7 +13,7 @@ import (
 )
 
 // Create a stats object with 5 of everything, no errors and no warnings.
-func makeAPTBucketReaderStats() (*stats.APTBucketReaderStats) {
+func makeAPTBucketReaderStats() *stats.APTBucketReaderStats {
 	_stats := stats.NewAPTBucketReaderStats()
 	for i := 1; i <= 5; i++ {
 		inst := testutil.MakeInstitution()
@@ -52,7 +52,7 @@ func TestBucket_AddToInstitutionsCached(t *testing.T) {
 	_stats := makeAPTBucketReaderStats()
 	inst := testutil.MakeInstitution()
 	_stats.AddToInstitutionsCached(inst)
-	lastInst := _stats.InstitutionsCached[len(_stats.InstitutionsCached) -1]
+	lastInst := _stats.InstitutionsCached[len(_stats.InstitutionsCached)-1]
 	assert.Equal(t, inst.Identifier, lastInst.Identifier)
 }
 
@@ -72,7 +72,7 @@ func TestBucket_AddToWorkItemsCached(t *testing.T) {
 	_stats := makeAPTBucketReaderStats()
 	workItem := testutil.MakeWorkItem()
 	_stats.AddWorkItem("WorkItemsCached", workItem)
-	lastWorkItem := _stats.WorkItemsCached[len(_stats.WorkItemsCached) - 1]
+	lastWorkItem := _stats.WorkItemsCached[len(_stats.WorkItemsCached)-1]
 	assert.Equal(t, workItem.Name, lastWorkItem.Name)
 	assert.Equal(t, workItem.ETag, lastWorkItem.ETag)
 }
@@ -107,7 +107,7 @@ func TestBucket_AddToWorkItemsFetched(t *testing.T) {
 	_stats := makeAPTBucketReaderStats()
 	workItem := testutil.MakeWorkItem()
 	_stats.AddWorkItem("WorkItemsFetched", workItem)
-	lastWorkItem := _stats.WorkItemsFetched[len(_stats.WorkItemsFetched) -1]
+	lastWorkItem := _stats.WorkItemsFetched[len(_stats.WorkItemsFetched)-1]
 	assert.Equal(t, workItem.Name, lastWorkItem.Name)
 	assert.Equal(t, workItem.ETag, lastWorkItem.ETag)
 }
@@ -142,7 +142,7 @@ func TestBucket_AddToWorkItemsCreated(t *testing.T) {
 	_stats := makeAPTBucketReaderStats()
 	workItem := testutil.MakeWorkItem()
 	_stats.AddWorkItem("WorkItemsCreated", workItem)
-	lastWorkItem := _stats.WorkItemsCreated[len(_stats.WorkItemsCreated) -1]
+	lastWorkItem := _stats.WorkItemsCreated[len(_stats.WorkItemsCreated)-1]
 	assert.Equal(t, workItem.Name, lastWorkItem.Name)
 	assert.Equal(t, workItem.ETag, lastWorkItem.ETag)
 }
@@ -177,7 +177,7 @@ func TestBucket_AddToWorkItemsQueued(t *testing.T) {
 	_stats := makeAPTBucketReaderStats()
 	workItem := testutil.MakeWorkItem()
 	_stats.AddWorkItem("WorkItemsQueued", workItem)
-	lastWorkItem := _stats.WorkItemsQueued[len(_stats.WorkItemsQueued) -1]
+	lastWorkItem := _stats.WorkItemsQueued[len(_stats.WorkItemsQueued)-1]
 	assert.Equal(t, workItem.Id, lastWorkItem.Id)
 }
 
@@ -195,7 +195,7 @@ func TestBucket_AddToWorkItemsMarkedAsQueued(t *testing.T) {
 	_stats := makeAPTBucketReaderStats()
 	workItem := testutil.MakeWorkItem()
 	_stats.AddWorkItem("WorkItemsMarkedAsQueued", workItem)
-	lastWorkItem := _stats.WorkItemsMarkedAsQueued[len(_stats.WorkItemsMarkedAsQueued) -1]
+	lastWorkItem := _stats.WorkItemsMarkedAsQueued[len(_stats.WorkItemsMarkedAsQueued)-1]
 	assert.Equal(t, workItem.Id, lastWorkItem.Id)
 }
 
@@ -212,7 +212,7 @@ func TestBucket_WorkItemWasMarkedAsQueued(t *testing.T) {
 func TestBucket_AddS3Item(t *testing.T) {
 	_stats := makeAPTBucketReaderStats()
 	_stats.AddS3Item("test.edu/test_item_555")
-	lastItem := _stats.S3Items[len(_stats.S3Items) - 1]
+	lastItem := _stats.S3Items[len(_stats.S3Items)-1]
 	assert.Equal(t, "test.edu/test_item_555", lastItem)
 }
 
@@ -226,7 +226,7 @@ func TestBucket_S3ItemWasFound(t *testing.T) {
 func TestBucket_AddError(t *testing.T) {
 	_stats := makeAPTBucketReaderStats()
 	_stats.AddError("Oopsie!")
-	lastItem := _stats.Errors[len(_stats.Errors) - 1]
+	lastItem := _stats.Errors[len(_stats.Errors)-1]
 	assert.Equal(t, "Oopsie!", lastItem)
 }
 
@@ -240,7 +240,7 @@ func TestBucket_HasErrors(t *testing.T) {
 func TestBucket_AddWarning(t *testing.T) {
 	_stats := makeAPTBucketReaderStats()
 	_stats.AddWarning("Oopsie!")
-	lastItem := _stats.Warnings[len(_stats.Warnings) - 1]
+	lastItem := _stats.Warnings[len(_stats.Warnings)-1]
 	assert.Equal(t, "Oopsie!", lastItem)
 }
 

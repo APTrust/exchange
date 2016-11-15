@@ -16,20 +16,20 @@ const (
 	FORBIDDEN = "forbidden"
 )
 
-var presenceValues = []string { REQUIRED, OPTIONAL, FORBIDDEN }
+var presenceValues = []string{REQUIRED, OPTIONAL, FORBIDDEN}
 
 // FileSpec defines whether files at a specified path within
 // the bag are required, optional, or forbidden.
 type FileSpec struct {
 	// Presence can be REQUIRED, OPTIONAL, or FORBIDDEN.
-	Presence        string
+	Presence string
 	// If this is true, the file must be parsed as a BagIt
 	// tag file, using the label:value format.
-	ParseAsTagFile  bool
+	ParseAsTagFile bool
 }
 
 // Valid tells you whether this FileSpec is valid.
-func (filespec *FileSpec) Valid() (bool) {
+func (filespec *FileSpec) Valid() bool {
 	return ValidPresenceValue(filespec.Presence)
 }
 
@@ -38,26 +38,25 @@ func (filespec *FileSpec) Valid() (bool) {
 type TagSpec struct {
 	// FilePath is the path of the file within the bag.
 	// This will obviously be a relative path.
-	FilePath        string
+	FilePath string
 	// Presence can be REQUIRED, OPTIONAL, or FORBIDDEN.
-	Presence        string
+	Presence string
 	// EmptyOK indicates whether its OK for the tag value
 	// to be empty.
-	EmptyOK         bool
+	EmptyOK bool
 	// Describes which values are allowed (case-insensitive).
-	AllowedValues   []string
+	AllowedValues []string
 }
 
 // Valid tells you whether this TagSpec is valid.
-func (tagspec *TagSpec) Valid() (bool) {
+func (tagspec *TagSpec) Valid() bool {
 	return ValidPresenceValue(tagspec.Presence) && tagspec.FilePath != ""
 }
 
 // Returns true if value is a valid presence value.
-func ValidPresenceValue(value string) (bool) {
+func ValidPresenceValue(value string) bool {
 	return util.StringListContains(presenceValues, value)
 }
-
 
 // BagValidationConfig lets us specify what constitutes a valid bag.
 // While our validator will do standard validations, such as verifying
@@ -69,45 +68,45 @@ type BagValidationConfig struct {
 	// rules for specific files. The key is the relative path
 	// to the file within the bag.
 	// E.g. bag-info.txt or dpn_tags/dpn-info.txt.
-	FileSpecs                   map[string]FileSpec
+	FileSpecs map[string]FileSpec
 	// TagSpecs is a map of TagSpec objects. The key is the
 	// tag name (e.g. Source-Organization or Internal-Sender-Description)
 	// and the value is the TagSpec.
-	TagSpecs                    map[string]TagSpec
+	TagSpecs map[string]TagSpec
 	// AllowMiscTopLevelFiles describes whether a valid bag can
 	// contain files not specifically defined in the config.
-	AllowMiscTopLevelFiles      bool
+	AllowMiscTopLevelFiles bool
 	// AllowMiscDirectories describes whether a valid bag can
 	// contain Directories other than the data directory.
-	AllowMiscDirectories        bool
+	AllowMiscDirectories bool
 	// TopLevelDirMustMatchBagName describes whether a tarred bag
 	// must untar to a directory whose name matches the tar file
 	// name. E.g. Must my_bag.tar untar to a directory called my_tar?
 	TopLevelDirMustMatchBagName bool
 	// Which fixity algorithms should we calculate on tag and
 	// payload files?
-	FixityAlgorithms            []string
+	FixityAlgorithms []string
 	// Regex to describe valid file and directory names.
 	// This can also be set to APTRUST to use the standard APTrust
 	// filename pattern defined in constants.APTrustFileNamePattern,
 	// or POSIX to use POSIX file name rules.
-	FileNamePattern             string
+	FileNamePattern string
 	// Regex compiled internally from FileNamePattern.
-	FileNameRegex               *regexp.Regexp
+	FileNameRegex *regexp.Regexp
 }
 
-func NewBagValidationConfig() (*BagValidationConfig) {
+func NewBagValidationConfig() *BagValidationConfig {
 	return &BagValidationConfig{
-		FileSpecs: make(map[string]FileSpec),
-		TagSpecs: make(map[string]TagSpec),
-		FixityAlgorithms: make([]string, 0),
-		AllowMiscTopLevelFiles: false,
-		AllowMiscDirectories: false,
+		FileSpecs:                   make(map[string]FileSpec),
+		TagSpecs:                    make(map[string]TagSpec),
+		FixityAlgorithms:            make([]string, 0),
+		AllowMiscTopLevelFiles:      false,
+		AllowMiscDirectories:        false,
 		TopLevelDirMustMatchBagName: false,
 	}
 }
 
-func (config *BagValidationConfig) ValidateConfig() ([]error) {
+func (config *BagValidationConfig) ValidateConfig() []error {
 	errors := make([]error, 0)
 	for _, tagSpec := range config.TagSpecs {
 		if !tagSpec.Valid() {
@@ -124,7 +123,7 @@ func (config *BagValidationConfig) ValidateConfig() ([]error) {
 // Note the two built-in patterns: constants.APTrustFileNamePattern and
 // constants.PosixFileNamePattern. If you load your validation config
 // from a file, LoadBagValidationConfig calls this for you.
-func (config *BagValidationConfig) CompileFileNameRegex() (error) {
+func (config *BagValidationConfig) CompileFileNameRegex() error {
 	var err error
 	if strings.ToUpper(config.FileNamePattern) == "APTRUST" {
 		config.FileNameRegex = constants.APTrustFileNamePattern

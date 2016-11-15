@@ -7,7 +7,6 @@ import (
 	"testing"
 )
 
-
 func TestNewQueueItem(t *testing.T) {
 	item := models.NewQueueItem("aptrust")
 	require.NotNil(t, item)

@@ -22,8 +22,8 @@ func NewTarFileIterator(pathToTarFile string) (*TarFileIterator, error) {
 		return nil, err
 	}
 	return &TarFileIterator{
-		tarReader: tar.NewReader(file),
-		file: file,
+		tarReader:        tar.NewReader(file),
+		file:             file,
 		topLevelDirNames: make([]string, 0),
 	}, nil
 }
@@ -43,15 +43,15 @@ func (iter *TarFileIterator) Next() (io.ReadCloser, *FileSummary, error) {
 	// which is the name of the bag.
 	relPathInArchive := (strings.Join(strings.Split(header.Name, "/")[1:], "/"))
 	fs := &FileSummary{
-		RelPath: relPathInArchive,
-		AbsPath: "",
-		Mode: finfo.Mode(),
-		Size: header.Size,
-		ModTime: header.ModTime,
-		IsDir: header.Typeflag == tar.TypeDir,
+		RelPath:       relPathInArchive,
+		AbsPath:       "",
+		Mode:          finfo.Mode(),
+		Size:          header.Size,
+		ModTime:       header.ModTime,
+		IsDir:         header.Typeflag == tar.TypeDir,
 		IsRegularFile: header.Typeflag == tar.TypeReg || header.Typeflag == tar.TypeRegA,
-		Uid: header.Uid,
-		Gid: header.Gid,
+		Uid:           header.Uid,
+		Gid:           header.Gid,
 	}
 
 	// Wrap our tar reader in a TarReadCloser. When the caller
@@ -112,7 +112,7 @@ func (iter *TarFileIterator) setTopLevelDirName(headerName string) {
 //
 // Note that you should read the entire tar file before calling
 // this; otherwise, you may not get all the top-level dir names.
-func (iter *TarFileIterator) GetTopLevelDirNames() ([]string) {
+func (iter *TarFileIterator) GetTopLevelDirNames() []string {
 	return iter.topLevelDirNames
 }
 
@@ -124,13 +124,13 @@ func (iter *TarFileIterator) Close() {
 }
 
 type TarReadCloser struct {
-	tarReader  *tar.Reader
+	tarReader *tar.Reader
 }
 
 func (tarReadCloser TarReadCloser) Read(p []byte) (int, error) {
 	return tarReadCloser.tarReader.Read(p)
 }
 
-func (tarReadCloser TarReadCloser) Close() (error) {
+func (tarReadCloser TarReadCloser) Close() error {
 	return nil // noop
 }

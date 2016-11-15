@@ -16,35 +16,35 @@ import (
 )
 
 type VolumeService struct {
-	port        int
-	volumes     map[string]*models.Volume
-	logger      *logging.Logger
+	port    int
+	volumes map[string]*models.Volume
+	logger  *logging.Logger
 }
 
 // NewVolumeService creates a new VolumeService object to track the
 // amount of available space and claimed space on locally mounted
 // volumes.
-func NewVolumeService(port int, logger *logging.Logger) (*VolumeService) {
+func NewVolumeService(port int, logger *logging.Logger) *VolumeService {
 	return &VolumeService{
-		port: port,
+		port:    port,
 		volumes: make(map[string]*models.Volume),
-		logger: logger,
+		logger:  logger,
 	}
 }
 
 func (service *VolumeService) Serve() {
-    http.HandleFunc("/reserve/", service.makeReserveHandler())
-    http.HandleFunc("/release/", service.makeReleaseHandler())
-    http.HandleFunc("/report/", service.makeReportHandler())
-    http.HandleFunc("/ping/", service.makePingHandler())
+	http.HandleFunc("/reserve/", service.makeReserveHandler())
+	http.HandleFunc("/release/", service.makeReleaseHandler())
+	http.HandleFunc("/report/", service.makeReportHandler())
+	http.HandleFunc("/ping/", service.makePingHandler())
 	listenAddr := fmt.Sprintf("127.0.0.1:%d", service.port)
-    http.ListenAndServe(listenAddr, nil)
+	http.ListenAndServe(listenAddr, nil)
 }
 
 // Returns a Volume object with info about the volume at the specified
 // mount point. The mount point should be the path to a disk or partition.
 // For example, "/", "/mnt/data", etc.
-func (service *VolumeService) getVolume(path string) (*models.Volume) {
+func (service *VolumeService) getVolume(path string) *models.Volume {
 	mountpoint, err := platform.GetMountPointFromPath(path)
 	if err != nil {
 		mountpoint = "/"
@@ -58,7 +58,7 @@ func (service *VolumeService) getVolume(path string) (*models.Volume) {
 }
 
 func (service *VolumeService) makeReserveHandler() http.HandlerFunc {
-	return func (w http.ResponseWriter, r *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
 		response := &models.VolumeResponse{}
 		status := http.StatusOK
 		path := r.FormValue("path")
@@ -94,7 +94,7 @@ func (service *VolumeService) makeReserveHandler() http.HandlerFunc {
 }
 
 func (service *VolumeService) makeReleaseHandler() http.HandlerFunc {
-	return func (w http.ResponseWriter, r *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
 		response := &models.VolumeResponse{}
 		path := r.FormValue("path")
 		status := http.StatusOK
@@ -116,7 +116,7 @@ func (service *VolumeService) makeReleaseHandler() http.HandlerFunc {
 }
 
 func (service *VolumeService) makeReportHandler() http.HandlerFunc {
-	return func (w http.ResponseWriter, r *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
 		response := &models.VolumeResponse{}
 		path := r.FormValue("path")
 		status := http.StatusOK
@@ -138,7 +138,7 @@ func (service *VolumeService) makeReportHandler() http.HandlerFunc {
 }
 
 func (service *VolumeService) makePingHandler() http.HandlerFunc {
-	return func (w http.ResponseWriter, r *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
 		response := &models.VolumeResponse{}
 		response.Succeeded = true
 		status := http.StatusOK

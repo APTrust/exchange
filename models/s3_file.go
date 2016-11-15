@@ -24,7 +24,7 @@ type S3File struct {
 	// The S3 Key, with object name, size, etag, last modified, etc.
 	//
 	// TODO: On delete jobs, you'll need to fetch the key object from S3.
-	Key        s3.Key
+	Key s3.Key
 
 	// If we attempted to delete this file from S3 and got an error
 	// message, that message will be stored here. This field is only
@@ -43,20 +43,19 @@ type S3File struct {
 	DeleteSkippedPerConfig bool
 }
 
-func NewS3FileWithKey(bucketName string, key s3.Key) (*S3File) {
+func NewS3FileWithKey(bucketName string, key s3.Key) *S3File {
 	return &S3File{
 		BucketName: bucketName,
-		Key: key,
+		Key:        key,
 	}
 }
 
-func NewS3FileWithName(bucketName, keyName string) (*S3File) {
+func NewS3FileWithName(bucketName, keyName string) *S3File {
 	return &S3File{
 		BucketName: bucketName,
-		Key: s3.Key{ Key: keyName },
+		Key:        s3.Key{Key: keyName},
 	}
 }
-
 
 // Returns the object identifier that will identify this bag
 // in fedora. That's the institution identifier, followed by
@@ -73,7 +72,7 @@ func (s3File *S3File) ObjectName() (string, error) {
 // The name of the owning institution, followed by a slash, followed
 // by the name of the tar file. This differs from the ObjectName,
 // because it will have the .tar or bag.001.of030.tar suffix.
-func (s3File *S3File) BagName() (string) {
+func (s3File *S3File) BagName() string {
 	return fmt.Sprintf("%s/%s", util.OwnerOf(s3File.BucketName), s3File.Key.Key)
 }
 

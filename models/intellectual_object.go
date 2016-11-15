@@ -21,72 +21,72 @@ consortial, institution and restricted.
 */
 type IntellectualObject struct {
 	// If Id is non-zero, this has been recorded in Pharos.
-	Id                     int            `json:"id"`
-	Identifier             string         `json:"identifier"`
-	BagName                string         `json:"bag_name"`
-	Institution            string         `json:"institution"`
-	InstitutionId          int            `json:"institution_id"`
-	Title                  string         `json:"title"`
-	Description            string         `json:"description"`
-	Access                 string         `json:"access"`
-	AltIdentifier          string         `json:"alt_identifier"`
-	GenericFiles           []*GenericFile `json:"generic_files"`
-	PremisEvents           []*PremisEvent `json:"events"`
-	CreatedAt              time.Time      `json:"created_at"`
-	UpdatedAt              time.Time      `json:"updated_at"`
+	Id            int            `json:"id"`
+	Identifier    string         `json:"identifier"`
+	BagName       string         `json:"bag_name"`
+	Institution   string         `json:"institution"`
+	InstitutionId int            `json:"institution_id"`
+	Title         string         `json:"title"`
+	Description   string         `json:"description"`
+	Access        string         `json:"access"`
+	AltIdentifier string         `json:"alt_identifier"`
+	GenericFiles  []*GenericFile `json:"generic_files"`
+	PremisEvents  []*PremisEvent `json:"events"`
+	CreatedAt     time.Time      `json:"created_at"`
+	UpdatedAt     time.Time      `json:"updated_at"`
 
 	// The following are fields populated and used by the Exchange
 	// ingest code on ingest only. These fields are not stored in
 	// Pharos, and will not be populated on any IntellectualObject
 	// retrieved from Pharos.
-	IngestS3Bucket         string         `json:"ingest_s3_bucket"`
-	IngestS3Key            string         `json:"ingest_s3_key"`
-	IngestTarFilePath      string         `json:"ingest_tar_file_path"`
-	IngestUntarredPath     string         `json:"ingest_untarred_path"`
-	IngestSize             int64          `json:"ingest_size"`
-	IngestRemoteMd5        string         `json:"ingest_remote_md5"`
-	IngestLocalMd5         string         `json:"ingest_local_md5"`
-	IngestMd5Verified      bool           `json:"ingest_md5_verified"`
-	IngestMd5Verifiable    bool           `json:"ingest_md5_verifiable"`
-	IngestManifests        []string       `json:"ingest_manifests"`
-	IngestTagManifests     []string       `json:"ingest_tag_manifests"`
-	IngestFilesIgnored     []string       `json:"ingest_files_ignored"`
-	IngestTags             []*Tag         `json:"ingest_tags"`
-	IngestMissingFiles     []*MissingFile `json:"ingest_missing_files"`
-	IngestTopLevelDirNames []string       `json:"ingest_top_level_dir_names"`
-	IngestErrorMessage     string         `json:"ingest_error_message"`
-	IngestDeletedFromReceivingAt time.Time `json:"ingest_deleted_from_receiving_at"`
+	IngestS3Bucket               string         `json:"ingest_s3_bucket"`
+	IngestS3Key                  string         `json:"ingest_s3_key"`
+	IngestTarFilePath            string         `json:"ingest_tar_file_path"`
+	IngestUntarredPath           string         `json:"ingest_untarred_path"`
+	IngestSize                   int64          `json:"ingest_size"`
+	IngestRemoteMd5              string         `json:"ingest_remote_md5"`
+	IngestLocalMd5               string         `json:"ingest_local_md5"`
+	IngestMd5Verified            bool           `json:"ingest_md5_verified"`
+	IngestMd5Verifiable          bool           `json:"ingest_md5_verifiable"`
+	IngestManifests              []string       `json:"ingest_manifests"`
+	IngestTagManifests           []string       `json:"ingest_tag_manifests"`
+	IngestFilesIgnored           []string       `json:"ingest_files_ignored"`
+	IngestTags                   []*Tag         `json:"ingest_tags"`
+	IngestMissingFiles           []*MissingFile `json:"ingest_missing_files"`
+	IngestTopLevelDirNames       []string       `json:"ingest_top_level_dir_names"`
+	IngestErrorMessage           string         `json:"ingest_error_message"`
+	IngestDeletedFromReceivingAt time.Time      `json:"ingest_deleted_from_receiving_at"`
 
-	genericFileMap         map[string]*GenericFile
-	tagMap                 map[string][]*Tag
+	genericFileMap map[string]*GenericFile
+	tagMap         map[string][]*Tag
 }
 
-func NewIntellectualObject() (*IntellectualObject) {
+func NewIntellectualObject() *IntellectualObject {
 	return &IntellectualObject{
-		GenericFiles: make([]*GenericFile, 0),
-		PremisEvents: make([]*PremisEvent, 0),
-		IngestManifests: make([]string, 0),
+		GenericFiles:       make([]*GenericFile, 0),
+		PremisEvents:       make([]*PremisEvent, 0),
+		IngestManifests:    make([]string, 0),
 		IngestTagManifests: make([]string, 0),
 		IngestFilesIgnored: make([]string, 0),
-		IngestTags: make([]*Tag, 0),
+		IngestTags:         make([]*Tag, 0),
 	}
 }
 
 // MissingFile defines a file that is not in the bag, despite the
 // fact that its checksum was found in a manifest.
 type MissingFile struct {
-	Manifest    string
-	LineNumber  int
-	FilePath    string
-	Digest      string
+	Manifest   string
+	LineNumber int
+	FilePath   string
+	Digest     string
 }
 
-func NewMissingFile(manifest string, lineNumber int, filePath, digest string) (*MissingFile) {
+func NewMissingFile(manifest string, lineNumber int, filePath, digest string) *MissingFile {
 	return &MissingFile{
-		Manifest: manifest,
+		Manifest:   manifest,
 		LineNumber: lineNumber,
-		FilePath: filePath,
-		Digest: digest,
+		FilePath:   filePath,
+		Digest:     digest,
 	}
 }
 
@@ -99,11 +99,11 @@ type Tag struct {
 	Value      string
 }
 
-func NewTag(sourceFile, label, value string) (*Tag) {
+func NewTag(sourceFile, label, value string) *Tag {
 	return &Tag{
 		SourceFile: sourceFile,
-		Label: label,
-		Value: value,
+		Label:      label,
+		Value:      value,
 	}
 }
 
@@ -111,7 +111,7 @@ func NewTag(sourceFile, label, value string) (*Tag) {
 // files in this object. The object's bag size will be slightly
 // larger than this, because it will include a manifest, tag
 // files and tar header.
-func (obj *IntellectualObject) TotalFileSize() (int64) {
+func (obj *IntellectualObject) TotalFileSize() int64 {
 	total := int64(0)
 	for _, genericFile := range obj.GenericFiles {
 		total += genericFile.Size
@@ -134,7 +134,7 @@ func (obj *IntellectualObject) AccessValid() bool {
 // Returns the GenericFile record for the specified path, or nil.
 // Param filePath should be the relative path of the file within
 // the bag. E.g. "data/images/myphoto.jpg"
-func (obj *IntellectualObject) FindGenericFile(filePath string) (*GenericFile) {
+func (obj *IntellectualObject) FindGenericFile(filePath string) *GenericFile {
 	if obj.genericFileMap == nil || len(obj.genericFileMap) != len(obj.GenericFiles) {
 		obj.genericFileMap = make(map[string]*GenericFile, len(obj.GenericFiles))
 		for i := range obj.GenericFiles {
@@ -150,7 +150,7 @@ func (obj *IntellectualObject) FindGenericFile(filePath string) (*GenericFile) {
 // says tags may be repeated, and their order must be preserved,
 // so this returns a slice of tags if the tag is found. In most
 // cases, the slice will contain one element.
-func (obj *IntellectualObject) FindTag(tagName string) ([]*Tag) {
+func (obj *IntellectualObject) FindTag(tagName string) []*Tag {
 	if obj.tagMap == nil {
 		obj.tagMap = make(map[string][]*Tag)
 		for i := range obj.IngestTags {
@@ -168,14 +168,14 @@ func (obj *IntellectualObject) FindTag(tagName string) ([]*Tag) {
 // were successfully saved to both primary and secondary storage.
 // Note that GenericFiles marked as IngestNeedsSave = false do
 // not need to be saved.
-func (obj *IntellectualObject) AllFilesSaved() (bool) {
+func (obj *IntellectualObject) AllFilesSaved() bool {
 	allSaved := true
 	for _, gf := range obj.GenericFiles {
 		if gf.IngestNeedsSave {
-			if (gf.IngestStorageURL == "" ||
+			if gf.IngestStorageURL == "" ||
 				gf.IngestReplicationURL == "" ||
 				gf.IngestStoredAt.IsZero() ||
-				gf.IngestReplicatedAt.IsZero()) {
+				gf.IngestReplicatedAt.IsZero() {
 				allSaved = false
 				break
 			}
@@ -197,7 +197,7 @@ func (obj *IntellectualObject) SerializeForPharos() ([]byte, error) {
 }
 
 // Returns events of the specified type
-func (obj *IntellectualObject) FindEventsByType(eventType string) ([]PremisEvent) {
+func (obj *IntellectualObject) FindEventsByType(eventType string) []PremisEvent {
 	events := make([]PremisEvent, 0)
 	for _, event := range obj.PremisEvents {
 		if event != nil && event.EventType == eventType {
@@ -206,7 +206,6 @@ func (obj *IntellectualObject) FindEventsByType(eventType string) ([]PremisEvent
 	}
 	return events
 }
-
 
 // BuildIngestEvents creates all of the PremisEvents required
 // for ingest for this IntellectualObject and all of its
@@ -231,7 +230,7 @@ func (obj *IntellectualObject) FindEventsByType(eventType string) ([]PremisEvent
 //
 // This call is idempotent, so calling it multiple times will
 // not mess up our data.
-func (obj *IntellectualObject) BuildIngestEvents() (error) {
+func (obj *IntellectualObject) BuildIngestEvents() error {
 
 	err := obj.buildEventCreation()
 	if err != nil {
@@ -267,7 +266,7 @@ func (obj *IntellectualObject) BuildIngestEvents() (error) {
 // this object was created. There will be some lag time between
 // when the object is created and when all of its ingest metadata
 // is recorded.
-func (obj *IntellectualObject) buildEventCreation() (error) {
+func (obj *IntellectualObject) buildEventCreation() error {
 	events := obj.FindEventsByType(constants.EventCreation)
 	if len(events) == 0 {
 		event, err := NewEventObjectCreation()
@@ -283,7 +282,7 @@ func (obj *IntellectualObject) buildEventCreation() (error) {
 
 // Builds the event (if it doesn't already exist) describing when
 // this object was assigned an identifier, and what that identifier is.
-func (obj *IntellectualObject) buildEventIdentifierAssignment() (error) {
+func (obj *IntellectualObject) buildEventIdentifierAssignment() error {
 	events := obj.FindEventsByType(constants.EventIdentifierAssignment)
 	if len(events) == 0 {
 		event, err := NewEventObjectIdentifierAssignment(obj.Identifier)
@@ -299,7 +298,7 @@ func (obj *IntellectualObject) buildEventIdentifierAssignment() (error) {
 
 // Builds the event (if it doesn't already exist) describing when
 // access permissions were set on this object.
-func (obj *IntellectualObject) buildEventAccessAssignment() (error) {
+func (obj *IntellectualObject) buildEventAccessAssignment() error {
 	events := obj.FindEventsByType(constants.EventAccessAssignment)
 	if len(events) == 0 {
 		event, err := NewEventObjectRights(obj.Access)
@@ -315,7 +314,7 @@ func (obj *IntellectualObject) buildEventAccessAssignment() (error) {
 
 // Builds the event (if it doesn't already exist) describing when
 // this object was fully ingested.
-func (obj *IntellectualObject) buildEventIngest() (error) {
+func (obj *IntellectualObject) buildEventIngest() error {
 	events := obj.FindEventsByType(constants.EventIngestion)
 	if len(events) == 0 {
 		event, err := NewEventObjectIngest(len(obj.GenericFiles))
@@ -333,7 +332,7 @@ func (obj *IntellectualObject) buildEventIngest() (error) {
 // this object's GenericFiles. See the notes for BuildIngestEvents
 // above, as they all apply here. This call is idempotent, so
 // calling it multiple times will not mess up our data.
-func (obj *IntellectualObject) BuildIngestChecksums() (error) {
+func (obj *IntellectualObject) BuildIngestChecksums() error {
 	for _, gf := range obj.GenericFiles {
 		err := gf.BuildIngestChecksums()
 		if err != nil {

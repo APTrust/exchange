@@ -9,7 +9,6 @@ import (
 	"os"
 )
 
-
 func main() {
 	pathToConfigFile, hours := parseCommandLine()
 	config, err := models.LoadConfigFile(pathToConfigFile)
@@ -25,7 +24,6 @@ func main() {
 	}
 	dpnQueue.Run()
 }
-
 
 // See if you can figure out from the function name what this does.
 func parseCommandLine() (configFile string, hours int) {

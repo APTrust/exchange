@@ -21,12 +21,12 @@ import (
 // For putting together DPN bags from APTrust files, see fetcher.go.
 
 type DPNCopier struct {
-	CopyChannel         chan *models.ReplicationManifest
-	ChecksumChannel     chan *models.ReplicationManifest
-	PostProcessChannel  chan *models.ReplicationManifest
-	Context             *context.Context
-	LocalClient         *network.DPNRestClient
-	RemoteClients       map[string]*network.DPNRestClient
+	CopyChannel        chan *models.ReplicationManifest
+	ChecksumChannel    chan *models.ReplicationManifest
+	PostProcessChannel chan *models.ReplicationManifest
+	Context            *context.Context
+	LocalClient        *network.DPNRestClient
+	RemoteClients      map[string]*network.DPNRestClient
 }
 
 func NewDPNCopier(_context *context.Context) (*DPNCopier, error) {
@@ -43,9 +43,9 @@ func NewDPNCopier(_context *context.Context) (*DPNCopier, error) {
 	if err != nil {
 		return nil, err
 	}
-	copier := &DPNCopier {
-		Context: _context,
-		LocalClient: localClient,
+	copier := &DPNCopier{
+		Context:       _context,
+		LocalClient:   localClient,
 		RemoteClients: remoteClients,
 	}
 	workerBufferSize := _context.Config.DPN.DPNCopyWorker.Workers * 4
@@ -86,7 +86,7 @@ func (copier *DPNCopier) HandleMessage(message *nsq.Message) error {
 
 	// Start processing.
 	copier.CopyChannel <- manifest
-	copier.Context.MessageLog.Info("Put xfer request %s (bag %s) from %s " +
+	copier.Context.MessageLog.Info("Put xfer request %s (bag %s) from %s "+
 		" into the copy channel", manifest.ReplicationTransfer.ReplicationId,
 		manifest.ReplicationTransfer.Bag, manifest.ReplicationTransfer.FromNode)
 	return nil
@@ -97,7 +97,7 @@ func (copier *DPNCopier) doCopy() {
 	for manifest := range copier.CopyChannel {
 		rsyncCommand := GetRsyncCommand(manifest.ReplicationTransfer.Link,
 			manifest.LocalPath, copier.Context.Config.DPN.UseSSHWithRsync)
-		copier.Context.MessageLog.Info("Starting copy of ReplicationTransfer %s " +
+		copier.Context.MessageLog.Info("Starting copy of ReplicationTransfer %s "+
 			"with command %s %s", manifest.ReplicationTransfer.ReplicationId,
 			rsyncCommand.Path, strings.Join(rsyncCommand.Args, " "))
 
@@ -165,7 +165,7 @@ func (copier *DPNCopier) calculateTagManifestDigest(manifest *models.Replication
 	}
 	// DPN BagIt spec says that the top-level dir inside the bag should
 	// have the same name as the bag itself (a UUID).
-    // https://wiki.duraspace.org/display/DPN/BagIt+Specification#BagItSpecification-DPNBagitStructure
+	// https://wiki.duraspace.org/display/DPN/BagIt+Specification#BagItSpecification-DPNBagitStructure
 	tagManifestPath := filepath.Join(manifest.ReplicationTransfer.Bag, "tagmanifest-sha256.txt")
 	readCloser, err := tarFileIterator.Find(tagManifestPath)
 	if readCloser != nil {
@@ -279,7 +279,7 @@ func (copier *DPNCopier) finishWithSuccess(manifest *models.ReplicationManifest)
 		copier.Context.MessageLog.Error(msg)
 		warning := "Copy succeeded but could not push to validation queue."
 		manifest.DPNWorkItem.Note = &warning
-		copier.Context.MessageLog.Info("Copy succeeded for Replication %s " +
+		copier.Context.MessageLog.Info("Copy succeeded for Replication %s "+
 			"but could not push to validation queue.",
 			manifest.ReplicationTransfer.ReplicationId)
 		SaveDPNWorkItemState(copier.Context, manifest, manifest.CopySummary)
@@ -288,7 +288,6 @@ func (copier *DPNCopier) finishWithSuccess(manifest *models.ReplicationManifest)
 	LogReplicationJson(manifest, copier.Context.JsonLog)
 	manifest.NsqMessage.Finish()
 }
-
 
 // GetRsyncCommand returns a command object for copying from the remote
 // location to the local filesystem. The copy is done via rsync over ssh,
@@ -324,10 +323,10 @@ func (copier *DPNCopier) finishWithSuccess(manifest *models.ReplicationManifest)
 //    fmt.Println(err.Error())
 //    fmt.Println(string(output))
 // }
-func GetRsyncCommand(copyFrom, copyTo string, useSSH bool) (*exec.Cmd) {
+func GetRsyncCommand(copyFrom, copyTo string, useSSH bool) *exec.Cmd {
 	//rsync -avz -e ssh remoteuser@remotehost:/remote/dir /this/dir/
 	if useSSH {
-		return exec.Command("rsync", "-avzW", "-e",  "ssh", copyFrom, copyTo, "--inplace")
+		return exec.Command("rsync", "-avzW", "-e", "ssh", copyFrom, copyTo, "--inplace")
 	}
 	return exec.Command("rsync", "-avzW", "--inplace", copyFrom, copyTo)
 }

@@ -34,24 +34,23 @@ func RestorationBucketFor(institution string) (bucketName string) {
 	return constants.RestoreBucketPrefix + institution
 }
 
-func BagNameFromTarFileName(pathToTarFile string) (string) {
+func BagNameFromTarFileName(pathToTarFile string) string {
 	fileName := path.Base(pathToTarFile)
 	return CleanBagName(fileName)
 }
 
 // Given the name of a tar file, returns the clean bag name. That's
 // the tar file name minus the tar extension and any ".bagN.ofN" suffix.
-func CleanBagName(bagName string) (string) {
+func CleanBagName(bagName string) string {
 	// Strip the .tar suffix
 	nameWithoutTar := bagName
 	if strings.HasSuffix(bagName, ".tar") {
-		nameWithoutTar = bagName[0:len(bagName)-4]
+		nameWithoutTar = bagName[0 : len(bagName)-4]
 	}
 	// Now get rid of the .b001.of200 suffix if this is a multi-part bag.
 	cleanName := constants.MultipartSuffix.ReplaceAll([]byte(nameWithoutTar), []byte(""))
 	return string(cleanName)
 }
-
 
 // Min returns the minimum of x or y. The Math package has this function
 // but you have to cast to floats.
@@ -79,12 +78,12 @@ func Base64EncodeMd5(md5Digest string) (string, error) {
 }
 
 // Returns true if url looks like a URL.
-func LooksLikeURL(url string) (bool) {
+func LooksLikeURL(url string) bool {
 	reUrl := regexp.MustCompile(`^(https?:\/\/)?([\da-z\.-]+)\.([a-z\.]{2,6})([\/\w \.-]*)*\/?$`)
 	return reUrl.Match([]byte(url))
 }
 
-func LooksLikeUUID(uuid string) (bool) {
+func LooksLikeUUID(uuid string) bool {
 	reUUID := regexp.MustCompile(`(?i)^([a-f\d]{8}(-[a-f\d]{4}){3}-[a-f\d]{12}?)$`)
 	return reUUID.Match([]byte(uuid))
 }
@@ -92,13 +91,13 @@ func LooksLikeUUID(uuid string) (bool) {
 // Cleans a string we might find a config file, trimming leading
 // and trailing spaces, single quotes and double quoted. Note that
 // leading and trailing spaces inside the quotes are not trimmed.
-func CleanString(str string) (string) {
+func CleanString(str string) string {
 	cleanStr := strings.TrimSpace(str)
 	// Strip leading and traling quotes, but only if string has matching
 	// quotes at both ends.
 	if strings.HasPrefix(cleanStr, "'") && strings.HasSuffix(cleanStr, "'") ||
 		strings.HasPrefix(cleanStr, "\"") && strings.HasSuffix(cleanStr, "\"") {
-		return cleanStr[1:len(cleanStr) - 1]
+		return cleanStr[1 : len(cleanStr)-1]
 	}
 	return cleanStr
 }
@@ -121,9 +120,9 @@ func GetInstitutionFromBagName(bagName string) (string, error) {
 	parts := strings.Split(bagName, ".")
 	if len(parts) < 3 {
 		message := fmt.Sprintf(
-			"Bag name '%s' should start with your institution ID,\n" +
-				"followed by a period and the object name.\n" +
-				"For example, 'miami.my_archive.tar' for a tar file,\n" +
+			"Bag name '%s' should start with your institution ID,\n"+
+				"followed by a period and the object name.\n"+
+				"For example, 'miami.my_archive.tar' for a tar file,\n"+
 				"or 'miami.my_archive' for a directory.",
 			bagName)
 		return "", fmt.Errorf(message)
@@ -155,18 +154,18 @@ func GetInstitutionFromBagName(bagName string) (string, error) {
 // And did you know both savable and saveable are correct? I chose the
 // former to reduce the size of our compiled binary by one byte. That
 // could save us pennies over the next 10,000 years.
-func HasSavableName(filename string) (bool) {
+func HasSavableName(filename string) bool {
 	return !(filename == "." ||
 		filename == ".." ||
 		filename == "bagit.txt" ||
-		strings.HasPrefix(filename, "._") ||  // mac junk files
+		strings.HasPrefix(filename, "._") || // mac junk files
 		strings.Contains(filename, "/._") || // mac junk files
 		reTagManifest.MatchString(filename) ||
 		reManifest.MatchString(filename))
 }
 
 // Returns true if the list of strings contains item.
-func StringListContains(list []string, item string) (bool) {
+func StringListContains(list []string, item string) bool {
 	if list != nil {
 		for i := range list {
 			if list[i] == item {
@@ -178,7 +177,7 @@ func StringListContains(list []string, item string) (bool) {
 }
 
 // Returns true if the list of ints contains item.
-func IntListContains(list []int, item int) (bool) {
+func IntListContains(list []int, item int) bool {
 	if list != nil {
 		for i := range list {
 			if list[i] == item {

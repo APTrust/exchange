@@ -18,16 +18,16 @@ etc.). It also encapsulates some functions common to all of
 those services.
 */
 type Context struct {
-	Config          *models.Config
-	MessageLog      *logging.Logger
-	JsonLog         *stdlog.Logger
-	NSQClient       *network.NSQClient
-	PharosClient    *network.PharosClient
-	VolumeClient    *network.VolumeClient
-	pathToLogFile   string
-	pathToJsonLog   string
-	succeeded       int64
-	failed          int64
+	Config        *models.Config
+	MessageLog    *logging.Logger
+	JsonLog       *stdlog.Logger
+	NSQClient     *network.NSQClient
+	PharosClient  *network.PharosClient
+	VolumeClient  *network.VolumeClient
+	pathToLogFile string
+	pathToJsonLog string
+	succeeded     int64
+	failed        int64
 }
 
 /*
@@ -42,9 +42,9 @@ stand-along processing services (bag_processor, bag_restorer,
 cleanup, etc.).
 */
 func NewContext(config *models.Config) (context *Context) {
-	context = &Context {
+	context = &Context{
 		succeeded: int64(0),
-		failed: int64(0),
+		failed:    int64(0),
 	}
 	context.Config = config
 	context.MessageLog, context.pathToLogFile = logger.InitLogger(config)
@@ -71,34 +71,34 @@ func (context *Context) initPharosClient() {
 }
 
 // Returns the number of work items that succeeded.
-func (context *Context) Succeeded() (int64) {
+func (context *Context) Succeeded() int64 {
 	return context.succeeded
 }
 
 // Returns the number of work items that failed.
-func (context *Context) Failed() (int64) {
+func (context *Context) Failed() int64 {
 	return context.failed
 }
 
 // Increases the count of successfully processed items by one.
-func (context *Context) IncrementSucceeded() (int64) {
+func (context *Context) IncrementSucceeded() int64 {
 	atomic.AddInt64(&context.succeeded, 1)
 	return context.succeeded
 }
 
 // Increases the count of unsuccessfully processed items by one.
-func (context *Context) IncrementFailed() (int64) {
+func (context *Context) IncrementFailed() int64 {
 	atomic.AddInt64(&context.failed, 1)
 	return context.succeeded
 }
 
 // Returns the path to this process' log file
-func (context *Context) PathToLogFile() (string) {
+func (context *Context) PathToLogFile() string {
 	return context.pathToLogFile
 }
 
 // Returns the path to this process' JSON log file
-func (context *Context) PathToJsonLog() (string) {
+func (context *Context) PathToJsonLog() string {
 	return context.pathToJsonLog
 }
 

@@ -10,7 +10,7 @@ import (
 
 func TestNewS3FileWithKey(t *testing.T) {
 	key := s3.Key{
-		Key: "yadda.yadda",
+		Key:  "yadda.yadda",
 		Size: 54321,
 		ETag: "81726354afdc",
 	}
@@ -27,11 +27,10 @@ func TestNewS3FileWithName(t *testing.T) {
 	assert.Equal(t, "Key Wee", s3File.Key.Key)
 }
 
-
 func TestDeleteAttempted(t *testing.T) {
-	cf := models.S3File {
-		BucketName: "charley",
-		Key: s3.Key{ Key: "horse"},
+	cf := models.S3File{
+		BucketName:   "charley",
+		Key:          s3.Key{Key: "horse"},
 		ErrorMessage: "",
 	}
 	assert.False(t, cf.DeleteAttempted())
@@ -42,7 +41,7 @@ func TestDeleteAttempted(t *testing.T) {
 	assert.True(t, cf.DeleteAttempted())
 }
 
-func testFile() (*models.S3File) {
+func testFile() *models.S3File {
 	return &models.S3File{
 		BucketName: "aptrust.receiving.uc.edu",
 		Key: s3.Key{

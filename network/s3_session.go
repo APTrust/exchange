@@ -2,12 +2,11 @@ package network
 
 import (
 	"fmt"
-    "github.com/aws/aws-sdk-go/aws"
-    "github.com/aws/aws-sdk-go/aws/credentials"
-    "github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/credentials"
+	"github.com/aws/aws-sdk-go/aws/session"
 	"os"
 )
-
 
 // Returns an S3 session for this objectList.
 func GetS3Session(awsRegion string) (*session.Session, error) {

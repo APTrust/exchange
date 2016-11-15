@@ -53,7 +53,7 @@ func TestResultRuntime(t *testing.T) {
 	fiveMinutesAgo := now.Add(-5 * time.Minute)
 	s.StartedAt = fiveMinutesAgo
 	s.FinishedAt = now
-	assert.EqualValues(t, 5 * time.Minute, s.RunTime())
+	assert.EqualValues(t, 5*time.Minute, s.RunTime())
 }
 
 func TestResultSucceeded(t *testing.T) {

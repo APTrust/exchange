@@ -63,7 +63,6 @@ func storeTestCommon(t *testing.T, bagName string, ingestManifest *models.Ingest
 	assert.True(t, ingestManifest.StoreResult.Retry,
 		"StoreResult.Retry should be true for %s", bagName)
 
-
 	// Make sure the GenericFiles include info about where we put them.
 	for _, gf := range ingestManifest.Object.GenericFiles {
 		assert.True(t, strings.HasPrefix(gf.URI, "https://s3.amazonaws.com/"),

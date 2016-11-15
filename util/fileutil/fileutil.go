@@ -76,7 +76,6 @@ func RelativeToAbsPath(relativePath string) (string, error) {
 	return filepath.Join(exchangeHome, relativePath), nil
 }
 
-
 // Returns true if the file at path exists, false if not.
 func FileExists(path string) bool {
 	_, err := os.Stat(path)
@@ -119,7 +118,7 @@ func RecursiveFileList(dir string) ([]string, error) {
 // characters and at least minSeparators path separators. This is
 // for testing paths you want pass into os.RemoveAll(), so you don't
 // wind up deleting "/" or "/etc" or something catastrophic like that.
-func LooksSafeToDelete(dir string, minLength, minSeparators int) (bool) {
+func LooksSafeToDelete(dir string, minLength, minSeparators int) bool {
 	separator := string(os.PathSeparator)
 	separatorCount := (len(dir) - len(strings.Replace(dir, separator, "", -1)))
 	return len(dir) >= minLength && separatorCount >= minSeparators

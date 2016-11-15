@@ -5,7 +5,6 @@ import (
 	"regexp"
 )
 
-
 // The tar files that make up multipart bags include a suffix
 // that follows this pattern. For example, after stripping off
 // the .tar suffix, you'll have a name like "my_bag.b04.of12"
@@ -30,18 +29,17 @@ const (
 	RestoreBucketPrefix     = "aptrust.restore."
 	S3DateFormat            = "2006-01-02T15:04:05.000Z"
 	// All S3 urls begin with this.
-	S3UriPrefix             = "https://s3.amazonaws.com/"
+	S3UriPrefix = "https://s3.amazonaws.com/"
 )
-
 
 // Status enumerations match values defined in
 // https://github.com/APTrust/fluctus/blob/develop/config/application.rb
 const (
-	StatusStarted              = "Started"
-	StatusPending              = "Pending"
-	StatusSuccess              = "Success"
-	StatusFailed               = "Failed"
-	StatusCancelled            = "Cancelled"
+	StatusStarted   = "Started"
+	StatusPending   = "Pending"
+	StatusSuccess   = "Success"
+	StatusFailed    = "Failed"
+	StatusCancelled = "Cancelled"
 )
 
 var StatusTypes []string = []string{
@@ -55,15 +53,15 @@ var StatusTypes []string = []string{
 // Stage enumerations match values defined in
 // https://github.com/APTrust/fluctus/blob/develop/config/application.rb
 const (
-	StageRequested           = "Requested"
-	StageReceive             = "Receive"
-	StageFetch               = "Fetch"
-	StageUnpack              = "Unpack"
-	StageValidate            = "Validate"
-	StageStore               = "Store"
-	StageRecord              = "Record"
-	StageCleanup             = "Cleanup"
-	StageResolve             = "Resolve"
+	StageRequested = "Requested"
+	StageReceive   = "Receive"
+	StageFetch     = "Fetch"
+	StageUnpack    = "Unpack"
+	StageValidate  = "Validate"
+	StageStore     = "Store"
+	StageRecord    = "Record"
+	StageCleanup   = "Cleanup"
+	StageResolve   = "Resolve"
 )
 
 var StageTypes []string = []string{
@@ -82,11 +80,11 @@ var StageTypes []string = []string{
 // https://github.com/APTrust/fluctus/blob/develop/config/application.rb
 
 const (
-	ActionIngest                 = "Ingest"
-	ActionFixityCheck            = "Fixity Check"
-	ActionRestore                = "Restore"
-	ActionDelete                 = "Delete"
-	ActionDPN                    = "DPN"
+	ActionIngest      = "Ingest"
+	ActionFixityCheck = "Fixity Check"
+	ActionRestore     = "Restore"
+	ActionDelete      = "Delete"
+	ActionDPN         = "DPN"
 )
 
 var ActionTypes []string = []string{
@@ -114,15 +112,15 @@ var DPNTaskTypes []string = []string{
 }
 
 const (
-	AlgMd5                      = "md5"
-	AlgSha256                   = "sha256"
+	AlgMd5    = "md5"
+	AlgSha256 = "sha256"
 )
 
-var ChecksumAlgorithms = []string{ AlgMd5, AlgSha256 }
+var ChecksumAlgorithms = []string{AlgMd5, AlgSha256}
 
 const (
-	IdTypeStorageURL                 = "url"
-	IdTypeBagAndPath                 = "bag/filepath"
+	IdTypeStorageURL = "url"
+	IdTypeBagAndPath = "bag/filepath"
 )
 
 // List of valid APTrust IntellectualObject AccessRights.
@@ -135,7 +133,7 @@ var AccessRights []string = []string{
 // AWS Regions (the ones we're using for storage)
 const (
 	AWSVirginia = "us-east-1"
-	AWSOregon = "us-west-2"
+	AWSOregon   = "us-west-2"
 )
 
 // GenericFile types. GenericFile.IngestFileType
@@ -148,7 +146,7 @@ const (
 
 // PREMIS Event types as defined by the Library of Congress at
 // http://id.loc.gov/search/?q=&q=cs%3Ahttp%3A%2F%2Fid.loc.gov%2Fvocabulary%2Fpreservation%2FeventType#
-const(
+const (
 	// The process of assigning access rights.
 	// For APTrust, access can be "restricted", "institution" or "consortia".
 	// This is not part of the LOC standard, and LOC has no analog for

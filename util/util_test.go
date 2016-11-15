@@ -174,7 +174,7 @@ func TestSavableName(t *testing.T) {
 }
 
 func TestStringListContains(t *testing.T) {
-	list := []string{ "apple", "orange", "banana" }
+	list := []string{"apple", "orange", "banana"}
 	assert.True(t, util.StringListContains(list, "orange"))
 	assert.False(t, util.StringListContains(list, "wedgie"))
 	// Don't crash on nil list
@@ -182,7 +182,7 @@ func TestStringListContains(t *testing.T) {
 }
 
 func TestIntListContains(t *testing.T) {
-	list := []int{ 101, 102, 103 }
+	list := []int{101, 102, 103}
 	assert.True(t, util.IntListContains(list, 102))
 	assert.False(t, util.IntListContains(list, 87))
 	// Don't crash on nil list

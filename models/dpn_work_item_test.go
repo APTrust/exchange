@@ -13,16 +13,16 @@ func TestSerializeDPNWorkItemForPharos(t *testing.T) {
 	note := "All done"
 	state := "Nebraska"
 	item := models.DPNWorkItem{
-		Id: 1000,
-		Node: "dpn.aptrust.org",
-		Task: "Replication",
-		Identifier: "1234-5678",
-		QueuedAt: &timestamp,
+		Id:          1000,
+		Node:        "dpn.aptrust.org",
+		Task:        "Replication",
+		Identifier:  "1234-5678",
+		QueuedAt:    &timestamp,
 		CompletedAt: &timestamp,
-		Note: &note,
-		State: &state,
-		CreatedAt: timestamp,
-		UpdatedAt: timestamp,
+		Note:        &note,
+		State:       &state,
+		CreatedAt:   timestamp,
+		UpdatedAt:   timestamp,
 	}
 	data, err := item.SerializeForPharos()
 	require.Nil(t, err)

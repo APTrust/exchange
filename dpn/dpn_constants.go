@@ -13,15 +13,15 @@ const (
 
 	DEFAULT_TOKEN_FORMAT_STRING = "token %s"
 
-	BAG_TYPE_DATA = "data"
-	BAG_TYPE_RIGHTS = "rights"
+	BAG_TYPE_DATA         = "data"
+	BAG_TYPE_RIGHTS       = "rights"
 	BAG_TYPE_INTERPRETIVE = "interpretive"
 
 	PATH_TYPE_LOCAL = "Local Filesystem"
 	PATH_TYPE_S3    = "S3 Bucket"
 
 	// These values are part of the published APTrust spec.
-	APTRUST_BAGIT_VERSION = "0.97"
+	APTRUST_BAGIT_VERSION  = "0.97"
 	APTRUST_BAGIT_ENCODING = "UTF-8"
 )
 

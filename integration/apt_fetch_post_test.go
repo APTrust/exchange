@@ -99,7 +99,7 @@ func fetcherTestGoodBagResult(t *testing.T, bagName string, ingestManifest *mode
 		assert.NotEmpty(t, gf.IngestMd5VerifiedAt, "Bag %s file %s IngestMd5VerifiedAt is missing", bagName, i)
 		assert.NotEmpty(t, gf.IngestSha256, "Bag %s file %s IngestSha256 is missing", bagName, i)
 		assert.NotEmpty(t, gf.IngestSha256GeneratedAt, "Bag %s file %s IngestSha256GeneratedAt is missing", bagName, i)
-		assert.NotEmpty(t, gf.IngestSha256VerifiedAt, "Bag %s file %s IngestSha256VerifiedAt is missing", bagName, )
+		assert.NotEmpty(t, gf.IngestSha256VerifiedAt, "Bag %s file %s IngestSha256VerifiedAt is missing", bagName)
 		assert.NotEmpty(t, gf.IngestUUID, "Bag %s file %s UUID is missing", bagName, i)
 		assert.NotEmpty(t, gf.IngestUUIDGeneratedAt, "Bag %s file %s UUIDGeneratedAt is missing", bagName, i)
 		assert.True(t, gf.IngestNeedsSave, "Bag %s file %s IngestNeedsSave should be true", bagName, i)

@@ -35,9 +35,9 @@ func NewDPNValidator(_context *context.Context) (*DPNValidator, error) {
 	if err != nil {
 		return nil, err
 	}
-	validator := &DPNValidator {
-		Context: _context,
-		LocalClient: localClient,
+	validator := &DPNValidator{
+		Context:       _context,
+		LocalClient:   localClient,
 		RemoteClients: remoteClients,
 	}
 	validator.loadBagValidationConfig()
@@ -73,7 +73,6 @@ func (validator *DPNValidator) loadBagValidationConfig() {
 	validator.BagValidationConfig = bagValidationConfig
 }
 
-
 func (validator *DPNValidator) HandleMessage(message *nsq.Message) error {
 	message.DisableAutoResponse()
 
@@ -94,7 +93,7 @@ func (validator *DPNValidator) HandleMessage(message *nsq.Message) error {
 	}
 
 	// Start processing.
-	validator.Context.MessageLog.Info("Putting xfer request %s (bag %s) from %s " +
+	validator.Context.MessageLog.Info("Putting xfer request %s (bag %s) from %s "+
 		" into the validation channel", manifest.ReplicationTransfer.ReplicationId,
 		manifest.ReplicationTransfer.Bag, manifest.ReplicationTransfer.FromNode)
 	validator.ValidationChannel <- manifest
@@ -228,7 +227,7 @@ func (validator *DPNValidator) finishWithSuccess(manifest *models.ReplicationMan
 		validator.Context.MessageLog.Error(msg)
 	} else {
 		validator.Context.MessageLog.Info("Replication %s (bag %s) pushed to NSQ topic %s",
-		manifest.ReplicationTransfer.ReplicationId,
+			manifest.ReplicationTransfer.ReplicationId,
 			manifest.ReplicationTransfer.Bag, topic)
 	}
 

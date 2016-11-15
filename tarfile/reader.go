@@ -17,11 +17,11 @@ import (
 )
 
 type Reader struct {
-	Manifest     *models.IngestManifest
-	tarReader    *tar.Reader
+	Manifest  *models.IngestManifest
+	tarReader *tar.Reader
 }
 
-func NewReader(manifest *models.IngestManifest) (*Reader) {
+func NewReader(manifest *models.IngestManifest) *Reader {
 	return &Reader{
 		Manifest: manifest,
 	}
@@ -61,8 +61,8 @@ func (reader *Reader) Untar() {
 		}
 		if err != nil {
 			reader.Manifest.UntarResult.AddError(
-				"Error reading tar file header: %v. " +
-				"Either this is not a tar file, or the file is corrupt.",
+				"Error reading tar file header: %v. "+
+					"Either this is not a tar file, or the file is corrupt.",
 				err)
 			reader.Manifest.UntarResult.Finish()
 			return
@@ -142,7 +142,7 @@ func (reader *Reader) recordStartOfWork() {
 
 // Make sure the manifest has enough information
 // for us to get started.
-func (reader *Reader) manifestInfoIsValid() (bool) {
+func (reader *Reader) manifestInfoIsValid() bool {
 	if reader.Manifest.Object == nil {
 		reader.Manifest.UntarResult.AddError("IntellectualObject is missing from manifest.")
 		return false
@@ -171,7 +171,7 @@ func (reader *Reader) manifestInfoIsValid() (bool) {
 }
 
 // Saves the file to disk and returns a GenericFile object.
-func (reader *Reader) createAndSaveGenericFile(fileName string, header *tar.Header) (*models.GenericFile) {
+func (reader *Reader) createAndSaveGenericFile(fileName string, header *tar.Header) *models.GenericFile {
 	fileDir := filepath.Dir(reader.Manifest.Object.IngestUntarredPath)
 	gf := models.NewGenericFile()
 	reader.Manifest.Object.GenericFiles = append(reader.Manifest.Object.GenericFiles, gf)
@@ -240,7 +240,7 @@ func getFileName(headerName string) (string, error) {
 // buildFile saves a data file from the tar archive to disk,
 // then returns a struct with data we'll need to construct the
 // GenericFile object in Fedora later.
-func (reader *Reader)saveWithChecksums(gf *models.GenericFile) {
+func (reader *Reader) saveWithChecksums(gf *models.GenericFile) {
 	// Set up a MultiWriter to stream data ONCE to file,
 	// md5 and sha256. We don't want to process the stream
 	// three separate times.
@@ -264,6 +264,6 @@ func (reader *Reader)saveWithChecksums(gf *models.GenericFile) {
 	gf.IngestMd5 = fmt.Sprintf("%x", md5Hash.Sum(nil))
 	gf.IngestSha256 = fmt.Sprintf("%x", shaHash.Sum(nil))
 	gf.IngestSha256GeneratedAt = time.Now().UTC()
-	gf.FileFormat, _ = platform.GuessMimeType(gf.IngestLocalPath)  // on err, defaults to application/binary
+	gf.FileFormat, _ = platform.GuessMimeType(gf.IngestLocalPath) // on err, defaults to application/binary
 	return
 }

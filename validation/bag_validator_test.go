@@ -15,10 +15,10 @@ import (
 	"testing"
 )
 
-func getEmptyValidationResult() (*validation.ValidationResult) {
+func getEmptyValidationResult() *validation.ValidationResult {
 	return &validation.ValidationResult{
-		ParseSummary: models.NewWorkSummary(),
-		ValidationSummary: models.NewWorkSummary(),
+		ParseSummary:       models.NewWorkSummary(),
+		ValidationSummary:  models.NewWorkSummary(),
 		IntellectualObject: models.NewIntellectualObject(),
 	}
 }
@@ -82,12 +82,12 @@ func TestNewBagValidator_BadConfig(t *testing.T) {
 	badPathSpec := validation.TagSpec{
 		FilePath: "",
 		Presence: "REQUIRED",
-		EmptyOK: true,
+		EmptyOK:  true,
 	}
 	badPresenceSpec := validation.TagSpec{
 		FilePath: "orangina",
 		Presence: "orangina",
-		EmptyOK: true,
+		EmptyOK:  true,
 	}
 	bagValidationConfig.TagSpecs["bad_path_spec"] = badPathSpec
 	bagValidationConfig.TagSpecs["bad_presence"] = badPresenceSpec
@@ -305,7 +305,6 @@ func TestValidate_InvalidBag(t *testing.T) {
 	assert.True(t, result.ValidationSummary.HasErrors())
 	assert.True(t, result.HasErrors())
 
-
 	err_0 := "File 'data/file-not-in-bag' in manifest 'manifest-sha256.txt' is missing from bag"
 	err_1 := "File 'custom_tags/tag_file_xyz.pdf' in manifest 'tagmanifest-md5.txt' is missing from bag"
 	err_2 := "File 'custom_tags/tag_file_xyz.pdf' in manifest 'tagmanifest-sha256.txt' is missing from bag"
@@ -329,7 +328,7 @@ func TestValidate_InvalidBag(t *testing.T) {
 // These good bags are from the old Bagman test suite. We have to make sure they
 // pass here, so we know validation is backwards-compatible.
 func TestValidate_GoodBags(t *testing.T) {
-	goodBags := []string {
+	goodBags := []string{
 		"example.edu.multipart.b01.of02.tar",
 		"example.edu.multipart.b02.of02.tar",
 		"example.edu.sample_good.tar",
@@ -338,7 +337,7 @@ func TestValidate_GoodBags(t *testing.T) {
 	if err != nil {
 		assert.Fail(t, "Could not load BagValidationConfig: %s", err.Error())
 	}
-	optionalFileSpec := validation.FileSpec{ Presence: "OPTIONAL" }
+	optionalFileSpec := validation.FileSpec{Presence: "OPTIONAL"}
 	bagValidationConfig.FileSpecs["tagmanifest-md5.txt"] = optionalFileSpec
 	_, filename, _, _ := runtime.Caller(0)
 	dir := filepath.Dir(filename)
@@ -369,7 +368,7 @@ func TestValidate_BadAccess(t *testing.T) {
 	if err != nil {
 		assert.Fail(t, "Could not load BagValidationConfig: %s", err.Error())
 	}
-	optionalFileSpec := validation.FileSpec{ Presence: "OPTIONAL" }
+	optionalFileSpec := validation.FileSpec{Presence: "OPTIONAL"}
 	bagValidationConfig.FileSpecs["tagmanifest-md5.txt"] = optionalFileSpec
 	_, filename, _, _ := runtime.Caller(0)
 	dir := filepath.Dir(filename)
@@ -392,7 +391,7 @@ func TestValidate_BadChecksums(t *testing.T) {
 	if err != nil {
 		assert.Fail(t, "Could not load BagValidationConfig: %s", err.Error())
 	}
-	optionalFileSpec := validation.FileSpec{ Presence: "OPTIONAL" }
+	optionalFileSpec := validation.FileSpec{Presence: "OPTIONAL"}
 	bagValidationConfig.FileSpecs["tagmanifest-md5.txt"] = optionalFileSpec
 	_, filename, _, _ := runtime.Caller(0)
 	dir := filepath.Dir(filename)
@@ -422,7 +421,7 @@ func TestValidate_BadFileNames(t *testing.T) {
 	if err != nil {
 		assert.Fail(t, "Could not load BagValidationConfig: %s", err.Error())
 	}
-	optionalFileSpec := validation.FileSpec{ Presence: "OPTIONAL" }
+	optionalFileSpec := validation.FileSpec{Presence: "OPTIONAL"}
 	bagValidationConfig.FileSpecs["tagmanifest-md5.txt"] = optionalFileSpec
 	_, filename, _, _ := runtime.Caller(0)
 	dir := filepath.Dir(filename)
@@ -452,7 +451,7 @@ func TestValidate_MissingDataFile(t *testing.T) {
 	if err != nil {
 		assert.Fail(t, "Could not load BagValidationConfig: %s", err.Error())
 	}
-	optionalFileSpec := validation.FileSpec{ Presence: "OPTIONAL" }
+	optionalFileSpec := validation.FileSpec{Presence: "OPTIONAL"}
 	bagValidationConfig.FileSpecs["tagmanifest-md5.txt"] = optionalFileSpec
 	_, filename, _, _ := runtime.Caller(0)
 	dir := filepath.Dir(filename)
@@ -476,7 +475,7 @@ func TestValidate_NoAPTrustInfo(t *testing.T) {
 	if err != nil {
 		assert.Fail(t, "Could not load BagValidationConfig: %s", err.Error())
 	}
-	optionalFileSpec := validation.FileSpec{ Presence: "OPTIONAL" }
+	optionalFileSpec := validation.FileSpec{Presence: "OPTIONAL"}
 	bagValidationConfig.FileSpecs["tagmanifest-md5.txt"] = optionalFileSpec
 	_, filename, _, _ := runtime.Caller(0)
 	dir := filepath.Dir(filename)
@@ -500,7 +499,7 @@ func TestValidate_NoBagInfo(t *testing.T) {
 	if err != nil {
 		assert.Fail(t, "Could not load BagValidationConfig: %s", err.Error())
 	}
-	optionalFileSpec := validation.FileSpec{ Presence: "OPTIONAL" }
+	optionalFileSpec := validation.FileSpec{Presence: "OPTIONAL"}
 	bagValidationConfig.FileSpecs["tagmanifest-md5.txt"] = optionalFileSpec
 	_, filename, _, _ := runtime.Caller(0)
 	dir := filepath.Dir(filename)
@@ -524,7 +523,7 @@ func TestValidate_NoDataDir(t *testing.T) {
 	if err != nil {
 		assert.Fail(t, "Could not load BagValidationConfig: %s", err.Error())
 	}
-	optionalFileSpec := validation.FileSpec{ Presence: "OPTIONAL" }
+	optionalFileSpec := validation.FileSpec{Presence: "OPTIONAL"}
 	bagValidationConfig.FileSpecs["tagmanifest-md5.txt"] = optionalFileSpec
 	_, filename, _, _ := runtime.Caller(0)
 	dir := filepath.Dir(filename)
@@ -554,7 +553,7 @@ func TestValidate_NoMd5Manifest(t *testing.T) {
 	if err != nil {
 		assert.Fail(t, "Could not load BagValidationConfig: %s", err.Error())
 	}
-	optionalFileSpec := validation.FileSpec{ Presence: "OPTIONAL" }
+	optionalFileSpec := validation.FileSpec{Presence: "OPTIONAL"}
 	bagValidationConfig.FileSpecs["tagmanifest-md5.txt"] = optionalFileSpec
 	_, filename, _, _ := runtime.Caller(0)
 	dir := filepath.Dir(filename)
@@ -592,7 +591,7 @@ func TestValidate_NoTitle(t *testing.T) {
 	if err != nil {
 		assert.Fail(t, "Could not load BagValidationConfig: %s", err.Error())
 	}
-	optionalFileSpec := validation.FileSpec{ Presence: "OPTIONAL" }
+	optionalFileSpec := validation.FileSpec{Presence: "OPTIONAL"}
 	bagValidationConfig.FileSpecs["tagmanifest-md5.txt"] = optionalFileSpec
 	_, filename, _, _ := runtime.Caller(0)
 	dir := filepath.Dir(filename)
@@ -616,7 +615,7 @@ func TestValidate_WrongFolderName(t *testing.T) {
 	if err != nil {
 		assert.Fail(t, "Could not load BagValidationConfig: %s", err.Error())
 	}
-	optionalFileSpec := validation.FileSpec{ Presence: "OPTIONAL" }
+	optionalFileSpec := validation.FileSpec{Presence: "OPTIONAL"}
 	bagValidationConfig.FileSpecs["tagmanifest-md5.txt"] = optionalFileSpec
 	_, filename, _, _ := runtime.Caller(0)
 	dir := filepath.Dir(filename)

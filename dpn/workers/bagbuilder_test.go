@@ -16,14 +16,14 @@ import (
 
 var _testPath string
 
-func testBagPath() (string) {
+func testBagPath() string {
 	if _testPath == "" {
 		_testPath, _ = ioutil.TempDir("", "dpn")
 	}
 	return _testPath
 }
 
-func intelObj(t *testing.T) (*models.IntellectualObject) {
+func intelObj(t *testing.T) *models.IntellectualObject {
 	filename := filepath.Join("testdata", "json_objects", "intel_obj.json")
 	obj, err := testutil.LoadIntelObjFixture(filename)
 	if err != nil {
@@ -108,7 +108,7 @@ func TestDPNInfo(t *testing.T) {
 	require.Nil(t, err)
 	require.Empty(t, builder.ErrorMessage)
 	require.NotNil(t, tagfile)
-	expected := filepath.Join(builder.LocalPath, "dpn-tags","dpn-info.txt")
+	expected := filepath.Join(builder.LocalPath, "dpn-tags", "dpn-info.txt")
 	assert.Equal(t, expected, tagfile.Name())
 
 	verifyTagField(t, tagfile, "DPN-Object-ID", builder.UUID)
@@ -124,7 +124,6 @@ func TestDPNInfo(t *testing.T) {
 	verifyTagField(t, tagfile, "Object-Type", dpn.BAG_TYPE_DATA)
 }
 
-
 func TestAPTrustBagit(t *testing.T) {
 	builder := createBagBuilder(t)
 	defer tearDown()
@@ -134,7 +133,7 @@ func TestAPTrustBagit(t *testing.T) {
 	require.Nil(t, err)
 	require.Empty(t, builder.ErrorMessage)
 	require.NotNil(t, tagfile)
-	expected := filepath.Join(builder.LocalPath, "aptrust-tags","bagit.txt")
+	expected := filepath.Join(builder.LocalPath, "aptrust-tags", "bagit.txt")
 	assert.Equal(t, expected, tagfile.Name())
 
 	verifyTagField(t, tagfile, "BagIt-Version", "0.97")

@@ -12,25 +12,25 @@ import (
 )
 
 // Returns a simple config object with only directory names filled in.
-func getSimpleDirConfig() (*models.Config) {
+func getSimpleDirConfig() *models.Config {
 	return &models.Config{
-		TarDirectory: "~/tmp/tar",
-		LogDirectory: "~/tmp/log",
-		RestoreDirectory: "~/tmp/restore",
+		TarDirectory:         "~/tmp/tar",
+		LogDirectory:         "~/tmp/log",
+		RestoreDirectory:     "~/tmp/restore",
 		ReplicationDirectory: "~/tmp/replication",
 		DPN: models.DPNConfig{
-			LogDirectory: "~/tmp/dpn_logs",
+			LogDirectory:            "~/tmp/dpn_logs",
 			RemoteNodeHomeDirectory: "~/tmp/dpn_home",
-			StagingDirectory: "~/tmp/dpn_staging",
+			StagingDirectory:        "~/tmp/dpn_staging",
 		},
 	}
 }
 
 func TestEnsureLogDirectory(t *testing.T) {
 	config := &models.Config{
-		TarDirectory: "~/tmp/tar",
-		LogDirectory: "~/tmp/log",
-		RestoreDirectory: "~/tmp/restore",
+		TarDirectory:         "~/tmp/tar",
+		LogDirectory:         "~/tmp/log",
+		RestoreDirectory:     "~/tmp/restore",
 		ReplicationDirectory: "~/tmp/replication",
 	}
 	absPathToLogDir, err := config.EnsureLogDirectory()

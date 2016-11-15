@@ -8,7 +8,7 @@ import (
 	"testing"
 )
 
-func TestChecksumMergeAttributes (t *testing.T) {
+func TestChecksumMergeAttributes(t *testing.T) {
 	cs1 := testutil.MakeChecksum()
 	cs2 := testutil.MakeChecksum()
 
@@ -22,7 +22,7 @@ func TestChecksumMergeAttributes (t *testing.T) {
 	assert.NotNil(t, err)
 }
 
-func TestChecksumSerializeForPharos (t *testing.T) {
+func TestChecksumSerializeForPharos(t *testing.T) {
 	filename := filepath.Join("testdata", "json_objects", "intel_obj.json")
 	intelObj, err := testutil.LoadIntelObjFixture(filename)
 	if err != nil {

@@ -2,7 +2,7 @@ package tarfile_test
 
 import (
 	"archive/tar"
-//	"fmt"
+	//	"fmt"
 	"github.com/APTrust/exchange/tarfile"
 	"github.com/stretchr/testify/assert"
 	"io/ioutil"
@@ -137,7 +137,7 @@ func TestAddToArchiveWithBadFilePath(t *testing.T) {
 	assert.True(t, strings.Contains(err.Error(), "no such file or directory"))
 }
 
-func pathToTestFile(name string) (string) {
+func pathToTestFile(name string) string {
 	_, filename, _, _ := runtime.Caller(0)
 	testDataPath, _ := filepath.Abs(path.Join(filepath.Dir(filename), "..", "testdata", "json_objects"))
 	return path.Join(testDataPath, name)

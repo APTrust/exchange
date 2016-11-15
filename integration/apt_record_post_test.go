@@ -78,7 +78,6 @@ func recordTestCommon(t *testing.T, bagName string, ingestManifest *models.Inges
 	assert.True(t, ingestManifest.CleanupResult.Retry,
 		"CleanupResult.Retry should be true for %s", bagName)
 
-
 	// Make sure our IntellectualObject got all of its PremisEvents
 	obj := ingestManifest.Object
 	require.Equal(t, 4, len(obj.PremisEvents))

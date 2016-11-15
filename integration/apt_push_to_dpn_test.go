@@ -18,7 +18,7 @@ import (
 func TestPushToDPN(t *testing.T) {
 	if !testutil.ShouldRunIntegrationTests() {
 		t.Skip("Skipping integration test. Set ENV var RUN_EXCHANGE_INTEGRATION=true if you want to run them.")
-    }
+	}
 	configFile := filepath.Join("config", "integration.json")
 	config, err := models.LoadConfigFile(configFile)
 	require.Nil(t, err)

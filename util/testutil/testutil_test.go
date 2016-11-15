@@ -41,11 +41,11 @@ func TestMakeGenericFile(t *testing.T) {
 	assert.False(t, gf.CreatedAt.IsZero())
 	assert.False(t, gf.UpdatedAt.IsZero())
 	assert.Equal(t, 3, len(gf.Checksums))
-	for _, cs := range(gf.Checksums) {
+	for _, cs := range gf.Checksums {
 		assert.NotNil(t, cs)
 	}
 	assert.Equal(t, 2, len(gf.PremisEvents))
-	for _, event := range(gf.PremisEvents) {
+	for _, event := range gf.PremisEvents {
 		assert.NotNil(t, event)
 	}
 	assert.NotEqual(t, "", gf.IngestLocalPath)
@@ -75,7 +75,7 @@ func TestMakeInstitution(t *testing.T) {
 }
 
 func TestMakeIntellectualObject(t *testing.T) {
-	obj := testutil.MakeIntellectualObject(2,4,6,8)
+	obj := testutil.MakeIntellectualObject(2, 4, 6, 8)
 	if obj == nil {
 		t.Errorf("MakeIntellectualObject() returned nil")
 		return

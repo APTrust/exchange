@@ -17,7 +17,7 @@ func TestNewS3ObjectDelete(t *testing.T) {
 	s3ObjectDelete := network.NewS3ObjectDelete(
 		constants.AWSVirginia,
 		testBucket,
-		[]string{ "test_obj_1.tar", "test_obj_2.tar"},
+		[]string{"test_obj_1.tar", "test_obj_2.tar"},
 	)
 	assert.Equal(t, constants.AWSVirginia, s3ObjectDelete.AWSRegion)
 	assert.Equal(t, testBucket, *s3ObjectDelete.DeleteObjectsInput.Bucket)
@@ -44,7 +44,7 @@ func TestS3ObjectDelete(t *testing.T) {
 	s3ObjectDelete := network.NewS3ObjectDelete(
 		constants.AWSVirginia,
 		testBucket,
-		[]string{ "test_obj_1.tar", "test_obj_2.tar"},
+		[]string{"test_obj_1.tar", "test_obj_2.tar"},
 	)
 	s3ObjectDelete.DeleteList()
 	assert.Equal(t, "", s3ObjectDelete.ErrorMessage)
@@ -52,7 +52,7 @@ func TestS3ObjectDelete(t *testing.T) {
 	assert.Empty(t, s3ObjectDelete.Response.Errors)
 }
 
-func upload(t *testing.T, key string) (error) {
+func upload(t *testing.T, key string) error {
 	upload := network.NewS3Upload(
 		constants.AWSVirginia,
 		testBucket,

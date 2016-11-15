@@ -21,42 +21,42 @@ type PremisEvent struct {
 	// is not yet in Pharos. If non-zero, it's been recorded
 	// in Pharos. Do not serialize zero values to JSON, or
 	// Pharos complains.
-	Id                 int       `json:"id,omitempty"`
+	Id int `json:"id,omitempty"`
 
 	// Identifier is a UUID string assigned by Pharos.
-	Identifier         string    `json:"identifier"`
+	Identifier string `json:"identifier"`
 
 	// EventType is the type of Premis event we want to register.
 	// See constants.EventTypes.
-	EventType          string    `json:"event_type"`
+	EventType string `json:"event_type"`
 
 	// DateTime is when this event occurred in our system.
-	DateTime           time.Time `json:"date_time"`
+	DateTime time.Time `json:"date_time"`
 
 	// Detail is a brief description of the event.
-	Detail             string    `json:"detail"`
+	Detail string `json:"detail"`
 
 	// Outcome is either success or failure
-	Outcome            string    `json:"outcome"`
+	Outcome string `json:"outcome"`
 
 	// Outcome detail is the checksum for checksum generation,
 	// the id for id generation.
-	OutcomeDetail      string    `json:"outcome_detail"`
+	OutcomeDetail string `json:"outcome_detail"`
 
 	// Object is a description of the object that generated
 	// the checksum or id.
-	Object             string    `json:"object"`
+	Object string `json:"object"`
 
 	// Agent is a URL describing where to find more info about Object.
-	Agent              string    `json:"agent"`
+	Agent string `json:"agent"`
 
 	// OutcomeInformation contains the text of an error message, if
 	// Outcome was failure.
-	OutcomeInformation string    `json:"outcome_information"`
+	OutcomeInformation string `json:"outcome_information"`
 
 	// Id of the IntellectualObject with which this event is
 	// associated.
-	IntellectualObjectId int     `json:"intellectual_object_id"`
+	IntellectualObjectId int `json:"intellectual_object_id"`
 
 	// Identifier of the IntellectualObject with which this
 	// event is associated.
@@ -64,7 +64,7 @@ type PremisEvent struct {
 
 	// Id of the GenericFile with which this event is
 	// associated. This will be zero for object-level events.
-	GenericFileId int            `json:"generic_file_id"`
+	GenericFileId int `json:"generic_file_id"`
 
 	// Identifier of the GenericFile with which this
 	// event is associated. This will be an empty string
@@ -72,10 +72,10 @@ type PremisEvent struct {
 	GenericFileIdentifier string `json:"generic_file_identifier"`
 
 	// Rails timestamp for when this object was created.
-	CreatedAt     time.Time `json:"created_at,omitempty"`
+	CreatedAt time.Time `json:"created_at,omitempty"`
 
 	// Rails timestamp for when this object was last updated.
-	UpdatedAt     time.Time `json:"updated_at,omitempty"`
+	UpdatedAt time.Time `json:"updated_at,omitempty"`
 }
 
 // EventTypeValid returns true/false, indicating whether the
@@ -342,13 +342,12 @@ func NewEventGenericFileReplication(replicatedAt time.Time, replicationUrl strin
 	}, nil
 }
 
-
 // Sets the Id, CreatedAt and UpdatedAt properties of this event to
 // match those os savedEvent. We call this after saving a record to
 // Pharos, which sets all of those properties. Generally, savedEvent
 // is a temporary event record returned from Pharos, while this event
 // is one we want to keep.
-func (event *PremisEvent) MergeAttributes(savedEvent *PremisEvent) (error) {
+func (event *PremisEvent) MergeAttributes(savedEvent *PremisEvent) error {
 	if savedEvent == nil {
 		return fmt.Errorf("Param savedEvent cannot be nil.")
 	}
@@ -359,7 +358,7 @@ func (event *PremisEvent) MergeAttributes(savedEvent *PremisEvent) (error) {
 }
 
 // Returns true if this event is a URL assignment event.
-func (event *PremisEvent) IsUrlAssignment() (bool) {
+func (event *PremisEvent) IsUrlAssignment() bool {
 	return (event.EventType == constants.EventIdentifierAssignment &&
 		strings.HasPrefix(event.Detail, "Assigned new storage URL"))
 }

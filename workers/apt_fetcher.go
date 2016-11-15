@@ -26,7 +26,7 @@ type APTFetcher struct {
 	WaitGroup           sync.WaitGroup
 }
 
-func NewAPTFetcher(_context *context.Context) (*APTFetcher) {
+func NewAPTFetcher(_context *context.Context) *APTFetcher {
 	fetcher := &APTFetcher{
 		Context: _context,
 	}
@@ -56,7 +56,7 @@ func NewAPTFetcher(_context *context.Context) (*APTFetcher) {
 }
 
 // This is the callback that NSQ workers use to handle messages from NSQ.
-func (fetcher *APTFetcher) HandleMessage(message *nsq.Message) (error) {
+func (fetcher *APTFetcher) HandleMessage(message *nsq.Message) error {
 	// Set up our IngestState. Most of this comes from Pharos;
 	// some of it we have to build fresh.
 	ingestState, err := GetIngestState(message, fetcher.Context, true)
@@ -70,8 +70,8 @@ func (fetcher *APTFetcher) HandleMessage(message *nsq.Message) (error) {
 	// other is currently working on it, just finish the message and
 	// assume that the in-progress worker will take care of the original.
 	if ingestState.WorkItem.Node != "" && ingestState.WorkItem.Pid != 0 {
-		fetcher.Context.MessageLog.Info("Marking WorkItem %d (%s/%s) as finished " +
-			"without doing any work, because this item is currently in process by " +
+		fetcher.Context.MessageLog.Info("Marking WorkItem %d (%s/%s) as finished "+
+			"without doing any work, because this item is currently in process by "+
 			"node %s, pid %s. WorkItem was last updated at %s.",
 			ingestState.WorkItem.Id, ingestState.WorkItem.Bucket,
 			ingestState.WorkItem.Name, ingestState.WorkItem.Node,
@@ -297,14 +297,14 @@ func (fetcher *APTFetcher) loadBagValidationConfig() {
 }
 
 // Make sure we have space to download this item.
-func (fetcher *APTFetcher) reserveSpaceForDownload (ingestState *models.IngestState) (bool) {
+func (fetcher *APTFetcher) reserveSpaceForDownload(ingestState *models.IngestState) bool {
 	okToDownload := false
 	err := fetcher.Context.VolumeClient.Ping(500)
 	if err == nil {
 		path := ingestState.IngestManifest.Object.IngestTarFilePath
 		ok, err := fetcher.Context.VolumeClient.Reserve(path, uint64(ingestState.WorkItem.Size))
 		if err != nil {
-			fetcher.Context.MessageLog.Warning("Volume service returned an error. " +
+			fetcher.Context.MessageLog.Warning("Volume service returned an error. "+
 				"Will requeue bag %s/%s because we may not have enough space to download %d bytes.",
 				ingestState.WorkItem.Bucket, ingestState.WorkItem.Name, ingestState.WorkItem.Size)
 		} else if ok {
@@ -312,7 +312,7 @@ func (fetcher *APTFetcher) reserveSpaceForDownload (ingestState *models.IngestSt
 			okToDownload = ok
 		}
 	} else {
-		fetcher.Context.MessageLog.Warning("Volume service is not running or returned an error. " +
+		fetcher.Context.MessageLog.Warning("Volume service is not running or returned an error. "+
 			"Continuing as if we have enough space to download %d bytes.",
 			ingestState.WorkItem.Size)
 		okToDownload = true
@@ -325,7 +325,7 @@ func (fetcher *APTFetcher) reserveSpaceForDownload (ingestState *models.IngestSt
 // there in our working directory. This anticipates the case where
 // we did those steps but were not able to update the WorkItem record
 // in Pharos at the end of the fetch/validate process.
-func (fetcher *APTFetcher) canSkipFetchAndValidate (ingestState *models.IngestState) (bool) {
+func (fetcher *APTFetcher) canSkipFetchAndValidate(ingestState *models.IngestState) bool {
 	return (ingestState.WorkItem.Stage == constants.StageValidate &&
 		ingestState.IngestManifest.ValidateResult.Finished() &&
 		!ingestState.IngestManifest.HasFatalErrors() &&
@@ -333,14 +333,14 @@ func (fetcher *APTFetcher) canSkipFetchAndValidate (ingestState *models.IngestSt
 }
 
 // Download the file, and update the IngestManifest while we're at it.
-func (fetcher *APTFetcher) downloadFile (ingestState *models.IngestState) (error) {
+func (fetcher *APTFetcher) downloadFile(ingestState *models.IngestState) error {
 	downloader := network.NewS3Download(
 		constants.AWSVirginia,
 		ingestState.IngestManifest.S3Bucket,
 		ingestState.IngestManifest.S3Key,
 		ingestState.IngestManifest.Object.IngestTarFilePath,
-		true,    // calculate md5 checksum on the entire tar file
-		false,   // calculate sha256 checksum on the entire tar file
+		true,  // calculate md5 checksum on the entire tar file
+		false, // calculate sha256 checksum on the entire tar file
 	)
 
 	// It's fairly common for very large bags to fail more than
@@ -352,7 +352,7 @@ func (fetcher *APTFetcher) downloadFile (ingestState *models.IngestState) (error
 			fetcher.Context.MessageLog.Info("Fetched %s/%s after %d attempts",
 				ingestState.IngestManifest.S3Bucket,
 				ingestState.IngestManifest.S3Key,
-				i + 1)
+				i+1)
 			break
 		}
 	}

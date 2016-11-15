@@ -16,7 +16,7 @@ import (
 	"time"
 )
 
-func loadConfig(t *testing.T) (*apt_models.Config) {
+func loadConfig(t *testing.T) *apt_models.Config {
 	configFile := filepath.Join("config", "integration.json")
 	config, err := apt_models.LoadConfigFile(configFile)
 	require.Nil(t, err)
@@ -32,29 +32,29 @@ func runSyncTests() bool {
 func nodeNamespaces(t *testing.T) (string, []string) {
 	config := loadConfig(t)
 	remoteNodes := make([]string, 0)
-	for namespace, _ := range config.DPN.RemoteNodeTokens {
+	for namespace := range config.DPN.RemoteNodeTokens {
 		remoteNodes = append(remoteNodes, namespace)
 	}
 	return config.DPN.LocalNode, remoteNodes
 }
 
-func allNodeNamespaces(t *testing.T) ([]string) {
+func allNodeNamespaces(t *testing.T) []string {
 	localNode, remoteNodes := nodeNamespaces(t)
-	return append([]string { localNode }, remoteNodes...)
+	return append([]string{localNode}, remoteNodes...)
 }
 
-func newDPNSync(t *testing.T) (*workers.DPNSync) {
+func newDPNSync(t *testing.T) *workers.DPNSync {
 	config := loadConfig(t)
 	_context := context.NewContext(config)
 	dpnSync, err := workers.NewDPNSync(_context)
 	require.Nil(t, err)
-	for namespace, _ := range config.DPN.RemoteNodeTokens {
+	for namespace := range config.DPN.RemoteNodeTokens {
 		require.NotNil(t, dpnSync.RemoteClients[namespace], namespace)
 	}
 	return dpnSync
 }
 
-func getPostTestClient(t *testing.T) (*network.DPNRestClient) {
+func getPostTestClient(t *testing.T) *network.DPNRestClient {
 	// If you want to debug, change ioutil.Discard to os.Stdout
 	// to see log output from the client.
 	config, err := apt_models.LoadConfigFile(filepath.Join("config", "integration.json"))
@@ -69,7 +69,7 @@ func getPostTestClient(t *testing.T) (*network.DPNRestClient) {
 	return client
 }
 
-func getParams() (*url.Values) {
+func getParams() *url.Values {
 	oneHourAgo := time.Now().Add(-1 * time.Hour)
 	params := url.Values{}
 	params.Set("after", oneHourAgo.Format(time.RFC3339Nano))
@@ -102,7 +102,7 @@ func TestRemoteNodeNames(t *testing.T) {
 	config := loadConfig(t)
 	dpnSync := newDPNSync(t)
 	remoteNodeNames := dpnSync.RemoteNodeNames()
-	for name, _ := range config.DPN.RemoteNodeURLs {
+	for name := range config.DPN.RemoteNodeURLs {
 		nameIsPresent := false
 		for _, remoteName := range remoteNodeNames {
 			if name == remoteName {
@@ -222,7 +222,7 @@ func TestReplicationsWereSynched(t *testing.T) {
 	client := getPostTestClient(t)
 	resp := client.ReplicationTransferList(nil)
 	require.Nil(t, resp.Error)
-	xfers:= resp.ReplicationTransfers()
+	xfers := resp.ReplicationTransfers()
 	require.Equal(t, 20, len(xfers))
 
 	for _, id := range dpn_testutil.REPLICATION_IDS {
@@ -238,7 +238,7 @@ func TestRestoresWereSynched(t *testing.T) {
 	client := getPostTestClient(t)
 	resp := client.RestoreTransferList(nil)
 	require.Nil(t, resp.Error)
-	xfers:= resp.RestoreTransfers()
+	xfers := resp.RestoreTransfers()
 	require.Equal(t, 20, len(xfers))
 
 	for _, id := range dpn_testutil.RESTORE_IDS {

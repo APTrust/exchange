@@ -47,7 +47,7 @@ func TestReserve(t *testing.T) {
 
 	// Start with a good request
 	params := url.Values{
-		"path": {"/tmp/some_file"},
+		"path":  {"/tmp/some_file"},
 		"bytes": {"8000"},
 	}
 	resp, err := http.PostForm(reserveUrl, params)
@@ -135,7 +135,7 @@ func TestReport(t *testing.T) {
 	// Reserve a chunk of space with 8000 bytes
 	reserveUrl := fmt.Sprintf("%s/reserve/", serviceUrl)
 	params := url.Values{
-		"path": {"/tmp/some_file"},
+		"path":  {"/tmp/some_file"},
 		"bytes": {"8000"},
 	}
 	resp, err := http.PostForm(reserveUrl, params)
@@ -147,7 +147,7 @@ func TestReport(t *testing.T) {
 
 	// Reserve another chunk with 24000 bytes
 	params = url.Values{
-		"path": {"/tmp/some_other_file"},
+		"path":  {"/tmp/some_other_file"},
 		"bytes": {"24000"},
 	}
 	resp, err = http.PostForm(reserveUrl, params)

@@ -7,7 +7,6 @@ import (
 	"testing"
 )
 
-
 func TestNewReplicationManifest(t *testing.T) {
 	nsqMessage := testutil.MakeNsqMessage("999")
 	manifest := models.NewReplicationManifest(nsqMessage)

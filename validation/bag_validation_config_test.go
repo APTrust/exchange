@@ -105,12 +105,12 @@ func TestValidateConfig(t *testing.T) {
 	badPathSpec := validation.TagSpec{
 		FilePath: "",
 		Presence: "REQUIRED",
-		EmptyOK: true,
+		EmptyOK:  true,
 	}
 	badPresenceSpec := validation.TagSpec{
 		FilePath: "orangina",
 		Presence: "orangina",
-		EmptyOK: true,
+		EmptyOK:  true,
 	}
 	conf.TagSpecs["bad_path_spec"] = badPathSpec
 	conf.TagSpecs["bad_presence"] = badPresenceSpec

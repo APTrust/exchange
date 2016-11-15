@@ -16,11 +16,11 @@ import (
 // long-term storage. We only copy bags that have been validated
 
 type DPNStorer struct {
-	StoreChannel        chan *models.ReplicationManifest
-	PostProcessChannel  chan *models.ReplicationManifest
-	Context             *context.Context
-	LocalClient         *network.DPNRestClient
-	RemoteClients       map[string]*network.DPNRestClient
+	StoreChannel       chan *models.ReplicationManifest
+	PostProcessChannel chan *models.ReplicationManifest
+	Context            *context.Context
+	LocalClient        *network.DPNRestClient
+	RemoteClients      map[string]*network.DPNRestClient
 }
 
 func NewDPNStorer(_context *context.Context) (*DPNStorer, error) {
@@ -37,9 +37,9 @@ func NewDPNStorer(_context *context.Context) (*DPNStorer, error) {
 	if err != nil {
 		return nil, err
 	}
-	storer := &DPNStorer {
-		Context: _context,
-		LocalClient: localClient,
+	storer := &DPNStorer{
+		Context:       _context,
+		LocalClient:   localClient,
 		RemoteClients: remoteClients,
 	}
 	workerBufferSize := _context.Config.DPN.DPNStoreWorker.Workers * 4
@@ -71,13 +71,12 @@ func (storer *DPNStorer) HandleMessage(message *nsq.Message) error {
 	}
 
 	// Start processing.
-	storer.Context.MessageLog.Info("Putting xfer request %s (bag %s) from %s " +
+	storer.Context.MessageLog.Info("Putting xfer request %s (bag %s) from %s "+
 		" into the storage channel", manifest.ReplicationTransfer.ReplicationId,
 		manifest.ReplicationTransfer.Bag, manifest.ReplicationTransfer.FromNode)
 	storer.StoreChannel <- manifest
 	return nil
 }
-
 
 func (storer *DPNStorer) store() {
 	for manifest := range storer.StoreChannel {
@@ -154,7 +153,7 @@ func (storer *DPNStorer) finishWithError(manifest *models.ReplicationManifest) {
 			manifest.StoreSummary.Errors[0])
 		manifest.StoreSummary.ErrorIsFatal = true
 		manifest.StoreSummary.Retry = false
-		storer.Context.MessageLog.Error("Cancelling Replication %s at %s: " +
+		storer.Context.MessageLog.Error("Cancelling Replication %s at %s: "+
 			"Copy to Glacier has failed %d times.",
 			manifest.ReplicationTransfer.ReplicationId,
 			manifest.ReplicationTransfer.FromNode,

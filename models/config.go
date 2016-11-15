@@ -17,7 +17,7 @@ type WorkerConfig struct {
 	// "800ms" for 800 milliseconds
 	// "10s" for ten seconds
 	// "1m" for one minute
-	HeartbeatInterval  string
+	HeartbeatInterval string
 
 	// The maximum number of times the worker should try to
 	// process a job. If non-fatal errors cause a job to
@@ -25,7 +25,7 @@ type WorkerConfig struct {
 	// Fatal errors, such as invalid bags or attempts to
 	// restore or delete non-existent files, will not be
 	// retried.
-	MaxAttempts        uint16
+	MaxAttempts uint16
 
 	// Maximum number of jobs a worker will accept from the
 	// queue at one time. Workers that may have to process
@@ -33,7 +33,7 @@ type WorkerConfig struct {
 	// apt_store and apt_restore, should set this number
 	// fairly low (20 or so) to prevent messages from
 	// timing out.
-	MaxInFlight        int
+	MaxInFlight int
 
 	// If the NSQ server does not hear from a client that a
 	// job is complete in this amount of time, the server
@@ -46,7 +46,7 @@ type WorkerConfig struct {
 	// message to zero. Still, very large bags in any of the
 	// long-running processes will need a timeout of "180m" or
 	// so to ensure completion.
-	MessageTimeout     string
+	MessageTimeout string
 
 	// Number of go routines used to perform network I/O,
 	// such as fetching files from S3, storing files to S3,
@@ -56,43 +56,43 @@ type WorkerConfig struct {
 	NetworkConnections int
 
 	// The name of the NSQ Channel the worker should read from.
-	NsqChannel         string
+	NsqChannel string
 
 	// The name of the NSQ Topic the worker should listen to.
-	NsqTopic           string
+	NsqTopic string
 
 	// This describes how long the NSQ client will wait for
 	// a read from the NSQ server before timing out. The format
 	// is the same as for HeartbeatInterval.
-	ReadTimeout        string
+	ReadTimeout string
 
 	// Number of go routines to start in the worker to
 	// handle all work other than network I/O. Typically,
 	// this should be close to the number of CPUs.
-	Workers            int
+	Workers int
 
 	// This describes how long the NSQ client will wait for
 	// a write to the NSQ server to complete before timing out.
 	// The format is the same as for HeartbeatInterval.
-	WriteTimeout       string
+	WriteTimeout string
 }
 
 type Config struct {
 	// ActiveConfig is the configuration currently
 	// in use.
-	ActiveConfig            string
+	ActiveConfig string
 
 	// The name of the AWS region that hosts APTrust's S3 files.
-	APTrustGlacierRegion    string
+	APTrustGlacierRegion string
 
 	// The name of the AWS region that hosts APTrust's Glacier files.
-	APTrustS3Region         string
+	APTrustS3Region string
 
 	// Config options specific to DPN services.
-	DPN                     DPNConfig
+	DPN DPNConfig
 
 	// Configuration options for apt_bag_delete
-	BagDeleteWorker         WorkerConfig
+	BagDeleteWorker WorkerConfig
 
 	// Location of the config file for bag validation.
 	// Config will differ for APTrust and DPN. This is
@@ -110,21 +110,21 @@ type Config struct {
 	// in the past day. The bucket reader WILL look items that aren't
 	// in the cache, but during peak hours when Pharos is under heavy
 	// load, this will save the server a lot of work.
-	BucketReaderCacheHours  int
+	BucketReaderCacheHours int
 
 	// Set this in non-production environments to restore
 	// intellectual objects to a custom bucket. If this is set,
 	// all intellectual objects from all institutions will be
 	// restored to this bucket.
-	CustomRestoreBucket     string
+	CustomRestoreBucket string
 
 	// Should we delete the uploaded tar file from the receiving
 	// bucket after successfully processing this bag?
-	DeleteOnSuccess         bool
+	DeleteOnSuccess bool
 
 	// FailedFixityWorker records details about fixity checks
 	// that could not be completed.
-	FailedFixityWorker      WorkerConfig
+	FailedFixityWorker WorkerConfig
 
 	// FailedReplicationWorker records details about failed
 	// attempts to copy generic files to the S3 replication
@@ -132,17 +132,17 @@ type Config struct {
 	FailedReplicationWorker WorkerConfig
 
 	// Configuration options for apt_fetch
-	FetchWorker             WorkerConfig
+	FetchWorker WorkerConfig
 
 	// Configuration options for apt_file_delete
-	FileDeleteWorker        WorkerConfig
+	FileDeleteWorker WorkerConfig
 
 	// Configuration options for apt_fixity, which
 	// handles ongoing fixity checks.
-	FixityWorker            WorkerConfig
+	FixityWorker WorkerConfig
 
 	// LogDirectory is where we'll write our log files.
-	LogDirectory            string
+	LogDirectory string
 
 	// LogLevel is defined in github.com/op/go-logging
 	// and should be one of the following:
@@ -152,12 +152,12 @@ type Config struct {
 	// 4 - NOTICE
 	// 5 - INFO
 	// 6 - DEBUG
-	LogLevel                logging.Level
+	LogLevel logging.Level
 
 	// If true, processes will log to STDERR in addition
 	// to their standard log files. You really only want
 	// to do this in development.
-	LogToStderr             bool
+	LogToStderr bool
 
 	// Maximum number of days allowed between scheduled
 	// fixity checks. The fixity_reader periodically
@@ -174,93 +174,93 @@ type Config struct {
 	// when you're running locally, or else you'll wind
 	// up pulling down a huge amount of data from the
 	// receiving buckets.
-	MaxFileSize             int64
+	MaxFileSize int64
 
-    // NsqdHttpAddress tells us where to find the NSQ server
+	// NsqdHttpAddress tells us where to find the NSQ server
 	// where we can read from and write to topics and channels.
 	// It's typically something like "http://localhost:4151"
-	NsqdHttpAddress         string
+	NsqdHttpAddress string
 
-    // NsqLookupd is the full HTTP(S) address of the NSQ Lookup
+	// NsqLookupd is the full HTTP(S) address of the NSQ Lookup
 	// daemon, which is where our worker processes look first to
 	// discover where they can find topics and channels. This is
 	// typically something like "localhost:4161"
-	NsqLookupd              string
+	NsqLookupd string
 
 	// The version of the Pharos API we're using. This should
 	// start with a v, like v1, v2.2, etc.
-	PharosAPIVersion       string
+	PharosAPIVersion string
 
 	// PharosURL is the URL of the Pharos server where
 	// we will be recording results and metadata. This should
 	// start with http:// or https://
-	PharosURL              string
+	PharosURL string
 
 	// The name of the preservation bucket to which we should
 	// copy files for long-term storage.
-	PreservationBucket      string
+	PreservationBucket string
 
 	// ReceivingBuckets is a list of S3 receiving buckets to check
 	// for incoming tar files.
-	ReceivingBuckets        []string
+	ReceivingBuckets []string
 
 	// Configuration options for apt_record
-	RecordWorker            WorkerConfig
+	RecordWorker WorkerConfig
 
 	// The bucket that stores a second copy of our perservation
 	// files. This should be in a different region than the
 	// preseration bucket. As of November 2014, the preservation
 	// bucket is in Virginia, and the replication bucket is in
 	// Oregon.
-	ReplicationBucket       string
+	ReplicationBucket string
 
 	// The path to the local directory that will temporarily
 	// hold files being copied from the preservartion bucket
 	// in US East to the replication bucket in USWest2.
-	ReplicationDirectory    string
+	ReplicationDirectory string
 
 	// Configuration options for apt_replicate
-	ReplicationWorker       WorkerConfig
+	ReplicationWorker WorkerConfig
 
 	// RestoreDirectory is the directory in which we will
 	// rebuild IntellectualObject before sending them
 	// off to the S3 restoration bucket.
-	RestoreDirectory        string
+	RestoreDirectory string
 
 	// If true, we should restore bags to our partners' test
 	// restoration buckets instead of the usual restoration
 	// buckets. This should be true only in the demo config,
 	// which is what we run on test.aptrust.org. Also note
 	// that CustomRestoreBucket overrides this.
-	RestoreToTestBuckets    bool
+	RestoreToTestBuckets bool
 
 	// Configuration options for apt_restore
-	RestoreWorker           WorkerConfig
+	RestoreWorker WorkerConfig
 
 	// SkipAlreadyProcessed indicates whether or not the
 	// bucket_reader should  put successfully-processed items into
 	// NSQ for re-processing. This is amost always set to false.
 	// The exception is when we deliberately want to reprocess
 	// items to test code changes.
-	SkipAlreadyProcessed    bool
+	SkipAlreadyProcessed bool
 
 	// Configuration options for apt_store
-	StoreWorker             WorkerConfig
+	StoreWorker WorkerConfig
 
 	// TarDirectory is the directory in which we will
 	// untar files from S3. This should be on a volume
 	// with lots of free disk space.
-	TarDirectory            string
+	TarDirectory string
 
 	// Configuration options for apt_trouble
-	TroubleWorker           WorkerConfig
+	TroubleWorker WorkerConfig
 
 	// The port number, on localhost, where the HTTP
 	// VolumeService should run. This is always on
 	// 127.0.0.1, because it has to access the same
 	// volumes and mounts as the locally running
 	// services.
-	VolumeServicePort       int
+	VolumeServicePort int
 }
 
 // This returns the configuration that the user requested,
@@ -298,7 +298,7 @@ func (config *Config) EnsureLogDirectory() (string, error) {
 	return config.AbsLogDirectory(), nil
 }
 
-func (config *Config) AbsLogDirectory() (string) {
+func (config *Config) AbsLogDirectory() string {
 	absLogDir, err := filepath.Abs(config.LogDirectory)
 	if err != nil {
 		msg := fmt.Sprintf("Cannot get absolute path to log directory. "+
@@ -370,7 +370,7 @@ func (config *Config) ExpandFilePaths() {
 	}
 }
 
-func (config *Config) createDirectories() (error) {
+func (config *Config) createDirectories() error {
 	if config.TarDirectory == "" {
 		return fmt.Errorf("You must define config.TarDirectory")
 	}
@@ -423,7 +423,6 @@ func (config *Config) createDirectories() (error) {
 	return nil
 }
 
-
 // DefaultMetadata includes mostly static information about bags
 // that APTrust packages for DPN.
 type DefaultMetadata struct {
@@ -438,10 +437,10 @@ type DefaultMetadata struct {
 
 // Config options for our DPN REST client.
 type RestClientConfig struct {
-	Comment                string
-	LocalServiceURL        string
-	LocalAPIRoot           string
-	LocalAuthToken         string
+	Comment         string
+	LocalServiceURL string
+	LocalAPIRoot    string
+	LocalAuthToken  string
 }
 
 type DPNConfig struct {
@@ -450,7 +449,7 @@ type DPNConfig struct {
 	// should not be allowed in production. Bools in Go default
 	// to false, so if this is not set in config, we should be
 	// safe.
-	AcceptInvalidSSLCerts   bool
+	AcceptInvalidSSLCerts bool
 
 	// Location of the config file for bag validation.
 	// Config will differ for APTrust and DPN. This is
@@ -458,57 +457,57 @@ type DPNConfig struct {
 	BagValidationConfigFile string
 
 	// Default metadata that goes into bags produced at our node.
-	DefaultMetadata         DefaultMetadata
+	DefaultMetadata DefaultMetadata
 
 	// DPNAPIVersion is the current version of the DPN REST API.
 	// This should be a string in the format api-v1, api-v2, etc.
-	DPNAPIVersion           string
+	DPNAPIVersion string
 
 	// The name of the AWS region that hosts DPN's Glacier files.
-	DPNGlacierRegion        string
+	DPNGlacierRegion string
 
 	// DPNCopyWorker copies tarred bags from other nodes into our
 	// DPN staging area, so we can replication them. Currently,
 	// copying is done by rsync over ssh.
-	DPNCopyWorker           WorkerConfig
+	DPNCopyWorker WorkerConfig
 
 	// DPNPackageWorker records details about fixity checks
 	// that could not be completed.
-	DPNPackageWorker        WorkerConfig
+	DPNPackageWorker WorkerConfig
 
 	// The name of the long-term storage bucket for DPN
-	DPNPreservationBucket   string
+	DPNPreservationBucket string
 
 	// DPNRecordWorker records DPN storage events in Pharos
 	// and through the DPN REST API.
-	DPNRecordWorker         WorkerConfig
+	DPNRecordWorker WorkerConfig
 
 	// DPNRestoreWorker processed RestoreTransfer requests.
-	DPNRestoreWorker        WorkerConfig
+	DPNRestoreWorker WorkerConfig
 
 	// DPNStoreWorker copies DPN bags to AWS Glacier.
-	DPNStoreWorker          WorkerConfig
+	DPNStoreWorker WorkerConfig
 
 	// DPNTroubleWorker records failed DPN tasks in the DPN
 	// trouble queue.
-	DPNTroubleWorker        WorkerConfig
+	DPNTroubleWorker WorkerConfig
 
 	// DPNValidationWorker validates DPN bags.
-	DPNValidationWorker     WorkerConfig
+	DPNValidationWorker WorkerConfig
 
 	// LocalNode is the namespace of the node this code is running on.
 	// E.g. "aptrust", "chron", "hathi", "tdr", "sdr"
-	LocalNode              string
+	LocalNode string
 
 	// Where should DPN service logs go?
-	LogDirectory           string
+	LogDirectory string
 
 	// Log level (4 = debug)
-	LogLevel               logging.Level
+	LogLevel logging.Level
 
 	// Should we log to Stderr in addition to writing to
 	// the log file?
-	LogToStderr            bool
+	LogToStderr bool
 
 	// RemoteNodeHomeDirectory is the prefix to the home directory
 	// for remote DPN nodes that connect to our node via rsync/ssh.
@@ -516,13 +515,13 @@ type DPNConfig struct {
 	// directory for a user like tdr  would be "/home/dpn.tdr".
 	// On a local dev or test machine,this can be any path the user
 	// has full read/write access to.
-	RemoteNodeHomeDirectory        string
+	RemoteNodeHomeDirectory string
 
 	// Number of nodes we should replicate bags to.
-	ReplicateToNumNodes    int
+	ReplicateToNumNodes int
 
 	// Settings for connecting to our own REST service
-	RestClient             RestClientConfig
+	RestClient RestClientConfig
 
 	// RemoteNodeAdminTokensForTesting are used in integration
 	// tests only, when we want to perform admin-only operations,
@@ -531,20 +530,20 @@ type DPNConfig struct {
 	RemoteNodeAdminTokensForTesting map[string]string
 
 	// API Tokens for connecting to remote nodes
-	RemoteNodeTokens       map[string]string
+	RemoteNodeTokens map[string]string
 
 	// URLs for remote nodes. Set these only if you want to
 	// override the node URLs we get back from our local
 	// DPN REST server.
-	RemoteNodeURLs         map[string]string
+	RemoteNodeURLs map[string]string
 
 	// The local directory for DPN staging. We store DPN bags
 	// here while they await transfer to the DPN preservation
 	// bucket and while they await replication to other nodes.
-	StagingDirectory     string
+	StagingDirectory string
 
 	// When copying bags from remote nodes, should we use rsync
 	// over SSH (true) or just plain rsync (false)? For local
 	// integration testing, this should be false.
-	UseSSHWithRsync        bool
+	UseSSHWithRsync bool
 }

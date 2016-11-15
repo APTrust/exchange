@@ -10,20 +10,20 @@ import (
 var md5sum = "1234567890"
 var sha256sum = "fedcba9876543210"
 
-func getGenericFile() (*models.GenericFile) {
+func getGenericFile() *models.GenericFile {
 	checksums := make([]*models.Checksum, 2)
 	checksums[0] = &models.Checksum{
 		Algorithm: "md5",
-		DateTime: time.Date(2014,11,11,12,0,0,0,time.UTC),
-		Digest: md5sum,
+		DateTime:  time.Date(2014, 11, 11, 12, 0, 0, 0, time.UTC),
+		Digest:    md5sum,
 	}
 	checksums[1] = &models.Checksum{
 		Algorithm: "sha256",
-		DateTime: time.Date(2014,11,11,12,0,0,0,time.UTC),
-		Digest: sha256sum,
+		DateTime:  time.Date(2014, 11, 11, 12, 0, 0, 0, time.UTC),
+		Digest:    sha256sum,
 	}
 	return &models.GenericFile{
-		URI: "https://s3.amazonaws.com/aptrust.preservation.storage/52a928da-89ef-48c6-4627-826d1858349b",
+		URI:       "https://s3.amazonaws.com/aptrust.preservation.storage/52a928da-89ef-48c6-4627-826d1858349b",
 		Checksums: checksums,
 	}
 }
@@ -51,7 +51,6 @@ func TestBucketAndKeyWithBadUri(t *testing.T) {
 	assert.False(t, result.WorkSummary.Retry, "Retry should be false after fatal error.")
 }
 
-
 func TestSha256Matches(t *testing.T) {
 	result := models.NewFixityResult(getGenericFile())
 	result.Sha256 = sha256sum
@@ -60,7 +59,6 @@ func TestSha256Matches(t *testing.T) {
 		t.Error(err)
 	}
 	assert.True(t, matches)
-
 
 	result.Sha256 = "some random string"
 	matches, err = result.Sha256Matches()

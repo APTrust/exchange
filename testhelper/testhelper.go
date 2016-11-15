@@ -5,11 +5,11 @@ import (
 	"io/ioutil"
 	"os/exec"
 	"path/filepath"
-	"strings"
 	"runtime"
+	"strings"
 )
 
-func VbagGetPath(fileName string) (string) {
+func VbagGetPath(fileName string) string {
 	_, filename, _, _ := runtime.Caller(0)
 	dir, _ := filepath.Abs(filepath.Dir(filename))
 	testDataPath := filepath.Join(dir, "..", "testdata", "unit_test_bags", fileName)

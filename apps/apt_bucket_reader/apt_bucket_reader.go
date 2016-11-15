@@ -10,7 +10,6 @@ import (
 	"os"
 )
 
-
 func main() {
 	pathToConfigFile, pathToStatsFile := parseCommandLine()
 	config, err := models.LoadConfigFile(pathToConfigFile)
@@ -28,7 +27,6 @@ func main() {
 		_context.MessageLog.Info("Wrote stats to %s", pathToStatsFile)
 	}
 }
-
 
 // See if you can figure out from the function name what this does.
 func parseCommandLine() (configFile string, statsFile string) {

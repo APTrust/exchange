@@ -7,7 +7,6 @@ import (
 	"testing"
 )
 
-
 func TestNewDPNIngestManifest(t *testing.T) {
 	nsqMessage := testutil.MakeNsqMessage("999")
 	manifest := models.NewDPNIngestManifest(nsqMessage)

@@ -38,7 +38,6 @@ func main() {
 	<-consumer.StopChan
 }
 
-
 func parseCommandLine() (configFile string) {
 	var pathToConfigFile string
 	flag.StringVar(&pathToConfigFile, "config", "", "Path to APTrust config file")

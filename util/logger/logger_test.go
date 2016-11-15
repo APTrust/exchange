@@ -14,21 +14,20 @@ import (
 	"testing"
 )
 
-
 // Get a barebones config object with just enough info to
 // set up logging. Log to a temp dir.
-func getLoggingTestConfig(t *testing.T) (*models.Config) {
+func getLoggingTestConfig(t *testing.T) *models.Config {
 	logDir, err := ioutil.TempDir("", "exchange_log_test")
 	if err != nil {
 		t.Errorf("Can't create temp dir to test logging: %v", err)
 	}
 	return &models.Config{
-		TarDirectory: logDir,
-		LogDirectory: logDir,
-		RestoreDirectory: logDir,
+		TarDirectory:         logDir,
+		LogDirectory:         logDir,
+		RestoreDirectory:     logDir,
 		ReplicationDirectory: logDir,
-		LogLevel: logging.ERROR,
-		LogToStderr: false,
+		LogLevel:             logging.ERROR,
+		LogToStderr:          false,
 	}
 }
 
@@ -39,7 +38,7 @@ func teardownLoggerTest(config *models.Config) {
 		// Don't call remove all on "/" or "/usr" or anything like that.
 		os.RemoveAll(absLogDir)
 	} else {
-		fmt.Printf("Not deleting log dir '%s' because it looks dangerous.\n" +
+		fmt.Printf("Not deleting log dir '%s' because it looks dangerous.\n"+
 			"Delete that manually, if you thing it's safe.\n", absLogDir)
 	}
 }

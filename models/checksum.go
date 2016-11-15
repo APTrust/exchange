@@ -17,7 +17,7 @@ For example:
 1994-11-05T08:15:30Z          (UTC)
 */
 type Checksum struct {
-	Id            int       `json:"id,omitempty"`  // Do not serialize zero to JSON!
+	Id            int       `json:"id,omitempty"` // Do not serialize zero to JSON!
 	GenericFileId int       `json:"generic_file_id"`
 	Algorithm     string    `json:"algorithm"`
 	DateTime      time.Time `json:"datetime"`
@@ -31,7 +31,7 @@ type Checksum struct {
 // Pharos, which sets all of those properties. Generally, savedChecksum
 // is a temporary record returned from Pharos, while this checksum
 // is one we want to keep.
-func (checksum *Checksum) MergeAttributes(savedChecksum *Checksum) (error) {
+func (checksum *Checksum) MergeAttributes(savedChecksum *Checksum) error {
 	if savedChecksum == nil {
 		return fmt.Errorf("Param savedChecksum cannot be nil.")
 	}

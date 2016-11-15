@@ -175,7 +175,7 @@ func TestIntellectualObjectSave(t *testing.T) {
 	// ---------------------------------------------
 	// First, test create...
 	// ---------------------------------------------
-	obj := testutil.MakeIntellectualObject(0,0,0,0)
+	obj := testutil.MakeIntellectualObject(0, 0, 0, 0)
 	obj.Id = 0
 	response := client.IntellectualObjectSave(obj)
 
@@ -198,11 +198,10 @@ func TestIntellectualObjectSave(t *testing.T) {
 	// not the unsaved one we sent.
 	assert.NotEqual(t, 0, obj.Id)
 
-
 	// ---------------------------------------------
 	// Now test with an update...
 	// ---------------------------------------------
-	obj = testutil.MakeIntellectualObject(0,0,0,0)
+	obj = testutil.MakeIntellectualObject(0, 0, 0, 0)
 	origModTime := obj.UpdatedAt
 	response = client.IntellectualObjectSave(obj)
 
@@ -337,7 +336,7 @@ func TestGenericFileSave(t *testing.T) {
 	// ---------------------------------------------
 	// First, test create...
 	// ---------------------------------------------
-	obj := testutil.MakeGenericFile(0,0,"kollege.kom/objekt/file.xml")
+	obj := testutil.MakeGenericFile(0, 0, "kollege.kom/objekt/file.xml")
 	obj.Id = 0
 	response := client.GenericFileSave(obj)
 
@@ -359,11 +358,10 @@ func TestGenericFileSave(t *testing.T) {
 	// not the unsaved one we sent.
 	assert.NotEqual(t, 0, obj.Id)
 
-
 	// ---------------------------------------------
 	// Now test with an update...
 	// ---------------------------------------------
-	obj = testutil.MakeGenericFile(0,0,"kollege.kom/objekt/file.xml")
+	obj = testutil.MakeGenericFile(0, 0, "kollege.kom/objekt/file.xml")
 	origModTime := obj.UpdatedAt
 	response = client.GenericFileSave(obj)
 
@@ -726,7 +724,6 @@ func TestWorkItemSave(t *testing.T) {
 	// not the unsaved one we sent.
 	assert.NotEqual(t, 0, obj.Id)
 
-
 	// ---------------------------------------------
 	// Now test with an update...
 	// ---------------------------------------------
@@ -820,7 +817,6 @@ func TestWorkItemStateSave(t *testing.T) {
 	// Make sure the client returns the SAVED object,
 	// not the unsaved one we sent.
 	assert.NotEqual(t, 0, obj.Id)
-
 
 	// ---------------------------------------------
 	// Now test with an update...
@@ -958,7 +954,6 @@ func TestDPNWorkItemSave(t *testing.T) {
 	// not the unsaved one we sent.
 	assert.NotEqual(t, 0, obj.Id)
 
-
 	// ---------------------------------------------
 	// Now test with an update...
 	// ---------------------------------------------
@@ -983,7 +978,6 @@ func TestDPNWorkItemSave(t *testing.T) {
 	assert.NotEqual(t, origModTime, obj.UpdatedAt)
 }
 
-
 // -------------------------------------------------------------------------
 // -------------------------------------------------------------------------
 // -------------------------------------------------------------------------
@@ -992,7 +986,7 @@ func TestDPNWorkItemSave(t *testing.T) {
 // JSON list response. That includes keys count, next, previous,
 // and results. The caller will add ["results"] with a list of
 // objects of the appropriate type.
-func listResponseData() (map[string]interface{}) {
+func listResponseData() map[string]interface{} {
 	data := make(map[string]interface{})
 	data["count"] = 100
 	data["next"] = "http://example.com/?page=11"
@@ -1001,7 +995,7 @@ func listResponseData() (map[string]interface{}) {
 }
 
 // Returns some sample URL parameters.
-func sampleParams() (url.Values) {
+func sampleParams() url.Values {
 	v := url.Values{}
 	v.Add("institution", "aptrust.org")
 	v.Add("page", "1")
@@ -1033,13 +1027,12 @@ func institutionListHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintln(w, string(listJson))
 }
 
-
 // -------------------------------------------------------------------------
 // IntellectualObject handlers
 // -------------------------------------------------------------------------
 
 func intellectualObjectGetHandler(w http.ResponseWriter, r *http.Request) {
-	obj := testutil.MakeIntellectualObject(2,3,4,5)
+	obj := testutil.MakeIntellectualObject(2, 3, 4, 5)
 	objJson, _ := json.Marshal(obj)
 	w.Header().Set("Content-Type", "application/json")
 	fmt.Fprintln(w, string(objJson))
@@ -1048,7 +1041,7 @@ func intellectualObjectGetHandler(w http.ResponseWriter, r *http.Request) {
 func intellectualObjectListHandler(w http.ResponseWriter, r *http.Request) {
 	list := make([]*models.IntellectualObject, 4)
 	for i := 0; i < 4; i++ {
-		list[i] = testutil.MakeIntellectualObject(2,3,4,5)
+		list[i] = testutil.MakeIntellectualObject(2, 3, 4, 5)
 	}
 	data := listResponseData()
 	data["results"] = list
@@ -1081,7 +1074,7 @@ func intellectualObjectSaveHandler(w http.ResponseWriter, r *http.Request) {
 // -------------------------------------------------------------------------
 
 func genericFileGetHandler(w http.ResponseWriter, r *http.Request) {
-	obj := testutil.MakeGenericFile(2,3, "kollege.kom/objekt")
+	obj := testutil.MakeGenericFile(2, 3, "kollege.kom/objekt")
 	objJson, _ := json.Marshal(obj)
 	w.Header().Set("Content-Type", "application/json")
 	fmt.Fprintln(w, string(objJson))
@@ -1090,7 +1083,7 @@ func genericFileGetHandler(w http.ResponseWriter, r *http.Request) {
 func genericFileListHandler(w http.ResponseWriter, r *http.Request) {
 	list := make([]*models.GenericFile, 4)
 	for i := 0; i < 4; i++ {
-		list[i] = testutil.MakeGenericFile(2,3,"kollege.kom/objekt")
+		list[i] = testutil.MakeGenericFile(2, 3, "kollege.kom/objekt")
 	}
 	data := listResponseData()
 	data["results"] = list
@@ -1148,32 +1141,32 @@ func genericFileSaveBatchHandler(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 		gf := &models.GenericFile{
-			Id: 1000 + i,
-			Identifier: file.Identifier,
+			Id:                   1000 + i,
+			Identifier:           file.Identifier,
 			IntellectualObjectId: file.IntellectualObjectId,
-			FileFormat: file.FileFormat,
-			URI: file.URI,
-			Size: file.Size,
+			FileFormat:           file.FileFormat,
+			URI:                  file.URI,
+			Size:                 file.Size,
 			// TODO: Restore these when they are part of the Pharos model.
 			//FileCreated: file.FileCreated,
 			//FileModified: file.FileModified,
-			Checksums: checksums,
+			Checksums:    checksums,
 			PremisEvents: events,
-			CreatedAt: time.Now().UTC(),
-			UpdatedAt: time.Now().UTC(),
+			CreatedAt:    time.Now().UTC(),
+			UpdatedAt:    time.Now().UTC(),
 		}
 		files = append(files, gf)
 	}
 	temp := struct {
-		Count int `json:"count"`
-		Next *string `json:"next"`
-		Previous *string `json:"previous"`
-		Results []*models.GenericFile `json:"results"`
-	} {
-		Count: 0,
-		Next: nil,
+		Count    int                   `json:"count"`
+		Next     *string               `json:"next"`
+		Previous *string               `json:"previous"`
+		Results  []*models.GenericFile `json:"results"`
+	}{
+		Count:    0,
+		Next:     nil,
 		Previous: nil,
-		Results: files,
+		Results:  files,
 	}
 	jsonData, err := json.Marshal(temp)
 	if err != nil {
@@ -1227,7 +1220,6 @@ func checksumSaveHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	fmt.Fprintln(w, string(objJson))
 }
-
 
 // -------------------------------------------------------------------------
 // PremisEvent handlers

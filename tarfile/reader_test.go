@@ -14,13 +14,13 @@ import (
 )
 
 // Return a manifest pointing to our test tar file.
-func getReader(tarFileName string) (*tarfile.Reader) {
+func getReader(tarFileName string) *tarfile.Reader {
 	_, filename, _, _ := runtime.Caller(0)
 	tarFilePath, _ := filepath.Abs(path.Join(filepath.Dir(filename), "..", "testdata", "unit_test_bags", tarFileName))
 	objIdentifier := strings.Replace(tarFileName, ".tar", "", 1)
 	parts := strings.Split(objIdentifier, ".")
 	institution := fmt.Sprintf("%s.%s", parts[0], parts[1])
-	bagName := strings.Replace(objIdentifier, institution + ".", "", 1)
+	bagName := strings.Replace(objIdentifier, institution+".", "", 1)
 
 	manifest := models.NewIngestManifest()
 	manifest.Object.Identifier = objIdentifier
@@ -212,7 +212,7 @@ func TestUntarNonExistentFile(t *testing.T) {
 }
 
 // Returns what SHOULD be the path to the untarred files.
-func untarredPath(bagname string) (string) {
+func untarredPath(bagname string) string {
 	_, filename, _, _ := runtime.Caller(0)
 	testDataPath, _ := filepath.Abs(path.Join(filepath.Dir(filename), "..", "testdata", "unit_test_bags"))
 	return path.Join(testDataPath, bagname)

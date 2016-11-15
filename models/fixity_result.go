@@ -5,32 +5,30 @@ import (
 	"strings"
 )
 
-
 // FixityResult descibes the results of fetching a file from S3
 // and verification of the file's sha256 checksum.
 type FixityResult struct {
 
 	// The generic file we're going to look at.
 	// This file is sitting somewhere on S3.
-	GenericFile   *GenericFile
+	GenericFile *GenericFile
 
 	// Does the file exist in S3?
-	S3FileExists  bool
+	S3FileExists bool
 
 	// The sha256 sum we calculated after downloading
 	// the file.
-	Sha256        string
+	Sha256 string
 
 	// Information about the result of this operation.
-	WorkSummary   *WorkSummary
+	WorkSummary *WorkSummary
 }
 
-
-func NewFixityResult(gf *GenericFile) (*FixityResult) {
-	return &FixityResult {
-		GenericFile: gf,
+func NewFixityResult(gf *GenericFile) *FixityResult {
+	return &FixityResult{
+		GenericFile:  gf,
 		S3FileExists: true,
-		WorkSummary: NewWorkSummary(),
+		WorkSummary:  NewWorkSummary(),
 	}
 }
 
@@ -42,25 +40,25 @@ func (result *FixityResult) BucketAndKey() (string, string, error) {
 		// This error is fatal, so don't retry.
 		result.WorkSummary.AddError("GenericFile URI '%s' is invalid", result.GenericFile.URI)
 		result.WorkSummary.Retry = false
-		return "","", fmt.Errorf(result.WorkSummary.FirstError())
+		return "", "", fmt.Errorf(result.WorkSummary.FirstError())
 	}
-	bucket := parts[length - 2]
-	key := parts[length - 1]
+	bucket := parts[length-2]
+	key := parts[length-1]
 	return bucket, key, nil
 }
 
 // Returns true if result.Sha256 was set.
-func (result *FixityResult) GotDigestFromPreservationFile() (bool) {
+func (result *FixityResult) GotDigestFromPreservationFile() bool {
 	return result.Sha256 != ""
 }
 
 // Returns true if the underlying GenericFile includes a SHA256 checksum.
-func (result *FixityResult) GenericFileHasDigest() (bool) {
+func (result *FixityResult) GenericFileHasDigest() bool {
 	return result.FedoraSha256() != ""
 }
 
 // Returns the SHA256 checksum that Fedora has on record.
-func (result *FixityResult) FedoraSha256() (string) {
+func (result *FixityResult) FedoraSha256() string {
 	checksum := result.GenericFile.GetChecksumByAlgorithm("sha256")
 	if checksum == nil {
 		return ""
@@ -70,7 +68,7 @@ func (result *FixityResult) FedoraSha256() (string) {
 
 // Returns true if we have all the data we need to compare the
 // existing checksum with the checksum of the S3 file.
-func (result *FixityResult) FixityCheckPossible() (bool) {
+func (result *FixityResult) FixityCheckPossible() bool {
 	return result.GotDigestFromPreservationFile() && result.GenericFileHasDigest()
 }
 

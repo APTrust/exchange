@@ -9,7 +9,6 @@ import (
 	"testing"
 )
 
-
 func TestNewSyncResult(t *testing.T) {
 	result := models.NewSyncResult("aptrust")
 	require.NotNil(t, result)

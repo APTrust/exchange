@@ -46,7 +46,6 @@ func TestNewEventObjectCreation(t *testing.T) {
 	assert.True(t, strings.HasPrefix(event.OutcomeInformation, "Object created, files stored and replicated"))
 }
 
-
 func TestNewEventObjectIngest(t *testing.T) {
 	// Test with required params missing
 	_, err := models.NewEventObjectIngest(0)
@@ -328,7 +327,7 @@ func TestNewEventGenericFileReplication(t *testing.T) {
 	assert.Equal(t, "Replicated to secondary storage", event.OutcomeInformation)
 }
 
-func TestPremisEventMergeAttributes (t *testing.T) {
+func TestPremisEventMergeAttributes(t *testing.T) {
 	event1 := testutil.MakePremisEvent()
 	event2 := testutil.MakePremisEvent()
 
@@ -342,7 +341,7 @@ func TestPremisEventMergeAttributes (t *testing.T) {
 	assert.NotNil(t, err)
 }
 
-func TestIsUrlAssignment (t *testing.T) {
+func TestIsUrlAssignment(t *testing.T) {
 	event := testutil.MakePremisEvent()
 	event.EventType = constants.EventIdentifierAssignment
 	event.Detail = "Assigned new storage URL blah blah blah THE INTERWEBZ!"

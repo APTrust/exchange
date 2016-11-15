@@ -19,7 +19,6 @@ the bucket reader, and then runs this program to check the
 stats output of the bucket reader to make sure all went well.
 */
 
-
 // Returns two Stats objects: the expected stats, from our test data dir,
 // and the actual stats, from the JSON file that the bucket reader dumped
 // out last time it ran

@@ -6,10 +6,10 @@ import (
 )
 
 type IngestState struct {
-	NSQMessage      *nsq.Message
-	WorkItem        *WorkItem
-	WorkItemState   *WorkItemState
-	IngestManifest  *IngestManifest
+	NSQMessage     *nsq.Message
+	WorkItem       *WorkItem
+	WorkItemState  *WorkItemState
+	IngestManifest *IngestManifest
 }
 
 // Tell NSQ we're still working on this item. NSQMessage will be nil if

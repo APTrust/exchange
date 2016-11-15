@@ -9,26 +9,26 @@ import (
 // requests from a remote node and copy that data into our own
 // local DPN registry.
 type SyncResult struct {
-	NodeName       string
-	FetchCounts    map[dpn.DPNObjectType]int
-	SyncCounts     map[dpn.DPNObjectType]int
-	Errors         map[dpn.DPNObjectType][]error
+	NodeName    string
+	FetchCounts map[dpn.DPNObjectType]int
+	SyncCounts  map[dpn.DPNObjectType]int
+	Errors      map[dpn.DPNObjectType][]error
 }
 
 // NewSyncResult creates a new SyncResult.
-func NewSyncResult(nodeName string) (*SyncResult) {
+func NewSyncResult(nodeName string) *SyncResult {
 	return &SyncResult{
-		NodeName: nodeName,
+		NodeName:    nodeName,
 		FetchCounts: make(map[dpn.DPNObjectType]int),
-		SyncCounts: make(map[dpn.DPNObjectType]int),
-		Errors: make(map[dpn.DPNObjectType][]error),
+		SyncCounts:  make(map[dpn.DPNObjectType]int),
+		Errors:      make(map[dpn.DPNObjectType][]error),
 	}
 }
 
 // AddToFetchCount adds increment to the specified objectType count,
 // where objectType is the type of object fetched (bag, fixity check,
 // etc.)
-func (syncResult *SyncResult) AddToFetchCount (objectType dpn.DPNObjectType, increment int) {
+func (syncResult *SyncResult) AddToFetchCount(objectType dpn.DPNObjectType, increment int) {
 	if _, keyExists := syncResult.FetchCounts[objectType]; !keyExists {
 		syncResult.FetchCounts[objectType] = 0
 	}
@@ -38,7 +38,7 @@ func (syncResult *SyncResult) AddToFetchCount (objectType dpn.DPNObjectType, inc
 // AddToSyncCount adds increment to the specified objectType count,
 // where objectType is the type of object fetched (bag, fixity check,
 // etc.)
-func (syncResult *SyncResult) AddToSyncCount (objectType dpn.DPNObjectType, increment int) {
+func (syncResult *SyncResult) AddToSyncCount(objectType dpn.DPNObjectType, increment int) {
 	if _, keyExists := syncResult.SyncCounts[objectType]; !keyExists {
 		syncResult.SyncCounts[objectType] = 0
 	}
@@ -46,7 +46,7 @@ func (syncResult *SyncResult) AddToSyncCount (objectType dpn.DPNObjectType, incr
 }
 
 // AddError adds an error for the specified objectType (bag, replication, etc.)
-func (syncResult *SyncResult) AddError (objectType dpn.DPNObjectType, err error) {
+func (syncResult *SyncResult) AddError(objectType dpn.DPNObjectType, err error) {
 	if _, keyExists := syncResult.Errors[objectType]; !keyExists {
 		syncResult.Errors[objectType] = make([]error, 0)
 	}
@@ -55,7 +55,7 @@ func (syncResult *SyncResult) AddError (objectType dpn.DPNObjectType, err error)
 
 // HasErrors returns true if there are any errors for the specified objectType.
 // If objectType is nil, this will check for errors in all object types
-func (syncResult *SyncResult) HasErrors(objectType dpn.DPNObjectType) (bool) {
+func (syncResult *SyncResult) HasErrors(objectType dpn.DPNObjectType) bool {
 	hasErrors := false
 	if objectType == "" {
 		for _, errors := range syncResult.Errors {

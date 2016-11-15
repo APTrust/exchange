@@ -57,7 +57,7 @@ func runRestTests(t *testing.T) bool {
 	return true
 }
 
-func getClient(t *testing.T) (*network.DPNRestClient) {
+func getClient(t *testing.T) *network.DPNRestClient {
 	// If you want to debug, change ioutil.Discard to os.Stdout
 	// to see log output from the client.
 	config, err := apt_models.LoadConfigFile(configFile)
@@ -74,7 +74,7 @@ func getClient(t *testing.T) (*network.DPNRestClient) {
 	return client
 }
 
-func getRemoteClient(t *testing.T, namespace string) (*network.DPNRestClient) {
+func getRemoteClient(t *testing.T, namespace string) *network.DPNRestClient {
 	// If you want to debug, change ioutil.Discard to os.Stdout
 	// to see log output from the client.
 	config, err := apt_models.LoadConfigFile(configFile)
@@ -174,11 +174,11 @@ func TestNodeUpdate(t *testing.T) {
 		origName = "No Name"
 	}
 	// Reverse the name.
-	newName := make([]rune, utf8.RuneCountInString(origName));
-	i := len(origName);
+	newName := make([]rune, utf8.RuneCountInString(origName))
+	i := len(origName)
 	for _, c := range origName {
-		i--;
-		newName[i] = c;
+		i--
+		newName[i] = c
 	}
 	node.Name = string(newName)
 	savedNodeResult := client.NodeUpdate(node)
@@ -218,7 +218,7 @@ func TestMemberList(t *testing.T) {
 	assert.EqualValues(t, 5, len(memberList.Members()))
 	params := url.Values{}
 	params.Set("name", "Faber College")
-	memberList  = client.MemberList(params)
+	memberList = client.MemberList(params)
 	assert.Nil(t, memberList.Error)
 	assert.NotNil(t, memberList.Request)
 	assert.NotNil(t, memberList.Response)
@@ -247,8 +247,8 @@ func TestMemberCreate(t *testing.T) {
 	id := uuid.NewV4().String()
 	member := models.Member{
 		MemberId: id,
-		Name: fmt.Sprintf("GO-TEST-MEMBER-%s", id),
-		Email: fmt.Sprintf("%s@example.com", id),
+		Name:     fmt.Sprintf("GO-TEST-MEMBER-%s", id),
+		Email:    fmt.Sprintf("%s@example.com", id),
 	}
 	resp := client.MemberCreate(&member)
 	require.Nil(t, resp.Error)
@@ -339,7 +339,7 @@ func TestDPNBagList(t *testing.T) {
 	assert.Equal(t, unfilteredCount, resp.Count)
 
 	// Get all bags updated after 1 hour from now
-	params.Set("after", time.Now().Add(1 * time.Hour).Format(time.RFC3339Nano))
+	params.Set("after", time.Now().Add(1*time.Hour).Format(time.RFC3339Nano))
 	resp = client.DPNBagList(params)
 	require.NotNil(t, resp)
 	require.Nil(t, resp.Error)
@@ -464,7 +464,7 @@ func TestReplicationTransferList(t *testing.T) {
 	require.Nil(t, resp.Error)
 
 	params.Set("fixity_accept", "false")
-	resp  = client.ReplicationTransferList(params)
+	resp = client.ReplicationTransferList(params)
 	require.NotNil(t, resp)
 	require.Nil(t, resp.Error)
 
@@ -478,7 +478,7 @@ func TestReplicationTransferList(t *testing.T) {
 
 	assert.Equal(t, totalRecordCount, resp.Count)
 
-	params.Set("after", time.Now().Add(1 * time.Hour).Format(time.RFC3339Nano))
+	params.Set("after", time.Now().Add(1*time.Hour).Format(time.RFC3339Nano))
 	resp = client.ReplicationTransferList(params)
 	require.NotNil(t, resp)
 	require.Nil(t, resp.Error)
@@ -549,7 +549,7 @@ func TestReplicationTransferUpdate(t *testing.T) {
 
 	// Mark as received, with a bad fixity.
 	newXfer := xferResp.ReplicationTransfer()
-	newFixityValue :=  "1234567890"
+	newFixityValue := "1234567890"
 	newXfer.UpdatedAt = newXfer.UpdatedAt.Add(1 * time.Second)
 	newXfer.FixityValue = &newFixityValue
 
@@ -597,7 +597,7 @@ func TestRestoreTransferList(t *testing.T) {
 
 	params := url.Values{}
 	params.Set("bag_valid", "true")
-	resp  = client.RestoreTransferList(params)
+	resp = client.RestoreTransferList(params)
 	require.NotNil(t, resp)
 	require.Nil(t, resp.Error)
 
@@ -626,7 +626,7 @@ func TestRestoreTransferList(t *testing.T) {
 	require.Nil(t, resp.Error)
 	assert.Equal(t, totalRecordCount, resp.Count)
 
-	params.Set("after", time.Now().Add(1 * time.Hour).Format(time.RFC3339Nano))
+	params.Set("after", time.Now().Add(1*time.Hour).Format(time.RFC3339Nano))
 	resp = client.RestoreTransferList(params)
 	require.NotNil(t, resp)
 	require.Nil(t, resp.Error)
@@ -707,7 +707,7 @@ func TestGetRemoteClient(t *testing.T) {
 	config, err := apt_models.LoadConfigFile(configFile)
 	require.Nil(t, err)
 	client := getClient(t)
-	nodes := []string { "chron", "hathi", "sdr", "tdr" }
+	nodes := []string{"chron", "hathi", "sdr", "tdr"}
 	for _, node := range nodes {
 		_, err := client.GetRemoteClient(node, config.DPN)
 		assert.Nil(t, err)
@@ -721,7 +721,7 @@ func TestGetRemoteClients(t *testing.T) {
 	client := getClient(t)
 	remoteClients, err := client.GetRemoteClients()
 	require.Nil(t, err)
-	nodes := []string { "chron", "hathi", "sdr", "tdr" }
+	nodes := []string{"chron", "hathi", "sdr", "tdr"}
 	for _, node := range nodes {
 		remoteClient := remoteClients[node]
 		assert.NotNil(t, remoteClient)
@@ -863,7 +863,6 @@ func TestIngestCreate(t *testing.T) {
 	assert.NotNil(t, resp.Ingest())
 }
 
-
 // -------------------------------------------------------------------------
 // HTTP test handlers from here down...
 // -------------------------------------------------------------------------
@@ -872,7 +871,7 @@ func TestIngestCreate(t *testing.T) {
 // JSON list response. That includes keys count, next, previous,
 // and results. The caller will add ["results"] with a list of
 // objects of the appropriate type.
-func listResponseData() (map[string]interface{}) {
+func listResponseData() map[string]interface{} {
 	data := make(map[string]interface{})
 	data["count"] = 100
 	data["next"] = "http://example.com/?page=11"
@@ -881,7 +880,7 @@ func listResponseData() (map[string]interface{}) {
 }
 
 // Returns some sample URL parameters.
-func sampleParams() (url.Values) {
+func sampleParams() url.Values {
 	v := url.Values{}
 	v.Add("member", "00000000-0000-0000-0000-000000000000")
 	v.Add("ingest_node", "aptrust")

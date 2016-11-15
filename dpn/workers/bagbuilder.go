@@ -17,36 +17,36 @@ type BagBuilder struct {
 	// the builder will create. It will end with the bag's UUID,
 	// so it should look something like this:
 	// /mnt/dpn/bags/00000000-0000-0000-0000-000000000000.
-	LocalPath              string
+	LocalPath string
 
 	// IntellectualObject is the APTrust IntellectualObject that
 	// we'll be repackaging as a DPN bag.
-	IntellectualObject     *apt_models.IntellectualObject
+	IntellectualObject *apt_models.IntellectualObject
 
 	// DefaultMetadata is some metadata that goes into EVERY DPN
 	// bag we create. This includes our name and address in the
 	// DPN data section that describes who packaged the bag.
 	// DefaultMetadata should be loaded from a JSON file using
 	// the dpn.LoadConfig() function.
-	DefaultMetadata        apt_models.DefaultMetadata
+	DefaultMetadata apt_models.DefaultMetadata
 
 	// UUID is the DPN identifier for this bag. This has nothing to
 	// do with any APTrust UUID. It's generated in the constructor.
-	UUID                   string
+	UUID string
 
 	// ErrorMessage describes what when wrong while trying to
 	// package this bag. If it's an empty string, packaging
 	// succeeded.
-	ErrorMessage           string
+	ErrorMessage string
 
 	// What type of bag is this? Data, rights or interpretive?
-	BagType                string
+	BagType string
 
 	// The underlying bag object.
-	Bag                    *bagins.Bag
+	Bag *bagins.Bag
 
 	// Timestamp describing when the bag was assembled.
-	bagtime                time.Time
+	bagtime time.Time
 }
 
 // NewBagBuilder returns a new BagBuilder.
@@ -101,15 +101,14 @@ func NewBagBuilder(localPath string, obj *apt_models.IntellectualObject, default
 	if err != nil {
 		return nil, err
 	}
-	builder :=  &BagBuilder{
-		LocalPath: filepath.Join(filePath, originalBagName),
+	builder := &BagBuilder{
+		LocalPath:          filepath.Join(filePath, originalBagName),
 		IntellectualObject: obj,
-		DefaultMetadata: defaultMetadata,
-		UUID: uuid,
-		BagType: dpn.BAG_TYPE_DATA,
-		Bag: bag,
+		DefaultMetadata:    defaultMetadata,
+		UUID:               uuid,
+		BagType:            dpn.BAG_TYPE_DATA,
+		Bag:                bag,
 	}
-
 
 	err = os.MkdirAll(filepath.Join(builder.LocalPath, "dpn-tags"), 0755)
 	if err != nil {
@@ -136,7 +135,7 @@ func NewBagBuilder(localPath string, obj *apt_models.IntellectualObject, default
 
 // BagTime returns the datetime the bag was created,
 // in RFC3339 format (e.g. "2015-03-05T10:10:00Z")
-func (builder *BagBuilder) BagTime() (string) {
+func (builder *BagBuilder) BagTime() string {
 	return builder.bagtime.Format(time.RFC3339)
 }
 
@@ -217,8 +216,7 @@ func (builder *BagBuilder) buildDPNInfo() {
 		builder.BagType))
 }
 
-
-func (builder *BagBuilder) buildAPTrustBagIt()  {
+func (builder *BagBuilder) buildAPTrustBagIt() {
 	aptrustBagit, err := builder.AddTagFile("aptrust-tags/bagit.txt")
 	if err != nil {
 		builder.ErrorMessage += fmt.Sprintf("[%s] ", err.Error())

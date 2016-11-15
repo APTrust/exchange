@@ -55,7 +55,7 @@ func (syncMap *SynchronizedMap) Keys() []string {
 	keys := make([]string, len(syncMap.data))
 	syncMap.mutex.RLock()
 	i := 0
-	for key, _ := range syncMap.data {
+	for key := range syncMap.data {
 		keys[i] = key
 		i += 1
 	}

@@ -10,9 +10,9 @@ import (
 )
 
 type FileSystemIterator struct {
-	rootPath   string
-	files      []string
-	index      int
+	rootPath string
+	files    []string
+	index    int
 }
 
 func NewFileSystemIterator(pathToDir string) (*FileSystemIterator, error) {
@@ -33,8 +33,8 @@ func NewFileSystemIterator(pathToDir string) (*FileSystemIterator, error) {
 	}
 	return &FileSystemIterator{
 		rootPath: pathToDir,
-		files: files,
-		index: -1,
+		files:    files,
+		index:    -1,
 	}, nil
 }
 
@@ -54,12 +54,12 @@ func (iter *FileSystemIterator) Next() (io.ReadCloser, *FileSummary, error) {
 	}
 	fileMode := stat.Mode()
 	fs := &FileSummary{
-		RelPath: strings.Replace(filePath, iter.rootPath + string(os.PathSeparator), "", 1),
-		AbsPath: filePath,
-		Mode: fileMode,
-		Size: stat.Size(),
-		ModTime: stat.ModTime(),
-		IsDir: stat.IsDir(),
+		RelPath:       strings.Replace(filePath, iter.rootPath+string(os.PathSeparator), "", 1),
+		AbsPath:       filePath,
+		Mode:          fileMode,
+		Size:          stat.Size(),
+		ModTime:       stat.ModTime(),
+		IsDir:         stat.IsDir(),
 		IsRegularFile: fileMode.IsRegular(),
 	}
 	systat := stat.Sys().(*syscall.Stat_t)
@@ -78,9 +78,9 @@ func (iter *FileSystemIterator) Next() (io.ReadCloser, *FileSummary, error) {
 // That will be a slice of strings, with exactly one item. We return a slice
 // instead of a string to maintain API compatibility with the ReadIterator
 // interface.
-func (iter *FileSystemIterator) GetTopLevelDirNames() ([]string) {
+func (iter *FileSystemIterator) GetTopLevelDirNames() []string {
 	pathParts := strings.Split(iter.rootPath, string(os.PathSeparator))
 	topLevelDirs := make([]string, 1)
-	topLevelDirs[0] = pathParts[len(pathParts) - 1]
+	topLevelDirs[0] = pathParts[len(pathParts)-1]
 	return topLevelDirs
 }

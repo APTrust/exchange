@@ -34,7 +34,7 @@ type Volume struct {
 // get the mountpoint. If you're on Windows, Mr. T pities you,
 // fool! This volume manager won't work for you. Upgrade to a
 // more sensible OS.
-func NewVolume(mountPoint string) (*Volume) {
+func NewVolume(mountPoint string) *Volume {
 	volume := &Volume{}
 	volume.mountPoint = mountPoint
 	volume.claimed = uint64(0)
@@ -44,12 +44,12 @@ func NewVolume(mountPoint string) (*Volume) {
 }
 
 // Returns the mountPoint to the volume.
-func (volume *Volume) MountPoint() (string) {
+func (volume *Volume) MountPoint() string {
 	return volume.mountPoint
 }
 
 // Returns the number of bytes claimed but not yet written to disk.
-func (volume *Volume) ClaimedSpace() (uint64) {
+func (volume *Volume) ClaimedSpace() uint64 {
 	return volume.claimed
 }
 
@@ -87,7 +87,7 @@ func (volume *Volume) AvailableSpace() (uint64, error) {
 // simply allows the Volume struct to maintain some internal bookkeeping.
 // Reserve will return an error if there is not enough free disk space to
 // accommodate the requested number of bytes.
-func (volume *Volume) Reserve(path string, numBytes uint64) (error) {
+func (volume *Volume) Reserve(path string, numBytes uint64) error {
 	available, err := volume.AvailableSpace()
 	if err != nil {
 		return err
@@ -119,6 +119,6 @@ func (volume *Volume) Release(path string) {
 }
 
 // This is for reporting and debugging.
-func (volume *Volume) Reservations() (map[string]uint64) {
+func (volume *Volume) Reservations() map[string]uint64 {
 	return volume.reservations
 }

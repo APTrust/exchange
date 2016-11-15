@@ -91,7 +91,6 @@ func TestFindTag(t *testing.T) {
 	obj.IngestTags = append(obj.IngestTags, models.NewTag("file3", "label3", "value3.1"))
 	obj.IngestTags = append(obj.IngestTags, models.NewTag("file4", "label3", "value3.2"))
 
-
 	tags1 := obj.FindTag("label1")
 	tags2 := obj.FindTag("label2")
 	tags3 := obj.FindTag("label3")

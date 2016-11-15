@@ -11,7 +11,6 @@ import (
 	"time"
 )
 
-
 func TestNewGenericFileForPharos(t *testing.T) {
 	filename := filepath.Join("testdata", "json_objects", "intel_obj.json")
 	intelObj, err := testutil.LoadIntelObjFixture(filename)
@@ -20,7 +19,7 @@ func TestNewGenericFileForPharos(t *testing.T) {
 	pharosGf := models.NewGenericFileForPharos(gf)
 	assert.Equal(t, gf.Identifier, pharosGf.Identifier)
 	assert.Equal(t, gf.IntellectualObjectId, pharosGf.IntellectualObjectId)
-		assert.Equal(t, gf.FileFormat, pharosGf.FileFormat)
+	assert.Equal(t, gf.FileFormat, pharosGf.FileFormat)
 	assert.Equal(t, gf.URI, pharosGf.URI)
 	assert.Equal(t, gf.Size, pharosGf.Size)
 	// TODO: Add these back when they're part of the Rails model
@@ -85,16 +84,16 @@ func TestNewDPNWorkItemForPharos(t *testing.T) {
 	note := "All done"
 	state := "Nebraska"
 	item := &models.DPNWorkItem{
-		Id: 1000,
-		Node: "dpn.aptrust.org",
-		Task: "Replication",
-		Identifier: "1234-5678",
-		QueuedAt: &timestamp,
+		Id:          1000,
+		Node:        "dpn.aptrust.org",
+		Task:        "Replication",
+		Identifier:  "1234-5678",
+		QueuedAt:    &timestamp,
 		CompletedAt: &timestamp,
-		Note: &note,
-		State: &state,
-		CreatedAt: timestamp,
-		UpdatedAt: timestamp,
+		Note:        &note,
+		State:       &state,
+		CreatedAt:   timestamp,
+		UpdatedAt:   timestamp,
 	}
 	pharosItem := models.NewDPNWorkItemForPharos(item)
 	require.NotNil(t, pharosItem)

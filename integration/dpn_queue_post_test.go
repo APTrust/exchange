@@ -13,7 +13,7 @@ import (
 // getObjectIdentifiers returns the identifiers of objects that
 // apps/test_push_to_dpn marks as "Push to DPN". These objects
 // should wind up in the dpn_copy queue.
-func identifiersPushedToDPN() ([]string) {
+func identifiersPushedToDPN() []string {
 	identifiers := make([]string, 7)
 	for index, s3Key := range testutil.INTEGRATION_GOOD_BAGS[0:7] {
 		identifier := strings.Replace(s3Key, "aptrust.receiving.test.", "", 1)

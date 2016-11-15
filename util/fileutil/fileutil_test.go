@@ -132,7 +132,7 @@ func TestExpandTilde(t *testing.T) {
 	}
 }
 
-func getPath(filename string) (string) {
+func getPath(filename string) string {
 	exchangeHome, _ := fileutil.ExchangeHome()
 	return filepath.Join(exchangeHome, filename)
 }

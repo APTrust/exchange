@@ -12,8 +12,7 @@ import (
 	"testing"
 )
 
-
-func setupMimeTest(t *testing.T) (string) {
+func setupMimeTest(t *testing.T) string {
 	tempfile, err := ioutil.TempFile("", "mime_test")
 	require.Nil(t, err)
 	_, err = io.WriteString(tempfile, "This is a text file.")

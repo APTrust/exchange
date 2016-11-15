@@ -40,7 +40,6 @@ func main() {
 	<-consumer.StopChan
 }
 
-
 // See if you can figure out from the function name what this does.
 func parseCommandLine() (configFile string) {
 	var pathToConfigFile string

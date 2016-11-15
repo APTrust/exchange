@@ -12,30 +12,29 @@ import (
 var bagDate time.Time = time.Date(2104, 7, 2, 12, 0, 0, 0, time.UTC)
 var ingestDate time.Time = time.Date(2014, 9, 10, 12, 0, 0, 0, time.UTC)
 
-
 func SampleWorkItem() *models.WorkItem {
 	return &models.WorkItem{
-		Id: 9000,
-		ObjectIdentifier: "ncsu.edu/some_object",
+		Id:                    9000,
+		ObjectIdentifier:      "ncsu.edu/some_object",
 		GenericFileIdentifier: "ncsu.edu/some_object/data/doc.pdf",
-		Name: "Sample Document",
-		Bucket: "aptrust.receiving.ncsu.edu",
-		ETag: "12345",
-		Size: 31337,
-		BagDate: bagDate,
-		InstitutionId: 324,
-		Date: ingestDate,
-		Note: "so many!",
-		Action: "Ingest",
-		Stage: "Store",
-		Status: "Success",
-		Outcome: "happy day!",
-		Retry: true,
-		Node: "",
-		Pid: 0,
+		Name:             "Sample Document",
+		Bucket:           "aptrust.receiving.ncsu.edu",
+		ETag:             "12345",
+		Size:             31337,
+		BagDate:          bagDate,
+		InstitutionId:    324,
+		Date:             ingestDate,
+		Note:             "so many!",
+		Action:           "Ingest",
+		Stage:            "Store",
+		Status:           "Success",
+		Outcome:          "happy day!",
+		Retry:            true,
+		Node:             "",
+		Pid:              0,
 		NeedsAdminReview: false,
-		CreatedAt: ingestDate,
-		UpdatedAt: ingestDate,
+		CreatedAt:        ingestDate,
+		UpdatedAt:        ingestDate,
 	}
 }
 
@@ -52,7 +51,7 @@ func TestWorkItemSerializeForPharos(t *testing.T) {
 func TestWorkItemHasBeenStored(t *testing.T) {
 	workItem := models.WorkItem{
 		Action: "Ingest",
-		Stage: "Record",
+		Stage:  "Record",
 		Status: "Success",
 	}
 	assert.True(t, workItem.HasBeenStored())
@@ -81,7 +80,7 @@ func TestWorkItemHasBeenStored(t *testing.T) {
 func TestIsStoring(t *testing.T) {
 	workItem := models.WorkItem{
 		Action: "Ingest",
-		Stage: "Store",
+		Stage:  "Store",
 		Status: "Started",
 	}
 	assert.True(t, workItem.IsStoring())
@@ -96,9 +95,9 @@ func TestIsStoring(t *testing.T) {
 func TestWorkItemShouldTryIngest(t *testing.T) {
 	workItem := models.WorkItem{
 		Action: "Ingest",
-		Stage: "Receive",
+		Stage:  "Receive",
 		Status: "Pending",
-		Retry: true,
+		Retry:  true,
 	}
 
 	// Test stages
@@ -145,21 +144,21 @@ func TestWorkItemShouldTryIngest(t *testing.T) {
 	assert.False(t, workItem.ShouldTryIngest())
 }
 
-func getWorkItems(action string) ([]*models.WorkItem) {
+func getWorkItems(action string) []*models.WorkItem {
 	workItems := make([]*models.WorkItem, 3)
 	workItems[0] = &models.WorkItem{
 		Action: action,
-		Stage: "Resolve",
+		Stage:  "Resolve",
 		Status: constants.StatusSuccess,
 	}
 	workItems[1] = &models.WorkItem{
 		Action: action,
-		Stage: "Resolve",
+		Stage:  "Resolve",
 		Status: constants.StatusFailed,
 	}
 	workItems[2] = &models.WorkItem{
 		Action: action,
-		Stage: "Requested",
+		Stage:  "Requested",
 		Status: constants.StatusPending,
 	}
 	return workItems

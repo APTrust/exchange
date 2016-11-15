@@ -9,32 +9,32 @@ import (
 type WorkSummary struct {
 	// This is set to true when the process that produces
 	// this result starts.
-	Attempted      bool
+	Attempted bool
 
 	// AttemptNumber is the number of the read attempt.
 	// This starts at one. This is uint16 to match the datatype
 	// of NsqMessage.Attempt.
-	AttemptNumber  uint16
+	AttemptNumber uint16
 
 	// This will be set to true if an error is fatal. In that
 	// case, we should not try to reprocess the item.
-	ErrorIsFatal   bool
+	ErrorIsFatal bool
 
 	// Errors is a list of strings describing errors that occurred
 	// during bag validation.
-	Errors         []string
+	Errors []string
 
 	// StartedAt describes when the attempt to read the bag started.
 	// If StartedAt.IsZero(), we have not yet attempted to read the
 	// bag.
-	StartedAt      time.Time
+	StartedAt time.Time
 
 	// FinishedAt describes when the attempt to read the bag completed.
 	// If FinishedAt.IsZero(), we have not yet attempted to read the
 	// bag. Note that the attempt may have completed without succeeding.
 	// Check the Succeeded() method to see if the process actually
 	// completed successfully.
-	FinishedAt    time.Time
+	FinishedAt time.Time
 
 	// Retry indicates whether we should retry a failed process.
 	// After non-fatal errors, such as network timeout, this will
@@ -42,18 +42,18 @@ type WorkSummary struct {
 	// data, this will generally be set to false. This defaults to
 	// true, because fatal errors are rare, and we don't want to
 	// give up on transient errors. Just requeue and try again.
-	Retry          bool
+	Retry bool
 }
 
 func NewWorkSummary() *WorkSummary {
 	return &WorkSummary{
-		Attempted: false,
+		Attempted:     false,
 		AttemptNumber: 0,
-		ErrorIsFatal: false,
-		Errors: make([]string, 0),
-		StartedAt: time.Time{},
-		FinishedAt: time.Time{},
-		Retry: true,
+		ErrorIsFatal:  false,
+		Errors:        make([]string, 0),
+		StartedAt:     time.Time{},
+		FinishedAt:    time.Time{},
+		Retry:         true,
 	}
 }
 
@@ -65,7 +65,7 @@ func (summary *WorkSummary) Started() bool {
 	return !summary.StartedAt.IsZero()
 }
 
-func (summary *WorkSummary) Finish()  {
+func (summary *WorkSummary) Finish() {
 	summary.FinishedAt = time.Now().UTC()
 }
 

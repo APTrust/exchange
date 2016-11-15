@@ -2,42 +2,42 @@ package network
 
 import (
 	"fmt"
-    "github.com/aws/aws-sdk-go/aws"
-    "github.com/aws/aws-sdk-go/service/s3"
-    "github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/s3"
 )
 
 type S3ObjectDelete struct {
-	AWSRegion          string
-	ErrorMessage       string
+	AWSRegion    string
+	ErrorMessage string
 
 	DeleteObjectsInput *s3.DeleteObjectsInput
 	Response           *s3.DeleteObjectsOutput
 
-	session            *session.Session
+	session *session.Session
 }
 
-func NewS3ObjectDelete(region, bucket string, keys []string) (*S3ObjectDelete) {
+func NewS3ObjectDelete(region, bucket string, keys []string) *S3ObjectDelete {
 	objects := make([]*s3.ObjectIdentifier, len(keys))
 	for i := range keys {
 		objects[i] = &s3.ObjectIdentifier{
 			Key: aws.String(keys[i]),
 		}
 	}
-	deleteObjectsInput :=  &s3.DeleteObjectsInput{
+	deleteObjectsInput := &s3.DeleteObjectsInput{
 		Bucket: &bucket,
 		Delete: &s3.Delete{
 			Objects: objects,
 		},
 	}
 	return &S3ObjectDelete{
-		AWSRegion: region,
+		AWSRegion:          region,
 		DeleteObjectsInput: deleteObjectsInput,
 	}
 }
 
 // Returns an S3 session for this object.
-func (client *S3ObjectDelete)GetSession() (*session.Session) {
+func (client *S3ObjectDelete) GetSession() *session.Session {
 	if client.session == nil {
 		var err error
 		if err != nil {

@@ -11,45 +11,45 @@ type QueueItem struct {
 	// Identifier is a UUID in the case of ReplicationTransfers and
 	// RestoreTransfers, or an IntellectualObject.Identifier in the
 	// case of Ingest requests. It identifies the subject of the request.
-	Identifier  string
+	Identifier string
 	// The Id of the DPNWorkItem that corresponds to this replication or
 	// restore requests. For ingest requests, it's the Id of the WorkItem.
-	ItemId      int
+	ItemId int
 	// QueuedAt is the time at which this item was queued.
-	QueuedAt    time.Time
+	QueuedAt time.Time
 }
 
 // NewQueueItem creates a new QueueItem with the specified identifier.
 func NewQueueItem(identifier string) *QueueItem {
-	return &QueueItem{ Identifier: identifier }
+	return &QueueItem{Identifier: identifier}
 }
 
 // QueueResult describes the result of one run of workers/dpn_queue.
 // This info is dumped into a JSON log by dpn_queue.
 type QueueResult struct {
 	// StartTime is the time at which dpn_queue started.
-	StartTime    time.Time
+	StartTime time.Time
 	// EndTime is the time at which dpn_queue finished its processing.
-	EndTime      time.Time
+	EndTime time.Time
 	// Replications is a list of ReplicationTransfer requests encountered
 	// during this run.
 	Replications []*QueueItem
 	// Restores is a list of RestoreTransfer requests encountered
 	// during this run.
-	Restores     []*QueueItem
+	Restores []*QueueItem
 	// Ingests is a list of ingest requests encountered during this run.
-	Ingests      []*QueueItem
+	Ingests []*QueueItem
 	// Errors is a list of errors that occurred during processing.
-	Errors       []string
+	Errors []string
 }
 
 // NewQueueResult returns a new QueueResult object.
 func NewQueueResult() *QueueResult {
 	return &QueueResult{
 		Replications: make([]*QueueItem, 0),
-		Restores: make([]*QueueItem, 0),
-		Ingests: make([]*QueueItem, 0),
-		Errors: make([]string, 0),
+		Restores:     make([]*QueueItem, 0),
+		Ingests:      make([]*QueueItem, 0),
+		Errors:       make([]string, 0),
 	}
 }
 
@@ -80,7 +80,7 @@ func (result *QueueResult) AddIngest(item *QueueItem) {
 
 // FindReplication returns the Replication QueueItem with the specified
 // identifier, or nil.
-func (result *QueueResult) FindReplication(identifier string) (*QueueItem) {
+func (result *QueueResult) FindReplication(identifier string) *QueueItem {
 	for _, item := range result.Replications {
 		if item.Identifier == identifier {
 			return item
@@ -88,9 +88,10 @@ func (result *QueueResult) FindReplication(identifier string) (*QueueItem) {
 	}
 	return nil
 }
+
 // FindRestore returns the Restore QueueItem with the specified
 // identifier, or nil.
-func (result *QueueResult) FindRestore(identifier string) (*QueueItem) {
+func (result *QueueResult) FindRestore(identifier string) *QueueItem {
 	for _, item := range result.Restores {
 		if item.Identifier == identifier {
 			return item
@@ -101,7 +102,7 @@ func (result *QueueResult) FindRestore(identifier string) (*QueueItem) {
 
 // FindIngest returns the Ingest QueueItem with the specified
 // identifier, or nil.
-func (result *QueueResult) FindIngest(identifier string) (*QueueItem) {
+func (result *QueueResult) FindIngest(identifier string) *QueueItem {
 	for _, item := range result.Ingests {
 		if item.Identifier == identifier {
 			return item

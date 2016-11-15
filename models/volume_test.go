@@ -47,7 +47,7 @@ func TestVolume(t *testing.T) {
 	assert.Equal(t, expectedBytesAvailable, bytesAvailable)
 
 	// Make sure a request for too much space is rejected
-	err = volume.Reserve("/path/to/file_3", numBytes * 2)
+	err = volume.Reserve("/path/to/file_3", numBytes*2)
 	require.NotNil(t, err)
 
 	// Free the two chunks of space we just requested.
@@ -60,7 +60,7 @@ func TestVolume(t *testing.T) {
 	assert.Equal(t, initialSpace, bytesAvailable)
 
 	// Now we should have enough space for this.
-	err = volume.Reserve("/path/to/file_4", numBytes * 2)
+	err = volume.Reserve("/path/to/file_4", numBytes*2)
 	require.Nil(t, err)
 }
 
@@ -70,7 +70,7 @@ func TestReservations(t *testing.T) {
 
 	paths := []string{"p1", "p2", "p3", "p4", "p5"}
 	for i, path := range paths {
-		err := volume.Reserve(path, uint64(1000 + i))
+		err := volume.Reserve(path, uint64(1000+i))
 		assert.Nil(t, err)
 	}
 	reservations := volume.Reservations()
@@ -78,7 +78,7 @@ func TestReservations(t *testing.T) {
 	for i, path := range paths {
 		bytes, keyExists := reservations[path]
 		assert.True(t, keyExists)
-		assert.EqualValues(t, uint64(1000 + i), bytes)
+		assert.EqualValues(t, uint64(1000+i), bytes)
 		// Releasing path should remove it from reservations
 		volume.Release(path)
 	}

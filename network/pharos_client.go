@@ -15,12 +15,12 @@ import (
 // PharosClient supports basic calls to the Pharos Admin REST API.
 // This client does not support the Member API.
 type PharosClient struct {
-	hostUrl      string
-	apiVersion   string
-	apiUser      string
-	apiKey       string
-	httpClient   *http.Client
-	transport    *http.Transport
+	hostUrl    string
+	apiVersion string
+	apiUser    string
+	apiKey     string
+	httpClient *http.Client
+	transport  *http.Transport
 }
 
 // Creates a new pharos client. Param hostUrl should come from
@@ -38,16 +38,16 @@ func NewPharosClient(hostUrl, apiVersion, apiUser, apiKey string) (*PharosClient
 	}
 	httpClient := &http.Client{Jar: cookieJar, Transport: transport}
 	return &PharosClient{
-		hostUrl: hostUrl,
+		hostUrl:    hostUrl,
 		apiVersion: apiVersion,
-		apiUser: apiUser,
-		apiKey: apiKey,
+		apiUser:    apiUser,
+		apiKey:     apiKey,
 		httpClient: httpClient,
-		transport: transport}, nil
+		transport:  transport}, nil
 }
 
 // Returns a list of depositing member institutions.
-func (client *PharosClient) InstitutionGet(identifier string) (*PharosResponse) {
+func (client *PharosClient) InstitutionGet(identifier string) *PharosResponse {
 	// Set up the response object
 	resp := NewPharosResponse(PharosInstitution)
 	resp.institutions = make([]*models.Institution, 1)
@@ -71,9 +71,8 @@ func (client *PharosClient) InstitutionGet(identifier string) (*PharosResponse) 
 	return resp
 }
 
-
 // Returns a list of APTrust depositor institutions.
-func (client *PharosClient) InstitutionList(params url.Values) (*PharosResponse) {
+func (client *PharosClient) InstitutionList(params url.Values) *PharosResponse {
 	// Set up the response object
 	resp := NewPharosResponse(PharosInstitution)
 	resp.institutions = make([]*models.Institution, 0)
@@ -94,11 +93,10 @@ func (client *PharosClient) InstitutionList(params url.Values) (*PharosResponse)
 	return resp
 }
 
-
 // Returns the object with the specified identifier, if it
 // exists. Param identifier is an IntellectualObject identifier
 // in the format "institution.edu/object_name"
-func (client *PharosClient) IntellectualObjectGet(identifier string) (*PharosResponse) {
+func (client *PharosClient) IntellectualObjectGet(identifier string) *PharosResponse {
 	// Set up the response object
 	resp := NewPharosResponse(PharosIntellectualObject)
 	resp.objects = make([]*models.IntellectualObject, 1)
@@ -130,7 +128,7 @@ func (client *PharosClient) IntellectualObjectGet(identifier string) (*PharosRes
 // * name_contains - Return objects whose name contains the specified string.
 // * name_exact - Return only object with the exact name specified.
 // * state = 'A' for active records, 'D' for deleted. Default is 'A'
-func (client *PharosClient) IntellectualObjectList(params url.Values) (*PharosResponse) {
+func (client *PharosClient) IntellectualObjectList(params url.Values) *PharosResponse {
 	// Set up the response object
 	resp := NewPharosResponse(PharosIntellectualObject)
 	resp.objects = make([]*models.IntellectualObject, 0)
@@ -145,7 +143,6 @@ func (client *PharosClient) IntellectualObjectList(params url.Values) (*PharosRe
 		return resp
 	}
 
-
 	// Parse the JSON from the response body.
 	// If there's an error, it will be recorded in resp.Error
 	resp.UnmarshalJsonList()
@@ -157,7 +154,7 @@ func (client *PharosClient) IntellectualObjectList(params url.Values) (*PharosRe
 // non-zero, this updates the existing object with a PUT. The response object
 // will contain a new copy of the IntellectualObject if it was successfully
 // saved.
-func (client *PharosClient) IntellectualObjectSave(obj *models.IntellectualObject) (*PharosResponse) {
+func (client *PharosClient) IntellectualObjectSave(obj *models.IntellectualObject) *PharosResponse {
 	// Set up the response object
 	resp := NewPharosResponse(PharosIntellectualObject)
 	resp.objects = make([]*models.IntellectualObject, 1)
@@ -199,7 +196,7 @@ func (client *PharosClient) IntellectualObjectSave(obj *models.IntellectualObjec
 // a WorkItem in Pharos requesting that the IntellectualObject with the
 // specified identifier be ingested into DPN. Check the value of WorkItem()
 // (not IntellectualObject()) in the response.
-func (client *PharosClient) IntellectualObjectPushToDPN(identifier string) (*PharosResponse) {
+func (client *PharosClient) IntellectualObjectPushToDPN(identifier string) *PharosResponse {
 	// Set up the response object
 	resp := NewPharosResponse(PharosWorkItem)
 	resp.workItems = make([]*models.WorkItem, 1)
@@ -225,7 +222,7 @@ func (client *PharosClient) IntellectualObjectPushToDPN(identifier string) (*Pha
 
 // Returns the GenericFile having the specified identifier. The identifier
 // should be in the format "institution.edu/object_name/path/to/file.ext"
-func (client *PharosClient) GenericFileGet(identifier string) (*PharosResponse) {
+func (client *PharosClient) GenericFileGet(identifier string) *PharosResponse {
 	// Set up the response object
 	resp := NewPharosResponse(PharosGenericFile)
 	resp.files = make([]*models.GenericFile, 1)
@@ -253,7 +250,7 @@ func (client *PharosClient) GenericFileGet(identifier string) (*PharosResponse) 
 //
 // * intellectual_object_identifier - The identifier of the object to which
 //   the files belong.
-func (client *PharosClient) GenericFileList(params url.Values) (*PharosResponse) {
+func (client *PharosClient) GenericFileList(params url.Values) *PharosResponse {
 	// Set up the response object
 	resp := NewPharosResponse(PharosGenericFile)
 	resp.files = make([]*models.GenericFile, 0)
@@ -279,7 +276,7 @@ func (client *PharosClient) GenericFileList(params url.Values) (*PharosResponse)
 // performs a PUT to update the existing record. Either way, the record
 // must have an IntellectualObject ID. The response object will have a new
 // copy of the GenericFile if the save was successful.
-func (client *PharosClient) GenericFileSave(obj *models.GenericFile) (*PharosResponse) {
+func (client *PharosClient) GenericFileSave(obj *models.GenericFile) *PharosResponse {
 	// Set up the response object
 	resp := NewPharosResponse(PharosGenericFile)
 	resp.files = make([]*models.GenericFile, 1)
@@ -324,7 +321,7 @@ func (client *PharosClient) GenericFileSave(obj *models.GenericFile) (*PharosRes
 // the batch insert is run as a transaction, so either all inserts
 // succeed, or the whole transaction is rolled back and no inserts
 // occur.
-func (client *PharosClient) GenericFileSaveBatch(objList []*models.GenericFile) (*PharosResponse) {
+func (client *PharosClient) GenericFileSaveBatch(objList []*models.GenericFile) *PharosResponse {
 	// Set up the response object
 	resp := NewPharosResponse(PharosGenericFile)
 	resp.files = make([]*models.GenericFile, len(objList))
@@ -353,7 +350,7 @@ func (client *PharosClient) GenericFileSaveBatch(objList []*models.GenericFile) 
 	batch := make([]*models.GenericFileForPharos, len(objList))
 	for i, gf := range objList {
 		batch[i] = models.NewGenericFileForPharos(gf)
- 	}
+	}
 
 	// Prepare the JSON data
 	postData, err := json.Marshal(batch)
@@ -373,7 +370,7 @@ func (client *PharosClient) GenericFileSaveBatch(objList []*models.GenericFile) 
 }
 
 // Returns the checksum with the specified id
-func (client *PharosClient) ChecksumGet(id int) (*PharosResponse) {
+func (client *PharosClient) ChecksumGet(id int) *PharosResponse {
 	// Set up the response object
 	resp := NewPharosResponse(PharosChecksum)
 	resp.checksums = make([]*models.Checksum, 1)
@@ -402,7 +399,7 @@ func (client *PharosClient) ChecksumGet(id int) (*PharosResponse) {
 // * generic_file_identifier - The identifier of the file to which
 //   the checksum belongs.
 // * algorithm - The checksum algorithm (constants.AldMd5, constants.AlgSha256)
-func (client *PharosClient) ChecksumList(params url.Values) (*PharosResponse) {
+func (client *PharosClient) ChecksumList(params url.Values) *PharosResponse {
 	// Set up the response object
 	resp := NewPharosResponse(PharosChecksum)
 	resp.checksums = make([]*models.Checksum, 0)
@@ -428,7 +425,7 @@ func (client *PharosClient) ChecksumList(params url.Values) (*PharosResponse) {
 // the identifier of the GenericFile to which the checksum belongs.
 // The response object will have a new copy of the Checksum if the
 // save was successful.
-func (client *PharosClient) ChecksumSave(obj *models.Checksum, gfIdentifier string) (*PharosResponse) {
+func (client *PharosClient) ChecksumSave(obj *models.Checksum, gfIdentifier string) *PharosResponse {
 	// Set up the response object
 	resp := NewPharosResponse(PharosChecksum)
 	resp.checksums = make([]*models.Checksum, 1)
@@ -463,7 +460,7 @@ func (client *PharosClient) ChecksumSave(obj *models.Checksum, gfIdentifier stri
 // Returns the PREMIS event with the specified identifier. The identifier
 // should be a UUID in string format, with dashes. E.g.
 // "49a7d6b5-cdc1-4912-812e-885c08e90c68"
-func (client *PharosClient) PremisEventGet(identifier string) (*PharosResponse) {
+func (client *PharosClient) PremisEventGet(identifier string) *PharosResponse {
 	// Set up the response object
 	resp := NewPharosResponse(PharosPremisEvent)
 	resp.events = make([]*models.PremisEvent, 1)
@@ -498,7 +495,7 @@ func (client *PharosClient) PremisEventGet(identifier string) (*PharosResponse) 
 //   event types listed in contants/constants.go
 // * created_since - (iso 8601 datetime string) Return events created
 //   on or after the specified datetime.
-func (client *PharosClient) PremisEventList(params url.Values) (*PharosResponse) {
+func (client *PharosClient) PremisEventList(params url.Values) *PharosResponse {
 	// Set up the response object
 	resp := NewPharosResponse(PharosPremisEvent)
 	resp.events = make([]*models.PremisEvent, 0)
@@ -523,7 +520,7 @@ func (client *PharosClient) PremisEventList(params url.Values) (*PharosResponse)
 // POST request to create a new event record. If the ID is non-zero, this
 // issues a PUT to update the existing event. The response object will
 // have a new copy of the Premis event if the save was successful.
-func (client *PharosClient) PremisEventSave(obj *models.PremisEvent) (*PharosResponse) {
+func (client *PharosClient) PremisEventSave(obj *models.PremisEvent) *PharosResponse {
 	// Set up the response object
 	resp := NewPharosResponse(PharosPremisEvent)
 	resp.events = make([]*models.PremisEvent, 1)
@@ -581,7 +578,7 @@ func (client *PharosClient) PremisEventSave(obj *models.PremisEvent) (*PharosRes
 // item_action - String enum value from constants. ActionIngest, ActionRestore, etc.
 // access - String enum value from constants.AccessRights.
 // state - "A" for active items, "D" for deleted items.
-func (client *PharosClient) WorkItemList(params url.Values) (*PharosResponse) {
+func (client *PharosClient) WorkItemList(params url.Values) *PharosResponse {
 	// Set up the response object
 	resp := NewPharosResponse(PharosWorkItem)
 	resp.workItems = make([]*models.WorkItem, 0)
@@ -606,7 +603,7 @@ func (client *PharosClient) WorkItemList(params url.Values) (*PharosResponse) {
 // this performs a POST to create a new record. For non-zero IDs, this
 // performs a PUT to update the existing record. The response object
 // will include a new copy of the WorkItem if it was saved successfully.
-func (client *PharosClient) WorkItemSave(obj *models.WorkItem) (*PharosResponse) {
+func (client *PharosClient) WorkItemSave(obj *models.WorkItem) *PharosResponse {
 	// Set up the response object
 	resp := NewPharosResponse(PharosWorkItem)
 	resp.workItems = make([]*models.WorkItem, 1)
@@ -643,7 +640,7 @@ func (client *PharosClient) WorkItemSave(obj *models.WorkItem) (*PharosResponse)
 }
 
 // Returns the WorkItem with the specified ID.
-func (client *PharosClient) WorkItemGet(id int) (*PharosResponse) {
+func (client *PharosClient) WorkItemGet(id int) *PharosResponse {
 	// Set up the response object
 	resp := NewPharosResponse(PharosWorkItem)
 	resp.workItems = make([]*models.WorkItem, 1)
@@ -671,7 +668,7 @@ func (client *PharosClient) WorkItemGet(id int) (*PharosResponse) {
 // this performs a POST to create a new record. For non-zero IDs, this
 // performs a PUT to update the existing record. The response object
 // will include a new copy of the WorkItemState if it was saved successfully.
-func (client *PharosClient) WorkItemStateSave(obj *models.WorkItemState) (*PharosResponse) {
+func (client *PharosClient) WorkItemStateSave(obj *models.WorkItemState) *PharosResponse {
 	// Set up the response object
 	resp := NewPharosResponse(PharosWorkItemState)
 	resp.workItemStates = make([]*models.WorkItemState, 1)
@@ -708,7 +705,7 @@ func (client *PharosClient) WorkItemStateSave(obj *models.WorkItemState) (*Pharo
 }
 
 // Returns the WorkItemState with the specified WorkItemId.
-func (client *PharosClient) WorkItemStateGet(workItemId int) (*PharosResponse) {
+func (client *PharosClient) WorkItemStateGet(workItemId int) *PharosResponse {
 	// Set up the response object
 	resp := NewPharosResponse(PharosWorkItemState)
 	resp.workItemStates = make([]*models.WorkItemState, 1)
@@ -735,7 +732,7 @@ func (client *PharosClient) WorkItemStateGet(workItemId int) (*PharosResponse) {
 // DPNWorkItemList returns a list of DPNWorkItems that match the specified
 // criteria. Valid params include node, task, identifier, queued_before,
 // queued_after, completed_before and completed_after.
-func (client *PharosClient) DPNWorkItemList(params url.Values) (*PharosResponse) {
+func (client *PharosClient) DPNWorkItemList(params url.Values) *PharosResponse {
 	// Set up the response object
 	resp := NewPharosResponse(PharosDPNWorkItem)
 	resp.dpnWorkItems = make([]*models.DPNWorkItem, 0)
@@ -760,7 +757,7 @@ func (client *PharosClient) DPNWorkItemList(params url.Values) (*PharosResponse)
 // this performs a POST to create a new record. For non-zero IDs, this
 // performs a PUT to update the existing record. The response object
 // will include a new copy of the WorkItem if it was saved successfully.
-func (client *PharosClient) DPNWorkItemSave(obj *models.DPNWorkItem) (*PharosResponse) {
+func (client *PharosClient) DPNWorkItemSave(obj *models.DPNWorkItem) *PharosResponse {
 	// Set up the response object
 	resp := NewPharosResponse(PharosDPNWorkItem)
 	resp.dpnWorkItems = make([]*models.DPNWorkItem, 1)
@@ -797,7 +794,7 @@ func (client *PharosClient) DPNWorkItemSave(obj *models.DPNWorkItem) (*PharosRes
 }
 
 // Returns the DPNWorkItem with the specified Id.
-func (client *PharosClient) DPNWorkItemGet(id int) (*PharosResponse) {
+func (client *PharosClient) DPNWorkItemGet(id int) *PharosResponse {
 	// Set up the response object
 	resp := NewPharosResponse(PharosDPNWorkItem)
 	resp.dpnWorkItems = make([]*models.DPNWorkItem, 1)
@@ -821,11 +818,9 @@ func (client *PharosClient) DPNWorkItemGet(id int) (*PharosResponse) {
 	return resp
 }
 
-
 // -------------------------------------------------------------------------
 // Utility Methods
 // -------------------------------------------------------------------------
-
 
 // BuildUrl combines the host and protocol in client.hostUrl with
 // relativeUrl to create an absolute URL. For example, if client.hostUrl
@@ -849,7 +844,7 @@ func (client *PharosClient) BuildUrl(relativeUrl string) string {
 // constructed from bytes.NewBuffer([]byte) for POST and PUT.
 // For the PharosClient, we're typically sending JSON data in
 // the request body.
-func (client *PharosClient) NewJsonRequest(method, absoluteUrl string, requestData io.Reader) (*http.Request, error){
+func (client *PharosClient) NewJsonRequest(method, absoluteUrl string, requestData io.Reader) (*http.Request, error) {
 	req, err := http.NewRequest(method, absoluteUrl, requestData)
 	if err != nil {
 		return nil, err
@@ -921,7 +916,7 @@ func escapeSlashes(s string) string {
 	return strings.Replace(s, "/", "%2F", -1)
 }
 
-func encodeParams(params url.Values) (string) {
+func encodeParams(params url.Values) string {
 	if params == nil {
 		return ""
 	} else {

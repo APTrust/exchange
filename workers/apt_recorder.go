@@ -18,13 +18,13 @@ const (
 
 // Records ingest data (objects, files and events) in Pharos
 type APTRecorder struct {
-	Context             *context.Context
-	RecordChannel       chan *models.IngestState
-	CleanupChannel      chan *models.IngestState
-	WaitGroup           sync.WaitGroup
+	Context        *context.Context
+	RecordChannel  chan *models.IngestState
+	CleanupChannel chan *models.IngestState
+	WaitGroup      sync.WaitGroup
 }
 
-func NewAPTRecorder(_context *context.Context) (*APTRecorder) {
+func NewAPTRecorder(_context *context.Context) *APTRecorder {
 	recorder := &APTRecorder{
 		Context: _context,
 	}
@@ -41,7 +41,7 @@ func NewAPTRecorder(_context *context.Context) (*APTRecorder) {
 }
 
 // This is the callback that NSQ workers use to handle messages from NSQ.
-func (recorder *APTRecorder) HandleMessage(message *nsq.Message) (error) {
+func (recorder *APTRecorder) HandleMessage(message *nsq.Message) error {
 	ingestState, err := GetIngestState(message, recorder.Context, false)
 	if err != nil {
 		recorder.Context.MessageLog.Error(err.Error())
@@ -52,8 +52,8 @@ func (recorder *APTRecorder) HandleMessage(message *nsq.Message) (error) {
 	// other is currently working on it, just finish the message and
 	// assume that the in-progress worker will take care of the original.
 	if ingestState.WorkItem.Node != "" && ingestState.WorkItem.Pid != 0 {
-		recorder.Context.MessageLog.Info("Marking WorkItem %d (%s/%s) as finished " +
-			"without doing any work, because this item is currently in process by " +
+		recorder.Context.MessageLog.Info("Marking WorkItem %d (%s/%s) as finished "+
+			"without doing any work, because this item is currently in process by "+
 			"node %s, pid %s. WorkItem was last updated at %s.",
 			ingestState.WorkItem.Id, ingestState.WorkItem.Bucket,
 			ingestState.WorkItem.Name, ingestState.WorkItem.Node,
@@ -88,7 +88,7 @@ func (recorder *APTRecorder) HandleMessage(message *nsq.Message) (error) {
 }
 
 // Step 1: Record data in Pharos
-func (recorder *APTRecorder) record () {
+func (recorder *APTRecorder) record() {
 	for ingestState := range recorder.RecordChannel {
 		ingestState.IngestManifest.RecordResult.Start()
 		ingestState.IngestManifest.RecordResult.Attempted = true
@@ -102,7 +102,7 @@ func (recorder *APTRecorder) record () {
 }
 
 // Step 2: Delete tar file from staging area and from receiving bucket.
-func (recorder *APTRecorder) cleanup () {
+func (recorder *APTRecorder) cleanup() {
 	for ingestState := range recorder.CleanupChannel {
 		// See if we have fatal errors, or too many recurring transient errors
 		attemptNumber := ingestState.IngestManifest.RecordResult.AttemptNumber
@@ -125,7 +125,7 @@ func (recorder *APTRecorder) cleanup () {
 			MarkWorkItemRequeued(ingestState, recorder.Context)
 		} else {
 			MarkWorkItemStarted(ingestState, recorder.Context, constants.StageCleanup,
-				"Bag has been stored and recorded. Deleting files from receiving bucket " +
+				"Bag has been stored and recorded. Deleting files from receiving bucket "+
 					"and staging area.")
 			DeleteBagFromStaging(ingestState, recorder.Context, ingestState.IngestManifest.RecordResult)
 			recorder.deleteBagFromReceivingBucket(ingestState)
@@ -147,7 +147,7 @@ func (recorder *APTRecorder) cleanup () {
 // in Pharos and which were not. This was a problem in the old
 // system, where record failured were common, and PREMIS events
 // often wound up being recorded twice.
-func (recorder *APTRecorder) buildEventsAndChecksums (ingestState *models.IngestState) {
+func (recorder *APTRecorder) buildEventsAndChecksums(ingestState *models.IngestState) {
 	obj := ingestState.IngestManifest.Object
 	err := obj.BuildIngestEvents()
 	if err != nil {
@@ -159,8 +159,8 @@ func (recorder *APTRecorder) buildEventsAndChecksums (ingestState *models.Ingest
 	}
 }
 
-func (recorder *APTRecorder) saveAllPharosData (ingestState *models.IngestState) {
-	if (ingestState.IngestManifest.Object.Id == 0) {
+func (recorder *APTRecorder) saveAllPharosData(ingestState *models.IngestState) {
+	if ingestState.IngestManifest.Object.Id == 0 {
 		recorder.saveIntellectualObject(ingestState)
 		if ingestState.IngestManifest.RecordResult.HasErrors() {
 			recorder.Context.MessageLog.Error("Error saving IntellectualObject %s/%s: %v",
@@ -173,14 +173,14 @@ func (recorder *APTRecorder) saveAllPharosData (ingestState *models.IngestState)
 				ingestState.IngestManifest.Object.Id)
 		}
 	} else {
-			recorder.Context.MessageLog.Info(
-				"No need to save %s/%s already has id %d",
-				ingestState.WorkItem.Bucket, ingestState.WorkItem.Name,
-				ingestState.IngestManifest.Object.Id)
+		recorder.Context.MessageLog.Info(
+			"No need to save %s/%s already has id %d",
+			ingestState.WorkItem.Bucket, ingestState.WorkItem.Name,
+			ingestState.IngestManifest.Object.Id)
 	}
 	recorder.saveGenericFiles(ingestState)
 	if ingestState.IngestManifest.RecordResult.HasErrors() {
-		recorder.Context.MessageLog.Error("Error saving one or more GenericFiles for " +
+		recorder.Context.MessageLog.Error("Error saving one or more GenericFiles for "+
 			"IntellectualObject %s/%s: %v",
 			ingestState.WorkItem.Bucket, ingestState.WorkItem.Name,
 			ingestState.IngestManifest.RecordResult.AllErrorsAsString())
@@ -188,7 +188,7 @@ func (recorder *APTRecorder) saveAllPharosData (ingestState *models.IngestState)
 	}
 }
 
-func (recorder *APTRecorder) saveIntellectualObject (ingestState *models.IngestState) {
+func (recorder *APTRecorder) saveIntellectualObject(ingestState *models.IngestState) {
 	obj := ingestState.IngestManifest.Object
 	resp := recorder.Context.PharosClient.IntellectualObjectSave(obj)
 	if resp.Error != nil {
@@ -208,7 +208,7 @@ func (recorder *APTRecorder) saveIntellectualObject (ingestState *models.IngestS
 	recorder.savePremisEventsForObject(ingestState)
 }
 
-func (recorder *APTRecorder) saveGenericFiles (ingestState *models.IngestState) {
+func (recorder *APTRecorder) saveGenericFiles(ingestState *models.IngestState) {
 	filesToCreate := make([]*models.GenericFile, 0)
 	filesToUpdate := make([]*models.GenericFile, 0)
 	for i, gf := range ingestState.IngestManifest.Object.GenericFiles {
@@ -219,7 +219,7 @@ func (recorder *APTRecorder) saveGenericFiles (ingestState *models.IngestState) 
 				gf.Identifier)
 			gf.IngestNeedsSave = false
 		}
-		if i % GENERIC_FILE_BATCH_SIZE == 0 {
+		if i%GENERIC_FILE_BATCH_SIZE == 0 {
 			recorder.createGenericFiles(ingestState, filesToCreate)
 			if ingestState.IngestManifest.RecordResult.HasErrors() {
 				break
@@ -252,7 +252,7 @@ func (recorder *APTRecorder) saveGenericFiles (ingestState *models.IngestState) 
 	}
 }
 
-func (recorder *APTRecorder) createGenericFiles (ingestState *models.IngestState, files []*models.GenericFile) {
+func (recorder *APTRecorder) createGenericFiles(ingestState *models.IngestState, files []*models.GenericFile) {
 	if len(files) == 0 {
 		return
 	}
@@ -269,7 +269,7 @@ func (recorder *APTRecorder) createGenericFiles (ingestState *models.IngestState
 	for _, savedFile := range resp.GenericFiles() {
 		gf := ingestState.IngestManifest.Object.FindGenericFile(savedFile.OriginalPath())
 		if gf == nil {
-			ingestState.IngestManifest.RecordResult.AddError("After save, could not find file '%s' " +
+			ingestState.IngestManifest.RecordResult.AddError("After save, could not find file '%s' "+
 				"in IntellectualObject.", savedFile.OriginalPath())
 			continue
 		}
@@ -285,7 +285,7 @@ func (recorder *APTRecorder) createGenericFiles (ingestState *models.IngestState
 	}
 }
 
-func (recorder *APTRecorder) updateGenericFiles (ingestState *models.IngestState, files []*models.GenericFile) {
+func (recorder *APTRecorder) updateGenericFiles(ingestState *models.IngestState, files []*models.GenericFile) {
 	if len(files) == 0 {
 		return
 	}
@@ -303,7 +303,7 @@ func (recorder *APTRecorder) updateGenericFiles (ingestState *models.IngestState
 	}
 }
 
-func (recorder *APTRecorder) savePremisEventsForFile (ingestState *models.IngestState, gf *models.GenericFile) {
+func (recorder *APTRecorder) savePremisEventsForFile(ingestState *models.IngestState, gf *models.GenericFile) {
 	// Call this only for files that need update.
 	// The batch create call creates all of the PremisEvents
 	// and checksums as well.
@@ -319,7 +319,7 @@ func (recorder *APTRecorder) savePremisEventsForFile (ingestState *models.Ingest
 	}
 }
 
-func (recorder *APTRecorder) savePremisEventsForObject (ingestState *models.IngestState) {
+func (recorder *APTRecorder) savePremisEventsForObject(ingestState *models.IngestState) {
 	obj := ingestState.IngestManifest.Object
 	for i, event := range obj.PremisEvents {
 		resp := recorder.Context.PharosClient.PremisEventSave(event)
@@ -333,7 +333,7 @@ func (recorder *APTRecorder) savePremisEventsForObject (ingestState *models.Inge
 	}
 }
 
-func (recorder *APTRecorder) saveChecksums (ingestState *models.IngestState, gf *models.GenericFile) {
+func (recorder *APTRecorder) saveChecksums(ingestState *models.IngestState, gf *models.GenericFile) {
 	// Call this only for files that need update.
 	// The only cheksums we should have for this object are the
 	// ones we created during this ingest - not the ones that
@@ -353,7 +353,7 @@ func (recorder *APTRecorder) saveChecksums (ingestState *models.IngestState, gf 
 	}
 }
 
-func (recorder *APTRecorder) deleteBagFromReceivingBucket (ingestState *models.IngestState) {
+func (recorder *APTRecorder) deleteBagFromReceivingBucket(ingestState *models.IngestState) {
 	ingestState.IngestManifest.CleanupResult.Start()
 	ingestState.IngestManifest.CleanupResult.Attempted = true
 	ingestState.IngestManifest.CleanupResult.AttemptNumber += 1
@@ -369,7 +369,7 @@ func (recorder *APTRecorder) deleteBagFromReceivingBucket (ingestState *models.I
 	deleter := network.NewS3ObjectDelete(
 		constants.AWSVirginia,
 		ingestState.IngestManifest.S3Bucket,
-		[]string{ ingestState.IngestManifest.S3Key })
+		[]string{ingestState.IngestManifest.S3Key})
 	deleter.DeleteList()
 	if deleter.ErrorMessage != "" {
 		message := fmt.Sprintf("In cleanup, error deleting S3 item %s/%s: %s",

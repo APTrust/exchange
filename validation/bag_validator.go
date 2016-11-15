@@ -13,21 +13,21 @@ import (
 )
 
 type ValidationResult struct {
-	ParseSummary         *models.WorkSummary
-	ValidationSummary    *models.WorkSummary
-	IntellectualObject   *models.IntellectualObject
+	ParseSummary       *models.WorkSummary
+	ValidationSummary  *models.WorkSummary
+	IntellectualObject *models.IntellectualObject
 }
 
-func (result *ValidationResult) HasErrors() (bool) {
+func (result *ValidationResult) HasErrors() bool {
 	return result.ParseSummary.HasErrors() ||
 		result.ValidationSummary.HasErrors() ||
 		result.IntellectualObject.IngestErrorMessage != ""
 }
 
 type BagValidator struct {
-	PathToBag            string
-	BagValidationConfig  *BagValidationConfig
-	virtualBag           *models.VirtualBag
+	PathToBag           string
+	BagValidationConfig *BagValidationConfig
+	virtualBag          *models.VirtualBag
 }
 
 // NewBagValidator creates a new BagValidator. Param pathToBag
@@ -63,17 +63,17 @@ func NewBagValidator(pathToBag string, bagValidationConfig *BagValidationConfig)
 		}
 	}
 	bagValidator := &BagValidator{
-		PathToBag: pathToBag,
+		PathToBag:           pathToBag,
 		BagValidationConfig: bagValidationConfig,
-	    virtualBag: models.NewVirtualBag(pathToBag, tagFilesToParse, calculateMd5, calculateSha256),
+		virtualBag:          models.NewVirtualBag(pathToBag, tagFilesToParse, calculateMd5, calculateSha256),
 	}
 	return bagValidator, nil
 }
 
 // Reads and validates the bag.
-func (validator *BagValidator) Validate() (*ValidationResult){
+func (validator *BagValidator) Validate() *ValidationResult {
 	result := &ValidationResult{
-		ValidationSummary:  models.NewWorkSummary(),
+		ValidationSummary: models.NewWorkSummary(),
 	}
 	result.IntellectualObject, result.ParseSummary = validator.virtualBag.Read()
 	if result.IntellectualObject == nil {
@@ -209,7 +209,7 @@ func (validator *BagValidator) verifyGenericFiles(result *ValidationResult) {
 }
 
 // Returns a specific description of the file name validation rules in effect.
-func (validator *BagValidator) fileValidationDetail() (string) {
+func (validator *BagValidator) fileValidationDetail() string {
 	detail := "validation pattern " + validator.BagValidationConfig.FileNamePattern
 	if strings.ToUpper(validator.BagValidationConfig.FileNamePattern) == "APTRUST" {
 		detail = "APTrust validation rules"

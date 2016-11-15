@@ -10,22 +10,22 @@ type Ingest struct {
 
 	// IngestId is the Id of this ingest record. This is a UUID
 	// in string format.
-	IngestId            string     `json:"ingest_id"`
+	IngestId string `json:"ingest_id"`
 
 	// Bag is the UUID of the bag to which this record belongs.
-	Bag                 string     `json:"bag"`
+	Bag string `json:"bag"`
 
 	// Ingested describes whether or not the ingest process
 	// completed successfully. This may be fals in cases where
 	// the bag was not successfully replicated to the minimum
 	// number of nodes.
-	Ingested            bool       `json:"ingested"`
+	Ingested bool `json:"ingested"`
 
 	// ReplicatingNodes is a list of namespaces of the nodes
 	// that have successfully replicated this bag.
-	ReplicatingNodes    []string   `json:"replicating_nodes"`
+	ReplicatingNodes []string `json:"replicating_nodes"`
 
 	// CreatedAt describes when this Ingest record was created
 	// in the DPN registry.
-	CreatedAt           time.Time  `json:"created_at"`
+	CreatedAt time.Time `json:"created_at"`
 }

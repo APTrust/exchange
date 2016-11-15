@@ -22,14 +22,14 @@ const MAX_UPLOAD_ATTEMPTS = 15
 
 // Stores GenericFiles in long-term storage (S3 and Glacier).
 type APTStorer struct {
-	Context             *context.Context
-	StorageChannel      chan *models.IngestState
-	CleanupChannel      chan *models.IngestState
-	RecordChannel       chan *models.IngestState
-	WaitGroup           sync.WaitGroup
+	Context        *context.Context
+	StorageChannel chan *models.IngestState
+	CleanupChannel chan *models.IngestState
+	RecordChannel  chan *models.IngestState
+	WaitGroup      sync.WaitGroup
 }
 
-func NewAPTStorer(_context *context.Context) (*APTStorer) {
+func NewAPTStorer(_context *context.Context) *APTStorer {
 	storer := &APTStorer{
 		Context: _context,
 	}
@@ -49,7 +49,7 @@ func NewAPTStorer(_context *context.Context) (*APTStorer) {
 }
 
 // This is the callback that NSQ workers use to handle messages from NSQ.
-func (storer *APTStorer) HandleMessage(message *nsq.Message) (error) {
+func (storer *APTStorer) HandleMessage(message *nsq.Message) error {
 	ingestState, err := GetIngestState(message, storer.Context, false)
 	if err != nil {
 		storer.Context.MessageLog.Error(err.Error())
@@ -60,8 +60,8 @@ func (storer *APTStorer) HandleMessage(message *nsq.Message) (error) {
 	// other is currently working on it, just finish the message and
 	// assume that the in-progress worker will take care of the original.
 	if ingestState.WorkItem.Node != "" && ingestState.WorkItem.Pid != 0 {
-		storer.Context.MessageLog.Info("Marking WorkItem %d (%s/%s) as finished " +
-			"without doing any work, because this item is currently in process by " +
+		storer.Context.MessageLog.Info("Marking WorkItem %d (%s/%s) as finished "+
+			"without doing any work, because this item is currently in process by "+
 			"node %s, pid %s. WorkItem was last updated at %s.",
 			ingestState.WorkItem.Id, ingestState.WorkItem.Bucket,
 			ingestState.WorkItem.Name, ingestState.WorkItem.Node,
@@ -99,7 +99,7 @@ func (storer *APTStorer) HandleMessage(message *nsq.Message) (error) {
 // Step 1 of 3: Put the item in long-term storage
 //
 // -------------------------------------------------------------------------
-func (storer *APTStorer) store () {
+func (storer *APTStorer) store() {
 	for ingestState := range storer.StorageChannel {
 
 		ingestState.IngestManifest.StoreResult.Start()
@@ -117,11 +117,11 @@ func (storer *APTStorer) store () {
 // Step 2 of 3: Delete the bag file(s) if storage succeeded
 //
 // -------------------------------------------------------------------------
-func (storer *APTStorer) cleanup () {
+func (storer *APTStorer) cleanup() {
 	for ingestState := range storer.CleanupChannel {
-		if (ingestState.IngestManifest.StoreResult.HasErrors() == false &&
-			ingestState.IngestManifest.Object.AllFilesSaved()) {
-			storer.Context.MessageLog.Info("Deleting tar file %s (%s/%s) " +
+		if ingestState.IngestManifest.StoreResult.HasErrors() == false &&
+			ingestState.IngestManifest.Object.AllFilesSaved() {
+			storer.Context.MessageLog.Info("Deleting tar file %s (%s/%s) "+
 				"because all files were stored successfully",
 				ingestState.IngestManifest.Object.IngestTarFilePath,
 				ingestState.IngestManifest.Object.IngestS3Bucket,
@@ -137,7 +137,7 @@ func (storer *APTStorer) cleanup () {
 // Step 3 of 3: Record IntellectualObject and GenericFile data in Pharos
 //
 // -------------------------------------------------------------------------
-func (storer *APTStorer) record () {
+func (storer *APTStorer) record() {
 	for ingestState := range storer.RecordChannel {
 
 		// Copy JSON representation of the IngestManifest to Pharos
@@ -175,7 +175,7 @@ func (storer *APTStorer) record () {
 	}
 }
 
-func (storer *APTStorer) saveFile (ingestState *models.IngestState, gf *models.GenericFile) {
+func (storer *APTStorer) saveFile(ingestState *models.IngestState, gf *models.GenericFile) {
 	existingSha256, err := storer.getExistingSha256(gf.Identifier)
 	if err != nil {
 		storer.Context.MessageLog.Error(err.Error())
@@ -215,7 +215,7 @@ func (storer *APTStorer) saveFile (ingestState *models.IngestState, gf *models.G
 			// OK. Set the GenericFile's UUID to match the existing file's
 			// UUID, so that we overwrite the existing file, and so the
 			// GenericFile record in Pharos still has the correct URL.
-			message := fmt.Sprintf("Resetting UUID for '%s' to '%s' so we can overwrite " +
+			message := fmt.Sprintf("Resetting UUID for '%s' to '%s' so we can overwrite "+
 				"the currently stored version of the file.",
 				gf.Identifier, uuid)
 			storer.Context.MessageLog.Info(message)
@@ -246,7 +246,7 @@ func (storer *APTStorer) saveFile (ingestState *models.IngestState, gf *models.G
 // unchanged versions of some files. So we check the sha256 of the
 // existing version against the sha256 of the one just uploaded. If they're
 // the same, we don't bother overwriting the existing file.
-func (storer *APTStorer) getExistingSha256 (gfIdentifier string) (*models.Checksum, error) {
+func (storer *APTStorer) getExistingSha256(gfIdentifier string) (*models.Checksum, error) {
 	storer.Context.MessageLog.Info("Checking Pharos for existing sha256 digest for %s",
 		gfIdentifier)
 	params := url.Values{}
@@ -268,7 +268,7 @@ func (storer *APTStorer) getExistingSha256 (gfIdentifier string) (*models.Checks
 // of the S3 storage URL. When we are updating an existing GenericFile, we want
 // to overwrite the object in S3/Glacier rather than writing a new one and
 // leaving the old one hanging around. To overwrite it, we must know its UUID.
-func (storer *APTStorer) getUuidOfExistingFile (gfIdentifier string) (string, error) {
+func (storer *APTStorer) getUuidOfExistingFile(gfIdentifier string) (string, error) {
 	storer.Context.MessageLog.Info("Checking Pharos for existing UUID for GenericFile %s",
 		gfIdentifier)
 	resp := storer.Context.PharosClient.GenericFileGet(gfIdentifier)
@@ -285,11 +285,11 @@ func (storer *APTStorer) getUuidOfExistingFile (gfIdentifier string) (string, er
 	if !util.LooksLikeUUID(uuid) {
 		return "", fmt.Errorf("Could not extract UUID from URI %s", existingGenericFile.URI)
 	}
-    return uuid, nil
+	return uuid, nil
 }
 
 // Copy the GenericFile to long-term storage in S3 or Glacier
-func (storer *APTStorer) copyToLongTermStorage (ingestState *models.IngestState, gf *models.GenericFile, sendWhere string) {
+func (storer *APTStorer) copyToLongTermStorage(ingestState *models.IngestState, gf *models.GenericFile, sendWhere string) {
 	if !storer.uuidPresent(ingestState, gf) {
 		msg := fmt.Sprintf("Cannot copy GenericFile %s to long-term storage because UUID is missing",
 			gf.Identifier)
@@ -304,7 +304,7 @@ func (storer *APTStorer) copyToLongTermStorage (ingestState *models.IngestState,
 			msg := "S3 uploader is nil. Cannot proceed."
 			ingestState.IngestManifest.StoreResult.AddError(msg)
 			storer.Context.MessageLog.Error(msg)
-			return  // We have some config problem here. Stop trying.
+			return // We have some config problem here. Stop trying.
 		}
 		if storer.assertRequiredMetadata(ingestState, uploader) {
 			tarFileIterator, readCloser := storer.getReadCloser(ingestState, gf)
@@ -332,9 +332,9 @@ func (storer *APTStorer) copyToLongTermStorage (ingestState *models.IngestState,
 }
 
 // Returns true if the GenericFile IngestUUID is present and looks good.
-func (storer *APTStorer) uuidPresent (ingestState *models.IngestState, gf *models.GenericFile) (bool) {
+func (storer *APTStorer) uuidPresent(ingestState *models.IngestState, gf *models.GenericFile) bool {
 	if !util.LooksLikeUUID(gf.IngestUUID) {
-		ingestState.IngestManifest.StoreResult.AddError("Cannot save %s to S3/Glacier because " +
+		ingestState.IngestManifest.StoreResult.AddError("Cannot save %s to S3/Glacier because "+
 			"GenericFile.IngestUUID (%s) is missing or invalid",
 			gf.Identifier, gf.IngestUUID)
 		ingestState.IngestManifest.StoreResult.ErrorIsFatal = true
@@ -345,7 +345,7 @@ func (storer *APTStorer) uuidPresent (ingestState *models.IngestState, gf *model
 
 // Initializes the uploader object with connection data and metadata
 // for this specific GenericFile.
-func (storer *APTStorer) initUploader(ingestState *models.IngestState, gf *models.GenericFile, sendWhere string) (*network.S3Upload) {
+func (storer *APTStorer) initUploader(ingestState *models.IngestState, gf *models.GenericFile, sendWhere string) *network.S3Upload {
 	var region string
 	var bucket string
 	if sendWhere == "s3" {
@@ -355,7 +355,7 @@ func (storer *APTStorer) initUploader(ingestState *models.IngestState, gf *model
 		region = storer.Context.Config.APTrustGlacierRegion
 		bucket = storer.Context.Config.ReplicationBucket
 	} else {
-		ingestState.IngestManifest.StoreResult.AddError("Cannot save %s to %s because " +
+		ingestState.IngestManifest.StoreResult.AddError("Cannot save %s to %s because "+
 			"storer doesn't know where %s is", gf.Identifier, sendWhere)
 		ingestState.IngestManifest.StoreResult.ErrorIsFatal = true
 		return nil
@@ -402,13 +402,13 @@ func (storer *APTStorer) getReadCloser(ingestState *models.IngestState, gf *mode
 }
 
 // Make sure we send data to S3/Glacier with all of the required metadata.
-func (storer *APTStorer) assertRequiredMetadata (ingestState *models.IngestState, s3Upload *network.S3Upload) (bool) {
+func (storer *APTStorer) assertRequiredMetadata(ingestState *models.IngestState, s3Upload *network.S3Upload) bool {
 	allKeysPresent := true
-	keys := []string { "institution", "bag", "bagpath", "md5", "sha256" }
+	keys := []string{"institution", "bag", "bagpath", "md5", "sha256"}
 	for _, key := range keys {
 		value := s3Upload.UploadInput.Metadata[key]
 		if value == nil || *value == "" {
-			ingestState.IngestManifest.StoreResult.AddError("S3Upload is missing required " +
+			ingestState.IngestManifest.StoreResult.AddError("S3Upload is missing required "+
 				"metadata key %s", key)
 			ingestState.IngestManifest.StoreResult.ErrorIsFatal = true
 			allKeysPresent = false
@@ -417,7 +417,7 @@ func (storer *APTStorer) assertRequiredMetadata (ingestState *models.IngestState
 	return allKeysPresent
 }
 
-func (storer *APTStorer) markFileAsStored (gf *models.GenericFile, sendWhere, storageUrl string) {
+func (storer *APTStorer) markFileAsStored(gf *models.GenericFile, sendWhere, storageUrl string) {
 	if sendWhere == "s3" {
 		gf.IngestStoredAt = time.Now().UTC()
 		gf.IngestStorageURL = storageUrl

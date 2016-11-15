@@ -16,25 +16,25 @@ import (
 type DPNQueue struct {
 	// LocalClient is the DPN REST client that talks to our own
 	// local DPN REST server.
-	LocalClient    *network.DPNRestClient
+	LocalClient *network.DPNRestClient
 	// RemoteNodes is a map of remote nodes. Key is the namespace
 	// and value is the node.
-	RemoteNodes    map[string]*models.Node
+	RemoteNodes map[string]*models.Node
 	// RemoteClients is a collection of clients that talk to the
 	// DPN REST servers on other nodes. The key is the namespace
 	// of the remote node, and the value is the client that talks
 	// to that node.
-	RemoteClients   map[string]*network.DPNRestClient
+	RemoteClients map[string]*network.DPNRestClient
 	// Context provides access to information about our environment
 	// and config settings, and access to basic services like
 	// logging and a Pharos client.
-	Context         *context.Context
+	Context *context.Context
 	// ExamineItemsSince is a timestamp. We will examine any items
 	// updated since this timestamp to see if they need to be queued.
 	ExamineItemsSince time.Time
 	// QueueResult contains information about which items were
 	// queued during this run of the program.
-	QueueResult      *models.QueueResult
+	QueueResult *models.QueueResult
 }
 
 // NewDPNQueue creates a new DPNQueue object. Param _context is a Context
@@ -57,16 +57,16 @@ func NewDPNQueue(_context *context.Context, hours int) (*DPNQueue, error) {
 	if err != nil {
 		return nil, fmt.Errorf("Error creating remote DPN REST client: %v", err)
 	}
-	sinceWhen := time.Now().UTC().Add(time.Duration(-1 * hours) * time.Hour)
+	sinceWhen := time.Now().UTC().Add(time.Duration(-1*hours) * time.Hour)
 	_context.MessageLog.Info("Checking records since %d hours ago (%s)",
 		hours, sinceWhen.Format(time.RFC3339))
 	dpnQueue := DPNQueue{
-		LocalClient: localClient,
-		RemoteNodes: make(map[string]*models.Node),
-		RemoteClients: remoteClients,
-		Context: _context,
+		LocalClient:       localClient,
+		RemoteNodes:       make(map[string]*models.Node),
+		RemoteClients:     remoteClients,
+		Context:           _context,
 		ExamineItemsSince: sinceWhen,
-		QueueResult: models.NewQueueResult(),
+		QueueResult:       models.NewQueueResult(),
 	}
 	return &dpnQueue, nil
 }
@@ -131,7 +131,7 @@ func (dpnQueue *DPNQueue) queueReplicationRequests() {
 // replicationParams returns the URL parameters we need to query our local
 // DPN REST server for ReplicationTransfer requests that we will need to
 // service.
-func (dpnQueue *DPNQueue) replicationParams(pageNumber int) (url.Values) {
+func (dpnQueue *DPNQueue) replicationParams(pageNumber int) url.Values {
 	params := url.Values{}
 	params.Set("after", dpnQueue.ExamineItemsSince.Format(time.RFC3339))
 	params.Set("to_node", dpnQueue.Context.Config.DPN.LocalNode)
@@ -190,7 +190,7 @@ func (dpnQueue *DPNQueue) queueRestoreRequests() {
 // restoreParams returns the URL parameters we need to query our local
 // DPN REST server for RestoreTransfer requests that we will need to
 // service.
-func (dpnQueue *DPNQueue) restoreParams(pageNumber int) (url.Values) {
+func (dpnQueue *DPNQueue) restoreParams(pageNumber int) url.Values {
 	params := url.Values{}
 	params.Set("after", dpnQueue.ExamineItemsSince.Format(time.RFC3339))
 	params.Set("from_node", dpnQueue.Context.Config.DPN.LocalNode)
@@ -244,7 +244,7 @@ func (dpnQueue *DPNQueue) queueIngestRequests() {
 // ingestParams returns the URL params we need to query Pharos about
 // unserviced DPN Ingest requests. These are WorkItems where the action
 // is "DPN" and the queued_at timestamp is empty.
-func (dpnQueue *DPNQueue) ingestParams(pageNumber int) (url.Values) {
+func (dpnQueue *DPNQueue) ingestParams(pageNumber int) url.Values {
 	params := url.Values{}
 	params.Set("item_action", "DPN")
 	params.Set("queued", "false")
@@ -325,7 +325,7 @@ func (dpnQueue *DPNQueue) queueTransfer(dpnWorkItem *apt_models.DPNWorkItem, tas
 //
 // This code is cluttered with logging to help diagnose issues in
 // integration tests.
-func (dpnQueue *DPNQueue) getOrCreateWorkItem(identifier, taskType string) (*apt_models.DPNWorkItem) {
+func (dpnQueue *DPNQueue) getOrCreateWorkItem(identifier, taskType string) *apt_models.DPNWorkItem {
 	params := url.Values{}
 	params.Set("identifier", identifier)
 	params.Set("task", taskType)
@@ -345,9 +345,9 @@ func (dpnQueue *DPNQueue) getOrCreateWorkItem(identifier, taskType string) (*apt
 		return existingItem
 	} else {
 		dpnWorkItem := &apt_models.DPNWorkItem{
-			Task: taskType,
+			Task:       taskType,
 			Identifier: identifier,
-			QueuedAt: nil,
+			QueuedAt:   nil,
 		}
 
 		createResp := dpnQueue.Context.PharosClient.DPNWorkItemSave(dpnWorkItem)

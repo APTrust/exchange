@@ -4,9 +4,9 @@ import (
 	"crypto/md5"
 	"crypto/sha256"
 	"fmt"
-    "github.com/aws/aws-sdk-go/aws"
-    "github.com/aws/aws-sdk-go/service/s3"
-    "github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/s3"
 	"hash"
 	"io"
 	"io/ioutil"
@@ -30,9 +30,9 @@ type S3Download struct {
 	// Don't try to read Response.Body, because if this
 	// object is non-nil, the response will already have
 	// been read and closed.
-	Response        *s3.GetObjectOutput
+	Response *s3.GetObjectOutput
 
-	session         *session.Session
+	session *session.Session
 }
 
 // Sets up a new S3 download. Params:
@@ -49,19 +49,19 @@ type S3Download struct {
 //              the download?
 // calculateSha256 - Should we calculate a sha256 checksum
 //              on the download?
-func NewS3Download(region, bucket, key, localPath string, calculateMd5, calculateSha256 bool) (*S3Download) {
+func NewS3Download(region, bucket, key, localPath string, calculateMd5, calculateSha256 bool) *S3Download {
 	return &S3Download{
-		AWSRegion: region,
-		BucketName: bucket,
-		KeyName: key,
-		LocalPath: localPath,
-		CalculateMd5: calculateMd5,
+		AWSRegion:       region,
+		BucketName:      bucket,
+		KeyName:         key,
+		LocalPath:       localPath,
+		CalculateMd5:    calculateMd5,
 		CalculateSha256: calculateSha256,
 	}
 }
 
 // Returns an S3 session for this download.
-func (client *S3Download)GetSession() (*session.Session) {
+func (client *S3Download) GetSession() *session.Session {
 	if client.session == nil {
 		var err error
 		if err != nil {
@@ -84,7 +84,7 @@ func (client *S3Download) Fetch() {
 	}
 	params := &s3.GetObjectInput{
 		Bucket: aws.String(client.BucketName),
-		Key: aws.String(client.KeyName),
+		Key:    aws.String(client.KeyName),
 	}
 
 	// Try the download several times. On larger files,
@@ -110,7 +110,7 @@ func (client *S3Download) Fetch() {
 // hashing algorithms don't provide. When we're working with
 // multi-gigabyte files, we really don't want to have to read them
 // again to produce the checksums.
-func (client *S3Download) tryDownload(service *s3.S3, params *s3.GetObjectInput) (error) {
+func (client *S3Download) tryDownload(service *s3.S3, params *s3.GetObjectInput) error {
 	resp, err := service.GetObject(params)
 	if err != nil {
 		return err
