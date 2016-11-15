@@ -4,6 +4,7 @@ import (
 	"github.com/APTrust/exchange/context"
 	"github.com/APTrust/exchange/dpn/models"
 	"github.com/APTrust/exchange/dpn/network"
+	dpn_testutil "github.com/APTrust/exchange/dpn/util/testutil"
 	"github.com/APTrust/exchange/dpn/workers"
 	apt_models "github.com/APTrust/exchange/models"
 	"github.com/stretchr/testify/assert"
@@ -14,57 +15,6 @@ import (
 	"testing"
 	"time"
 )
-var BAG_IDS = []string{
-	"00000000-0000-4000-a000-000000000001",
-	"00000000-0000-4000-a000-000000000002",
-	"00000000-0000-4000-a000-000000000003",
-	"00000000-0000-4000-a000-000000000004",
-	"00000000-0000-4000-a000-000000000005",
-}
-var REPLICATION_IDS = []string{
-	"10000000-0000-4111-a000-000000000001",
-	"10000000-0000-4111-a000-000000000007",
-	"10000000-0000-4111-a000-000000000013",
-	"10000000-0000-4111-a000-000000000019",
-	"20000000-0000-4000-a000-000000000001",
-	"20000000-0000-4000-a000-000000000007",
-	"20000000-0000-4000-a000-000000000013",
-	"20000000-0000-4000-a000-000000000019",
-	"30000000-0000-4000-a000-000000000001",
-	"30000000-0000-4000-a000-000000000007",
-	"30000000-0000-4000-a000-000000000013",
-	"30000000-0000-4000-a000-000000000019",
-	"40000000-0000-4000-a000-000000000001",
-	"40000000-0000-4000-a000-000000000007",
-	"40000000-0000-4000-a000-000000000013",
-	"40000000-0000-4000-a000-000000000019",
-	"50000000-0000-4000-a000-000000000001",
-	"50000000-0000-4000-a000-000000000007",
-	"50000000-0000-4000-a000-000000000013",
-	"50000000-0000-4000-a000-000000000019",
-}
-var RESTORE_IDS = []string{
-	"11000000-0000-4111-a000-000000000001",
-	"11000000-0000-4111-a000-000000000002",
-	"11000000-0000-4111-a000-000000000003",
-	"11000000-0000-4111-a000-000000000004",
-	"21000000-0000-4111-a000-000000000001",
-	"21000000-0000-4111-a000-000000000002",
-	"21000000-0000-4111-a000-000000000003",
-	"21000000-0000-4111-a000-000000000004",
-	"31000000-0000-4111-a000-000000000001",
-	"31000000-0000-4111-a000-000000000002",
-	"31000000-0000-4111-a000-000000000003",
-	"31000000-0000-4111-a000-000000000004",
-	"41000000-0000-4111-a000-000000000001",
-	"41000000-0000-4111-a000-000000000002",
-	"41000000-0000-4111-a000-000000000003",
-	"41000000-0000-4111-a000-000000000004",
-	"51000000-0000-4111-a000-000000000001",
-	"51000000-0000-4111-a000-000000000002",
-	"51000000-0000-4111-a000-000000000003",
-	"51000000-0000-4111-a000-000000000004",
-}
 
 func loadConfig(t *testing.T) (*apt_models.Config) {
 	configFile := filepath.Join("config", "integration.json")
@@ -205,7 +155,7 @@ func TestBagsWereSynched(t *testing.T) {
 	bags := resp.Bags()
 	require.Equal(t, 5, len(bags))
 
-	for _, id := range BAG_IDS {
+	for _, id := range dpn_testutil.BAG_IDS {
 		resp := client.DPNBagGet(id)
 		assert.NotNil(t, resp.Bag())
 	}
@@ -275,7 +225,7 @@ func TestReplicationsWereSynched(t *testing.T) {
 	xfers:= resp.ReplicationTransfers()
 	require.Equal(t, 20, len(xfers))
 
-	for _, id := range REPLICATION_IDS {
+	for _, id := range dpn_testutil.REPLICATION_IDS {
 		resp := client.ReplicationTransferGet(id)
 		assert.NotNil(t, resp.ReplicationTransfer())
 	}
@@ -291,7 +241,7 @@ func TestRestoresWereSynched(t *testing.T) {
 	xfers:= resp.RestoreTransfers()
 	require.Equal(t, 20, len(xfers))
 
-	for _, id := range RESTORE_IDS {
+	for _, id := range dpn_testutil.RESTORE_IDS {
 		resp := client.RestoreTransferGet(id)
 		assert.NotNil(t, resp.RestoreTransfer())
 	}
