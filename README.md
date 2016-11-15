@@ -93,7 +93,7 @@ To run integration tests, you'll need the following:
 
 Once you have all that, simple run `./scripts/test.rb --help` to see which integration tests are available. Note that
 integration tests are cumulative, with each test bringing the various services into the state that the next
-test needs to start. Currently, `./scripts/test.rb --dpn_store` will run through all APTrust ingest and DPN replication
+test needs to start. Currently, `./scripts/test.rb dpn_store` will run through all APTrust ingest and DPN replication
 tests.
 
 ## TODO
