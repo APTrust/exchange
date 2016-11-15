@@ -35,67 +35,71 @@ class TestRunner
   # checks for expected post conditions (i.e. verifies that certain
   # items were synched). Returns true if tests passed.
   def run_dpn_sync_post_test
-    env = @context.env_hash
-    env['RUN_DPN_SYNC_POST_TEST'] = 'true'
-    cmd = "go test dpn_sync_post_test.go"
-    dir = "#{@context.exchange_root}/integration"
-    pid = Process.spawn(env, cmd, chdir: dir)
-    Process.wait pid
-    return $?.exitstatus == 0
+    return run_integration_post_test('go test dpn_sync_post_test.go')
+    # env = @context.env_hash
+    # env['RUN_DPN_SYNC_POST_TEST'] = 'true'
+    # cmd = "go test dpn_sync_post_test.go"
+    # dir = "#{@context.exchange_root}/integration"
+    # pid = Process.spawn(env, cmd, chdir: dir)
+    # Process.wait pid
+    # return $?.exitstatus == 0
   end
 
   # This runs the the dpn_queue post test, to ensure that items
   # marked for DPN by apps/test_push_to_dpn have WorkItems created
   # and have been pushed into NSQ.
   def run_dpn_queue_post_test
-    env = @context.env_hash
-    env['RUN_EXCHANGE_INTEGRATION'] = 'true'
-    cmd = "go test dpn_queue_post_test.go"
-    dir = "#{@context.exchange_root}/integration"
-    pid = Process.spawn(env, cmd, chdir: dir)
-    Process.wait pid
-    return $?.exitstatus == 0
+    return run_integration_post_test('go test dpn_queue_post_test.go')
+    # env = @context.env_hash
+    # env['RUN_EXCHANGE_INTEGRATION'] = 'true'
+    # cmd = "go test dpn_queue_post_test.go"
+    # dir = "#{@context.exchange_root}/integration"
+    # pid = Process.spawn(env, cmd, chdir: dir)
+    # Process.wait pid
+    # return $?.exitstatus == 0
   end
 
   # This runs the the dpn_copy post test, to ensure that DPN
   # replication items were copied, DPNWorkItems updated, and
   # dpn_validation_topic entries created in NSQ.
   def run_dpn_copy_post_test
-    env = @context.env_hash
-    env['RUN_EXCHANGE_INTEGRATION'] = 'true'
-    cmd = "go test dpn_copy_post_test.go"
-    dir = "#{@context.exchange_root}/integration"
-    pid = Process.spawn(env, cmd, chdir: dir)
-    Process.wait pid
-    return $?.exitstatus == 0
+    return run_integration_post_test('go test dpn_copy_post_test.go')
+    # env = @context.env_hash
+    # env['RUN_EXCHANGE_INTEGRATION'] = 'true'
+    # cmd = "go test dpn_copy_post_test.go"
+    # dir = "#{@context.exchange_root}/integration"
+    # pid = Process.spawn(env, cmd, chdir: dir)
+    # Process.wait pid
+    # return $?.exitstatus == 0
   end
 
   # Run the dpn_validate post test to ensure Pharos and NSQ
   # were updated with the expected information.
   def run_dpn_validate_post_test
-    env = @context.env_hash
-    env['RUN_EXCHANGE_INTEGRATION'] = 'true'
-    cmd = "go test dpn_validate_post_test.go"
-    dir = "#{@context.exchange_root}/integration"
-    pid = Process.spawn(env, cmd, chdir: dir)
-    Process.wait pid
-    return $?.exitstatus == 0
+    return run_integration_post_test('go test dpn_validate_post_test.go')
+    # env = @context.env_hash
+    # env['RUN_EXCHANGE_INTEGRATION'] = 'true'
+    # cmd = "go test dpn_validate_post_test.go"
+    # dir = "#{@context.exchange_root}/integration"
+    # pid = Process.spawn(env, cmd, chdir: dir)
+    # Process.wait pid
+    # return $?.exitstatus == 0
   end
 
   def run_bucket_reader_post_test
-    return run_integration_post_test('go test apt_bucket_reader_test.go')
+    return run_integration_post_test('go test apt_bucket_reader_post_test.go')
   end
 
   def run_apt_fetch_post_test
-    return run_integration_post_test('go test apt_fetch_test.go')
+    return run_integration_post_test('go test apt_fetch_post_test.go')
   end
 
   def run_apt_store_post_test
-    return run_integration_post_test('go test apt_store_test.go')
+    return run_integration_post_test('go test apt_store_post_test.go')
   end
 
   def run_apt_record_post_test
-    return run_integration_post_test('go test apt_record_test.go')
+    return run_integration_post_test('go test apt_record_post_test.go')
   end
 
   private
