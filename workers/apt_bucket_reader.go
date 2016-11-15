@@ -160,7 +160,7 @@ func (reader *APTBucketReader) processBucket(bucketName string) () {
 		bucketName, MAX_KEYS)
 	keepFetching := true
 	for keepFetching {
-		s3ObjList.GetList()
+		s3ObjList.GetList("")
 		if s3ObjList.ErrorMessage != "" {
 			if reader.stats != nil {
 				reader.stats.AddError(s3ObjList.ErrorMessage)
