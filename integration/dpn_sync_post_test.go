@@ -1,4 +1,4 @@
-package workers_test
+package integration
 
 import (
 	"github.com/APTrust/exchange/context"

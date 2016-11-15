@@ -37,8 +37,8 @@ class TestRunner
   def run_dpn_sync_post_test
     env = @context.env_hash
     env['RUN_DPN_SYNC_POST_TEST'] = 'true'
-    cmd = "go test dpn_sync_test.go"
-    dir = "#{@context.exchange_root}/dpn/workers"
+    cmd = "go test dpn_sync_post_test.go"
+    dir = "#{@context.exchange_root}/integration"
     pid = Process.spawn(env, cmd, chdir: dir)
     Process.wait pid
     return $?.exitstatus == 0
@@ -50,7 +50,7 @@ class TestRunner
   def run_dpn_queue_post_test
     env = @context.env_hash
     env['RUN_EXCHANGE_INTEGRATION'] = 'true'
-    cmd = "go test dpn_queue_test.go"
+    cmd = "go test dpn_queue_post_test.go"
     dir = "#{@context.exchange_root}/integration"
     pid = Process.spawn(env, cmd, chdir: dir)
     Process.wait pid
@@ -63,7 +63,7 @@ class TestRunner
   def run_dpn_copy_post_test
     env = @context.env_hash
     env['RUN_EXCHANGE_INTEGRATION'] = 'true'
-    cmd = "go test dpn_copy_test.go"
+    cmd = "go test dpn_copy_post_test.go"
     dir = "#{@context.exchange_root}/integration"
     pid = Process.spawn(env, cmd, chdir: dir)
     Process.wait pid
@@ -75,7 +75,7 @@ class TestRunner
   def run_dpn_validate_post_test
     env = @context.env_hash
     env['RUN_EXCHANGE_INTEGRATION'] = 'true'
-    cmd = "go test dpn_validate_test.go"
+    cmd = "go test dpn_validate_post_test.go"
     dir = "#{@context.exchange_root}/integration"
     pid = Process.spawn(env, cmd, chdir: dir)
     Process.wait pid
