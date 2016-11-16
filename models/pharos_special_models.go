@@ -127,7 +127,7 @@ func NewChecksumForPharos(cs *Checksum) *ChecksumForPharos {
 }
 
 type DPNWorkItemForPharos struct {
-	Node        string     `json:"node"`
+	RemoteNode  string     `json:"remote_node"`
 	Task        string     `json:"task"`
 	Identifier  string     `json:"identifier"`
 	QueuedAt    *time.Time `json:"queued_at"`
@@ -138,7 +138,7 @@ type DPNWorkItemForPharos struct {
 
 func NewDPNWorkItemForPharos(item *DPNWorkItem) *DPNWorkItemForPharos {
 	return &DPNWorkItemForPharos{
-		Node:        item.Node,
+		RemoteNode:  item.RemoteNode,
 		Task:        item.Task,
 		Identifier:  item.Identifier,
 		QueuedAt:    item.QueuedAt,

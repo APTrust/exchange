@@ -123,6 +123,7 @@ func TestDPNWorkItemsCreatedAndQueued(t *testing.T) {
 		dpnWorkItem := pharosResp.DPNWorkItem()
 		require.NotNil(t, dpnWorkItem.QueuedAt)
 		assert.False(t, dpnWorkItem.QueuedAt.IsZero())
+		assert.Equal(t, xfer.FromNode, dpnWorkItem.RemoteNode)
 	}
 
 	// Check DPNWorkItems RestoreTransfers
@@ -139,6 +140,7 @@ func TestDPNWorkItemsCreatedAndQueued(t *testing.T) {
 		dpnWorkItem := pharosResp.DPNWorkItem()
 		require.NotNil(t, dpnWorkItem.QueuedAt)
 		assert.False(t, dpnWorkItem.QueuedAt.IsZero())
+		assert.Equal(t, xfer.ToNode, dpnWorkItem.RemoteNode)
 	}
 
 	// Check NSQ as well.

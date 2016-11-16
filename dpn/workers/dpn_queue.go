@@ -111,7 +111,8 @@ func (dpnQueue *DPNQueue) queueReplicationRequests() {
 		xfers := dpnResp.ReplicationTransfers()
 		for _, xfer := range xfers {
 			queueItem := models.NewQueueItem(xfer.ReplicationId)
-			dpnWorkItem := dpnQueue.getOrCreateWorkItem(xfer.ReplicationId, constants.DPNTaskReplication)
+			dpnWorkItem := dpnQueue.getOrCreateWorkItem(xfer.ReplicationId, xfer.FromNode,
+				constants.DPNTaskReplication)
 			queueItem.ItemId = dpnWorkItem.Id
 			if dpnWorkItem.QueuedAt == nil || dpnWorkItem.QueuedAt.IsZero() {
 				dpnQueue.queueTransfer(dpnWorkItem, constants.DPNTaskReplication)
@@ -170,7 +171,7 @@ func (dpnQueue *DPNQueue) queueRestoreRequests() {
 		xfers := dpnResp.RestoreTransfers()
 		for _, xfer := range xfers {
 			queueItem := models.NewQueueItem(xfer.RestoreId)
-			dpnWorkItem := dpnQueue.getOrCreateWorkItem(xfer.RestoreId, constants.DPNTaskRestore)
+			dpnWorkItem := dpnQueue.getOrCreateWorkItem(xfer.RestoreId, xfer.ToNode, constants.DPNTaskRestore)
 			queueItem.ItemId = dpnWorkItem.Id
 			if dpnWorkItem.QueuedAt == nil || dpnWorkItem.QueuedAt.IsZero() {
 				dpnQueue.queueTransfer(dpnWorkItem, constants.DPNTaskRestore)
@@ -325,7 +326,7 @@ func (dpnQueue *DPNQueue) queueTransfer(dpnWorkItem *apt_models.DPNWorkItem, tas
 //
 // This code is cluttered with logging to help diagnose issues in
 // integration tests.
-func (dpnQueue *DPNQueue) getOrCreateWorkItem(identifier, taskType string) *apt_models.DPNWorkItem {
+func (dpnQueue *DPNQueue) getOrCreateWorkItem(identifier, remoteNode, taskType string) *apt_models.DPNWorkItem {
 	params := url.Values{}
 	params.Set("identifier", identifier)
 	params.Set("task", taskType)
@@ -347,6 +348,7 @@ func (dpnQueue *DPNQueue) getOrCreateWorkItem(identifier, taskType string) *apt_
 		dpnWorkItem := &apt_models.DPNWorkItem{
 			Task:       taskType,
 			Identifier: identifier,
+			RemoteNode: remoteNode,
 			QueuedAt:   nil,
 		}
 

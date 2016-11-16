@@ -110,6 +110,16 @@ func (packager *DPNPackager) postProcess() {
 	}
 }
 
+func (packager *DPNPackager) createBagDirectory(manifest *models.DPNIngestManifest) {
+	if manifest.LocalDir == "" {
+		manifest.PackageSummary.AddError("LocalDirectory is not set for bag %s",
+			manifest.IntellectualObject.Identifier)
+		manifest.PackageSummary.ErrorIsFatal = true
+		manifest.PackageSummary.Retry = false
+		return
+	}
+}
+
 func (packager *DPNPackager) finishWithSuccess(manifest *models.DPNIngestManifest) {
 
 }

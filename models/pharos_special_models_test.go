@@ -85,7 +85,7 @@ func TestNewDPNWorkItemForPharos(t *testing.T) {
 	state := "Nebraska"
 	item := &models.DPNWorkItem{
 		Id:          1000,
-		Node:        "dpn.aptrust.org",
+		RemoteNode:  "hathi",
 		Task:        "Replication",
 		Identifier:  "1234-5678",
 		QueuedAt:    &timestamp,
@@ -97,7 +97,7 @@ func TestNewDPNWorkItemForPharos(t *testing.T) {
 	}
 	pharosItem := models.NewDPNWorkItemForPharos(item)
 	require.NotNil(t, pharosItem)
-	assert.Equal(t, item.Node, pharosItem.Node)
+	assert.Equal(t, item.RemoteNode, pharosItem.RemoteNode)
 	assert.Equal(t, item.Task, pharosItem.Task)
 	assert.Equal(t, item.Identifier, pharosItem.Identifier)
 	assert.Equal(t, item.QueuedAt, pharosItem.QueuedAt)

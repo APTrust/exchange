@@ -228,7 +228,7 @@ func MakeDPNWorkItem() *models.DPNWorkItem {
 	note := fake.Sentence()
 	return &models.DPNWorkItem{
 		Id:          rand.Intn(50000) + 1,
-		Node:        fake.Word(),
+		RemoteNode:  fake.Word(),
 		Task:        RandomFromList(constants.DPNTaskTypes),
 		Identifier:  _uuid.String(),
 		QueuedAt:    &queuedAt,

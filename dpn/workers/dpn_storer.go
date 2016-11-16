@@ -84,7 +84,6 @@ func (storer *DPNStorer) store() {
 		manifest.NsqMessage.Touch()
 
 		// Tell Pharos that we've started to validate item.
-		manifest.DPNWorkItem.Node, _ = os.Hostname()
 		note := "Storing bag"
 		manifest.DPNWorkItem.Note = &note
 		SaveDPNWorkItemState(storer.Context, manifest, manifest.StoreSummary)
@@ -186,7 +185,6 @@ func (storer *DPNStorer) finishWithError(manifest *models.ReplicationManifest) {
 	}
 
 	manifest.StoreSummary.Finish()
-	manifest.DPNWorkItem.Node = ""
 	manifest.DPNWorkItem.Note = &note
 	SaveDPNWorkItemState(storer.Context, manifest, manifest.StoreSummary)
 	storer.Context.MessageLog.Error(manifest.StoreSummary.AllErrorsAsString())
@@ -226,7 +224,6 @@ func (storer *DPNStorer) finishWithSuccess(manifest *models.ReplicationManifest)
 		manifest.StoreSummary.Finish()
 		manifest.DPNWorkItem.CompletedAt = &manifest.StoreSummary.FinishedAt
 	}
-	manifest.DPNWorkItem.Node = ""
 	manifest.DPNWorkItem.Note = &note
 	SaveDPNWorkItemState(storer.Context, manifest, manifest.StoreSummary)
 

@@ -90,7 +90,6 @@ func (validator *DPNValidator) validate() {
 		manifest.NsqMessage.Touch()
 
 		// Tell Pharos that we've started to validate item.
-		manifest.DPNWorkItem.Node, _ = os.Hostname()
 		note := "Validating bag"
 		manifest.DPNWorkItem.Note = &note
 		SaveDPNWorkItemState(validator.Context, manifest, manifest.ValidateSummary)
@@ -172,7 +171,6 @@ func (validator *DPNValidator) finishWithError(manifest *models.ReplicationManif
 	if manifest.Cancelled {
 		note = manifest.ValidateSummary.Errors[0]
 	}
-	manifest.DPNWorkItem.Node = ""
 	manifest.DPNWorkItem.Note = &note
 	SaveDPNWorkItemState(validator.Context, manifest, manifest.ValidateSummary)
 	validator.Context.MessageLog.Error(manifest.ValidateSummary.AllErrorsAsString())
@@ -195,7 +193,6 @@ func (validator *DPNValidator) finishWithSuccess(manifest *models.ReplicationMan
 	manifest.ValidateSummary.Finish()
 	// Tell Pharos we're done working on this.
 	note := "Bag passed validation"
-	manifest.DPNWorkItem.Node = ""
 	manifest.DPNWorkItem.Note = &note
 	SaveDPNWorkItemState(validator.Context, manifest, manifest.ValidateSummary)
 
