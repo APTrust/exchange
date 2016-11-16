@@ -37,6 +37,7 @@ type WorkItem struct {
 	Size                  int64      `json:"size"`
 	BagDate               time.Time  `json:"bag_date"`
 	InstitutionId         int        `json:"institution_id"`
+	WorkItemStateId       *int       `json:"work_item_state_id"`
 	User                  string     `json:"user"`
 	Date                  time.Time  `json:"date"`
 	Note                  string     `json:"note"`

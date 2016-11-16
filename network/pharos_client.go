@@ -704,14 +704,14 @@ func (client *PharosClient) WorkItemStateSave(obj *models.WorkItemState) *Pharos
 	return resp
 }
 
-// Returns the WorkItemState with the specified WorkItemId.
-func (client *PharosClient) WorkItemStateGet(workItemId int) *PharosResponse {
+// Returns the WorkItemState with the specified WorkItemStateId.
+func (client *PharosClient) WorkItemStateGet(workItemStateId int) *PharosResponse {
 	// Set up the response object
 	resp := NewPharosResponse(PharosWorkItemState)
 	resp.workItemStates = make([]*models.WorkItemState, 1)
 
 	// Build the url and the request object
-	relativeUrl := fmt.Sprintf("/api/%s/item_state/%d/", client.apiVersion, workItemId)
+	relativeUrl := fmt.Sprintf("/api/%s/item_state/%d/", client.apiVersion, workItemStateId)
 	absoluteUrl := client.BuildUrl(relativeUrl)
 
 	// Run the request
