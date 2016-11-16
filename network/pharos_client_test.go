@@ -831,7 +831,7 @@ func TestWorkItemStateSave(t *testing.T) {
 	response = client.WorkItemStateSave(obj)
 
 	// Check the request URL and method
-	expectedUrl := fmt.Sprintf("/api/v2/item_state/%d/", obj.WorkItemId)
+	expectedUrl := fmt.Sprintf("/api/v2/item_state/%d/", obj.Id)
 	assert.Equal(t, "PUT", response.Request.Method)
 	assert.Equal(t, expectedUrl, response.Request.URL.Opaque)
 

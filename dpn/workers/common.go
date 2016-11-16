@@ -18,7 +18,9 @@ import (
 	"time"
 )
 
-// GetDPNWorkItem returns the DPNWorkItem associated with this message.
+// GetDPNWorkItem fetches the DPNWorkItem associated with this message
+// and attaches it to the manifest.
+//
 // Param _context is a context object, manifest is a ReplicationManifest,
 // and workSummary should be the WorkSummary pertinent to the current
 // operation. So, on copy, workSummary should be manifest.CopySummary;
@@ -59,6 +61,93 @@ func GetDPNWorkItem(_context *context.Context, manifest *models.ReplicationManif
 	if !util.LooksLikeUUID(dpnWorkItem.Identifier) {
 		msg := fmt.Sprintf("DPNWorkItem %d has identifier '%s', "+
 			"which does not look like a UUID", workItemId, dpnWorkItem.Identifier)
+		workSummary.AddError(msg)
+		workSummary.ErrorIsFatal = true
+	}
+}
+
+// GetWorkItem fetches the WorkItem associated with this message
+// and attaches it to the manifest.
+//
+// Param _context is a context object, manifest is an IngestManifest,
+// and workSummary should be the WorkSummary pertinent to the current
+// operation. So, on package, workSummary should be manifest.PackageSummary;
+// on store it should be manifest.StoreSummary, and on record, it should be
+// manifest.RecordSummary.
+func GetWorkItem(_context *context.Context, manifest *models.DPNIngestManifest, workSummary *apt_models.WorkSummary) {
+	workItemId, err := strconv.Atoi(string(manifest.NsqMessage.Body))
+	if err != nil {
+		msg := fmt.Sprintf("Could not get WorkItemId from"+
+			"NSQ message body '%s': %v", manifest.NsqMessage.Body, err)
+		workSummary.AddError(msg)
+		workSummary.ErrorIsFatal = true
+		return
+	}
+	resp := _context.PharosClient.WorkItemGet(workItemId)
+	if resp.Error != nil {
+		msg := fmt.Sprintf("Could not get WorkItem (id %d) "+
+			"from Pharos: %v", workItemId, resp.Error)
+		workSummary.AddError(msg)
+		workSummary.ErrorIsFatal = true
+		return
+	}
+	workItem := resp.WorkItem()
+	manifest.WorkItem = workItem
+	if workItem == nil {
+		msg := fmt.Sprintf("Pharos returned nil for WorkItem %d", workItemId)
+		workSummary.AddError(msg)
+		workSummary.ErrorIsFatal = true
+		return
+	}
+	if workItem.Action != constants.ActionDPN {
+		msg := fmt.Sprintf("WorkItem %d has action type %s, "+
+			"and does not belong in this queue!", workItemId, workItem.Action)
+		workSummary.AddError(msg)
+		workSummary.ErrorIsFatal = true
+	}
+}
+
+// GetWorkItemState fetches the WorkItemState associated with this message
+// and attaches it to the manifest.
+//
+// Param _context is a context object, manifest is an IngestManifest,
+// and workSummary should be the WorkSummary pertinent to the current
+// operation. So, on package, workSummary should be manifest.PackageSummary;
+// on store it should be manifest.StoreSummary, and on record, it should be
+// manifest.RecordSummary.
+func GetWorkItemState(_context *context.Context, manifest *models.DPNIngestManifest, workSummary *apt_models.WorkSummary) {
+	if manifest.WorkItem == nil {
+		msg := fmt.Sprintf("Can't get WorkItemState: WorkItem is nil or WorkItemStateId is missing")
+		workSummary.AddError(msg)
+		workSummary.ErrorIsFatal = true
+		return
+	}
+	if manifest.WorkItem.WorkItemStateId == nil || *manifest.WorkItem.WorkItemStateId == 0 {
+		// If this is our first attempt at packaging, this item will have no state.
+		_context.MessageLog.Info("No WorkItemState for WorkItem %d",
+			manifest.WorkItem.Id, manifest.WorkItem.ObjectIdentifier)
+		return
+	}
+	resp := _context.PharosClient.WorkItemStateGet(*manifest.WorkItem.WorkItemStateId)
+	if resp.Error != nil {
+		msg := fmt.Sprintf("Could not get WorkItemState (id %d) "+
+			"from Pharos: %v", manifest.WorkItem.WorkItemStateId, resp.Error)
+		workSummary.AddError(msg)
+		workSummary.ErrorIsFatal = true
+		return
+	}
+	workItemState := resp.WorkItemState()
+	manifest.WorkItemState = workItemState
+	if workItemState == nil {
+		msg := fmt.Sprintf("Pharos returned nil for WorkItemState %d", manifest.WorkItem.WorkItemStateId)
+		workSummary.AddError(msg)
+		workSummary.ErrorIsFatal = true
+		return
+	}
+	if workItemState.Action != constants.ActionDPN {
+		msg := fmt.Sprintf("WorkItem %d has action type %s, "+
+			"and does not belong in this queue!", manifest.WorkItem.WorkItemStateId,
+			workItemState.Action)
 		workSummary.AddError(msg)
 		workSummary.ErrorIsFatal = true
 	}
@@ -283,7 +372,13 @@ func SetupReplicationManifest(message *nsq.Message, stage string, _context *cont
 	manifest, activeSummary := initManifest(message, stage)
 	GetDPNWorkItem(_context, manifest, activeSummary)
 	restoreSucceeded := restoreReplicationState(manifest, _context)
-	clearPriorErrors(manifest, stage)
+
+	// We may have previously attempted this stage of processing.
+	// If so, reset errors and start/end time, because we're about
+	// to try it again.
+	activeSummary.ClearErrors()
+	activeSummary.StartedAt = time.Time{}
+	activeSummary.FinishedAt = time.Time{}
 
 	// Now we get the transfer record from the originating node.
 	remoteClient := remoteClients[manifest.DPNWorkItem.RemoteNode]
@@ -345,7 +440,7 @@ func restoreReplicationState(manifest *models.ReplicationManifest, _context *con
 		_context.MessageLog.Warning(
 			"Cannot unmarshal saved manifest for ReplicationId %s: %v\n"+
 				"Will re-fetch bag from remote node. Manifest data: %s",
-			err, manifest.DPNWorkItem.Identifier, savedState)
+			manifest.DPNWorkItem.Identifier, err, savedState)
 	} else {
 		manifest.ReplicationTransfer = savedManifest.ReplicationTransfer
 		manifest.DPNBag = savedManifest.DPNBag
@@ -359,24 +454,6 @@ func restoreReplicationState(manifest *models.ReplicationManifest, _context *con
 		restoreSucceeded = true
 	}
 	return restoreSucceeded
-}
-
-// clearPriorErrors clears prior errors for this stage of processing,
-// since we're about to re-run the same stage of processing.
-func clearPriorErrors(manifest *models.ReplicationManifest, stage string) {
-	if stage == "copy" {
-		manifest.CopySummary.ClearErrors()
-		manifest.CopySummary.StartedAt = time.Time{}
-		manifest.CopySummary.FinishedAt = time.Time{}
-	} else if stage == "validate" {
-		manifest.ValidateSummary.ClearErrors()
-		manifest.ValidateSummary.StartedAt = time.Time{}
-		manifest.ValidateSummary.FinishedAt = time.Time{}
-	} else if stage == "store" {
-		manifest.StoreSummary.ClearErrors()
-		manifest.StoreSummary.StartedAt = time.Time{}
-		manifest.StoreSummary.FinishedAt = time.Time{}
-	}
 }
 
 // cancelIfNecessary cancels this job if the ReplicationTransfer
@@ -397,6 +474,36 @@ func cancelIfNecessary(manifest *models.ReplicationManifest, stage string, activ
 	if manifest.ReplicationTransfer.Cancelled == true {
 		activeSummary.AddError("Aborting replication because Cancelled is true.")
 		manifest.Cancelled = true
+	}
+}
+
+// restoreIngestState restores an IngestManifest from the serialized version
+// in WorkItemState.State.
+func restoreIngestState(_context *context.Context, manifest *models.DPNIngestManifest) {
+	savedState := ""
+	if manifest.WorkItemState != nil {
+		savedState = manifest.WorkItemState.State
+	}
+	savedManifest := &models.DPNIngestManifest{}
+	err := json.Unmarshal([]byte(savedState), &savedManifest)
+	if err == nil {
+		manifest.LocalDir = savedManifest.LocalDir
+		manifest.LocalTarFile = savedManifest.LocalTarFile
+		manifest.StorageURL = savedManifest.StorageURL
+		manifest.DPNBag = savedManifest.DPNBag
+		manifest.PackageSummary = savedManifest.PackageSummary
+		manifest.ValidateSummary = savedManifest.ValidateSummary
+		manifest.StoreSummary = savedManifest.StoreSummary
+		manifest.RecordSummary = savedManifest.RecordSummary
+	} else {
+		_context.MessageLog.Warning(
+			"Cannot unmarshal saved manifest for %s: %v\n"+
+				"Will build state instead. Manifest data: %s",
+			manifest.WorkItem.ObjectIdentifier, err, savedState)
+		manifest.LocalDir = filepath.Join(
+			_context.Config.DPN.StagingDirectory,
+			manifest.WorkItem.ObjectIdentifier)
+		manifest.LocalTarFile = fmt.Sprintf("%s.tar", manifest.LocalDir)
 	}
 }
 
@@ -435,5 +542,24 @@ func SetupIngestManifest(message *nsq.Message, stage string, _context *context.C
 	//    If creating a new manifest:
 	//    - fetch the IntellectualObject
 	//    - set LocalDir and LocalTarFile
+	manifest := models.NewDPNIngestManifest(message)
+
+	var activeSummary *apt_models.WorkSummary
+	if stage == "package" {
+		activeSummary = manifest.PackageSummary
+	} else if stage == "store" {
+		activeSummary = manifest.StoreSummary
+	} else if stage == "record" {
+		activeSummary = manifest.RecordSummary
+	}
+
+	GetWorkItem(_context, manifest, activeSummary)
+	GetWorkItemState(_context, manifest, activeSummary)
+	if activeSummary.HasErrors() {
+		return manifest
+	}
+	restoreIngestState(_context, manifest)
+	//loadIntellectualObject(_context, manifest)
+
 	return nil
 }

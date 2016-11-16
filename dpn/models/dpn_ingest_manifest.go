@@ -37,10 +37,6 @@ type DPNIngestManifest struct {
 	// into long-term storage.
 	StorageURL string
 
-	// BagMd5Digest is the bag's md5 digest. We need this to copy to
-	// Amazon S3/Glacier.
-	BagMd5Digest string
-
 	// DPNBag is the DPNBag record we will create for the bag we're
 	// sending into long-term storage. Once the bag is stored, we'll
 	// POST this DPNBag record to our local DPN REST server.

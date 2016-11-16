@@ -110,7 +110,11 @@ func GetWorkItem(message *nsq.Message, _context *context.Context) (*models.WorkI
 func GetWorkItemState(workItem *models.WorkItem, _context *context.Context, initIfEmpty bool) (*models.WorkItemState, error) {
 	var workItemState *models.WorkItemState
 	var err error
-	resp := _context.PharosClient.WorkItemStateGet(workItem.Id)
+	workItemStateId := 0
+	if workItem.WorkItemStateId != nil {
+		workItemStateId = *workItem.WorkItemStateId
+	}
+	resp := _context.PharosClient.WorkItemStateGet(workItemStateId)
 	if resp.Response.StatusCode == http.StatusNotFound {
 		if initIfEmpty {
 			// Record has not been created yet, so build a new one now.
@@ -123,7 +127,7 @@ func GetWorkItemState(workItem *models.WorkItem, _context *context.Context, init
 			// It means we're being called from some worker other than
 			// apt_fetcher, and those workers require that a WorkItemState
 			// record exist.
-			return nil, fmt.Errorf("HTTP 404. Pharos has no WorkItemState with WorkItem id %d", workItem.Id)
+			return nil, fmt.Errorf("HTTP 404. Pharos has no WorkItemState with WorkItemState id %d", workItem.WorkItemStateId)
 		}
 	} else if resp.Error != nil {
 		// We got some other 4xx/5xx error from the Pharos REST service.
@@ -133,7 +137,7 @@ func GetWorkItemState(workItem *models.WorkItem, _context *context.Context, init
 		// the response.
 		workItemState = resp.WorkItemState()
 		if workItemState == nil {
-			return nil, fmt.Errorf("Pharos returned nil for WorkItemState with WorkItem id %d", workItem.Id)
+			return nil, fmt.Errorf("Pharos returned nil for WorkItemState with WorkItemState id %d", workItem.WorkItemStateId)
 		}
 	}
 	return workItemState, nil

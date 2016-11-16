@@ -678,7 +678,7 @@ func (client *PharosClient) WorkItemStateSave(obj *models.WorkItemState) *Pharos
 	httpMethod := "POST"
 	if obj.Id > 0 {
 		// URL should look like /api/v2/item_state/46956/
-		relativeUrl = fmt.Sprintf("%s%d/", relativeUrl, obj.WorkItemId)
+		relativeUrl = fmt.Sprintf("%s%d/", relativeUrl, obj.Id)
 		httpMethod = "PUT"
 	}
 	absoluteUrl := client.BuildUrl(relativeUrl)
