@@ -528,22 +528,32 @@ func LoadBagValidationConfig(_context *context.Context) *validation.BagValidatio
 	return bagValidationConfig
 }
 
+func loadIntellectualObject(_context *context.Context, manifest *models.DPNIngestManifest, activeSummary *apt_models.WorkSummary) {
+	resp := _context.PharosClient.IntellectualObjectGet(manifest.WorkItem.ObjectIdentifier, true)
+	if resp.Error != nil {
+		activeSummary.AddError("Could not get IntellectualObject %s: %v",
+			manifest.WorkItem.ObjectIdentifier, resp.Error)
+		return
+	}
+	manifest.IntellectualObject = resp.IntellectualObject()
+	if manifest.IntellectualObject == nil {
+		activeSummary.AddError("Pharos returned nil for IntellectualObject %s",
+			manifest.WorkItem.ObjectIdentifier)
+	}
+}
+
 // SetupIngestManifest loads the existing DPNIngestManifest associated with
 // the NSQ message, or creates a new one if necessary. Param message should
 // be the NSQ message we're working on. Param stage should be one of "package",
 // "store" or "record". Param _context is the context of the worker calling
-// this fuction.
+// this fuction. The caller should check for errors in the manifest's
+// Package, Store or Record summary (whichever is the current stage) before
+// proceeding.
 func SetupIngestManifest(message *nsq.Message, stage string, _context *context.Context) *models.DPNIngestManifest {
-	// TODO: Implement this.
-	//
-	// 1. Fetch the WorkItem
-	// 2. Fetch the WorkItemState
-	// 3. Unmarshal DPNIngestManifest from WorkItemState, or create a new IngestManifest.
-	//    If creating a new manifest:
-	//    - fetch the IntellectualObject
-	//    - set LocalDir and LocalTarFile
+	// Create a new manifest
 	manifest := models.NewDPNIngestManifest(message)
-
+	// Note which stage we're currently working on. If we encounter errors
+	// while building the manifest, we will add them to that summary.
 	var activeSummary *apt_models.WorkSummary
 	if stage == "package" {
 		activeSummary = manifest.PackageSummary
@@ -553,13 +563,27 @@ func SetupIngestManifest(message *nsq.Message, stage string, _context *context.C
 		activeSummary = manifest.RecordSummary
 	}
 
+	// Get the WorkItem and WorkItemState for this ingest.
 	GetWorkItem(_context, manifest, activeSummary)
 	GetWorkItemState(_context, manifest, activeSummary)
 	if activeSummary.HasErrors() {
 		return manifest
 	}
-	restoreIngestState(_context, manifest)
-	//loadIntellectualObject(_context, manifest)
 
-	return nil
+	// Unless this is our first attempt to ingest this DPN bag, there
+	// should be some stored state in WorkItemState. Try to deserialize
+	// that state info, if possible.
+	restoreIngestState(_context, manifest)
+
+	// Load the IntellectualObject from Pharos. We do not store this
+	// with the other state info, because if the IntellectualObject
+	// has thousands of files, the JSON state info gets too big.
+	loadIntellectualObject(_context, manifest, activeSummary)
+
+	// Clear out data from prior attempts to process this item at this stage.
+	activeSummary.ClearErrors()
+	activeSummary.StartedAt = time.Time{}
+	activeSummary.FinishedAt = time.Time{}
+
+	return manifest
 }

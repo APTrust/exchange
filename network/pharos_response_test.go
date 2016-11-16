@@ -125,7 +125,7 @@ func TestIntellectualObject(t *testing.T) {
 		t.Error(err)
 		return
 	}
-	resp := client.IntellectualObjectGet("college.edu/object")
+	resp := client.IntellectualObjectGet("college.edu/object", true)
 	assert.NotNil(t, resp.IntellectualObject())
 }
 
