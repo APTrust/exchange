@@ -279,7 +279,43 @@ func SaveDPNWorkItemState(_context *context.Context, manifest *models.Replicatio
 // "validate" or "store". Param _context is the context of the worker calling
 // this fuction.
 func SetupReplicationManifest(message *nsq.Message, stage string, _context *context.Context, localClient *network.DPNRestClient, remoteClients map[string]*network.DPNRestClient) *models.ReplicationManifest {
-	// TODO: This function is too long. Break it up.
+
+	manifest, activeSummary := initManifest(message, stage)
+	GetDPNWorkItem(_context, manifest, activeSummary)
+	restoreSucceeded := restoreReplicationState(manifest, _context)
+	clearPriorErrors(manifest, stage)
+
+	// Now we get the transfer record from the originating node.
+	remoteClient := remoteClients[manifest.DPNWorkItem.RemoteNode]
+	if remoteClient == nil {
+		activeSummary.AddError("Cannot get remote DPN client for %s",
+			manifest.ReplicationTransfer.FromNode)
+	}
+	GetXferRequest(remoteClient, manifest, activeSummary)
+	if activeSummary.HasErrors() {
+		return manifest
+	}
+
+	// A little more manifest-building, in case we were unable to
+	// restore the original manifest above.
+	if !restoreSucceeded {
+		// This is where we have stored our local copy of this bag.
+		manifest.LocalPath = filepath.Join(
+			_context.Config.DPN.StagingDirectory,
+			manifest.ReplicationTransfer.Bag+".tar")
+		_context.MessageLog.Info("Set manifest.LocalPath to %s", manifest.LocalPath)
+		// Get the DPN bag from the remote node.
+		GetDPNBag(remoteClient, manifest, activeSummary)
+	}
+
+	cancelIfNecessary(manifest, stage, activeSummary)
+	return manifest
+}
+
+// initManifest creates an empty ReplicationManifest, returning that and
+// a pointer to the WorkSummary that will record information about the
+// current operations.
+func initManifest(message *nsq.Message, stage string) (*models.ReplicationManifest, *apt_models.WorkSummary) {
 	manifest := models.NewReplicationManifest(message)
 	var activeSummary *apt_models.WorkSummary
 	if stage == "copy" {
@@ -291,61 +327,43 @@ func SetupReplicationManifest(message *nsq.Message, stage string, _context *cont
 	} else {
 		panic(fmt.Sprintf("Unknown stage %s", stage))
 	}
+	return manifest, activeSummary
+}
 
-	// Get the DPNWorkItem that describes this replication.
-	workItemId, err := strconv.Atoi(string(manifest.NsqMessage.Body))
-	if err != nil {
-		msg := fmt.Sprintf("Could not get DPNWorkItemId from"+
-			"NSQ message body '%s': %v", manifest.NsqMessage.Body, err)
-		activeSummary.AddError(msg)
-		activeSummary.ErrorIsFatal = true
-		activeSummary.Finish()
-		return manifest
-	}
-	_context.MessageLog.Info("Requesting DPNWorkItem %d from Pharos", workItemId)
-	resp := _context.PharosClient.DPNWorkItemGet(workItemId)
-	if resp.Error != nil {
-		msg := fmt.Sprintf("Could not get DPNWorkItem (id %d) "+
-			"from Pharos: %v", workItemId, resp.Error)
-		activeSummary.AddError(msg)
-		activeSummary.ErrorIsFatal = true
-		activeSummary.Finish()
-		return manifest
-	}
-	manifest.DPNWorkItem = resp.DPNWorkItem()
-
-	// Restore the manifest from the saved state. If we can recover
-	// the saved state from the DPNWorkItem, it will replace the
-	// manifest we created above. Note that that manifest is still
-	// empty at this point. If we can't recover the manifest, we'll
-	// rebuild it, but it will be missing WorkSummary records from
-	// previous stages.
+// Restores the ReplicationManifest from the saved version in DPNWorkItem.State,
+// if possible. This acts directly on the manifest pointer param, and returns
+// a boolean indicating whether the restore was successful.
+func restoreReplicationState(manifest *models.ReplicationManifest, _context *context.Context) bool {
 	savedState := ""
-	fromNode := ""
 	if manifest.DPNWorkItem.State != nil {
 		savedState = *manifest.DPNWorkItem.State
 	}
 	savedManifest := &models.ReplicationManifest{}
-	unmarshaFailed := false
-	err = json.Unmarshal([]byte(savedState), &savedManifest)
+	restoreSucceeded := false
+	err := json.Unmarshal([]byte(savedState), &savedManifest)
 	if err != nil {
 		_context.MessageLog.Warning(
 			"Cannot unmarshal saved manifest for ReplicationId %s: %v\n"+
 				"Will re-fetch bag from remote node. Manifest data: %s",
 			err, manifest.DPNWorkItem.Identifier, savedState)
-		unmarshaFailed = true
 	} else {
-		manifest = savedManifest
-		manifest.DPNWorkItem = resp.DPNWorkItem()
-		fromNode = manifest.ReplicationTransfer.FromNode
+		manifest.ReplicationTransfer = savedManifest.ReplicationTransfer
+		manifest.DPNBag = savedManifest.DPNBag
+		manifest.CopySummary = savedManifest.CopySummary
+		manifest.ValidateSummary = savedManifest.ValidateSummary
+		manifest.StoreSummary = savedManifest.StoreSummary
+		manifest.LocalPath = savedManifest.LocalPath
+		manifest.StorageURL = savedManifest.StorageURL
+		manifest.RsyncOutput = savedManifest.RsyncOutput
+		manifest.Cancelled = savedManifest.Cancelled
+		restoreSucceeded = true
 	}
+	return restoreSucceeded
+}
 
-	// Make sure we attach this, so we can touch, finish, and requeue
-	// the NSQ message.
-	manifest.NsqMessage = message
-
-	// Clear prior errors for this stage of processing, since we're
-	// about to try again.
+// clearPriorErrors clears prior errors for this stage of processing,
+// since we're about to re-run the same stage of processing.
+func clearPriorErrors(manifest *models.ReplicationManifest, stage string) {
 	if stage == "copy" {
 		manifest.CopySummary.ClearErrors()
 		manifest.CopySummary.StartedAt = time.Time{}
@@ -359,50 +377,12 @@ func SetupReplicationManifest(message *nsq.Message, stage string, _context *cont
 		manifest.StoreSummary.StartedAt = time.Time{}
 		manifest.StoreSummary.FinishedAt = time.Time{}
 	}
+}
 
-	// Get the latest copy of the ReplicationTransfer from
-	// the remote node. There's a chance this replication may
-	// have been cancelled since we copied the bag from the
-	// remote node. Unfortunately, we have to do this twice.
-	// If we don't know the FromNode, we have to first get
-	// the ReplicationTransfer from our node, then check with
-	// the node that originated the request, to ensure it hasn't
-	// been cancelled.
-	if fromNode == "" {
-		_context.MessageLog.Info("Requesting ReplicationTransfer %s from local DPN server",
-			manifest.DPNWorkItem.Identifier)
-		GetXferRequest(localClient, manifest, activeSummary)
-		if activeSummary.HasErrors() {
-			return manifest
-		}
-		fromNode = manifest.ReplicationTransfer.FromNode
-	}
-
-	// Now we get the transfer record from the originating node.
-	remoteClient := remoteClients[fromNode]
-	if remoteClient == nil {
-		activeSummary.AddError("Cannot get remote DPN client for %s",
-			manifest.ReplicationTransfer.FromNode)
-	}
-	_context.MessageLog.Info("Requesting ReplicationTransfer %s from remote DPN server %s",
-		manifest.DPNWorkItem.Identifier, manifest.ReplicationTransfer.FromNode)
-	GetXferRequest(remoteClient, manifest, activeSummary)
-	if activeSummary.HasErrors() {
-		return manifest
-	}
-
-	// A little more manifest-building, in case we were unable to
-	// restore the original manifest above.
-	if unmarshaFailed {
-		// This is where we have stored our local copy of this bag.
-		manifest.LocalPath = filepath.Join(
-			_context.Config.DPN.StagingDirectory,
-			manifest.ReplicationTransfer.Bag+".tar")
-		_context.MessageLog.Info("Set manifest.LocalPath to %s", manifest.LocalPath)
-		// Get the DPN bag from the remote node.
-		GetDPNBag(remoteClient, manifest, activeSummary)
-	}
-
+// cancelIfNecessary cancels this job if the ReplicationTransfer
+// from the remote node has changed to indicate that we should not
+// proceed.
+func cancelIfNecessary(manifest *models.ReplicationManifest, stage string, activeSummary *apt_models.WorkSummary) {
 	// In the copy stage, StoreRequested will always be false. After the copy
 	// stage, when we send the fixity value back to the remote server and the
 	// remote knows whether or not we received a valid copy of the bag, the
@@ -418,8 +398,6 @@ func SetupReplicationManifest(message *nsq.Message, stage string, _context *cont
 		activeSummary.AddError("Aborting replication because Cancelled is true.")
 		manifest.Cancelled = true
 	}
-
-	return manifest
 }
 
 // LoadBagValidationConfig loads the bag validation config file specified
