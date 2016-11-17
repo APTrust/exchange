@@ -121,9 +121,16 @@ func (packager *DPNPackager) createBagDirectory(manifest *models.DPNIngestManife
 }
 
 func (packager *DPNPackager) finishWithSuccess(manifest *models.DPNIngestManifest) {
-
+	// Log success
+	// Save WorkItem
+	// Save WorkItemState
+	// Push to next queue
+	// Finish NSQ
 }
 
 func (packager *DPNPackager) finishWithError(manifest *models.DPNIngestManifest) {
-
+	// Log error
+	// Save WorkItem
+	// Save WorkItemState
+	// Finish NSQ
 }

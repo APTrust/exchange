@@ -15,6 +15,7 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -107,6 +108,19 @@ func GetWorkItem(_context *context.Context, manifest *models.DPNIngestManifest, 
 	}
 }
 
+// SaveWorkItem saves the WorkItem in the manifest to Pharos.
+// Param workSummary should be the WorkSummary from the manifest for the
+// current stage of processing.
+func SaveWorkItem(_context *context.Context, manifest *models.DPNIngestManifest, workSummary *apt_models.WorkSummary) {
+	resp := _context.PharosClient.WorkItemSave(manifest.WorkItem)
+	if resp.Error != nil {
+		_context.MessageLog.Error("Error saving WorkItem ready for %s/%s: %v",
+			manifest.WorkItem.Bucket, manifest.WorkItem.Name, resp.Error)
+		workSummary.AddError(resp.Error.Error())
+	}
+	manifest.WorkItem = resp.WorkItem()
+}
+
 // GetWorkItemState fetches the WorkItemState associated with this message
 // and attaches it to the manifest.
 //
@@ -124,8 +138,8 @@ func GetWorkItemState(_context *context.Context, manifest *models.DPNIngestManif
 	}
 	if manifest.WorkItem.WorkItemStateId == nil || *manifest.WorkItem.WorkItemStateId == 0 {
 		// If this is our first attempt at packaging, this item will have no state.
-		_context.MessageLog.Info("No WorkItemState for WorkItem %d",
-			manifest.WorkItem.Id, manifest.WorkItem.ObjectIdentifier)
+		_context.MessageLog.Info("No WorkItemState for WorkItem %d (%s/%s)",
+			manifest.WorkItem.Id, manifest.WorkItem.Bucket, manifest.WorkItem.Name)
 		return
 	}
 	resp := _context.PharosClient.WorkItemStateGet(*manifest.WorkItem.WorkItemStateId)
@@ -150,6 +164,51 @@ func GetWorkItemState(_context *context.Context, manifest *models.DPNIngestManif
 			workItemState.Action)
 		workSummary.AddError(msg)
 		workSummary.ErrorIsFatal = true
+	}
+}
+
+// SaveWorkItemState sends a copy of this processes' WorkItemState
+// back to Pharos.
+//
+// Param activeSummary will change, depending on what stage of processing
+// we're in. It could be the DPNIngestState.PackageSummary,
+// DPNIngestState.StoreSummary, etc.
+func SaveWorkItemState(manifest *models.DPNIngestManifest, _context *context.Context, activeSummary *apt_models.WorkSummary) {
+	// Serialize the IngestManifest to JSON, and stuff it into the
+	// WorkItemState.State. Subsequent workers need this info to
+	// store the object's files in S3 and Glacier, and to record
+	// results in Pharos.
+	data, err := json.Marshal(manifest)
+	if err != nil {
+		// If we couldn't serialize the IngestManifest, subsequent workers
+		// won't have the info they need to process this bag. We'll have to
+		// requeue this item and start all over.
+		_context.MessageLog.Error(err.Error())
+		activeSummary.AddError("Could not convert DPN Ingest Manifest "+
+			"to JSON. This item will have to be re-processed. Error was: %v", err)
+	} else {
+		manifest.WorkItemState.State = string(data)
+		// OK. We serialized the IngestManifest. Dump a copy into the
+		// file system for backup and troubleshooting, and send a copy
+		// over to Pharos, so the next worker in the chain (the save worker)
+		// can access it.
+		LogIngestJson(manifest, _context.JsonLog)
+		resp := _context.PharosClient.WorkItemStateSave(manifest.WorkItemState)
+		if resp.Error != nil {
+			// Could not send a copy of the WorkItemState to Pharos.
+			// That means subsequent workers won't have the info they
+			// need to work on this bag. We'll have to start processing
+			// all over again.
+			_context.MessageLog.Error(resp.Error.Error())
+			activeSummary.AddError("Could not save WorkItemState "+
+				"to Pharos. This item will have to be re-processed. Error was: %v", resp.Error)
+		} else {
+			// Saved to Pharos!
+			_context.MessageLog.Info("Saved WorkItemState for WorkItem %d (%s/%s) to Pharos",
+				manifest.WorkItem.Id, manifest.WorkItem.Bucket,
+				manifest.WorkItem.Name)
+			manifest.WorkItemState = resp.WorkItemState()
+		}
 	}
 }
 
@@ -313,8 +372,8 @@ func UpdateReplicationTransfer(_context *context.Context, remoteClient *network.
 	}
 }
 
-// Dump the WorkItemState.State into the JSON log, surrounded my markers that
-// make it easy to find. This log gets big.
+// LogReplicationJson dumps the WorkItemState.State into the JSON log,
+// surrounded by markers that make it easy to find. This log gets big.
 func LogReplicationJson(manifest *models.ReplicationManifest, jsonLog *log.Logger) {
 	timestamp := time.Now().UTC().Format(time.RFC3339)
 	startMessage := fmt.Sprintf("-------- BEGIN DPNWorkItem %d | XferId: %s | Time: %s --------",
@@ -324,6 +383,23 @@ func LogReplicationJson(manifest *models.ReplicationManifest, jsonLog *log.Logge
 	state := "{}"
 	if manifest.DPNWorkItem.State != nil {
 		state = *manifest.DPNWorkItem.State
+	}
+	jsonLog.Println(startMessage, "\n",
+		state, "\n",
+		endMessage, "\n")
+}
+
+// LogIntestJson dumps the WorkItemState.State into the JSON log, surrounded
+// by markers that make it easy to find. This log gets big.
+func LogIngestJson(manifest *models.DPNIngestManifest, jsonLog *log.Logger) {
+	timestamp := time.Now().UTC().Format(time.RFC3339)
+	startMessage := fmt.Sprintf("-------- BEGIN WorkItem %d | Name: %s | Time: %s --------",
+		manifest.WorkItem.Id, manifest.WorkItem.Name, timestamp)
+	endMessage := fmt.Sprintf("-------- END WorkItem %d | Name: %s | Time: %s --------",
+		manifest.WorkItem.Id, manifest.WorkItem.Name, timestamp)
+	state := "{}"
+	if manifest.WorkItemState != nil {
+		state = manifest.WorkItemState.State
 	}
 	jsonLog.Println(startMessage, "\n",
 		state, "\n",
@@ -429,12 +505,16 @@ func initManifest(message *nsq.Message, stage string) (*models.ReplicationManife
 // if possible. This acts directly on the manifest pointer param, and returns
 // a boolean indicating whether the restore was successful.
 func restoreReplicationState(manifest *models.ReplicationManifest, _context *context.Context) bool {
+	restoreSucceeded := false
 	savedState := ""
 	if manifest.DPNWorkItem.State != nil {
 		savedState = *manifest.DPNWorkItem.State
 	}
+	if strings.TrimSpace(savedState) == "" {
+		return false // No use trying to unmarshal an empty string
+	}
+	// If there is a saved WorkItemState.State, let's parse it.
 	savedManifest := &models.ReplicationManifest{}
-	restoreSucceeded := false
 	err := json.Unmarshal([]byte(savedState), &savedManifest)
 	if err != nil {
 		_context.MessageLog.Warning(
@@ -496,10 +576,17 @@ func restoreIngestState(_context *context.Context, manifest *models.DPNIngestMan
 		manifest.StoreSummary = savedManifest.StoreSummary
 		manifest.RecordSummary = savedManifest.RecordSummary
 	} else {
-		_context.MessageLog.Warning(
-			"Cannot unmarshal saved manifest for %s: %v\n"+
-				"Will build state instead. Manifest data: %s",
-			manifest.WorkItem.ObjectIdentifier, err, savedState)
+		if strings.TrimSpace(savedState) == "" {
+			_context.MessageLog.Info("No saved state for WorkItem %d (%s/%s)",
+				manifest.WorkItem.Id, manifest.WorkItem.Bucket,
+				manifest.WorkItem.Name)
+		} else {
+			_context.MessageLog.Warning(
+				"Cannot unmarshal saved manifest for WorkItem %d (%s/%s): %v\n"+
+					"Will build state instead. Manifest data: %s",
+				manifest.WorkItem.Id, manifest.WorkItem.Bucket,
+				manifest.WorkItem.Name, err, savedState)
+		}
 		manifest.LocalDir = filepath.Join(
 			_context.Config.DPN.StagingDirectory,
 			manifest.WorkItem.ObjectIdentifier)
@@ -586,4 +673,21 @@ func SetupIngestManifest(message *nsq.Message, stage string, _context *context.C
 	activeSummary.FinishedAt = time.Time{}
 
 	return manifest
+}
+
+// PushToQueue pushes a WorkItem into the specified NSQ topic.
+func PushToQueue(manifest *models.DPNIngestManifest, _context *context.Context, activeSummary *apt_models.WorkSummary, queueTopic string) {
+	err := _context.NSQClient.Enqueue(
+		queueTopic,
+		manifest.WorkItem.Id)
+	if err != nil {
+		msg := fmt.Sprintf("Error adding WorkItem %d (%s/%s) to NSQ topic %s: %v",
+			manifest.WorkItem.Id, manifest.WorkItem.Bucket,
+			manifest.WorkItem.Name, queueTopic, err)
+		activeSummary.AddError(msg)
+		_context.MessageLog.Error(msg)
+		// Record work item state again, to capture the
+		// cannot-be-queued error.
+		SaveWorkItemState(manifest, _context, activeSummary)
+	}
 }
