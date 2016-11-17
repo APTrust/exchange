@@ -6,6 +6,9 @@ import (
 	"github.com/APTrust/exchange/context"
 	"github.com/APTrust/exchange/dpn/models"
 	"github.com/APTrust/exchange/dpn/network"
+	// dpn_util "github.com/APTrust/exchange/dpn/util"
+	apt_network "github.com/APTrust/exchange/network"
+	"github.com/APTrust/exchange/util/fileutil"
 	"github.com/APTrust/exchange/validation"
 	"github.com/nsqio/go-nsq"
 	"os"
@@ -98,6 +101,16 @@ func (packager *DPNPackager) buildBag() {
 		// Fetch all of the IntelObj's GenericFile into the data subdir
 		// Add each file to the BagBuilder
 		// Add manifests and other required files
+		packager.createBagDirectory(manifest)
+		if manifest.PackageSummary.HasErrors() {
+			packager.PostProcessChannel <- manifest
+			continue
+		}
+		packager.buildDPNBag(manifest)
+		if manifest.PackageSummary.HasErrors() {
+			packager.PostProcessChannel <- manifest
+			continue
+		}
 		packager.ValidationChannel <- manifest
 	}
 }
@@ -121,6 +134,68 @@ func (packager *DPNPackager) postProcess() {
 	}
 }
 
+// Build the DPN bag by fetching the APTrust files, writing manifests, etc.
+func (packager *DPNPackager) buildDPNBag(manifest *models.DPNIngestManifest) {
+	// builder, err := dpn_util.NewBagBuilder(
+	// 	manifest.LocalDir,
+	// 	manifest.IntellectualObject,
+	// 	packager.Context.Config.DPN.DefaultMetadata)
+	// if err != nil {
+	// 	manifest.PackageSummary.AddError("Cannot create BagBuilder: %v", err)
+	// 	return
+	// }
+	packager.fetchAllFiles(manifest)
+
+	// Write tag files and manifests
+	// Validate the bag
+	// Tar it up
+}
+
+// ISSUE: See https://www.pivotaltracker.com/story/show/134540309
+// TODO: Don't even try to solve the issue above without a thorough plan.
+func (packager *DPNPackager) fetchAllFiles(manifest *models.DPNIngestManifest) {
+	downloader := apt_network.NewS3Download(
+		constants.AWSVirginia,
+		packager.Context.Config.PreservationBucket,
+		"",
+		manifest.LocalDir,
+		false, // no need to calculate md5
+		true)  // calculate sha256 for fixity verification
+	for _, gf := range manifest.IntellectualObject.GenericFiles {
+		downloader.Sha256Digest = ""
+		downloader.ErrorMessage = ""
+
+		// We're going to want to confirm the sha256 digest of the download...
+		existingSha256 := gf.GetChecksumByAlgorithm(constants.AlgSha256)
+		if existingSha256 == nil {
+			manifest.PackageSummary.AddError("Cannot find sha256 digest for file %s", gf.Identifier)
+			break
+		}
+		// Figure out what the key name is for this file. It's a UUID.
+		s3KeyName, err := gf.PreservationStorageFileName()
+		if err != nil {
+			manifest.PackageSummary.AddError("File %s: %v", gf.Identifier, err)
+			break
+		}
+		downloader.KeyName = s3KeyName
+
+		// Fetch is the expensive part, so we don't even want to get to this
+		// point if we don't have the info above.
+		downloader.Fetch()
+		if downloader.ErrorMessage != "" {
+			manifest.PackageSummary.AddError("Error fetching %s from S3: %s",
+				gf.Identifier, downloader.ErrorMessage)
+			break
+		}
+		if downloader.Sha256Digest != existingSha256.Digest {
+			manifest.PackageSummary.AddError("sha256 digest mismatch for for file %s."+
+				"Our digest: %s. Digest of fetched file: %s",
+				gf.Identifier, existingSha256, downloader.Sha256Digest)
+			break
+		}
+	}
+}
+
 func (packager *DPNPackager) createBagDirectory(manifest *models.DPNIngestManifest) {
 	if manifest.LocalDir == "" {
 		manifest.PackageSummary.AddError("LocalDirectory is not set for bag %s",
@@ -129,17 +204,33 @@ func (packager *DPNPackager) createBagDirectory(manifest *models.DPNIngestManife
 		manifest.PackageSummary.Retry = false
 		return
 	}
+	err := os.MkdirAll(manifest.LocalDir, 0755)
+	if err != nil {
+		manifest.PackageSummary.AddError("Cannot create directory to build bag: %v", err)
+		manifest.PackageSummary.ErrorIsFatal = true
+	}
 }
 
 func (packager *DPNPackager) finishWithSuccess(manifest *models.DPNIngestManifest) {
-	// Log success
-	// Save WorkItem
-	// Save WorkItemState
-	// Push to next queue
-	// Finish NSQ
+	packager.Context.MessageLog.Info("Packaging succeeded for %s", manifest.WorkItem.ObjectIdentifier)
+	manifest.WorkItem.Status = constants.StageStore
+	manifest.WorkItem.Status = constants.StatusPending
+	manifest.WorkItem.Note = "Packaging completed, awaiting storage"
+	manifest.WorkItem.Node = ""    // no worker is working on this now
+	manifest.WorkItem.Pid = 0      // no process is working on this
+	manifest.WorkItem.Retry = true // just in case this had been false
+	SaveWorkItem(packager.Context, manifest, manifest.PackageSummary)
+	SaveWorkItemState(packager.Context, manifest, manifest.PackageSummary)
+	if fileutil.LooksSafeToDelete(manifest.LocalDir, 12, 3) {
+		os.RemoveAll(manifest.LocalDir)
+	}
+	PushToQueue(packager.Context, manifest, manifest.PackageSummary,
+		packager.Context.Config.DPN.DPNStoreWorker.NsqTopic)
+	manifest.NsqMessage.Finish()
 }
 
 func (packager *DPNPackager) finishWithError(manifest *models.DPNIngestManifest) {
+	// Log what happened.
 	msg := ""
 	packager.Context.MessageLog.Error(manifest.PackageSummary.AllErrorsAsString())
 	if manifest.PackageSummary.ErrorIsFatal {
@@ -169,9 +260,28 @@ func (packager *DPNPackager) finishWithError(manifest *models.DPNIngestManifest)
 		manifest.WorkItem.Outcome = "Pending retry after transient errors"
 		manifest.WorkItem.Retry = true
 	}
+
+	// Set the WorkItem fields and save to Pharos
 	manifest.WorkItem.Note = msg
 	manifest.WorkItem.Node = "" // no worker is working on this now
 	manifest.WorkItem.Pid = 0   // no process is working on this
+
+	// Delete the folder containing the bag we were building,
+	// And delete the tar file too, if it exists.
+	if fileutil.LooksSafeToDelete(manifest.LocalDir, 12, 3) {
+		err := os.RemoveAll(manifest.LocalDir)
+		if err != nil {
+			manifest.PackageSummary.AddError("Could not delete bag directory %s: %v",
+				manifest.LocalDir, err)
+		}
+	}
+	err := os.Remove(manifest.LocalTarFile)
+	if err != nil {
+		manifest.PackageSummary.AddError("Could not delete tar file %s: %v",
+			manifest.LocalTarFile, err)
+	}
+
+	// Save info to Pharos so the next worker knows what's what.
 	SaveWorkItem(packager.Context, manifest, manifest.PackageSummary)
 	SaveWorkItemState(packager.Context, manifest, manifest.PackageSummary)
 }

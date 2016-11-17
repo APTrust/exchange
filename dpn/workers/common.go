@@ -676,7 +676,7 @@ func SetupIngestManifest(message *nsq.Message, stage string, _context *context.C
 }
 
 // PushToQueue pushes a WorkItem into the specified NSQ topic.
-func PushToQueue(manifest *models.DPNIngestManifest, _context *context.Context, activeSummary *apt_models.WorkSummary, queueTopic string) {
+func PushToQueue(_context *context.Context, manifest *models.DPNIngestManifest, activeSummary *apt_models.WorkSummary, queueTopic string) {
 	err := _context.NSQClient.Enqueue(
 		queueTopic,
 		manifest.WorkItem.Id)
