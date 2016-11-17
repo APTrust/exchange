@@ -2,12 +2,14 @@ package workers
 
 import (
 	"fmt"
+	"github.com/APTrust/exchange/constants"
 	"github.com/APTrust/exchange/context"
 	"github.com/APTrust/exchange/dpn/models"
 	"github.com/APTrust/exchange/dpn/network"
 	"github.com/APTrust/exchange/validation"
 	"github.com/nsqio/go-nsq"
-	//	"os"
+	"os"
+	"time"
 )
 
 // dpn_packager repackages APTrust bags as DPN bags so they
@@ -73,6 +75,15 @@ func (packager *DPNPackager) HandleMessage(message *nsq.Message) error {
 		return nil
 	}
 
+	now := time.Now().UTC()
+	hostname, _ := os.Hostname()
+	manifest.WorkItem.Stage = constants.StagePackage
+	manifest.WorkItem.StageStartedAt = &now
+	manifest.WorkItem.Status = constants.StatusStarted
+	manifest.WorkItem.Node = hostname
+	manifest.WorkItem.Pid = os.Getpid()
+	SaveWorkItem(packager.Context, manifest, manifest.PackageSummary)
+
 	// Start processing.
 	packager.Context.MessageLog.Info("Putting bag %s into the package channel",
 		manifest.WorkItem.ObjectIdentifier)
@@ -129,8 +140,38 @@ func (packager *DPNPackager) finishWithSuccess(manifest *models.DPNIngestManifes
 }
 
 func (packager *DPNPackager) finishWithError(manifest *models.DPNIngestManifest) {
-	// Log error
-	// Save WorkItem
-	// Save WorkItemState
-	// Finish NSQ
+	msg := ""
+	packager.Context.MessageLog.Error(manifest.PackageSummary.AllErrorsAsString())
+	if manifest.PackageSummary.ErrorIsFatal {
+		msg := fmt.Sprintf("Ingest error for %s is fatal. Will not retry.",
+			manifest.WorkItem.ObjectIdentifier)
+		packager.Context.MessageLog.Error(msg)
+		manifest.NsqMessage.Finish()
+		manifest.WorkItem.Status = constants.StatusFailed
+		manifest.WorkItem.Outcome = "Failed due to fatal error"
+		manifest.WorkItem.Retry = false
+		manifest.WorkItem.NeedsAdminReview = true
+	} else if manifest.PackageSummary.AttemptNumber > packager.Context.Config.DPN.DPNPackageWorker.MaxAttempts {
+		msg := fmt.Sprintf("Giving up on ingest for %s after %d attempts.",
+			manifest.WorkItem.ObjectIdentifier, manifest.PackageSummary.AttemptNumber)
+		packager.Context.MessageLog.Error(msg)
+		manifest.NsqMessage.Finish()
+		manifest.WorkItem.Status = constants.StatusFailed
+		manifest.WorkItem.Outcome = "Failed after too many attempts with transient errors"
+		manifest.WorkItem.Retry = false
+		manifest.WorkItem.NeedsAdminReview = true
+	} else {
+		msg := fmt.Sprintf("Will retry ingest for %s",
+			manifest.WorkItem.ObjectIdentifier)
+		packager.Context.MessageLog.Warning(msg)
+		manifest.NsqMessage.Requeue(1 * time.Minute)
+		manifest.WorkItem.Status = constants.StatusPending
+		manifest.WorkItem.Outcome = "Pending retry after transient errors"
+		manifest.WorkItem.Retry = true
+	}
+	manifest.WorkItem.Note = msg
+	manifest.WorkItem.Node = "" // no worker is working on this now
+	manifest.WorkItem.Pid = 0   // no process is working on this
+	SaveWorkItem(packager.Context, manifest, manifest.PackageSummary)
+	SaveWorkItemState(packager.Context, manifest, manifest.PackageSummary)
 }

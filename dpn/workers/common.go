@@ -168,12 +168,12 @@ func GetWorkItemState(_context *context.Context, manifest *models.DPNIngestManif
 }
 
 // SaveWorkItemState sends a copy of this processes' WorkItemState
-// back to Pharos.
+// back to Pharos. It also dumps the ingest manifest to the JSON log.
 //
 // Param activeSummary will change, depending on what stage of processing
 // we're in. It could be the DPNIngestState.PackageSummary,
 // DPNIngestState.StoreSummary, etc.
-func SaveWorkItemState(manifest *models.DPNIngestManifest, _context *context.Context, activeSummary *apt_models.WorkSummary) {
+func SaveWorkItemState(_context *context.Context, manifest *models.DPNIngestManifest, activeSummary *apt_models.WorkSummary) {
 	// Serialize the IngestManifest to JSON, and stuff it into the
 	// WorkItemState.State. Subsequent workers need this info to
 	// store the object's files in S3 and Glacier, and to record
@@ -688,6 +688,6 @@ func PushToQueue(manifest *models.DPNIngestManifest, _context *context.Context, 
 		_context.MessageLog.Error(msg)
 		// Record work item state again, to capture the
 		// cannot-be-queued error.
-		SaveWorkItemState(manifest, _context, activeSummary)
+		SaveWorkItemState(_context, manifest, activeSummary)
 	}
 }

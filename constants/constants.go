@@ -62,6 +62,7 @@ const (
 	StageRecord    = "Record"
 	StageCleanup   = "Cleanup"
 	StageResolve   = "Resolve"
+	StagePackage   = "Package"
 )
 
 var StageTypes []string = []string{
@@ -74,6 +75,7 @@ var StageTypes []string = []string{
 	StageRecord,
 	StageCleanup,
 	StageResolve,
+	StagePackage,
 }
 
 // Action enumerations match values defined in
