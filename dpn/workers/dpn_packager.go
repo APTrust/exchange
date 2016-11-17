@@ -161,9 +161,17 @@ func (packager *DPNPackager) fetchAllFiles(manifest *models.DPNIngestManifest) {
 		manifest.LocalDir,
 		false, // no need to calculate md5
 		true)  // calculate sha256 for fixity verification
+	packager.Context.MessageLog.Info("Object %s has %d saved files",
+		manifest.IntellectualObject.Identifier,
+		len(manifest.IntellectualObject.GenericFiles))
 	for _, gf := range manifest.IntellectualObject.GenericFiles {
 		downloader.Sha256Digest = ""
 		downloader.ErrorMessage = ""
+
+		// -------------------------------------------------------------------
+		// TODO: Separate tag files from data files
+		// TODO: Omit deleted files
+		// -------------------------------------------------------------------
 
 		// We're going to want to confirm the sha256 digest of the download...
 		existingSha256 := gf.GetChecksumByAlgorithm(constants.AlgSha256)
@@ -181,16 +189,20 @@ func (packager *DPNPackager) fetchAllFiles(manifest *models.DPNIngestManifest) {
 
 		// Fetch is the expensive part, so we don't even want to get to this
 		// point if we don't have the info above.
+		packager.Context.MessageLog.Info("Downloading %s (%s)", gf.Identifier, s3KeyName)
 		downloader.Fetch()
 		if downloader.ErrorMessage != "" {
-			manifest.PackageSummary.AddError("Error fetching %s from S3: %s",
-				gf.Identifier, downloader.ErrorMessage)
+			msg := fmt.Sprintf("Error fetching %s from S3: %s", gf.Identifier, downloader.ErrorMessage)
+			packager.Context.MessageLog.Error(msg)
+			manifest.PackageSummary.AddError(msg)
 			break
 		}
 		if downloader.Sha256Digest != existingSha256.Digest {
-			manifest.PackageSummary.AddError("sha256 digest mismatch for for file %s."+
+			msg := fmt.Sprintf("sha256 digest mismatch for for file %s."+
 				"Our digest: %s. Digest of fetched file: %s",
 				gf.Identifier, existingSha256, downloader.Sha256Digest)
+			packager.Context.MessageLog.Error(msg)
+			manifest.PackageSummary.AddError(msg)
 			break
 		}
 	}
@@ -208,6 +220,8 @@ func (packager *DPNPackager) createBagDirectory(manifest *models.DPNIngestManife
 	if err != nil {
 		manifest.PackageSummary.AddError("Cannot create directory to build bag: %v", err)
 		manifest.PackageSummary.ErrorIsFatal = true
+	} else {
+		packager.Context.MessageLog.Info("Created dir %s", manifest.LocalDir)
 	}
 }
 
