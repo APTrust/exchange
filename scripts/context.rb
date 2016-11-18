@@ -5,7 +5,7 @@ require_relative 'app'
 class Context
 
   attr_reader(:dpn_server_root, :exchange_root, :pharos_root, :log_dir,
-              :go_bin_dir, :apps)
+              :staging_dir, :go_bin_dir, :apps)
   attr_accessor(:verbose, :run_dpn_cluster_init)
 
   def initialize
@@ -13,6 +13,7 @@ class Context
     @exchange_root = ENV['EXCHANGE_ROOT'] || abort("Set env var EXCHANGE_ROOT")
     @pharos_root = ENV['PHAROS_ROOT'] || abort("Set env var PHAROS_ROOT")
     @log_dir = "#{ENV['HOME']}/tmp/logs"
+    @staging_dir = "#{ENV['HOME']}/tmp/dpn_staging"
     @nsq_data_dir = "#{ENV['HOME']}/tmp/nsq"
     @go_bin_dir = "#{ENV['HOME']}/tmp/bin"
 
@@ -59,6 +60,7 @@ class Context
 
   def make_test_dirs
     FileUtils.mkdir_p @log_dir
+    FileUtils.mkdir_p @staging_dir
     FileUtils.mkdir_p @go_bin_dir
     FileUtils.mkdir_p @nsq_data_dir
   end
@@ -66,6 +68,11 @@ class Context
   def clear_logs
     puts "Deleting old logs"
     FileUtils.remove(Dir.glob("#{@log_dir}/*"))
+  end
+
+  def clear_staging
+    puts "Deleting temporary staging"
+    FileUtils.remove_dir(staging_dir, force: true)
   end
 
   def clear_binaries

@@ -12,6 +12,7 @@ import (
 	"github.com/APTrust/exchange/validation"
 	"github.com/nsqio/go-nsq"
 	"os"
+	"path/filepath"
 	"time"
 )
 
@@ -157,8 +158,8 @@ func (packager *DPNPackager) fetchAllFiles(manifest *models.DPNIngestManifest) {
 	downloader := apt_network.NewS3Download(
 		constants.AWSVirginia,
 		packager.Context.Config.PreservationBucket,
-		"",
-		manifest.LocalDir,
+		"",    // s3 key to fetch - to be set below
+		"",    // local path at which to save the s3 file - set below
 		false, // no need to calculate md5
 		true)  // calculate sha256 for fixity verification
 	packager.Context.MessageLog.Info("Object %s has %d saved files",
@@ -185,7 +186,16 @@ func (packager *DPNPackager) fetchAllFiles(manifest *models.DPNIngestManifest) {
 			manifest.PackageSummary.AddError("File %s: %v", gf.Identifier, err)
 			break
 		}
+
+		// Tell the downloader what we're downloading, and where to put it.
 		downloader.KeyName = s3KeyName
+		downloader.LocalPath = filepath.Join(manifest.LocalDir, gf.OriginalPath())
+
+		// Make sure the target directory exists in the local file system.
+		packager.ensureDirectory(manifest, downloader.LocalPath)
+		if manifest.PackageSummary.HasErrors() {
+			break
+		}
 
 		// Fetch is the expensive part, so we don't even want to get to this
 		// point if we don't have the info above.
@@ -204,6 +214,17 @@ func (packager *DPNPackager) fetchAllFiles(manifest *models.DPNIngestManifest) {
 			packager.Context.MessageLog.Error(msg)
 			manifest.PackageSummary.AddError(msg)
 			break
+		}
+	}
+}
+
+func (packager *DPNPackager) ensureDirectory(manifest *models.DPNIngestManifest, filePath string) {
+	dir := filepath.Dir(filePath)
+	if !fileutil.FileExists(dir) {
+		err := os.MkdirAll(dir, 0755)
+		if err != nil {
+			manifest.PackageSummary.AddError("Cannot create directory %s: %v", dir, err)
+			manifest.PackageSummary.ErrorIsFatal = true
 		}
 	}
 }

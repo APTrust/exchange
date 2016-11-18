@@ -119,6 +119,7 @@ class IntegrationTest
     @results = {}
     @context.make_test_dirs
     @context.clear_logs
+    @context.clear_staging
     @context.clear_binaries
     @context.clear_nsq_data
   end
