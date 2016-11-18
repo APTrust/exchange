@@ -69,11 +69,11 @@ type BagBuilder struct {
 // You can also add non-payload files outside the data directory. That
 // usually means adding custom tag files to custom tag directories.
 //
-//   err := builder.Bag.AddCustomTagFile("/abs/path/to/source.txt", "rel/path/to/dest.txt", true)
+//   err := builder.Bag.AddCustomTagfile("/abs/path/to/source.txt", "rel/path/to/dest.txt", true)
 //
 // That adds "/abs/path/to/source.txt" into "rel/path/to/dest.txt" inside
 // the bag, but notice it's not in the data directory. The final param
-// to AddCustomTagFile indicates whether you want to put the tag file's
+// to AddCustomTagfile indicates whether you want to put the tag file's
 // checksum in the tag manifest.
 //
 // You should not have to add any of the DPN standard tag files or
@@ -248,7 +248,7 @@ func (builder *BagBuilder) buildAPTrustBagIt() {
 // tagFile.Data.AddField(*bagins.NewTagField("Bag-Count", "1"))
 //
 // If you want to copy an existing file into your bag as a tag file, use
-// builder.Bag.AddCustomTagFile(absSourcePath, relDestPath string)
+// builder.Bag.AddCustomTagfile(absSourcePath, relDestPath string)
 func (builder *BagBuilder) AddTagFile(tagFileName string) (*bagins.TagFile, error) {
 	err := builder.Bag.AddTagfile(tagFileName)
 	if err != nil {

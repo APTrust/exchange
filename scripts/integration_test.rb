@@ -425,7 +425,7 @@ class IntegrationTest
 
       # Start service
       @service.app_start(@context.apps['dpn_package'])
-      sleep 45
+      sleep 60
 
       # Run the post test
       #@results['dpn_package_test'] = @test_runner.run_dpn_package_post_test

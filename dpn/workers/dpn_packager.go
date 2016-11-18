@@ -6,13 +6,14 @@ import (
 	"github.com/APTrust/exchange/context"
 	"github.com/APTrust/exchange/dpn/models"
 	"github.com/APTrust/exchange/dpn/network"
-	// dpn_util "github.com/APTrust/exchange/dpn/util"
+	dpn_util "github.com/APTrust/exchange/dpn/util"
 	apt_network "github.com/APTrust/exchange/network"
 	"github.com/APTrust/exchange/util/fileutil"
 	"github.com/APTrust/exchange/validation"
 	"github.com/nsqio/go-nsq"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 )
 
@@ -97,16 +98,6 @@ func (packager *DPNPackager) HandleMessage(message *nsq.Message) error {
 
 func (packager *DPNPackager) buildBag() {
 	for manifest := range packager.PackageChannel {
-		// Create the manifest.LocalDir, with data subdir
-		// Create a new BagBuilder
-		// Fetch all of the IntelObj's GenericFile into the data subdir
-		// Add each file to the BagBuilder
-		// Add manifests and other required files
-		packager.createBagDirectory(manifest)
-		if manifest.PackageSummary.HasErrors() {
-			packager.PostProcessChannel <- manifest
-			continue
-		}
 		packager.buildDPNBag(manifest)
 		if manifest.PackageSummary.HasErrors() {
 			packager.PostProcessChannel <- manifest
@@ -137,19 +128,86 @@ func (packager *DPNPackager) postProcess() {
 
 // Build the DPN bag by fetching the APTrust files, writing manifests, etc.
 func (packager *DPNPackager) buildDPNBag(manifest *models.DPNIngestManifest) {
-	// builder, err := dpn_util.NewBagBuilder(
-	// 	manifest.LocalDir,
-	// 	manifest.IntellectualObject,
-	// 	packager.Context.Config.DPN.DefaultMetadata)
-	// if err != nil {
-	// 	manifest.PackageSummary.AddError("Cannot create BagBuilder: %v", err)
-	// 	return
-	// }
+
+	// A little problem with BagBuilder here is that it creates a directory
+	// with the bag name under the directory you give it. So if LocalDir
+	// is /mnt/dpn/staging/test.edu/bag1, the BagBuilder starts putting files
+	// into /mnt/dpn/staging/test.edu/bag1/bag1. That behavior makes sense in
+	// other contexts, but causes problems here. So we have to remove the
+	// bag name from the path.
+	pathParts := strings.Split(manifest.LocalDir, string(os.PathSeparator))
+	builderDir := strings.Join(pathParts[0:len(pathParts)-1], string(os.PathSeparator))
+	packager.Context.MessageLog.Info("BuilderDir is %s", builderDir)
+
+	builder, err := dpn_util.NewBagBuilder(
+		builderDir, // should be absolute path
+		manifest.IntellectualObject,
+		packager.Context.Config.DPN.DefaultMetadata)
+	if err != nil {
+		manifest.PackageSummary.AddError("Cannot create BagBuilder: %v", err)
+		return
+	}
 	packager.fetchAllFiles(manifest)
 
+	for _, gf := range manifest.IntellectualObject.GenericFiles {
+		localPath := filepath.Join(manifest.LocalDir, gf.OriginalPath())
+		var err error
+		if strings.HasPrefix(gf.OriginalPath(), "data/") {
+			packager.Context.MessageLog.Info("Adding %s as data file at %s", localPath, gf.OriginalPath())
+			err = builder.Bag.AddFile(localPath, gf.OriginalPath())
+		} else {
+			packager.Context.MessageLog.Info("Adding %s as tag file at %s", localPath, gf.OriginalPath())
+			err = builder.Bag.AddCustomTagfile(localPath, gf.OriginalPath(), true)
+		}
+		if err != nil {
+			manifest.PackageSummary.AddError("Cannot add %s to bag: %v", localPath, err)
+			return
+		}
+	}
+
 	// Write tag files and manifests
+	errors := builder.Bag.Save()
+	if errors != nil && len(errors) > 0 {
+		for _, err = range errors {
+			manifest.PackageSummary.AddError("Bagging error: %v", err)
+		}
+	}
+
+	// -------------------------------------------------------------------------
+	//
+	// START HERE
+	//
+	// TODO: BagBuilder is writing empty tag files and empty manifest-sha256.txt
+	// Also, not all tag files are being added to tagmanifest-sha256.txt
+	//
+	//
+	// -------------------------------------------------------------------------
+
 	// Validate the bag
+	var validationResult *validation.ValidationResult
+	validator, err := validation.NewBagValidator(manifest.LocalDir, packager.BagValidationConfig)
+	if err != nil {
+		manifest.PackageSummary.AddError(err.Error())
+	} else {
+		// Validation can take a long time for large bags.
+		validationResult = validator.Validate()
+	}
+	if validationResult == nil {
+		// This should be impossible
+		manifest.PackageSummary.AddError("Bag validator returned nil result!")
+	} else if validationResult.ParseSummary.HasErrors() || validationResult.ValidationSummary.HasErrors() {
+		for _, errMsg := range validationResult.ParseSummary.Errors {
+			manifest.PackageSummary.AddError("Validator parse error: %s", errMsg)
+		}
+		for _, errMsg := range validationResult.ValidationSummary.Errors {
+			manifest.PackageSummary.AddError("Validation error: %s", errMsg)
+		}
+	}
+
+	// -------------------------------------------------------------------------
 	// Tar it up
+	// TODO: Implement the tar code
+	// -------------------------------------------------------------------------
 }
 
 // ISSUE: See https://www.pivotaltracker.com/story/show/134540309
@@ -165,14 +223,10 @@ func (packager *DPNPackager) fetchAllFiles(manifest *models.DPNIngestManifest) {
 	packager.Context.MessageLog.Info("Object %s has %d saved files",
 		manifest.IntellectualObject.Identifier,
 		len(manifest.IntellectualObject.GenericFiles))
+	downloaded := 0
 	for _, gf := range manifest.IntellectualObject.GenericFiles {
 		downloader.Sha256Digest = ""
 		downloader.ErrorMessage = ""
-
-		// -------------------------------------------------------------------
-		// TODO: Separate tag files from data files
-		// TODO: Omit deleted files
-		// -------------------------------------------------------------------
 
 		// We're going to want to confirm the sha256 digest of the download...
 		existingSha256 := gf.GetChecksumByAlgorithm(constants.AlgSha256)
@@ -192,14 +246,15 @@ func (packager *DPNPackager) fetchAllFiles(manifest *models.DPNIngestManifest) {
 		downloader.LocalPath = filepath.Join(manifest.LocalDir, gf.OriginalPath())
 
 		// Make sure the target directory exists in the local file system.
-		packager.ensureDirectory(manifest, downloader.LocalPath)
-		if manifest.PackageSummary.HasErrors() {
-			break
-		}
+		//packager.ensureDirectory(manifest, downloader.LocalPath)
+		//if manifest.PackageSummary.HasErrors() {
+		//	break
+		//}
 
 		// Fetch is the expensive part, so we don't even want to get to this
 		// point if we don't have the info above.
-		packager.Context.MessageLog.Info("Downloading %s (%s)", gf.Identifier, s3KeyName)
+		packager.Context.MessageLog.Info("Downloading %s (%s) to %s", gf.Identifier,
+			s3KeyName, downloader.LocalPath)
 		downloader.Fetch()
 		if downloader.ErrorMessage != "" {
 			msg := fmt.Sprintf("Error fetching %s from S3: %s", gf.Identifier, downloader.ErrorMessage)
@@ -215,34 +270,15 @@ func (packager *DPNPackager) fetchAllFiles(manifest *models.DPNIngestManifest) {
 			manifest.PackageSummary.AddError(msg)
 			break
 		}
+		downloaded += 1
 	}
-}
-
-func (packager *DPNPackager) ensureDirectory(manifest *models.DPNIngestManifest, filePath string) {
-	dir := filepath.Dir(filePath)
-	if !fileutil.FileExists(dir) {
-		err := os.MkdirAll(dir, 0755)
-		if err != nil {
-			manifest.PackageSummary.AddError("Cannot create directory %s: %v", dir, err)
-			manifest.PackageSummary.ErrorIsFatal = true
-		}
-	}
-}
-
-func (packager *DPNPackager) createBagDirectory(manifest *models.DPNIngestManifest) {
-	if manifest.LocalDir == "" {
-		manifest.PackageSummary.AddError("LocalDirectory is not set for bag %s",
-			manifest.IntellectualObject.Identifier)
-		manifest.PackageSummary.ErrorIsFatal = true
-		manifest.PackageSummary.Retry = false
-		return
-	}
-	err := os.MkdirAll(manifest.LocalDir, 0755)
-	if err != nil {
-		manifest.PackageSummary.AddError("Cannot create directory to build bag: %v", err)
-		manifest.PackageSummary.ErrorIsFatal = true
+	totalFileCount := len(manifest.IntellectualObject.GenericFiles)
+	if downloaded == totalFileCount {
+		packager.Context.MessageLog.Info("Downloaded all %d files for %s",
+			downloaded, manifest.IntellectualObject.Identifier)
 	} else {
-		packager.Context.MessageLog.Info("Created dir %s", manifest.LocalDir)
+		packager.Context.MessageLog.Error("Downloaded only %d of %d files for %s",
+			downloaded, totalFileCount, manifest.IntellectualObject.Identifier)
 	}
 }
 
