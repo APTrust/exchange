@@ -96,18 +96,25 @@ func (client *PharosClient) InstitutionList(params url.Values) *PharosResponse {
 // Returns the object with the specified identifier, if it
 // exists. Param identifier is an IntellectualObject identifier
 // in the format "institution.edu/object_name". If param
-// includeRelations is true, Pharos will return an IntellectualObject
-// with all of its GenericFile, PREMIS events and checksums. In
-// some cases, that can be a very large object.
-func (client *PharosClient) IntellectualObjectGet(identifier string, includeRelations bool) *PharosResponse {
+// includeFiles is true, Pharos will return an IntellectualObject
+// with all of its GenericFiles and their checksums. If param
+// includeEvents is true, Pharos will return the object with
+// its PREMIS events. If both boolean flags are true, Pharos
+// will return the object will all files, checksums and events,
+// resulting in a huge blob of JSON (many megabytes).
+func (client *PharosClient) IntellectualObjectGet(identifier string, includeFiles, includeEvents bool) *PharosResponse {
 	// Set up the response object
 	resp := NewPharosResponse(PharosIntellectualObject)
 	resp.objects = make([]*models.IntellectualObject, 1)
 
 	// Build the url and the request object
 	relativeUrl := fmt.Sprintf("/api/%s/objects/%s", client.apiVersion, escapeSlashes(identifier))
-	if includeRelations {
-		relativeUrl += "?include_relations=true"
+	if includeFiles && includeEvents {
+		relativeUrl += "?include_all_relations=true"
+	} else if includeFiles {
+		relativeUrl += "?include_files=true"
+	} else if includeEvents {
+		relativeUrl += "?include_events=true"
 	}
 	absoluteUrl := client.BuildUrl(relativeUrl)
 

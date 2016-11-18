@@ -616,7 +616,8 @@ func LoadBagValidationConfig(_context *context.Context) *validation.BagValidatio
 }
 
 func loadIntellectualObject(_context *context.Context, manifest *models.DPNIngestManifest, activeSummary *apt_models.WorkSummary) {
-	resp := _context.PharosClient.IntellectualObjectGet(manifest.WorkItem.ObjectIdentifier, true)
+	// Load IntelObj with GenericFiles and checksums, but not events.
+	resp := _context.PharosClient.IntellectualObjectGet(manifest.WorkItem.ObjectIdentifier, true, false)
 	if resp.Error != nil {
 		activeSummary.AddError("Could not get IntellectualObject %s: %v",
 			manifest.WorkItem.ObjectIdentifier, resp.Error)

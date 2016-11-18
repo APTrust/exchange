@@ -99,7 +99,7 @@ func TestIntellectualObjectGet(t *testing.T) {
 		return
 	}
 
-	response := client.IntellectualObjectGet("college.edu/object", false)
+	response := client.IntellectualObjectGet("college.edu/object", false, false)
 
 	// Check the request URL and method
 	assert.Equal(t, "GET", response.Request.Method)
@@ -121,13 +121,20 @@ func TestIntellectualObjectGet(t *testing.T) {
 	assert.Equal(t, 4, len(obj.GenericFiles[0].Checksums))
 	assert.Equal(t, 5, len(obj.IngestTags))
 
-	// Check with includeRelations option
-	response = client.IntellectualObjectGet("college.edu/object", true)
-
-	// Check the request URL and method
-	assert.Equal(t, "GET", response.Request.Method)
+	// Check with includeFiles option
+	response = client.IntellectualObjectGet("college.edu/object", true, false)
 	assert.Equal(t,
-		"/api/v2/objects/college.edu%2Fobject?include_relations=true",
+		"/api/v2/objects/college.edu%2Fobject?include_files=true",
+		response.Request.URL.Opaque)
+	// Check with includeEvents option
+	response = client.IntellectualObjectGet("college.edu/object", false, true)
+	assert.Equal(t,
+		"/api/v2/objects/college.edu%2Fobject?include_events=true",
+		response.Request.URL.Opaque)
+	// Check with includeFiles and includeEvents options
+	response = client.IntellectualObjectGet("college.edu/object", true, true)
+	assert.Equal(t,
+		"/api/v2/objects/college.edu%2Fobject?include_all_relations=true",
 		response.Request.URL.Opaque)
 }
 
