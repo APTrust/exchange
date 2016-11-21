@@ -5,6 +5,7 @@ import (
 	"github.com/APTrust/exchange/dpn"
 	"github.com/APTrust/exchange/dpn/util"
 	"github.com/APTrust/exchange/models"
+	"github.com/APTrust/exchange/util/fileutil"
 	"github.com/APTrust/exchange/util/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -74,6 +75,7 @@ func TestDPNBagit(t *testing.T) {
 	assert.Equal(t, expected, tagfile.Name())
 	verifyTagField(t, tagfile, "BagIt-Version", "0.97")
 	verifyTagField(t, tagfile, "Tag-File-Character-Encoding", "UTF-8")
+	assert.True(t, fileutil.FileExists(expected))
 }
 
 func TestDPNBagInfo(t *testing.T) {
@@ -87,6 +89,7 @@ func TestDPNBagInfo(t *testing.T) {
 	require.NotNil(t, tagfile)
 	expected := filepath.Join(builder.LocalPath, "bag-info.txt")
 	assert.Equal(t, expected, tagfile.Name())
+	assert.True(t, fileutil.FileExists(expected))
 
 	verifyTagField(t, tagfile, "Source-Organization", "uc.edu")
 	verifyTagField(t, tagfile, "Organization-Address", "")
@@ -110,6 +113,7 @@ func TestDPNInfo(t *testing.T) {
 	require.NotNil(t, tagfile)
 	expected := filepath.Join(builder.LocalPath, "dpn-tags", "dpn-info.txt")
 	assert.Equal(t, expected, tagfile.Name())
+	assert.True(t, fileutil.FileExists(expected))
 
 	verifyTagField(t, tagfile, "DPN-Object-ID", builder.UUID)
 	verifyTagField(t, tagfile, "Local-ID", "uc.edu/cin.675812")
@@ -135,6 +139,7 @@ func TestAPTrustBagit(t *testing.T) {
 	require.NotNil(t, tagfile)
 	expected := filepath.Join(builder.LocalPath, "aptrust-tags", "bagit.txt")
 	assert.Equal(t, expected, tagfile.Name())
+	assert.True(t, fileutil.FileExists(expected))
 
 	verifyTagField(t, tagfile, "BagIt-Version", "0.97")
 	verifyTagField(t, tagfile, "Tag-File-Character-Encoding", "UTF-8")
