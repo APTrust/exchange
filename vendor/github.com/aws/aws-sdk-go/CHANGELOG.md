@@ -1,3 +1,56 @@
+Release v1.5.8 (2016-11-18)
+===
+
+Service Client Updates
+---
+`service/application-autoscaling`: Updates service API and documentation
+`service/elasticmapreduce`: Updates service API and documentation
+`service/elastictranscoder`: Updates service API, documentation, and examples
+`service/gamelift`: Updates service API and documentation
+`service/lambda`: Updates service API and documentation
+
+Release v1.5.7 (2016-11-18)
+===
+
+Service Client Updates
+---
+`service/apigateway`: Updates service API and documentation
+`service/meteringmarketplace`: Updates service API and documentation
+`service/monitoring`: Updates service API and documentation
+`service/sqs`: Updates service API, documentation, and examples
+
+Release v1.5.6 (2016-11-16)
+===
+
+Service Client Updates
+---
+`service/route53`: Updates service API and documentation
+`service/servicecatalog`: Updates service API and documentation
+
+Release v1.5.5 (2016-11-15)
+===
+
+Service Client Updates
+---
+`service/ds`: Updates service API and documentation
+`service/elasticache`: Updates service API and documentation
+`service/kinesis`: Updates service API and documentation
+
+Release v1.5.4 (2016-11-15)
+===
+
+Service Client Updates
+---
+`service/cognito-idp`: Updates service API and documentation
+
+Release v1.5.3 (2016-11-11)
+===
+
+Service Client Updates
+---
+`service/cloudformation`: Updates service documentation and examples
+`service/logs`: Updates service API and documentation
+
 Release v1.5.2 (2016-11-03)
 ===
 
@@ -70,7 +123,7 @@ Service Client Updates
 SDK Feature Updates
 ---
 * `service/dynamodb/dynamodbattribute`: Add UnmarshalListOfMaps #897
-  * Adds support for unmarshalling a list of maps. This is useful for unmarshalling the DynamoDB AttributeValue list of maps returned by APIs like Query and Scan.
+  * Adds support for unmarshaling a list of maps. This is useful for unmarshaling the DynamoDB AttributeValue list of maps returned by APIs like Query and Scan.
 
 Release v1.4.18 (2016-10-17)
 ===
