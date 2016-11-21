@@ -1,12 +1,12 @@
-hash: 5c6b96abae7b9fd13888b28a7449212be335f7e25d226a147da088820bf0b948
-updated: 2016-11-07T16:37:22.132751924-05:00
+hash: 0197e49eb203b715ccfe9f3973e42f1fb424dcae4ccc6d5e89fd6c90265d970b
+updated: 2016-11-21T12:35:37.475865858-05:00
 imports:
 - name: github.com/APTrust/bagins
-  version: 14b07b4f79dfe7c804c00db61df4ccec7d1c416a
+  version: 5bc94534149810750faf248f6ac948b48cbb2fc5
   subpackages:
   - bagutil
 - name: github.com/aws/aws-sdk-go
-  version: 45d21707a58c6bfdf7cf12197d054769d88f7d13
+  version: 898c81ba64b9a467379d35e3fabad133beae0ee4
   subpackages:
   - aws
   - aws/awserr
