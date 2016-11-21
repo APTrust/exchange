@@ -67,7 +67,18 @@ type DPNBag struct {
 }
 
 func NewDPNBag(localId, member, ingestNode string) *DPNBag {
+	// AdminNode same is ingest node for newly-ingested
+	// bags, per DPN spec.
+	_uuid := uuid.NewV4().String()
 	return &DPNBag{
-		UUID: uuid.NewV4().String(),
+		UUID:             _uuid,
+		LocalId:          localId,
+		Member:           member,
+		FirstVersionUUID: _uuid,
+		Version:          1,
+		IngestNode:       ingestNode,
+		AdminNode:        ingestNode,
+		BagType:          "D",
+		MessageDigests:   make([]*MessageDigest, 0),
 	}
 }
