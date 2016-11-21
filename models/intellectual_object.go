@@ -269,10 +269,7 @@ func (obj *IntellectualObject) BuildIngestEvents() error {
 func (obj *IntellectualObject) buildEventCreation() error {
 	events := obj.FindEventsByType(constants.EventCreation)
 	if len(events) == 0 {
-		event, err := NewEventObjectCreation()
-		if err != nil {
-			return err
-		}
+		event := NewEventObjectCreation()
 		event.IntellectualObjectId = obj.Id
 		event.IntellectualObjectIdentifier = obj.Identifier
 		obj.PremisEvents = append(obj.PremisEvents, event)

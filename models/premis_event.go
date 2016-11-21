@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"github.com/APTrust/exchange/constants"
 	"github.com/APTrust/exchange/util"
-	"github.com/nu7hatch/gouuid"
+	"github.com/satori/go.uuid"
 	"strings"
 	"time"
 )
@@ -91,11 +91,8 @@ func (premisEvent *PremisEvent) EventTypeValid() bool {
 	return false
 }
 
-func NewEventObjectCreation() (*PremisEvent, error) {
-	eventId, err := uuid.NewV4()
-	if err != nil {
-		return nil, fmt.Errorf("Error generating UUID for creation event: %v", err)
-	}
+func NewEventObjectCreation() *PremisEvent {
+	eventId := uuid.NewV4()
 	return &PremisEvent{
 		Identifier:         eventId.String(),
 		EventType:          constants.EventCreation,
@@ -106,17 +103,14 @@ func NewEventObjectCreation() (*PremisEvent, error) {
 		Object:             "APTrust Exchange ingest services",
 		Agent:              "https://github.com/APTrust/exchange",
 		OutcomeInformation: "Object created, files stored and replicated, awaiting recording of all files and events in Pharos.",
-	}, nil
+	}
 }
 
 func NewEventObjectIngest(numberOfFilesIngested int) (*PremisEvent, error) {
 	if numberOfFilesIngested <= 0 {
 		return nil, fmt.Errorf("Param numberOfFilesIngested must be greater than zero.")
 	}
-	eventId, err := uuid.NewV4()
-	if err != nil {
-		return nil, fmt.Errorf("Error generating UUID for ingest event: %v", err)
-	}
+	eventId := uuid.NewV4()
 	return &PremisEvent{
 		Identifier:         eventId.String(),
 		EventType:          constants.EventIngestion,
@@ -134,10 +128,7 @@ func NewEventObjectIdentifierAssignment(objectIdentifier string) (*PremisEvent, 
 	if objectIdentifier == "" {
 		return nil, fmt.Errorf("Param objectIdentifier cannot be empty.")
 	}
-	eventId, err := uuid.NewV4()
-	if err != nil {
-		return nil, fmt.Errorf("Error generating UUID for ingest event: %v", err)
-	}
+	eventId := uuid.NewV4()
 	return &PremisEvent{
 		Identifier:         eventId.String(),
 		EventType:          constants.EventIdentifierAssignment,
@@ -155,10 +146,7 @@ func NewEventObjectRights(accessSetting string) (*PremisEvent, error) {
 	if !util.StringListContains(constants.AccessRights, strings.ToLower(accessSetting)) {
 		return nil, fmt.Errorf("Param accessSetting '%s' is not valid.", accessSetting)
 	}
-	eventId, err := uuid.NewV4()
-	if err != nil {
-		return nil, fmt.Errorf("Error generating UUID for ingest access/rights event: %v", err)
-	}
+	eventId := uuid.NewV4()
 	return &PremisEvent{
 		Identifier:         eventId.String(),
 		EventType:          constants.EventAccessAssignment,
@@ -181,10 +169,7 @@ func NewEventGenericFileIngest(storedAt time.Time, md5Digest string) (*PremisEve
 		return nil, fmt.Errorf("Param md5Digest must have 32 characters. '%s' doesn't.",
 			md5Digest)
 	}
-	eventId, err := uuid.NewV4()
-	if err != nil {
-		return nil, fmt.Errorf("Error generating UUID for generic file ingest event: %v", err)
-	}
+	eventId := uuid.NewV4()
 	return &PremisEvent{
 		Identifier:         eventId.String(),
 		EventType:          constants.EventIngestion,
@@ -211,10 +196,7 @@ func NewEventGenericFileFixityCheck(checksumVerifiedAt time.Time, fixityAlg, dig
 		return nil, fmt.Errorf("Param digest must have 32 or 64 characters. '%s' doesn't.",
 			digest)
 	}
-	eventId, err := uuid.NewV4()
-	if err != nil {
-		return nil, fmt.Errorf("Error generating UUID for generic file fixity check: %v", err)
-	}
+	eventId := uuid.NewV4()
 	object := "Go language crypto/md5"
 	agent := "http://golang.org/pkg/crypto/md5/"
 	outcomeInformation := "Fixity matches"
@@ -252,10 +234,7 @@ func NewEventGenericFileDigestCalculation(checksumGeneratedAt time.Time, fixityA
 		return nil, fmt.Errorf("Param digest must have 32 or 64 characters. '%s' doesn't.",
 			digest)
 	}
-	eventId, err := uuid.NewV4()
-	if err != nil {
-		return nil, fmt.Errorf("Error generating UUID for generic file ingest event: %v", err)
-	}
+	eventId := uuid.NewV4()
 	object := "Go language crypto/md5"
 	agent := "http://golang.org/pkg/crypto/md5/"
 	if fixityAlg == constants.AlgSha256 {
@@ -289,16 +268,13 @@ func NewEventGenericFileIdentifierAssignment(identifierGeneratedAt time.Time, id
 	if identifier == "" {
 		return nil, fmt.Errorf("Param identifier cannot be empty.")
 	}
-	eventId, err := uuid.NewV4()
-	if err != nil {
-		return nil, fmt.Errorf("Error generating UUID for generic file ingest event: %v", err)
-	}
+	eventId := uuid.NewV4()
 	object := "APTrust exchange/ingest processor"
 	agent := "https://github.com/APTrust/exchange"
 	detail := "Assigned new institution.bag/path identifier"
 	if identifierType == constants.IdTypeStorageURL {
 		object = "Go uuid library + goamz S3 library"
-		agent = "http://github.com/nu7hatch/gouuid"
+		agent = "http://github.com/satori/go.uuid"
 		// Don't change these words. They're used in IsUrlAssignment below.
 		detail = fmt.Sprintf("Assigned new storage URL identifier, and item was stored at %s",
 			identifierGeneratedAt.Format(time.RFC3339))
@@ -325,10 +301,7 @@ func NewEventGenericFileReplication(replicatedAt time.Time, replicationUrl strin
 		return nil, fmt.Errorf("Param identifier cannot be empty.")
 	}
 
-	eventId, err := uuid.NewV4()
-	if err != nil {
-		return nil, fmt.Errorf("Error generating UUID for generic file replication event: %v", err)
-	}
+	eventId := uuid.NewV4()
 	return &PremisEvent{
 		Identifier:         eventId.String(),
 		EventType:          constants.EventReplication,
@@ -337,7 +310,7 @@ func NewEventGenericFileReplication(replicatedAt time.Time, replicationUrl strin
 		Outcome:            string(constants.StatusSuccess),
 		OutcomeDetail:      replicationUrl,
 		Object:             "Go uuid library + goamz S3 library",
-		Agent:              "http://github.com/nu7hatch/gouuid",
+		Agent:              "http://github.com/satori/go.uuid",
 		OutcomeInformation: "Replicated to secondary storage",
 	}, nil
 }

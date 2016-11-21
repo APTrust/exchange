@@ -1,6 +1,7 @@
 package models
 
 import (
+	"github.com/satori/go.uuid"
 	"time"
 )
 
@@ -63,4 +64,10 @@ type DPNBag struct {
 
 	// UpdatedAt is when this record was last updated.
 	UpdatedAt time.Time `json:"updated_at"`
+}
+
+func NewDPNBag(localId, member, ingestNode string) *DPNBag {
+	return &DPNBag{
+		UUID: uuid.NewV4().String(),
+	}
 }

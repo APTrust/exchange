@@ -18,7 +18,6 @@ import:
   version: ^1.0.6
 - package: github.com/nsqio/nsq
   version: 0.3.8
-- package: github.com/nu7hatch/gouuid
 - package: github.com/op/go-logging
   version: ^1.0.0
 - package: github.com/rakyll/magicmime

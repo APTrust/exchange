@@ -8,7 +8,7 @@ import (
 	"github.com/APTrust/exchange/models"
 	"github.com/APTrust/exchange/util/fileutil"
 	"github.com/icrowley/fake"
-	"github.com/nu7hatch/gouuid"
+	"github.com/satori/go.uuid"
 	"math"
 	"math/rand"
 	"os"
@@ -68,7 +68,7 @@ func MakeGenericFile(eventCount, checksumCount int, objIdentifier string) *model
 	inst := objIdParts[0]
 	objName := objIdParts[1]
 	fileIdentifier := RandomFileIdentifier(objIdentifier)
-	_uuid, _ := uuid.NewV4()
+	_uuid := uuid.NewV4()
 	checksums := make([]*models.Checksum, checksumCount)
 	events := make([]*models.PremisEvent, eventCount)
 	for i := 0; i < checksumCount; i++ {
@@ -164,7 +164,7 @@ func MakeIntellectualObject(fileCount, eventCount, checksumCount, tagCount int) 
 }
 
 func MakePremisEvent() *models.PremisEvent {
-	_uuid, _ := uuid.NewV4()
+	_uuid := uuid.NewV4()
 	return &models.PremisEvent{
 		Id:                 rand.Intn(50000) + 1,
 		Identifier:         _uuid.String(),
@@ -222,7 +222,7 @@ func MakeWorkItemState() *models.WorkItemState {
 }
 
 func MakeDPNWorkItem() *models.DPNWorkItem {
-	_uuid, _ := uuid.NewV4()
+	_uuid := uuid.NewV4()
 	queuedAt := RandomDateTime()
 	createdAt := RandomDateTime()
 	note := fake.Sentence()

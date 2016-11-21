@@ -9,7 +9,7 @@ import (
 	"github.com/APTrust/exchange/platform"
 	"github.com/APTrust/exchange/util"
 	"github.com/APTrust/exchange/util/fileutil"
-	"github.com/nu7hatch/gouuid"
+	"github.com/satori/go.uuid"
 	"hash"
 	"io"
 	"path"
@@ -124,17 +124,14 @@ func (vbag *VirtualBag) addGenericFile() error {
 	if !fileSummary.IsRegularFile {
 		return nil
 	}
-	uuid, err := uuid.NewV4()
-	if err != nil {
-		panic("Can't read from /dev/urandom!")
-	}
+	_uuid := uuid.NewV4()
 	gf := NewGenericFile()
 	gf.Identifier = fmt.Sprintf("%s/%s", vbag.obj.Identifier, fileSummary.RelPath)
 	gf.IntellectualObjectIdentifier = vbag.obj.Identifier
 	gf.Size = fileSummary.Size
 	gf.FileModified = fileSummary.ModTime
 	gf.IngestLocalPath = fileSummary.AbsPath // will be empty if bag is tarred
-	gf.IngestUUID = uuid.String()
+	gf.IngestUUID = _uuid.String()
 	gf.IngestUUIDGeneratedAt = time.Now().UTC()
 	gf.IngestFileUid = fileSummary.Uid
 	gf.IngestFileGid = fileSummary.Gid

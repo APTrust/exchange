@@ -33,8 +33,7 @@ func TestEventTypeValid(t *testing.T) {
 }
 
 func TestNewEventObjectCreation(t *testing.T) {
-	event, err := models.NewEventObjectCreation()
-	assert.Nil(t, err)
+	event := models.NewEventObjectCreation()
 	assert.Len(t, event.Identifier, 36)
 	assert.Equal(t, "creation", event.EventType)
 	assert.False(t, event.DateTime.IsZero())
@@ -293,7 +292,7 @@ func TestNewEventGenericFileIdentifierAssignment(t *testing.T) {
 	assert.Equal(t, "Success", event.Outcome)
 	assert.Equal(t, "https://example.com/000-000-999", event.OutcomeDetail)
 	assert.Equal(t, "Go uuid library + goamz S3 library", event.Object)
-	assert.Equal(t, "http://github.com/nu7hatch/gouuid", event.Agent)
+	assert.Equal(t, "http://github.com/satori/go.uuid", event.Agent)
 	assert.Equal(t, "Assigned url identifier", event.OutcomeInformation)
 
 }
@@ -323,7 +322,7 @@ func TestNewEventGenericFileReplication(t *testing.T) {
 	assert.Equal(t, "Success", event.Outcome)
 	assert.Equal(t, "https://example.com/123456789", event.OutcomeDetail)
 	assert.Equal(t, "Go uuid library + goamz S3 library", event.Object)
-	assert.Equal(t, "http://github.com/nu7hatch/gouuid", event.Agent)
+	assert.Equal(t, "http://github.com/satori/go.uuid", event.Agent)
 	assert.Equal(t, "Replicated to secondary storage", event.OutcomeInformation)
 }
 
