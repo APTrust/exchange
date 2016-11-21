@@ -149,7 +149,6 @@ func (builder *BagBuilder) buildDPNBagIt() {
 		builder.DefaultMetadata.BagItVersion))
 	bagit.Data.AddField(*bagins.NewTagField("Tag-File-Character-Encoding",
 		builder.DefaultMetadata.BagItEncoding))
-	bagit.Create()
 }
 
 func (builder *BagBuilder) buildDPNBagInfo() {
@@ -171,7 +170,6 @@ func (builder *BagBuilder) buildDPNBagInfo() {
 		fmt.Sprintf("%d", builder.IntellectualObject.TotalFileSize())))
 	bagInfo.Data.AddField(*bagins.NewTagField("Bag-Group-Identifier", ""))
 	bagInfo.Data.AddField(*bagins.NewTagField("Bag-Count", "1"))
-	bagInfo.Create()
 }
 
 func (builder *BagBuilder) buildDPNInfo() {
@@ -216,8 +214,6 @@ func (builder *BagBuilder) buildDPNInfo() {
 	// Bag Type
 	dpnInfo.Data.AddField(*bagins.NewTagField("Bag-Type",
 		builder.BagType))
-
-	dpnInfo.Create()
 }
 
 func (builder *BagBuilder) buildAPTrustBagIt() {
@@ -234,8 +230,6 @@ func (builder *BagBuilder) buildAPTrustBagIt() {
 		dpn.APTRUST_BAGIT_VERSION))
 	aptrustBagit.Data.AddField(*bagins.NewTagField("Tag-File-Character-Encoding",
 		dpn.APTRUST_BAGIT_ENCODING))
-
-	aptrustBagit.Create()
 }
 
 // AddTagFile creates a new tag file and adds it to the bag,

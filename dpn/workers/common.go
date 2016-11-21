@@ -176,6 +176,14 @@ func GetWorkItemState(_context *context.Context, manifest *models.DPNIngestManif
 // we're in. It could be the DPNIngestState.PackageSummary,
 // DPNIngestState.StoreSummary, etc.
 func SaveWorkItemState(_context *context.Context, manifest *models.DPNIngestManifest, activeSummary *apt_models.WorkSummary) {
+	if manifest == nil {
+		_context.MessageLog.Error("SaveWorkItemState can't do anything with nil manifest")
+		return
+	}
+	if manifest.WorkItemState == nil {
+		_context.MessageLog.Error("SaveWorkItemState can't save nil WorkItemState")
+		return
+	}
 	// Serialize the IngestManifest to JSON, and stuff it into the
 	// WorkItemState.State. Subsequent workers need this info to
 	// store the object's files in S3 and Glacier, and to record
@@ -658,6 +666,10 @@ func SetupIngestManifest(message *nsq.Message, stage string, _context *context.C
 	GetWorkItemState(_context, manifest, activeSummary)
 	if activeSummary.HasErrors() {
 		return manifest
+	}
+	if manifest.WorkItemState == nil {
+		manifest.WorkItemState = apt_models.NewWorkItemState(manifest.WorkItem.Id,
+			constants.ActionDPN, "")
 	}
 
 	// Unless this is our first attempt to ingest this DPN bag, there

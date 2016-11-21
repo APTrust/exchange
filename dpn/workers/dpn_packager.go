@@ -154,8 +154,9 @@ func (packager *DPNPackager) buildDPNBag(manifest *models.DPNIngestManifest) {
 		localPath := filepath.Join(manifest.LocalDir, gf.OriginalPath())
 		var err error
 		if strings.HasPrefix(gf.OriginalPath(), "data/") {
-			packager.Context.MessageLog.Info("Adding %s as data file at %s", localPath, gf.OriginalPath())
-			err = builder.Bag.AddFile(localPath, gf.OriginalPath())
+			pathMinusDataPrefix := strings.Replace(gf.OriginalPath(), "data/", "", 1)
+			packager.Context.MessageLog.Info("Adding %s as data file at %s", localPath, pathMinusDataPrefix)
+			err = builder.Bag.AddFile(localPath, pathMinusDataPrefix)
 		} else {
 			packager.Context.MessageLog.Info("Adding %s as tag file at %s", localPath, gf.OriginalPath())
 			err = builder.Bag.AddCustomTagfile(localPath, gf.OriginalPath(), true)
@@ -173,16 +174,6 @@ func (packager *DPNPackager) buildDPNBag(manifest *models.DPNIngestManifest) {
 			manifest.PackageSummary.AddError("Bagging error: %v", err)
 		}
 	}
-
-	// -------------------------------------------------------------------------
-	//
-	// START HERE
-	//
-	// TODO: BagBuilder is writing empty tag files and empty manifest-sha256.txt
-	// Also, not all tag files are being added to tagmanifest-sha256.txt
-	//
-	//
-	// -------------------------------------------------------------------------
 
 	// Validate the bag
 	var validationResult *validation.ValidationResult
@@ -354,6 +345,10 @@ func (packager *DPNPackager) finishWithError(manifest *models.DPNIngestManifest)
 	}
 
 	// Save info to Pharos so the next worker knows what's what.
-	SaveWorkItem(packager.Context, manifest, manifest.PackageSummary)
-	SaveWorkItemState(packager.Context, manifest, manifest.PackageSummary)
+	if manifest.WorkItem != nil {
+		SaveWorkItem(packager.Context, manifest, manifest.PackageSummary)
+	}
+	if manifest.WorkItemState != nil {
+		SaveWorkItemState(packager.Context, manifest, manifest.PackageSummary)
+	}
 }
