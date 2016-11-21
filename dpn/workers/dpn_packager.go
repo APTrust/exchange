@@ -87,6 +87,7 @@ func (packager *DPNPackager) HandleMessage(message *nsq.Message) error {
 	manifest.WorkItem.Status = constants.StatusStarted
 	manifest.WorkItem.Node = hostname
 	manifest.WorkItem.Pid = os.Getpid()
+	manifest.WorkItem.Note = "Starting DPN ingest"
 	SaveWorkItem(packager.Context, manifest, manifest.PackageSummary)
 
 	// Start processing.
@@ -302,7 +303,7 @@ func (packager *DPNPackager) finishWithSuccess(manifest *models.DPNIngestManifes
 
 func (packager *DPNPackager) finishWithError(manifest *models.DPNIngestManifest) {
 	// Log what happened.
-	msg := ""
+	msg := "Ingest failed. See ingest manifest."
 	packager.Context.MessageLog.Error(manifest.PackageSummary.AllErrorsAsString())
 	if manifest.PackageSummary.ErrorIsFatal {
 		msg := fmt.Sprintf("Ingest error for %s is fatal. Will not retry.",

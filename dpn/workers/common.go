@@ -114,9 +114,11 @@ func GetWorkItem(_context *context.Context, manifest *models.DPNIngestManifest, 
 func SaveWorkItem(_context *context.Context, manifest *models.DPNIngestManifest, workSummary *apt_models.WorkSummary) {
 	resp := _context.PharosClient.WorkItemSave(manifest.WorkItem)
 	if resp.Error != nil {
-		_context.MessageLog.Error("Error saving WorkItem ready for %s/%s: %v",
+		_context.MessageLog.Error("Error saving WorkItem for %s/%s: %v",
 			manifest.WorkItem.Bucket, manifest.WorkItem.Name, resp.Error)
 		workSummary.AddError(resp.Error.Error())
+		body, _ := resp.RawResponseData()
+		_context.MessageLog.Error(string(body))
 	}
 	manifest.WorkItem = resp.WorkItem()
 }
