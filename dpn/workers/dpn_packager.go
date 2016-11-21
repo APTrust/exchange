@@ -22,6 +22,7 @@ import (
 
 type DPNPackager struct {
 	PackageChannel      chan *models.DPNIngestManifest
+	TarChannel          chan *models.DPNIngestManifest
 	ValidationChannel   chan *models.DPNIngestManifest
 	PostProcessChannel  chan *models.DPNIngestManifest
 	BagValidationConfig *validation.BagValidationConfig
@@ -52,10 +53,12 @@ func NewDPNPackager(_context *context.Context) (*DPNPackager, error) {
 	packager.BagValidationConfig = LoadBagValidationConfig(packager.Context)
 	workerBufferSize := _context.Config.DPN.DPNPackageWorker.Workers * 4
 	packager.PackageChannel = make(chan *models.DPNIngestManifest, workerBufferSize)
+	packager.TarChannel = make(chan *models.DPNIngestManifest, workerBufferSize)
 	packager.ValidationChannel = make(chan *models.DPNIngestManifest, workerBufferSize)
 	packager.PostProcessChannel = make(chan *models.DPNIngestManifest, workerBufferSize)
 	for i := 0; i < _context.Config.DPN.DPNPackageWorker.Workers; i++ {
 		go packager.buildBag()
+		go packager.tarBag()
 		go packager.validate()
 		go packager.postProcess()
 	}
@@ -104,15 +107,124 @@ func (packager *DPNPackager) buildBag() {
 			packager.PostProcessChannel <- manifest
 			continue
 		}
+		if manifest.DPNBag == nil {
+			// TODO: Get APTrust Inst from Pharos, get DPN UUID from there
+			dpnMemberId := ""
+			manifest.DPNBag = models.NewDPNBag(
+				manifest.IntellectualObject.Identifier,
+				dpnMemberId,
+				packager.Context.Config.DPN.LocalNode)
+			// TODO: Set the tag manifest checksum on MessageDigests
+		}
+		packager.ValidationChannel <- manifest
+	}
+}
+
+func (packager *DPNPackager) tarBag() {
+	for manifest := range packager.TarChannel {
+		manifest.NsqMessage.Touch()
+		// files, err := fileutil.RecursiveFileList(manifest.LocalDir)
+		// if err != nil {
+		// 	manifest.PackageSummary.AddError("Cannot get list of files in directory %s: %s",
+		// 		manifest.LocalDir, err.Error())
+		// 	packager.PostProcessChannel <- manifest
+		// 	continue
+		// }
+
+		// tarFile, err := os.Create(manifest.TarFilePath)
+		// if err != nil {
+		// 	manifest.PackageSummary.AddError("Error creating tar file %s for bag %s: %v",
+		// 		manifest.TarFilePath, result.BagIdentifier, err)
+		// 	packager.PostProcessChannel <- result
+		// 	continue
+		// }
+
+		// // Set up our tar writer, and put all items from the bag
+		// // directory into the tar file.
+		// tarWriter := tar.NewWriter(tarFile)
+		// for _, filePath := range files {
+		// 	pathInBag := strings.Split(filePath, manifest.IntellectualObject.Identifier)[1]
+		// 	pathWithinArchive := fmt.Sprintf()
+
+		// 	// The DPN spec at https://wiki.duraspace.org/display/DPN/BagIt+Specification
+		// 	// says the top-level folder within the bag should have the name of the DPN
+		// 	// Object Identifier (the UUID). So we replace <bag_name>/ with <uuid>/.
+		// 	parts := strings.Split(pathWithinArchive, "/")
+		// 	topLevelDirName := parts[0]
+		// 	pathWithinArchive = strings.Replace(pathWithinArchive, topLevelDirName,
+		// 		result.PackageResult.BagBuilder.UUID, 1)
+
+		// 	err = bagman.AddToArchive(tarWriter, filePath, pathWithinArchive)
+		// 	if err != nil {
+		// 		result.ErrorMessage += fmt.Sprintf("Error adding file %s to archive %s: %v",
+		// 			filePath, tarFilePath, err)
+		// 		packager.ProcUtil.MessageLog.Error(result.ErrorMessage)
+		// 		tarFile.Close()
+		// 		tarWriter.Close()
+		// 		os.Remove(tarFilePath)
+		// 		packager.CleanupChannel <- result
+		// 		break
+		// 	}
+		// }
+		// tarWriter.Flush()
+		// tarFile.Close()
+		// result.PackageResult.TarFilePath = tarFilePath
+
+		// // Calculate the checksums. We need the md5 for the put to S3
+		// fileDigest, err := bagman.CalculateDigests(result.PackageResult.TarFilePath)
+		// if err != nil {
+		// 	result.ErrorMessage = fmt.Sprintf("Could not calculate checksums on '%s': %v",
+		// 		result.PackageResult.TarFilePath, err)
+		// 	packager.ProcUtil.MessageLog.Error(result.ErrorMessage)
+		// 	packager.CleanupChannel <- result
+		// 	continue
+		// }
+		// result.BagMd5Digest = fileDigest.Md5Digest
+		// result.BagSha256Digest = fileDigest.Sha256Digest
+		// result.BagSize = fileDigest.Size
+
+		// // Calculate the tagmanifest checksum. This will count as our first
+		// // fixity check on the bag, and will be used to verify replication
+		// // copies at other nodes.
+		// tagManifestPath := filepath.Join(result.PackageResult.BagBuilder.LocalPath, "tagmanifest-sha256.txt")
+		// fileDigest, err = bagman.CalculateDigests(tagManifestPath)
+		// if err != nil {
+		// 	result.ErrorMessage = fmt.Sprintf("Could not calculate checksums on '%s': %v",
+		// 		tagManifestPath, err)
+		// 	packager.ProcUtil.MessageLog.Error(result.ErrorMessage)
+		// 	packager.CleanupChannel <- result
+		// 	continue
+		// }
+		// result.TagManifestDigest = fileDigest.Sha256Digest
+
+		manifest.NsqMessage.Touch()
 		packager.ValidationChannel <- manifest
 	}
 }
 
 func (packager *DPNPackager) validate() {
 	for manifest := range packager.ValidationChannel {
-		// Validate the bag
-		// Tar it up
-		// Send it into the PostProcessChannel
+		manifest.NsqMessage.Touch()
+		var validationResult *validation.ValidationResult
+		validator, err := validation.NewBagValidator(manifest.LocalDir, packager.BagValidationConfig)
+		if err != nil {
+			manifest.PackageSummary.AddError(err.Error())
+		} else {
+			// Validation can take a long time for large bags.
+			validationResult = validator.Validate()
+		}
+		if validationResult == nil {
+			// This should be impossible
+			manifest.PackageSummary.AddError("Bag validator returned nil result!")
+		} else if validationResult.ParseSummary.HasErrors() || validationResult.ValidationSummary.HasErrors() {
+			for _, errMsg := range validationResult.ParseSummary.Errors {
+				manifest.PackageSummary.AddError("Validator parse error: %s", errMsg)
+			}
+			for _, errMsg := range validationResult.ValidationSummary.Errors {
+				manifest.PackageSummary.AddError("Validation error: %s", errMsg)
+			}
+		}
+		manifest.NsqMessage.Touch()
 		packager.PostProcessChannel <- manifest
 	}
 }
@@ -172,27 +284,6 @@ func (packager *DPNPackager) buildDPNBag(manifest *models.DPNIngestManifest) {
 	if errors != nil && len(errors) > 0 {
 		for _, err = range errors {
 			manifest.PackageSummary.AddError("Bagging error: %v", err)
-		}
-	}
-
-	// Validate the bag
-	var validationResult *validation.ValidationResult
-	validator, err := validation.NewBagValidator(manifest.LocalDir, packager.BagValidationConfig)
-	if err != nil {
-		manifest.PackageSummary.AddError(err.Error())
-	} else {
-		// Validation can take a long time for large bags.
-		validationResult = validator.Validate()
-	}
-	if validationResult == nil {
-		// This should be impossible
-		manifest.PackageSummary.AddError("Bag validator returned nil result!")
-	} else if validationResult.ParseSummary.HasErrors() || validationResult.ValidationSummary.HasErrors() {
-		for _, errMsg := range validationResult.ParseSummary.Errors {
-			manifest.PackageSummary.AddError("Validator parse error: %s", errMsg)
-		}
-		for _, errMsg := range validationResult.ValidationSummary.Errors {
-			manifest.PackageSummary.AddError("Validation error: %s", errMsg)
 		}
 	}
 
