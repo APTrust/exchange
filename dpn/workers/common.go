@@ -600,7 +600,6 @@ func restoreIngestState(_context *context.Context, manifest *models.DPNIngestMan
 		manifest.LocalDir = filepath.Join(
 			_context.Config.DPN.StagingDirectory,
 			manifest.WorkItem.ObjectIdentifier)
-		manifest.LocalTarFile = fmt.Sprintf("%s.tar", manifest.LocalDir)
 	}
 }
 

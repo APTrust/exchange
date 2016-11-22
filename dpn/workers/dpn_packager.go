@@ -10,6 +10,7 @@ import (
 	dpn_util "github.com/APTrust/exchange/dpn/util"
 	apt_models "github.com/APTrust/exchange/models"
 	apt_network "github.com/APTrust/exchange/network"
+	"github.com/APTrust/exchange/tarfile"
 	"github.com/APTrust/exchange/util/fileutil"
 	"github.com/APTrust/exchange/validation"
 	"github.com/nsqio/go-nsq"
@@ -191,86 +192,60 @@ func (packager *DPNPackager) buildDPNBag(manifest *models.DPNIngestManifest) {
 		CreatedAt: time.Now().UTC(),
 	}
 	manifest.DPNBag.MessageDigests = append(manifest.DPNBag.MessageDigests, digest)
+
+	// Now that we have a valid DPN bag object, we can name the tar file.
+	// According to the DPN spec, the tar file name should be the bag's
+	// UUID plus a ".tar" extension.
+	parentOfBagDir := filepath.Dir(manifest.LocalDir)
+	manifest.LocalTarFile = filepath.Join(parentOfBagDir, manifest.DPNBag.UUID+".tar")
 }
 
 func (packager *DPNPackager) tarBag() {
 	for manifest := range packager.TarChannel {
 		packager.Context.MessageLog.Info("Tarring %s", manifest.LocalDir)
 		manifest.NsqMessage.Touch()
-		// files, err := fileutil.RecursiveFileList(manifest.LocalDir)
-		// if err != nil {
-		// 	manifest.PackageSummary.AddError("Cannot get list of files in directory %s: %s",
-		// 		manifest.LocalDir, err.Error())
-		// 	packager.PostProcessChannel <- manifest
-		// 	continue
-		// }
 
-		// tarFile, err := os.Create(manifest.TarFilePath)
-		// if err != nil {
-		// 	manifest.PackageSummary.AddError("Error creating tar file %s for bag %s: %v",
-		// 		manifest.TarFilePath, result.BagIdentifier, err)
-		// 	packager.PostProcessChannel <- result
-		// 	continue
-		// }
+		files, err := fileutil.RecursiveFileList(manifest.LocalDir)
+		if err != nil {
+			manifest.PackageSummary.AddError("Cannot get list of files in directory %s: %s",
+				manifest.LocalDir, err.Error())
+			packager.PostProcessChannel <- manifest
+			continue
+		}
 
-		// // Set up our tar writer, and put all items from the bag
-		// // directory into the tar file.
-		// tarWriter := tar.NewWriter(tarFile)
-		// for _, filePath := range files {
-		// 	pathInBag := strings.Split(filePath, manifest.IntellectualObject.Identifier)[1]
-		// 	pathWithinArchive := fmt.Sprintf()
+		// Set up our tar writer...
+		tarWriter := tarfile.NewWriter(manifest.LocalTarFile)
+		err = tarWriter.Open()
+		if err != nil {
+			manifest.PackageSummary.AddError("Error creating tar file %s for bag %s: %v",
+				manifest.LocalTarFile, manifest.IntellectualObject.Identifier, err)
+			packager.PostProcessChannel <- manifest
+			continue
+		}
 
-		// 	// The DPN spec at https://wiki.duraspace.org/display/DPN/BagIt+Specification
-		// 	// says the top-level folder within the bag should have the name of the DPN
-		// 	// Object Identifier (the UUID). So we replace <bag_name>/ with <uuid>/.
-		// 	parts := strings.Split(pathWithinArchive, "/")
-		// 	topLevelDirName := parts[0]
-		// 	pathWithinArchive = strings.Replace(pathWithinArchive, topLevelDirName,
-		// 		result.PackageResult.BagBuilder.UUID, 1)
+		// ... and start filling it up.
+		for _, filePath := range files {
+			// The DPN spec at https://wiki.duraspace.org/display/DPN/BagIt+Specification
+			// says the top-level folder within the bag should have the name of the DPN
+			// Object Identifier (the UUID). So we replace <bag_name>/ with <uuid>/.
+			//
+			// Splitting filePath on object identifier looks like this:
+			// /mnt/dpn/staging/test.edu/bag1/data/file1
+			// pathInBag = "data/file1"
+			// pathWithinArchive = "7a27db64-cea6-4602-a6c5-d8b2a7f6c02b/data/file1"
+			pathInBag := strings.Split(filePath, manifest.IntellectualObject.Identifier)[1]
+			pathWithinArchive := filepath.Join(manifest.DPNBag.UUID, pathInBag)
 
-		// 	err = bagman.AddToArchive(tarWriter, filePath, pathWithinArchive)
-		// 	if err != nil {
-		// 		result.ErrorMessage += fmt.Sprintf("Error adding file %s to archive %s: %v",
-		// 			filePath, tarFilePath, err)
-		// 		packager.ProcUtil.MessageLog.Error(result.ErrorMessage)
-		// 		tarFile.Close()
-		// 		tarWriter.Close()
-		// 		os.Remove(tarFilePath)
-		// 		packager.CleanupChannel <- result
-		// 		break
-		// 	}
-		// }
-		// tarWriter.Flush()
-		// tarFile.Close()
-		// result.PackageResult.TarFilePath = tarFilePath
-
-		// // Calculate the checksums. We need the md5 for the put to S3
-		// fileDigest, err := bagman.CalculateDigests(result.PackageResult.TarFilePath)
-		// if err != nil {
-		// 	result.ErrorMessage = fmt.Sprintf("Could not calculate checksums on '%s': %v",
-		// 		result.PackageResult.TarFilePath, err)
-		// 	packager.ProcUtil.MessageLog.Error(result.ErrorMessage)
-		// 	packager.CleanupChannel <- result
-		// 	continue
-		// }
-		// result.BagMd5Digest = fileDigest.Md5Digest
-		// result.BagSha256Digest = fileDigest.Sha256Digest
-		// result.BagSize = fileDigest.Size
-
-		// // Calculate the tagmanifest checksum. This will count as our first
-		// // fixity check on the bag, and will be used to verify replication
-		// // copies at other nodes.
-		// tagManifestPath := filepath.Join(result.PackageResult.BagBuilder.LocalPath, "tagmanifest-sha256.txt")
-		// fileDigest, err = bagman.CalculateDigests(tagManifestPath)
-		// if err != nil {
-		// 	result.ErrorMessage = fmt.Sprintf("Could not calculate checksums on '%s': %v",
-		// 		tagManifestPath, err)
-		// 	packager.ProcUtil.MessageLog.Error(result.ErrorMessage)
-		// 	packager.CleanupChannel <- result
-		// 	continue
-		// }
-		// result.TagManifestDigest = fileDigest.Sha256Digest
-
+			err = tarWriter.AddToArchive(filePath, pathWithinArchive)
+			if err != nil {
+				manifest.PackageSummary.AddError("Error adding file %s to archive %s: %v",
+					filePath, pathWithinArchive, err)
+				tarWriter.Close()
+				packager.PostProcessChannel <- manifest
+				break
+			}
+		}
+		tarWriter.Close()
 		manifest.NsqMessage.Touch()
 
 		// We want to validate everything AFTER tarring, because
@@ -283,9 +258,11 @@ func (packager *DPNPackager) validate() {
 	for manifest := range packager.ValidationChannel {
 		packager.Context.MessageLog.Info("Validating %s", manifest.LocalTarFile)
 		manifest.NsqMessage.Touch()
+		manifest.ValidateSummary.Attempted = true
+		manifest.ValidateSummary.AttemptNumber += 1
+		manifest.ValidateSummary.Start()
 		var validationResult *validation.ValidationResult
-		// TODO: ==================== Change to LocalTarFile ==================================
-		validator, err := validation.NewBagValidator(manifest.LocalDir, packager.BagValidationConfig)
+		validator, err := validation.NewBagValidator(manifest.LocalTarFile, packager.BagValidationConfig)
 		if err != nil {
 			manifest.PackageSummary.AddError(err.Error())
 		} else {
@@ -303,6 +280,7 @@ func (packager *DPNPackager) validate() {
 				manifest.PackageSummary.AddError("Validation error: %s", errMsg)
 			}
 		}
+		manifest.ValidateSummary.Finish()
 		manifest.NsqMessage.Touch()
 		packager.PostProcessChannel <- manifest
 	}
@@ -443,6 +421,7 @@ func (packager *DPNPackager) fetchAllFiles(manifest *models.DPNIngestManifest) {
 }
 
 func (packager *DPNPackager) finishWithSuccess(manifest *models.DPNIngestManifest) {
+	// Tell Pharos we're done with this item and save the work state.
 	packager.Context.MessageLog.Info("Packaging succeeded for %s", manifest.WorkItem.ObjectIdentifier)
 	manifest.WorkItem.Status = constants.StageStore
 	manifest.WorkItem.Status = constants.StatusPending
@@ -451,13 +430,25 @@ func (packager *DPNPackager) finishWithSuccess(manifest *models.DPNIngestManifes
 	manifest.WorkItem.Pid = 0      // no process is working on this
 	manifest.WorkItem.Retry = true // just in case this had been false
 	SaveWorkItem(packager.Context, manifest, manifest.PackageSummary)
+	manifest.PackageSummary.Finish()
 	SaveWorkItemState(packager.Context, manifest, manifest.PackageSummary)
-	// REPLACE
-	// if fileutil.LooksSafeToDelete(manifest.LocalDir, 12, 3) {
-	// 	os.RemoveAll(manifest.LocalDir)
-	// }
+
+	// Delete the working directory where we built the bag
+	if fileutil.LooksSafeToDelete(manifest.LocalDir, 12, 3) {
+		os.RemoveAll(manifest.LocalDir)
+	}
+
+	// Push this WorkItem to the next NSQ topic.
+	packager.Context.MessageLog.Info("Pushing %s (DPN bag %s) to NSQ topic %s",
+		manifest.IntellectualObject.Identifier, manifest.DPNBag.UUID,
+		packager.Context.Config.DPN.DPNStoreWorker.NsqTopic)
 	PushToQueue(packager.Context, manifest, manifest.PackageSummary,
 		packager.Context.Config.DPN.DPNStoreWorker.NsqTopic)
+	if manifest.PackageSummary.HasErrors() {
+		packager.Context.MessageLog.Error(manifest.PackageSummary.Errors[0])
+	}
+
+	// Tell NSQ we're done packaging this.
 	manifest.NsqMessage.Finish()
 }
 
@@ -500,24 +491,24 @@ func (packager *DPNPackager) finishWithError(manifest *models.DPNIngestManifest)
 
 	// Delete the folder containing the bag we were building,
 	// And delete the tar file too, if it exists.
-	// --- REPLACE ---
-	// if fileutil.LooksSafeToDelete(manifest.LocalDir, 12, 3) {
-	// 	err := os.RemoveAll(manifest.LocalDir)
-	// 	if err != nil {
-	// 		manifest.PackageSummary.AddError("Could not delete bag directory %s: %v",
-	// 			manifest.LocalDir, err)
-	// 	}
-	// }
-	// err := os.Remove(manifest.LocalTarFile)
-	// if err != nil {
-	// 	manifest.PackageSummary.AddError("Could not delete tar file %s: %v",
-	// 		manifest.LocalTarFile, err)
-	// }
+	if fileutil.LooksSafeToDelete(manifest.LocalDir, 12, 3) {
+		err := os.RemoveAll(manifest.LocalDir)
+		if err != nil {
+			manifest.PackageSummary.AddError("Could not delete bag directory %s: %v",
+				manifest.LocalDir, err)
+		}
+	}
+	err := os.Remove(manifest.LocalTarFile)
+	if err != nil {
+		manifest.PackageSummary.AddError("Could not delete tar file %s: %v",
+			manifest.LocalTarFile, err)
+	}
 
 	// Save info to Pharos so the next worker knows what's what.
 	if manifest.WorkItem != nil {
 		SaveWorkItem(packager.Context, manifest, manifest.PackageSummary)
 	}
+	manifest.PackageSummary.Finish()
 	if manifest.WorkItemState != nil {
 		SaveWorkItemState(packager.Context, manifest, manifest.PackageSummary)
 	}
