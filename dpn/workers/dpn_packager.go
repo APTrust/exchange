@@ -328,8 +328,17 @@ func (packager *DPNPackager) assembleFilesAndManifests(manifest *models.DPNInges
 			packager.Context.MessageLog.Info("Adding %s as data file at %s", localPath, pathMinusDataPrefix)
 			err = builder.Bag.AddFile(localPath, pathMinusDataPrefix)
 		} else {
-			packager.Context.MessageLog.Info("Adding %s as tag file at %s", localPath, gf.OriginalPath())
-			err = builder.Bag.AddCustomTagfile(localPath, gf.OriginalPath(), true)
+			targetPath := gf.OriginalPath()
+			if strings.Index(targetPath, "/") == -1 {
+				// If original path has no slash, it was at the top-level
+				// of the APTrust bag, which means it's a custom tag file.
+				// Per the DPN bag spec, it has to go into aptrust-tags.
+				// Using Sprintf instead of filepath.Join to ensure forward
+				// slash for tar file.
+				targetPath = fmt.Sprintf("aptrust-tags/%s", gf.OriginalPath())
+			}
+			packager.Context.MessageLog.Info("Adding %s as tag file at %s", localPath, targetPath)
+			err = builder.Bag.AddCustomTagfile(localPath, targetPath, true)
 		}
 		if err != nil {
 			manifest.PackageSummary.AddError("Cannot add %s to bag: %v", localPath, err)
@@ -382,12 +391,6 @@ func (packager *DPNPackager) fetchAllFiles(manifest *models.DPNIngestManifest) {
 		// Tell the downloader what we're downloading, and where to put it.
 		downloader.KeyName = s3KeyName
 		downloader.LocalPath = filepath.Join(manifest.LocalDir, gf.OriginalPath())
-
-		// Make sure the target directory exists in the local file system.
-		//packager.ensureDirectory(manifest, downloader.LocalPath)
-		//if manifest.PackageSummary.HasErrors() {
-		//	break
-		//}
 
 		// Fetch is the expensive part, so we don't even want to get to this
 		// point if we don't have the info above.
