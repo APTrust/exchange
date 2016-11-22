@@ -113,7 +113,11 @@ func (packager *DPNPackager) buildBag() {
 			// the DPN registry.
 			packager.buildDPNBag(manifest)
 		}
-		packager.TarChannel <- manifest
+		if manifest.PackageSummary.HasErrors() {
+			packager.PostProcessChannel <- manifest
+		} else {
+			packager.TarChannel <- manifest
+		}
 	}
 }
 
@@ -328,15 +332,14 @@ func (packager *DPNPackager) assembleFilesAndManifests(manifest *models.DPNInges
 			packager.Context.MessageLog.Info("Adding %s as data file at %s", localPath, pathMinusDataPrefix)
 			err = builder.Bag.AddFile(localPath, pathMinusDataPrefix)
 		} else {
-			targetPath := gf.OriginalPath()
-			if strings.Index(targetPath, "/") == -1 {
-				// If original path has no slash, it was at the top-level
-				// of the APTrust bag, which means it's a custom tag file.
-				// Per the DPN bag spec, it has to go into aptrust-tags.
-				// Using Sprintf instead of filepath.Join to ensure forward
-				// slash for tar file.
-				targetPath = fmt.Sprintf("aptrust-tags/%s", gf.OriginalPath())
-			}
+			// Using Sprintf instead of filepath.Join because, for our purposes,
+			// tar file paths are supposed to contain forward slashes only.
+			// See https://tools.ietf.org/html/draft-kunze-bagit-14, sections
+			// 2.1.3 and 7.2. The GNU tar file standard also states that
+			// directory names are separated by slashes (not backslashes).
+			// http://www.gnu.org/software/tar/manual/html_node/Standard.html
+			targetPath := fmt.Sprintf("aptrust-tags/%s", gf.OriginalPath())
+			localPath = filepath.Join(manifest.LocalDir, "aptrust-tags", gf.OriginalPath())
 			packager.Context.MessageLog.Info("Adding %s as tag file at %s", localPath, targetPath)
 			err = builder.Bag.AddCustomTagfile(localPath, targetPath, true)
 		}
@@ -389,8 +392,17 @@ func (packager *DPNPackager) fetchAllFiles(manifest *models.DPNIngestManifest) {
 		}
 
 		// Tell the downloader what we're downloading, and where to put it.
+		// Any files outside the data directory are tag files, and per the DPN
+		// spec, tag files from APTrust bags have to go into a dir called
+		// aptrust-tags. (Actually, <anything>-tags, but we're going with
+		// aptrust-tags.) See the DPN bagging spec here:
+		// https://wiki.duraspace.org/display/DPNC/BagIt+Specification
 		downloader.KeyName = s3KeyName
-		downloader.LocalPath = filepath.Join(manifest.LocalDir, gf.OriginalPath())
+		targetPath := gf.OriginalPath()
+		if !strings.HasPrefix(gf.OriginalPath(), "data/") {
+			targetPath = filepath.Join("aptrust-tags", gf.OriginalPath())
+		}
+		downloader.LocalPath = filepath.Join(manifest.LocalDir, targetPath)
 
 		// Fetch is the expensive part, so we don't even want to get to this
 		// point if we don't have the info above.
