@@ -1,6 +1,7 @@
 package workers
 
 import (
+	"crypto/sha256"
 	"fmt"
 	"github.com/APTrust/exchange/constants"
 	"github.com/APTrust/exchange/context"
@@ -12,6 +13,7 @@ import (
 	"github.com/APTrust/exchange/util/fileutil"
 	"github.com/APTrust/exchange/validation"
 	"github.com/nsqio/go-nsq"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -103,26 +105,23 @@ func (packager *DPNPackager) HandleMessage(message *nsq.Message) error {
 
 func (packager *DPNPackager) buildBag() {
 	for manifest := range packager.PackageChannel {
-		packager.buildDPNBag(manifest)
-		if manifest.PackageSummary.HasErrors() {
-			packager.PostProcessChannel <- manifest
-			continue
+		// Download and assemble all the files.
+		packager.assembleFilesAndManifests(manifest)
+		if !manifest.PackageSummary.HasErrors() {
+			// Build the DPN bag record that will go into
+			// the DPN registry.
+			packager.buildDPNBag(manifest)
 		}
-		if manifest.DPNBag == nil {
-			depositingInstitution := packager.getInstitution(manifest)
-			if depositingInstitution == nil {
-				return
-			}
-			manifest.DPNBag = models.NewDPNBag(
-				manifest.IntellectualObject.Identifier,
-				depositingInstitution.DPNUUID,
-				packager.Context.Config.DPN.LocalNode)
-			// TODO: Set the tag manifest checksum on MessageDigests
-		}
-		packager.ValidationChannel <- manifest
+		packager.TarChannel <- manifest
 	}
 }
 
+// getInstitution gets the Pharos record of the institution that owns the
+// IntellectualObject we're currently working with. From that record, we
+// can get the institution's DPN UUID. If an institution does not have a
+// DPN UUID, they will not be able to push bags to DPN. So if we wind up
+// with an institution with no DPN UUID here, that means some access
+// restrictions were not properly enforced in Pharos.
 func (packager *DPNPackager) getInstitution(manifest *models.DPNIngestManifest) *apt_models.Institution {
 	instIdentifier := manifest.IntellectualObject.Institution
 	if instIdentifier == "" {
@@ -145,8 +144,58 @@ func (packager *DPNPackager) getInstitution(manifest *models.DPNIngestManifest) 
 	return inst
 }
 
+// buildDPNBag bags the DPNBag object that will eventually be entered into
+// the DPN registry. This is not the bag itself, just the DPN registry entry.
+func (packager *DPNPackager) buildDPNBag(manifest *models.DPNIngestManifest) {
+	packager.Context.MessageLog.Info("Building DPN bag record for %s",
+		manifest.IntellectualObject.Identifier)
+	depositingInstitution := packager.getInstitution(manifest)
+	if depositingInstitution == nil {
+		return
+	}
+	manifest.DPNBag = models.NewDPNBag(
+		manifest.IntellectualObject.Identifier,
+		depositingInstitution.DPNUUID,
+		packager.Context.Config.DPN.LocalNode)
+
+	// Calculate the sha256 digest of the tag manifest. This is used for
+	// validating bag transfers in DPN. Note that we are NOT using a
+	// nonce when we call shaHash.Sum(nil). Though the DPN spec allows
+	// us to use a nonce, no nodes are using nonces as of late 2016.
+	tagManifestFile := filepath.Join(manifest.LocalDir, "tagmanifest-sha256.txt")
+	if !fileutil.FileExists(tagManifestFile) {
+		manifest.PackageSummary.AddError("Cannot find tag manifest %s", tagManifestFile)
+		return
+	}
+	reader, err := os.Open(tagManifestFile)
+	if err != nil {
+		manifest.PackageSummary.AddError("Cannot read tag manifest at %s: %v",
+			tagManifestFile, err)
+		return
+	}
+	defer reader.Close()
+	shaHash := sha256.New()
+	io.Copy(shaHash, reader)
+	tagManifestDigest := fmt.Sprintf("%x", shaHash.Sum(nil))
+
+	// Now create the MessageDigest for this bag, with the tag manifest
+	// checksum that will be used to verify transfers. When a remote
+	// node copies this bag to fulfill a replication request, we expect
+	// the node to return this fixity value as proof that it received
+	// a valid copy of the bag.
+	digest := &models.MessageDigest{
+		Bag:       manifest.DPNBag.UUID,
+		Algorithm: constants.AlgSha256,
+		Node:      packager.Context.Config.DPN.LocalNode,
+		Value:     tagManifestDigest,
+		CreatedAt: time.Now().UTC(),
+	}
+	manifest.DPNBag.MessageDigests = append(manifest.DPNBag.MessageDigests, digest)
+}
+
 func (packager *DPNPackager) tarBag() {
 	for manifest := range packager.TarChannel {
+		packager.Context.MessageLog.Info("Tarring %s", manifest.LocalDir)
 		manifest.NsqMessage.Touch()
 		// files, err := fileutil.RecursiveFileList(manifest.LocalDir)
 		// if err != nil {
@@ -223,14 +272,19 @@ func (packager *DPNPackager) tarBag() {
 		// result.TagManifestDigest = fileDigest.Sha256Digest
 
 		manifest.NsqMessage.Touch()
+
+		// We want to validate everything AFTER tarring, because
+		// the tarred bag is ultimately what will go into DPN.
 		packager.ValidationChannel <- manifest
 	}
 }
 
 func (packager *DPNPackager) validate() {
 	for manifest := range packager.ValidationChannel {
+		packager.Context.MessageLog.Info("Validating %s", manifest.LocalTarFile)
 		manifest.NsqMessage.Touch()
 		var validationResult *validation.ValidationResult
+		// TODO: ==================== Change to LocalTarFile ==================================
 		validator, err := validation.NewBagValidator(manifest.LocalDir, packager.BagValidationConfig)
 		if err != nil {
 			manifest.PackageSummary.AddError(err.Error())
@@ -265,8 +319,9 @@ func (packager *DPNPackager) postProcess() {
 }
 
 // Build the DPN bag by fetching the APTrust files, writing manifests, etc.
-func (packager *DPNPackager) buildDPNBag(manifest *models.DPNIngestManifest) {
-
+func (packager *DPNPackager) assembleFilesAndManifests(manifest *models.DPNIngestManifest) {
+	packager.Context.MessageLog.Info("Assembling %s", manifest.IntellectualObject.Identifier)
+	manifest.NsqMessage.Touch()
 	// A little problem with BagBuilder here is that it creates a directory
 	// with the bag name under the directory you give it. So if LocalDir
 	// is /mnt/dpn/staging/test.edu/bag1, the BagBuilder starts putting files
@@ -303,6 +358,7 @@ func (packager *DPNPackager) buildDPNBag(manifest *models.DPNIngestManifest) {
 			return
 		}
 	}
+	manifest.NsqMessage.Touch()
 
 	// Write tag files and manifests
 	errors := builder.Bag.Save()
@@ -311,11 +367,7 @@ func (packager *DPNPackager) buildDPNBag(manifest *models.DPNIngestManifest) {
 			manifest.PackageSummary.AddError("Bagging error: %v", err)
 		}
 	}
-
-	// -------------------------------------------------------------------------
-	// Tar it up
-	// TODO: Implement the tar code
-	// -------------------------------------------------------------------------
+	manifest.NsqMessage.Touch()
 }
 
 // ISSUE: See https://www.pivotaltracker.com/story/show/134540309
@@ -400,9 +452,10 @@ func (packager *DPNPackager) finishWithSuccess(manifest *models.DPNIngestManifes
 	manifest.WorkItem.Retry = true // just in case this had been false
 	SaveWorkItem(packager.Context, manifest, manifest.PackageSummary)
 	SaveWorkItemState(packager.Context, manifest, manifest.PackageSummary)
-	if fileutil.LooksSafeToDelete(manifest.LocalDir, 12, 3) {
-		os.RemoveAll(manifest.LocalDir)
-	}
+	// REPLACE
+	// if fileutil.LooksSafeToDelete(manifest.LocalDir, 12, 3) {
+	// 	os.RemoveAll(manifest.LocalDir)
+	// }
 	PushToQueue(packager.Context, manifest, manifest.PackageSummary,
 		packager.Context.Config.DPN.DPNStoreWorker.NsqTopic)
 	manifest.NsqMessage.Finish()
@@ -447,18 +500,19 @@ func (packager *DPNPackager) finishWithError(manifest *models.DPNIngestManifest)
 
 	// Delete the folder containing the bag we were building,
 	// And delete the tar file too, if it exists.
-	if fileutil.LooksSafeToDelete(manifest.LocalDir, 12, 3) {
-		err := os.RemoveAll(manifest.LocalDir)
-		if err != nil {
-			manifest.PackageSummary.AddError("Could not delete bag directory %s: %v",
-				manifest.LocalDir, err)
-		}
-	}
-	err := os.Remove(manifest.LocalTarFile)
-	if err != nil {
-		manifest.PackageSummary.AddError("Could not delete tar file %s: %v",
-			manifest.LocalTarFile, err)
-	}
+	// --- REPLACE ---
+	// if fileutil.LooksSafeToDelete(manifest.LocalDir, 12, 3) {
+	// 	err := os.RemoveAll(manifest.LocalDir)
+	// 	if err != nil {
+	// 		manifest.PackageSummary.AddError("Could not delete bag directory %s: %v",
+	// 			manifest.LocalDir, err)
+	// 	}
+	// }
+	// err := os.Remove(manifest.LocalTarFile)
+	// if err != nil {
+	// 	manifest.PackageSummary.AddError("Could not delete tar file %s: %v",
+	// 		manifest.LocalTarFile, err)
+	// }
 
 	// Save info to Pharos so the next worker knows what's what.
 	if manifest.WorkItem != nil {
