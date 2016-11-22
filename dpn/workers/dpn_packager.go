@@ -7,6 +7,7 @@ import (
 	"github.com/APTrust/exchange/dpn/models"
 	"github.com/APTrust/exchange/dpn/network"
 	dpn_util "github.com/APTrust/exchange/dpn/util"
+	apt_models "github.com/APTrust/exchange/models"
 	apt_network "github.com/APTrust/exchange/network"
 	"github.com/APTrust/exchange/util/fileutil"
 	"github.com/APTrust/exchange/validation"
@@ -108,16 +109,40 @@ func (packager *DPNPackager) buildBag() {
 			continue
 		}
 		if manifest.DPNBag == nil {
-			// TODO: Get APTrust Inst from Pharos, get DPN UUID from there
-			dpnMemberId := ""
+			depositingInstitution := packager.getInstitution(manifest)
+			if depositingInstitution == nil {
+				return
+			}
 			manifest.DPNBag = models.NewDPNBag(
 				manifest.IntellectualObject.Identifier,
-				dpnMemberId,
+				depositingInstitution.DPNUUID,
 				packager.Context.Config.DPN.LocalNode)
 			// TODO: Set the tag manifest checksum on MessageDigests
 		}
 		packager.ValidationChannel <- manifest
 	}
+}
+
+func (packager *DPNPackager) getInstitution(manifest *models.DPNIngestManifest) *apt_models.Institution {
+	instIdentifier := manifest.IntellectualObject.Institution
+	if instIdentifier == "" {
+		instIdentifier = strings.Split(manifest.IntellectualObject.Identifier, "/")[0]
+	}
+	if instIdentifier == "" {
+		manifest.PackageSummary.AddError("Cannot get institution identifier from object %s",
+			manifest.IntellectualObject.Identifier)
+		return nil
+	}
+	resp := packager.Context.PharosClient.InstitutionGet(instIdentifier)
+	if resp.Error != nil {
+		manifest.PackageSummary.AddError("Can't get institution '%s' from Pharos: %v",
+			instIdentifier, resp.Error.Error())
+	}
+	inst := resp.Institution()
+	if inst == nil {
+		manifest.PackageSummary.AddError("Pharos returned nil for institution '%s'", instIdentifier)
+	}
+	return inst
 }
 
 func (packager *DPNPackager) tarBag() {

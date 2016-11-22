@@ -15,4 +15,9 @@ type Institution struct {
 
 	// Identifier is the institution's domain name.
 	Identifier string `json:"identifier"`
+
+	// The institution's DPN member id. This will be
+	// empty if the depositing institution is not a
+	// DPN member.
+	DPNUUID string `json:"dpn_uuid"`
 }

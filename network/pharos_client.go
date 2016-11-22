@@ -46,7 +46,7 @@ func NewPharosClient(hostUrl, apiVersion, apiUser, apiKey string) (*PharosClient
 		transport:  transport}, nil
 }
 
-// Returns a list of depositing member institutions.
+// Returns the institution with the specified identifier.
 func (client *PharosClient) InstitutionGet(identifier string) *PharosResponse {
 	// Set up the response object
 	resp := NewPharosResponse(PharosInstitution)
