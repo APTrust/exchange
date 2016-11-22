@@ -100,6 +100,9 @@ func TestDPNBagInfo(t *testing.T) {
 	verifyTagField(t, tagfile, "Bag-Size", "686")
 	verifyTagField(t, tagfile, "Bag-Group-Identifier", "")
 	verifyTagField(t, tagfile, "Bag-Count", "1")
+
+	// Make sure the bagging date was set.
+	assert.NotEqual(t, builder.BagTime(), "0001-01-01T00:00:00Z")
 }
 
 func TestDPNInfo(t *testing.T) {

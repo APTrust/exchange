@@ -136,6 +136,9 @@ func NewBagBuilder(localPath string, obj *apt_models.IntellectualObject, default
 // BagTime returns the datetime the bag was created,
 // in RFC3339 format (e.g. "2015-03-05T10:10:00Z")
 func (builder *BagBuilder) BagTime() string {
+	if builder.bagtime.IsZero() {
+		builder.bagtime = time.Now().UTC()
+	}
 	return builder.bagtime.Format(time.RFC3339)
 }
 
