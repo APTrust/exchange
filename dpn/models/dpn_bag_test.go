@@ -19,4 +19,12 @@ func TestNewDPNBag(t *testing.T) {
 	assert.Equal(t, "D", bag.BagType)
 	assert.NotNil(t, bag.MessageDigests)
 	assert.Empty(t, bag.MessageDigests)
+	assert.NotNil(t, bag.Interpretive)
+	assert.Empty(t, bag.Interpretive)
+	assert.NotNil(t, bag.Rights)
+	assert.Empty(t, bag.Rights)
+	assert.NotNil(t, bag.ReplicatingNodes)
+	assert.Empty(t, bag.ReplicatingNodes)
+	assert.False(t, bag.CreatedAt.IsZero())
+	assert.False(t, bag.UpdatedAt.IsZero())
 }

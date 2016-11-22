@@ -80,5 +80,10 @@ func NewDPNBag(localId, member, ingestNode string) *DPNBag {
 		AdminNode:        ingestNode,
 		BagType:          "D",
 		MessageDigests:   make([]*MessageDigest, 0),
+		Interpretive:     make([]string, 0),
+		Rights:           make([]string, 0),
+		ReplicatingNodes: make([]string, 0),
+		CreatedAt:        time.Now().UTC(),
+		UpdatedAt:        time.Now().UTC(),
 	}
 }
