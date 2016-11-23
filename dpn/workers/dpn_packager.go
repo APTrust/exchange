@@ -252,6 +252,16 @@ func (packager *DPNPackager) tarBag() {
 		tarWriter.Close()
 		manifest.NsqMessage.Touch()
 
+		// Finish the DPN bag record by setting the file size
+		file, err := os.Stat(manifest.LocalTarFile)
+		if err != nil {
+			manifest.PackageSummary.AddError("Cannot get file size of %s: %v",
+				manifest.LocalTarFile, err)
+			packager.PostProcessChannel <- manifest
+			break
+		}
+		manifest.DPNBag.Size = uint64(file.Size())
+
 		// We want to validate everything AFTER tarring, because
 		// the tarred bag is ultimately what will go into DPN.
 		packager.ValidationChannel <- manifest
@@ -438,7 +448,7 @@ func (packager *DPNPackager) fetchAllFiles(manifest *models.DPNIngestManifest) {
 func (packager *DPNPackager) finishWithSuccess(manifest *models.DPNIngestManifest) {
 	// Tell Pharos we're done with this item and save the work state.
 	packager.Context.MessageLog.Info("Packaging succeeded for %s", manifest.WorkItem.ObjectIdentifier)
-	manifest.WorkItem.Status = constants.StageStore
+	manifest.WorkItem.Stage = constants.StageStore
 	manifest.WorkItem.Status = constants.StatusPending
 	manifest.WorkItem.Note = "Packaging completed, awaiting storage"
 	manifest.WorkItem.Node = ""    // no worker is working on this now

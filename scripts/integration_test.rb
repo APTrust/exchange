@@ -112,123 +112,123 @@ require_relative 'test_runner'
 class IntegrationTest
 
   def initialize(context)
-    @context = context
-    @build = Build.new(context)
-    @service = Service.new(context)
-    @test_runner = TestRunner.new(context)
-    @results = {}
-    @context.make_test_dirs
-    @context.clear_logs
-    @context.clear_staging
-    @context.clear_binaries
-    @context.clear_nsq_data
+	@context = context
+	@build = Build.new(context)
+	@service = Service.new(context)
+	@test_runner = TestRunner.new(context)
+	@results = {}
+	@context.make_test_dirs
+	@context.clear_logs
+	@context.clear_staging
+	@context.clear_binaries
+	@context.clear_nsq_data
   end
 
 
   def bucket_reader(more_tests_follow)
-    begin
-      # Build everything anew
-      @build.build(@context.apps['nsq_service'])
-      @build.build(@context.apps['apt_bucket_reader'])
+	begin
+	  # Build everything anew
+	  @build.build(@context.apps['nsq_service'])
+	  @build.build(@context.apps['apt_bucket_reader'])
 
-      # Start services with a little extra time for startup and shutdown
-      @service.pharos_reset_db
-      @service.pharos_load_fixtures
-      @service.pharos_start
-      @service.nsq_start
-      sleep 10
-      @service.app_start(@context.apps['apt_bucket_reader'])
-      @service.stop_everything unless more_tests_follow
-      sleep 5
+	  # Start services with a little extra time for startup and shutdown
+	  @service.pharos_reset_db
+	  @service.pharos_load_fixtures
+	  @service.pharos_start
+	  @service.nsq_start
+	  sleep 10
+	  @service.app_start(@context.apps['apt_bucket_reader'])
+	  @service.stop_everything unless more_tests_follow
+	  sleep 5
 
-      # Run the post tests.
-      @results['apt_bucket_reader_test'] = @test_runner.run_bucket_reader_post_test
-    rescue Exception => ex
-      print_exception(ex)
-      return false
-    ensure
-      @service.stop_everything unless more_tests_follow
-    end
-    if more_tests_follow
-      return all_tests_passed?
-    else
-      return print_results
-    end
+	  # Run the post tests.
+	  @results['apt_bucket_reader_test'] = @test_runner.run_bucket_reader_post_test
+	rescue Exception => ex
+	  print_exception(ex)
+	  return false
+	ensure
+	  @service.stop_everything unless more_tests_follow
+	end
+	if more_tests_follow
+	  return all_tests_passed?
+	else
+	  return print_results
+	end
   end
 
   def apt_ingest(more_tests_follow)
-    begin
-      # Rebuild binaries
-      @build.build(@context.apps['apt_volume_service'])
-      @build.build(@context.apps['apt_fetch'])
-      @build.build(@context.apps['apt_store'])
-      @build.build(@context.apps['apt_record'])
+	begin
+	  # Rebuild binaries
+	  @build.build(@context.apps['apt_volume_service'])
+	  @build.build(@context.apps['apt_fetch'])
+	  @build.build(@context.apps['apt_store'])
+	  @build.build(@context.apps['apt_record'])
 
-      # Run the prerequisite process (with tests)
-      # Note that the prereq starts most of the required services.
-      bucket_reader_ok = bucket_reader(true)
-      if !bucket_reader_ok
-        puts "Skipping apt_ingest test because of prior failures."
-        print_results
-        return false
-      end
+	  # Run the prerequisite process (with tests)
+	  # Note that the prereq starts most of the required services.
+	  bucket_reader_ok = bucket_reader(true)
+	  if !bucket_reader_ok
+		puts "Skipping apt_ingest test because of prior failures."
+		print_results
+		return false
+	  end
 
-      # Start services required for this specific set of tests.
-      @service.app_start(@context.apps['apt_volume_service'])
-      sleep 5
-      @service.app_start(@context.apps['apt_fetch'])
-      sleep 10  # let nsq store topic fill before client connects
-      @service.app_start(@context.apps['apt_store'])
-      sleep 10  # let nsq record topic fill before client connects
-      @service.app_start(@context.apps['apt_record'])
-      sleep 30  # allow fetch/store/record time to finish
-      @service.stop_everything unless more_tests_follow
-      sleep 5
+	  # Start services required for this specific set of tests.
+	  @service.app_start(@context.apps['apt_volume_service'])
+	  sleep 5
+	  @service.app_start(@context.apps['apt_fetch'])
+	  sleep 10  # let nsq store topic fill before client connects
+	  @service.app_start(@context.apps['apt_store'])
+	  sleep 10  # let nsq record topic fill before client connects
+	  @service.app_start(@context.apps['apt_record'])
+	  sleep 30  # allow fetch/store/record time to finish
+	  @service.stop_everything unless more_tests_follow
+	  sleep 5
 
-      # Run the post tests. This is where we check to see if the
-      # ingest services (fetch, store, record) correctly performed
-      # all of the expected work.
-      @results['apt_fetch_test'] = @test_runner.run_apt_fetch_post_test
-      @results['apt_store_test'] = @test_runner.run_apt_store_post_test
-      @results['apt_record_test'] = @test_runner.run_apt_record_post_test
-    rescue Exception => ex
-      print_exception(ex)
-      return false
-    ensure
-      @service.stop_everything unless more_tests_follow
-    end
-    if more_tests_follow
-      return all_tests_passed?
-    else
-      return print_results
-    end
+	  # Run the post tests. This is where we check to see if the
+	  # ingest services (fetch, store, record) correctly performed
+	  # all of the expected work.
+	  @results['apt_fetch_test'] = @test_runner.run_apt_fetch_post_test
+	  @results['apt_store_test'] = @test_runner.run_apt_store_post_test
+	  @results['apt_record_test'] = @test_runner.run_apt_record_post_test
+	rescue Exception => ex
+	  print_exception(ex)
+	  return false
+	ensure
+	  @service.stop_everything unless more_tests_follow
+	end
+	if more_tests_follow
+	  return all_tests_passed?
+	else
+	  return print_results
+	end
   end
 
   def apt_restore(more_tests_follow)
-    # Can't test this yet because the restore service hasn't been written.
+	# Can't test this yet because the restore service hasn't been written.
   end
 
   def apt_delete(more_tests_follow)
-    # Can't test this yet because the delete service hasn't been written.
+	# Can't test this yet because the delete service hasn't been written.
   end
 
   # dpn_rest_client tests the DPN REST client against a
   # locally-running DPN cluster. Returns true if all tests passed,
   # false otherwise.
   def dpn_rest_client(more_tests_follow)
-    begin
-      @service.dpn_cluster_start
-      @results['dpn_rest_client_test'] = @test_runner.run_dpn_rest_client_test
-    rescue Exception => ex
-      print_exception(ex)
-    ensure
-      @service.stop_everything unless more_tests_follow
-    end
-    if more_tests_follow
-      return all_tests_passed?
-    else
-      return print_results
-    end
+	begin
+	  @service.dpn_cluster_start
+	  @results['dpn_rest_client_test'] = @test_runner.run_dpn_rest_client_test
+	rescue Exception => ex
+	  print_exception(ex)
+	ensure
+	  @service.stop_everything unless more_tests_follow
+	end
+	if more_tests_follow
+	  return all_tests_passed?
+	else
+	  return print_results
+	end
   end
 
   # dpn_sync tests the dpn_sync app against a locally-running
@@ -238,33 +238,33 @@ class IntegrationTest
   # were synched as expected to the local node. Returns true/false
   # to indicate whether all tests passed.
   def dpn_sync(more_tests_follow)
-    begin
-      # Build
-      @build.build(@context.apps['dpn_sync'])
+	begin
+	  # Build
+	  @build.build(@context.apps['dpn_sync'])
 
-      # Run prerequisites
-      if !apt_ingest(true)
-        puts "Skipping dpn_sync test because of prior failures."
-        print_results
-        return false
-      end
+	  # Run prerequisites
+	  if !apt_ingest(true)
+		puts "Skipping dpn_sync test because of prior failures."
+		print_results
+		return false
+	  end
 
-      # Start services
-      @service.dpn_cluster_start  # sleeps to wait for all nodes to come up
-      @service.app_start(@context.apps['dpn_sync'])
+	  # Start services
+	  @service.dpn_cluster_start  # sleeps to wait for all nodes to come up
+	  @service.app_start(@context.apps['dpn_sync'])
 
-      # Post test
-      @results['dpn_sync_test'] = @test_runner.run_dpn_sync_post_test
-    rescue Exception => ex
-      print_exception(ex)
-    ensure
-      @service.stop_everything unless more_tests_follow
-    end
-    if more_tests_follow
-      return all_tests_passed?
-    else
-      return print_results
-    end
+	  # Post test
+	  @results['dpn_sync_test'] = @test_runner.run_dpn_sync_post_test
+	rescue Exception => ex
+	  print_exception(ex)
+	ensure
+	  @service.stop_everything unless more_tests_follow
+	end
+	if more_tests_follow
+	  return all_tests_passed?
+	else
+	  return print_results
+	end
   end
 
   # dpn_queue tests the dpn_queue application, which is responsible
@@ -279,208 +279,209 @@ class IntegrationTest
   # because we need to ingest the APTrust bags that we're going to
   # mark for DPN.
   def dpn_queue(more_tests_follow)
-    begin
-      # Build
-      @build.build(@context.apps['dpn_queue'])
+	begin
+	  # Build
+	  @build.build(@context.apps['dpn_queue'])
 
-      # Run prerequisites.
-      dpn_sync_ok = dpn_sync(true)
-      if !dpn_sync_ok
-        puts "Skipping dpn_queue test because of prior failures."
-        print_results
-        return false
-      end
+	  # Run prerequisites.
+	  dpn_sync_ok = dpn_sync(true)
+	  if !dpn_sync_ok
+		puts "Skipping dpn_queue test because of prior failures."
+		print_results
+		return false
+	  end
 
-      # Push some APTrust bags to DPN. We want to make sure
-      # that dpn_queue picks these up.
-      @results['apt_push_to_dpn'] = @test_runner.run_apt_push_to_dpn_test
-      if @results['apt_push_to_dpn'] == false
-        puts "Skipping dpn_queue test because apt_push_to_dpn failed."
-        print_results
-        return false
-      end
+	  # Push some APTrust bags to DPN. We want to make sure
+	  # that dpn_queue picks these up.
+	  @results['apt_push_to_dpn'] = @test_runner.run_apt_push_to_dpn_test
+	  if @results['apt_push_to_dpn'] == false
+		puts "Skipping dpn_queue test because apt_push_to_dpn failed."
+		print_results
+		return false
+	  end
 
-      # Start services
-      @service.app_start(@context.apps['dpn_queue'])
+	  # Start services
+	  @service.app_start(@context.apps['dpn_queue'])
 
-      # Run the post test
-      @results['dpn_queue_test'] = @test_runner.run_dpn_queue_post_test
-    rescue Exception => ex
-      print_exception(ex)
-    ensure
-      @service.stop_everything unless more_tests_follow
-    end
-    if more_tests_follow
-      return all_tests_passed?
-    else
-      return print_results
-    end
+	  # Run the post test
+	  @results['dpn_queue_test'] = @test_runner.run_dpn_queue_post_test
+	rescue Exception => ex
+	  print_exception(ex)
+	ensure
+	  @service.stop_everything unless more_tests_follow
+	end
+	if more_tests_follow
+	  return all_tests_passed?
+	else
+	  return print_results
+	end
   end
 
   def dpn_copy(more_tests_follow)
-    begin
-      # Build
-      @build.build(@context.apps['dpn_copy'])
+	begin
+	  # Build
+	  @build.build(@context.apps['dpn_copy'])
 
-      # Run prerequisites
-      queue_ok = dpn_queue(true)
-      if !queue_ok
-        puts "Skipping dpn_copy test because of prior failures."
-        print_results
-        return false
-      end
+	  # Run prerequisites
+	  queue_ok = dpn_queue(true)
+	  if !queue_ok
+		puts "Skipping dpn_copy test because of prior failures."
+		print_results
+		return false
+	  end
 
-      # Start service
-      @service.app_start(@context.apps['dpn_copy'])
-      sleep 30
+	  # Start service
+	  @service.app_start(@context.apps['dpn_copy'])
+	  sleep 30
 
-      # Run the post test
-      @results['dpn_copy_test'] = @test_runner.run_dpn_copy_post_test
-    rescue Exception => ex
-      print_exception(ex)
-    ensure
-      @service.stop_everything unless more_tests_follow
-    end
-    if more_tests_follow
-      return all_tests_passed?
-    else
-      return print_results
-    end
+	  # Run the post test
+	  @results['dpn_copy_test'] = @test_runner.run_dpn_copy_post_test
+	rescue Exception => ex
+	  print_exception(ex)
+	ensure
+	  @service.stop_everything unless more_tests_follow
+	end
+	if more_tests_follow
+	  return all_tests_passed?
+	else
+	  return print_results
+	end
   end
 
   def dpn_validate(more_tests_follow)
-    begin
-      # Build
-      @build.build(@context.apps['dpn_validate'])
+	begin
+	  # Build
+	  @build.build(@context.apps['dpn_validate'])
 
-      # Run prerequisites
-      copy_ok = dpn_copy(true)
-      if !copy_ok
-        puts "Skipping dpn_validate test because of prior failures."
-        print_results
-        return false
-      end
+	  # Run prerequisites
+	  copy_ok = dpn_copy(true)
+	  if !copy_ok
+		puts "Skipping dpn_validate test because of prior failures."
+		print_results
+		return false
+	  end
 
-      # Start service
-      @service.app_start(@context.apps['dpn_validate'])
-      sleep 20
+	  # Start service
+	  @service.app_start(@context.apps['dpn_validate'])
+	  sleep 20
 
-      # Ensure expected post conditions
-      @results['dpn_validate_test'] = @test_runner.run_dpn_validate_post_test
-    rescue Exception => ex
-      print_exception(ex)
-    ensure
-      @service.stop_everything unless more_tests_follow
-    end
-    if more_tests_follow
-      return all_tests_passed?
-    else
-      return print_results
-    end
+	  # Ensure expected post conditions
+	  @results['dpn_validate_test'] = @test_runner.run_dpn_validate_post_test
+	rescue Exception => ex
+	  print_exception(ex)
+	ensure
+	  @service.stop_everything unless more_tests_follow
+	end
+	if more_tests_follow
+	  return all_tests_passed?
+	else
+	  return print_results
+	end
   end
 
   def dpn_store(more_tests_follow)
-    begin
-      # Build
-      @build.build(@context.apps['dpn_store'])
+	begin
+	  # Build
+	  @build.build(@context.apps['dpn_store'])
 
-      # Run prerequisites
-      validate_ok = dpn_validate(true)
-      if !validate_ok
-        puts "Skipping dpn_store test because of prior failures."
-        print_results
-        return false
-      end
+	  # Run prerequisites
+	  validate_ok = dpn_validate(true)
+	  if !validate_ok
+		puts "Skipping dpn_store test because of prior failures."
+		print_results
+		return false
+	  end
 
-      # Start service
-      @service.app_start(@context.apps['dpn_store'])
-      sleep 20
+	  # Start service
+	  @service.app_start(@context.apps['dpn_store'])
+	  sleep 20
 
-      # Ensure expected post conditions
-      @results['dpn_store_test'] = @test_runner.run_dpn_store_post_test
-    rescue Exception => ex
-      print_exception(ex)
-    ensure
-      @service.stop_everything unless more_tests_follow
-    end
-    if more_tests_follow
-      return all_tests_passed?
-    else
-      return print_results
-    end
+	  # Ensure expected post conditions
+	  @results['dpn_store_test'] = @test_runner.run_dpn_store_post_test
+	rescue Exception => ex
+	  print_exception(ex)
+	ensure
+	  @service.stop_everything unless more_tests_follow
+	end
+	if more_tests_follow
+	  return all_tests_passed?
+	else
+	  return print_results
+	end
   end
 
+  # dpn_package packages an APTrust bag for ingest into DPN.
   def dpn_package(more_tests_follow)
-    begin
-      # Build
-      @build.build(@context.apps['dpn_package'])
+	begin
+	  # Build
+	  @build.build(@context.apps['dpn_package'])
 
-      # Run prerequisites
-      queue_ok = dpn_queue(true)
-      if !queue_ok
-        puts "Skipping dpn_package test because of prior failures."
-        print_results
-        return false
-      end
+	  # Run prerequisites
+	  queue_ok = dpn_queue(true)
+	  if !queue_ok
+		puts "Skipping dpn_package test because of prior failures."
+		print_results
+		return false
+	  end
 
-      # Start service
-      @service.app_start(@context.apps['dpn_package'])
-      sleep 60
+	  # Start service
+	  @service.app_start(@context.apps['dpn_package'])
+	  sleep 50
 
-      # Run the post test
-      #@results['dpn_package_test'] = @test_runner.run_dpn_package_post_test
-    rescue Exception => ex
-      print_exception(ex)
-    ensure
-      @service.stop_everything unless more_tests_follow
-    end
-    if more_tests_follow
-      return all_tests_passed?
-    else
-      return print_results
-    end
+	  # Run the post test
+	  @results['dpn_package_test'] = @test_runner.run_dpn_package_post_test
+	rescue Exception => ex
+	  print_exception(ex)
+	ensure
+	  @service.stop_everything unless more_tests_follow
+	end
+	if more_tests_follow
+	  return all_tests_passed?
+	else
+	  return print_results
+	end
   end
 
   def dpn_replicate(more_tests_follow)
-    # depents on dpn_copy
+	# depents on dpn_copy
   end
 
   # Runs all the APTrust and DPN unit tests. Does not run any tests that
   # rely on external services. Returns true/false to indicate whether all
   # tests passed.
   def units(more_tests_follow)
-    @results['unit_tests'] = @test_runner.run_all_unit_tests
-    print_results
+	@results['unit_tests'] = @test_runner.run_all_unit_tests
+	print_results
   end
 
   def print_exception(ex)
-    puts ex
-    puts ex.backtrace
+	puts ex
+	puts ex.backtrace
   end
 
   # print_results prints the results of each test that was run
   # and returns true if all tests passed, false if any test failed.
   def print_results
-    all_tests_passed = true
-    puts "\n---Results---"
-    @results.each do |test_name, passed|
-      if passed
-        message = 'PASS'
-      else
-        message = 'FAIL'
-        all_tests_passed = false
-      end
-      printf("%-30s: %s\n", test_name, message)
-    end
-    puts "\n"
-    return all_tests_passed
+	all_tests_passed = true
+	puts "\n---Results---"
+	@results.each do |test_name, passed|
+	  if passed
+		message = 'PASS'
+	  else
+		message = 'FAIL'
+		all_tests_passed = false
+	  end
+	  printf("%-30s: %s\n", test_name, message)
+	end
+	puts "\n"
+	return all_tests_passed
   end
 
   def all_tests_passed?
-    @results.each do |test_name, passed|
-      return false unless passed
-    end
-    return true
+	@results.each do |test_name, passed|
+	  return false unless passed
+	end
+	return true
   end
 
 end
