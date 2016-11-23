@@ -105,3 +105,12 @@ func TestNewDPNWorkItemForPharos(t *testing.T) {
 	assert.Equal(t, item.Note, pharosItem.Note)
 	assert.Equal(t, item.State, pharosItem.State)
 }
+
+func TestNewWorkItemStateForPharos(t *testing.T) {
+	workItemState := testutil.MakeWorkItemState()
+	pharosItem := models.NewWorkItemStateForPharos(workItemState)
+	assert.Equal(t, workItemState.Id, pharosItem.Id)
+	assert.Equal(t, workItemState.WorkItemId, pharosItem.WorkItemId)
+	assert.Equal(t, workItemState.Action, pharosItem.Action)
+	assert.Equal(t, workItemState.State, pharosItem.State)
+}

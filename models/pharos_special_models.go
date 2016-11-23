@@ -147,3 +147,19 @@ func NewDPNWorkItemForPharos(item *DPNWorkItem) *DPNWorkItemForPharos {
 		State:       item.State,
 	}
 }
+
+type WorkItemStateForPharos struct {
+	Id         int    `json:"id"`
+	WorkItemId int    `json:"work_item_id"`
+	Action     string `json:"action"`
+	State      string `json:"state"`
+}
+
+func NewWorkItemStateForPharos(workItemState *WorkItemState) *WorkItemStateForPharos {
+	return &WorkItemStateForPharos{
+		Id:         workItemState.Id,
+		WorkItemId: workItemState.WorkItemId,
+		Action:     workItemState.Action,
+		State:      workItemState.State,
+	}
+}

@@ -697,7 +697,8 @@ func (client *PharosClient) WorkItemStateSave(obj *models.WorkItemState) *Pharos
 	absoluteUrl := client.BuildUrl(relativeUrl)
 
 	// Prepare the JSON data
-	postData, err := json.Marshal(obj)
+	pharosWorkItemState := models.NewWorkItemStateForPharos(obj)
+	postData, err := json.Marshal(pharosWorkItemState)
 	if err != nil {
 		resp.Error = err
 	}
