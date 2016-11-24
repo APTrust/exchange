@@ -10,7 +10,7 @@ import (
 	"strings"
 )
 
-func FindResultInLog(pathToLogFile, bagName string) (ingestManifest *models.IngestManifest, err error) {
+func FindIngestManifestInLog(pathToLogFile, bagName string) (ingestManifest *models.IngestManifest, err error) {
 	file, err := os.Open(pathToLogFile)
 	if err != nil {
 		return nil, err

@@ -33,7 +33,7 @@ func TestFetchResults(t *testing.T) {
 	// that file.
 	pathToJsonLog := filepath.Join(config.LogDirectory, "apt_fetch.json")
 	for _, bagName := range testutil.INTEGRATION_GOOD_BAGS {
-		ingestManifest, err := testutil.FindResultInLog(pathToJsonLog, bagName)
+		ingestManifest, err := testutil.FindIngestManifestInLog(pathToJsonLog, bagName)
 		assert.Nil(t, err)
 		if err != nil {
 			continue
@@ -46,7 +46,7 @@ func TestFetchResults(t *testing.T) {
 		}
 	}
 	for _, bagName := range testutil.INTEGRATION_BAD_BAGS {
-		ingestManifest, err := testutil.FindResultInLog(pathToJsonLog, bagName)
+		ingestManifest, err := testutil.FindIngestManifestInLog(pathToJsonLog, bagName)
 		assert.Nil(t, err)
 		if err != nil {
 			continue
