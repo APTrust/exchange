@@ -11,6 +11,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"net/url"
+	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -70,7 +71,22 @@ func TestPackageWorkItemState(t *testing.T) {
 // TestPackageJsonLog checks that all expected entries are present
 // in the dpn_package.json log.
 func TestPackageJsonLog(t *testing.T) {
+	if !apt_testutil.ShouldRunIntegrationTests() {
+		t.Skip("Skipping integration test. Set ENV var RUN_EXCHANGE_INTEGRATION=true if you want to run them.")
+	}
+	_context, err := apt_testutil.GetContext("integration.json")
+	require.Nil(t, err)
+	pathToLogFile := filepath.Join(_context.Config.LogDirectory, "dpn_package.json")
+	for _, s3Key := range apt_testutil.INTEGRATION_GOOD_BAGS[0:7] {
+		parts := strings.Split(s3Key, "/")
+		tarFileName := parts[1]
+		manifest, err := apt_testutil.FindDPNIngestManifestInLog(pathToLogFile, tarFileName)
+		require.Nil(t, err)
+		require.NotNil(t, manifest)
 
+		detail := fmt.Sprintf("%s from JSON log", tarFileName)
+		testPackageManifest(t, _context, manifest, detail)
+	}
 }
 
 // TestPackageTarFilesPresent tests whether all expected DPN bags
@@ -100,7 +116,10 @@ func testPackageWorkItemState(t *testing.T, _context *context.Context, workItemS
 	dpnIngestManifest := models.NewDPNIngestManifest(nil)
 	err := json.Unmarshal([]byte(workItemState), dpnIngestManifest)
 	require.Nil(t, err, "Could not unmarshal state")
+	testPackageManifest(t, _context, dpnIngestManifest, detail)
+}
 
+func testPackageManifest(t *testing.T, _context *context.Context, dpnIngestManifest *models.DPNIngestManifest, detail string) {
 	require.NotNil(t, dpnIngestManifest.PackageSummary, detail)
 	require.NotNil(t, dpnIngestManifest.ValidateSummary, detail)
 	assert.False(t, dpnIngestManifest.PackageSummary.StartedAt.IsZero(), detail)
