@@ -92,20 +92,59 @@ func TestPackageJsonLog(t *testing.T) {
 // TestPackageTarFilesPresent tests whether all expected DPN bags
 // (tar files) are present in the staging area.
 func TestPackageTarFilesPresent(t *testing.T) {
-
+	if !apt_testutil.ShouldRunIntegrationTests() {
+		t.Skip("Skipping integration test. Set ENV var RUN_EXCHANGE_INTEGRATION=true if you want to run them.")
+	}
+	_context, err := apt_testutil.GetContext("integration.json")
+	require.Nil(t, err)
+	pattern := filepath.Join(_context.Config.DPN.StagingDirectory, "test.edu", "*.tar")
+	files, err := filepath.Glob(pattern)
+	require.Nil(t, err)
+	assert.Equal(t, 7, len(files))
 }
 
 // TestPackageCleanup checks to see whether dpn_package cleaned up
 // all of the intermediate files created during the bag building
 // process. Those are directories containing untarred bags.
 func TestPackageCleanup(t *testing.T) {
+	if !apt_testutil.ShouldRunIntegrationTests() {
+		t.Skip("Skipping integration test. Set ENV var RUN_EXCHANGE_INTEGRATION=true if you want to run them.")
+	}
+	_context, err := apt_testutil.GetContext("integration.json")
+	require.Nil(t, err)
+	pattern := filepath.Join(_context.Config.DPN.StagingDirectory, "test.edu", "*")
+	files, err := filepath.Glob(pattern)
+	require.Nil(t, err)
 
+	// Only the 7 tar file should remain. The 7 working directories
+	// should have been deleted. If anything other than a tar file
+	// remains, some part of cleanup failed.
+	assert.Equal(t, 7, len(files))
+	for _, file := range files {
+		assert.True(t, strings.HasSuffix(file, ".tar"))
+	}
 }
 
 // TestPackageItemsQueued checks to see if dpn_package pushed items
 // into the dpn_store NSQ topic.
 func TestPackageItemsQueued(t *testing.T) {
-
+	if !apt_testutil.ShouldRunIntegrationTests() {
+		t.Skip("Skipping integration test. Set ENV var RUN_EXCHANGE_INTEGRATION=true if you want to run them.")
+	}
+	_context, err := apt_testutil.GetContext("integration.json")
+	require.Nil(t, err, "Could not create context")
+	stats, err := _context.NSQClient.GetStats()
+	require.Nil(t, err)
+	foundTopic := false
+	for _, topic := range stats.Data.Topics {
+		if topic.TopicName == _context.Config.DPN.DPNStoreWorker.NsqTopic {
+			// All 7 packaged bags should show up in the storage queue
+			foundTopic = true
+			assert.EqualValues(t, uint64(7), topic.MessageCount)
+		}
+	}
+	assert.True(t, foundTopic, "Nothing was queued in %s",
+		_context.Config.DPN.DPNStoreWorker.NsqTopic)
 }
 
 // Test the JSON serialized WorkItemState. Param WorkItemState is a
