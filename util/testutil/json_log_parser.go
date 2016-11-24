@@ -12,8 +12,9 @@ import (
 )
 
 // FindIngestManifestInLog returns the IngestManifest for the specified
-// bag in the specified JSON log file. Param bagName should
-// include the .tar extension. So "mybag.tar", not "mybag" or "test.edu/mybag".
+// bag in the specified JSON log file. Param bucketAndKey is the S3 bucket
+// name and key name, separated by a slash. Key name ends with ".tar". For example,
+// "aptrust.receiving.virginia.edu/bag_o_goodies.tar".
 func FindIngestManifestInLog(pathToLogFile, bagName string) (manifest *apt_models.IngestManifest, err error) {
 	file, err := os.Open(pathToLogFile)
 	if err != nil {
@@ -67,6 +68,8 @@ func FindReplicationManifestInLog(pathToLogFile, replicationId string) (manifest
 
 // findJsonString returns the string of JSON found between the beginning
 // and end markers for the specified bag in the file reader.
+// If there is more than one JSON record for the specified marker,
+// this returns only the LAST record, which is the most up-to-date.
 func findJsonString(file io.Reader, marker string) string {
 	startPrefix := fmt.Sprintf("-------- BEGIN %s", marker)
 	endPrefix := fmt.Sprintf(" -------- END %s", marker)
