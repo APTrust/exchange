@@ -386,10 +386,10 @@ func UpdateReplicationTransfer(_context *context.Context, remoteClient *network.
 // surrounded by markers that make it easy to find. This log gets big.
 func LogReplicationJson(manifest *models.ReplicationManifest, jsonLog *log.Logger) {
 	timestamp := time.Now().UTC().Format(time.RFC3339)
-	startMessage := fmt.Sprintf("-------- BEGIN DPNWorkItem %d | XferId: %s | Time: %s --------",
-		manifest.DPNWorkItem.Id, manifest.DPNWorkItem.Identifier, timestamp)
-	endMessage := fmt.Sprintf("-------- END DPNWorkItem %d | XferId: %s | Time: %s --------",
-		manifest.DPNWorkItem.Id, manifest.DPNWorkItem.Identifier, timestamp)
+	startMessage := fmt.Sprintf("-------- BEGIN %s | DPNWorkItem %d | Time: %s --------",
+		manifest.DPNWorkItem.Identifier, manifest.DPNWorkItem.Id, timestamp)
+	endMessage := fmt.Sprintf("-------- END %s | DPNWorkItem %d | Time: %s --------",
+		manifest.DPNWorkItem.Identifier, manifest.DPNWorkItem.Id, timestamp)
 	state := "{}"
 	if manifest.DPNWorkItem.State != nil {
 		state = *manifest.DPNWorkItem.State
@@ -403,10 +403,10 @@ func LogReplicationJson(manifest *models.ReplicationManifest, jsonLog *log.Logge
 // by markers that make it easy to find. This log gets big.
 func LogIngestJson(manifest *models.DPNIngestManifest, jsonLog *log.Logger) {
 	timestamp := time.Now().UTC().Format(time.RFC3339)
-	startMessage := fmt.Sprintf("-------- BEGIN WorkItem %d | Name: %s | Time: %s --------",
-		manifest.WorkItem.Id, manifest.WorkItem.Name, timestamp)
-	endMessage := fmt.Sprintf("-------- END WorkItem %d | Name: %s | Time: %s --------",
-		manifest.WorkItem.Id, manifest.WorkItem.Name, timestamp)
+	startMessage := fmt.Sprintf("-------- BEGIN %s | WorkItem %d | Time: %s --------",
+		manifest.WorkItem.Name, manifest.WorkItem.Id, timestamp)
+	endMessage := fmt.Sprintf("-------- END %s | WorkItem %d | Time: %s --------",
+		manifest.WorkItem.Name, manifest.WorkItem.Id, timestamp)
 	state := "{}"
 	if manifest.WorkItemState != nil {
 		state = manifest.WorkItemState.State

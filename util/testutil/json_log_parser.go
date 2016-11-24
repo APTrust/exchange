@@ -4,13 +4,17 @@ import (
 	"bufio"
 	"encoding/json"
 	"fmt"
-	"github.com/APTrust/exchange/models"
+	dpn_models "github.com/APTrust/exchange/dpn/models"
+	apt_models "github.com/APTrust/exchange/models"
 	"io"
 	"os"
 	"strings"
 )
 
-func FindIngestManifestInLog(pathToLogFile, bagName string) (ingestManifest *models.IngestManifest, err error) {
+// FindIngestManifestInLog returns the IngestManifest for the specified
+// bag in the specified JSON log file. Param bagName should
+// include the .tar extension. So "mybag.tar", not "mybag" or "test.edu/mybag".
+func FindIngestManifestInLog(pathToLogFile, bagName string) (manifest *apt_models.IngestManifest, err error) {
 	file, err := os.Open(pathToLogFile)
 	if err != nil {
 		return nil, err
@@ -20,15 +24,52 @@ func FindIngestManifestInLog(pathToLogFile, bagName string) (ingestManifest *mod
 	if len(jsonString) == 0 {
 		err = fmt.Errorf("Bag %s not found in %s", bagName, pathToLogFile)
 	} else {
-		ingestManifest = &models.IngestManifest{}
-		err = json.Unmarshal([]byte(jsonString), ingestManifest)
+		manifest = &apt_models.IngestManifest{}
+		err = json.Unmarshal([]byte(jsonString), manifest)
 	}
-	return ingestManifest, err
+	return manifest, err
 }
 
-func findJsonString(file io.Reader, bagName string) string {
-	startPrefix := fmt.Sprintf("-------- BEGIN %s", bagName)
-	endPrefix := fmt.Sprintf(" -------- END %s", bagName)
+// FindDPNIngestManifestInLog returns the DPNIngestManifest for the
+// specified bag in the specified log file. Param bagName should
+// include the .tar extension. So "mybag.tar", not "mybag" or "test.edu/mybag".
+func FindDPNIngestManifestInLog(pathToLogFile, bagName string) (manifest *dpn_models.DPNIngestManifest, err error) {
+	file, err := os.Open(pathToLogFile)
+	if err != nil {
+		return nil, err
+	}
+	defer file.Close()
+	jsonString := findJsonString(file, bagName)
+	if len(jsonString) == 0 {
+		err = fmt.Errorf("Bag %s not found in %s", bagName, pathToLogFile)
+	} else {
+		manifest = &dpn_models.DPNIngestManifest{}
+		err = json.Unmarshal([]byte(jsonString), manifest)
+	}
+	return manifest, err
+}
+
+func FindReplicationManifestInLog(pathToLogFile, replicationId string) (manifest *dpn_models.ReplicationManifest, err error) {
+	file, err := os.Open(pathToLogFile)
+	if err != nil {
+		return nil, err
+	}
+	defer file.Close()
+	jsonString := findJsonString(file, replicationId)
+	if len(jsonString) == 0 {
+		err = fmt.Errorf("Replication %s not found in %s", replicationId, pathToLogFile)
+	} else {
+		manifest = &dpn_models.ReplicationManifest{}
+		err = json.Unmarshal([]byte(jsonString), manifest)
+	}
+	return manifest, err
+}
+
+// findJsonString returns the string of JSON found between the beginning
+// and end markers for the specified bag in the file reader.
+func findJsonString(file io.Reader, marker string) string {
+	startPrefix := fmt.Sprintf("-------- BEGIN %s", marker)
+	endPrefix := fmt.Sprintf(" -------- END %s", marker)
 	inJson := false
 	foundOne := false
 	jsonLines := make([]string, 0)
