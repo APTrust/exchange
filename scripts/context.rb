@@ -41,8 +41,9 @@ class Context
       'dpn_queue' => App.new('dpn_queue', 'application'),
       'dpn_sync' => App.new('dpn_sync', 'application'),
       'dpn_validate' => App.new('dpn_validate', 'service'),
-      'dpn_replication_store' => App.new('dpn_store', 'service'),
+      'dpn_replication_store' => App.new('dpn_replication_store', 'service'),
       'dpn_package' => App.new('dpn_package', 'service'),
+      'dpn_ingest_store' => App.new('dpn_ingest_store', 'service'),
       'nsq_service' => App.new('nsq_service', 'special'),
     }
   end

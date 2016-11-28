@@ -10,8 +10,8 @@ import (
 	"os"
 )
 
-// dpn_package packages APTrust bags into DPN bags so they can be
-// ingested into DPN.
+// dpn_ingest_store copies locally-ingested DPN bags to long-term storage
+// in AWS Glacier.
 
 func main() {
 	pathToConfigFile := parseCommandLine()
@@ -23,18 +23,18 @@ func main() {
 	_context := context.NewContext(config)
 	_context.MessageLog.Info("Connecting to NSQLookupd at %s", _context.Config.NsqLookupd)
 	_context.MessageLog.Info("NSQDHttpAddress is %s", _context.Config.NsqdHttpAddress)
-	consumer, err := apt_workers.CreateNsqConsumer(_context.Config, &_context.Config.DPN.DPNPackageWorker)
+	consumer, err := apt_workers.CreateNsqConsumer(_context.Config, &_context.Config.DPN.DPNIngestStoreWorker)
 	if err != nil {
 		_context.MessageLog.Fatalf(err.Error())
 	}
-	packager, err := workers.NewDPNPackager(_context)
+	storer, err := workers.NewDPNIngestStorer(_context)
 	if err != nil {
 		_context.MessageLog.Error(err.Error())
 		fmt.Fprintf(os.Stderr, err.Error())
 		os.Exit(1)
 	}
-	_context.MessageLog.Info("dpn_package started")
-	consumer.AddHandler(packager)
+	_context.MessageLog.Info("dpn_ingest_store started")
+	consumer.AddHandler(storer)
 	consumer.ConnectToNSQLookupd(_context.Config.NsqLookupd)
 
 	// This reader blocks until we get an interrupt, so our program does not exit.
@@ -56,10 +56,10 @@ func parseCommandLine() (configFile string) {
 // Tell the user about the program.
 func printUsage() {
 	message := `
-dpn_package packages APTrust bags into DPN bags so they can be ingested
-into DPN.
+dpn_ingest_store copies locally-ingested DPN bags to long-term storage
+in AWS Glacier.
 
-Usage: dpn_package -config=<path to APTrust config file>
+Usage: dpn_ingest_store -config=<path to APTrust config file>
 
 Param -config is required and can be an absolute path or config/env.json,
 where env is dev, test, production, etc.
