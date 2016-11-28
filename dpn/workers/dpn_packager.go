@@ -74,7 +74,8 @@ func (packager *DPNPackager) HandleMessage(message *nsq.Message) error {
 
 	packager.Context.MessageLog.Info("Packager is checking NSQ message %s", string(message.Body))
 
-	manifest := SetupIngestManifest(message, "package", packager.Context)
+	// Set up the manifest WITH the IntellectualObject
+	manifest := SetupIngestManifest(message, "package", packager.Context, true)
 	manifest.PackageSummary.Start()
 	manifest.PackageSummary.Attempted = true
 	manifest.PackageSummary.AttemptNumber += 1

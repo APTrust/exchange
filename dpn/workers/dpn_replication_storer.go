@@ -12,8 +12,9 @@ import (
 	"time"
 )
 
-// dpn_storer copies replicated bags from our staging area to Glacier
-// long-term storage. We only copy bags that have been validated
+// dpn_replication_storer copies replicated bags from our staging
+// area to Glacier long-term storage. We only copy bags that have
+// been validated.
 
 type DPNReplicationStorer struct {
 	StoreChannel       chan *models.ReplicationManifest

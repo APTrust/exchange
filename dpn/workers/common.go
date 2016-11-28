@@ -645,8 +645,11 @@ func loadIntellectualObject(_context *context.Context, manifest *models.DPNInges
 // "store" or "record". Param _context is the context of the worker calling
 // this fuction. The caller should check for errors in the manifest's
 // Package, Store or Record summary (whichever is the current stage) before
-// proceeding.
-func SetupIngestManifest(message *nsq.Message, stage string, _context *context.Context) *models.DPNIngestManifest {
+// proceeding. If param includeIntelObj is true, this will load the
+// IntellectualObject record from Pharos, which can be an expensive operation.
+// The IntellectualObject is required for dpn_packager, and is not used at all
+// in dpn_ingest_store or dpn_record.
+func SetupIngestManifest(message *nsq.Message, stage string, _context *context.Context, includeIntelObj bool) *models.DPNIngestManifest {
 	// Create a new manifest
 	manifest := models.NewDPNIngestManifest(message)
 	// Note which stage we're currently working on. If we encounter errors
@@ -679,7 +682,11 @@ func SetupIngestManifest(message *nsq.Message, stage string, _context *context.C
 	// Load the IntellectualObject from Pharos. We do not store this
 	// with the other state info, because if the IntellectualObject
 	// has thousands of files, the JSON state info gets too big.
-	loadIntellectualObject(_context, manifest, activeSummary)
+	if includeIntelObj {
+		loadIntellectualObject(_context, manifest, activeSummary)
+	} else if manifest.WorkItem != nil {
+		_context.MessageLog.Debug("Not loading intellectual object for %s", manifest.WorkItem.ObjectIdentifier)
+	}
 
 	// Clear out data from prior attempts to process this item at this stage.
 	activeSummary.ClearErrors()
