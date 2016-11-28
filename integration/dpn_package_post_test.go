@@ -137,14 +137,14 @@ func TestPackageItemsQueued(t *testing.T) {
 	require.Nil(t, err)
 	foundTopic := false
 	for _, topic := range stats.Data.Topics {
-		if topic.TopicName == _context.Config.DPN.DPNStoreWorker.NsqTopic {
+		if topic.TopicName == _context.Config.DPN.DPNIngestStoreWorker.NsqTopic {
 			// All 7 packaged bags should show up in the storage queue
 			foundTopic = true
 			assert.EqualValues(t, uint64(7), topic.MessageCount)
 		}
 	}
 	assert.True(t, foundTopic, "Nothing was queued in %s",
-		_context.Config.DPN.DPNStoreWorker.NsqTopic)
+		_context.Config.DPN.DPNIngestStoreWorker.NsqTopic)
 }
 
 // Test the JSON serialized WorkItemState. Param WorkItemState is a

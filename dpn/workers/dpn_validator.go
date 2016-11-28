@@ -197,7 +197,7 @@ func (validator *DPNValidator) finishWithSuccess(manifest *models.ReplicationMan
 	SaveDPNWorkItemState(validator.Context, manifest, manifest.ValidateSummary)
 
 	// Push this DPNWorkItem Id into the next queue, so it can be stored.
-	topic := validator.Context.Config.DPN.DPNStoreWorker.NsqTopic
+	topic := validator.Context.Config.DPN.DPNReplicationStoreWorker.NsqTopic
 	err := validator.Context.NSQClient.Enqueue(topic, manifest.DPNWorkItem.Id)
 	if err != nil {
 		msg := fmt.Sprintf("Error pushing into NSQ %s: %v", err)

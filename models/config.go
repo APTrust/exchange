@@ -51,8 +51,7 @@ type WorkerConfig struct {
 	// Number of go routines used to perform network I/O,
 	// such as fetching files from S3, storing files to S3,
 	// and fetching/storing Fluctus data. If a worker does
-	// no network I/O (such as the TroubleWorker), this
-	// setting is ignored.
+	// no network I/O, this setting is ignored.
 	NetworkConnections int
 
 	// The name of the NSQ Channel the worker should read from.
@@ -121,15 +120,6 @@ type Config struct {
 	// Should we delete the uploaded tar file from the receiving
 	// bucket after successfully processing this bag?
 	DeleteOnSuccess bool
-
-	// FailedFixityWorker records details about fixity checks
-	// that could not be completed.
-	FailedFixityWorker WorkerConfig
-
-	// FailedReplicationWorker records details about failed
-	// attempts to copy generic files to the S3 replication
-	// bucket in Oregon.
-	FailedReplicationWorker WorkerConfig
 
 	// Configuration options for apt_fetch
 	FetchWorker WorkerConfig
@@ -219,9 +209,6 @@ type Config struct {
 	// in US East to the replication bucket in USWest2.
 	ReplicationDirectory string
 
-	// Configuration options for apt_replicate
-	ReplicationWorker WorkerConfig
-
 	// RestoreDirectory is the directory in which we will
 	// rebuild IntellectualObject before sending them
 	// off to the S3 restoration bucket.
@@ -251,9 +238,6 @@ type Config struct {
 	// untar files from S3. This should be on a volume
 	// with lots of free disk space.
 	TarDirectory string
-
-	// Configuration options for apt_trouble
-	TroubleWorker WorkerConfig
 
 	// The port number, on localhost, where the HTTP
 	// VolumeService should run. This is always on
@@ -471,6 +455,10 @@ type DPNConfig struct {
 	// copying is done by rsync over ssh.
 	DPNCopyWorker WorkerConfig
 
+	// DPNIngestStoreWorker copies DPN bags ingested from APTrust
+	// to AWS Glacier.
+	DPNIngestStoreWorker WorkerConfig
+
 	// DPNPackageWorker records details about fixity checks
 	// that could not be completed.
 	DPNPackageWorker WorkerConfig
@@ -482,17 +470,15 @@ type DPNConfig struct {
 	// and through the DPN REST API.
 	DPNRecordWorker WorkerConfig
 
+	// DPNReplicationStoreWorker copies DPN bags replicated from
+	// other nodes to AWS Glacier.
+	DPNReplicationStoreWorker WorkerConfig
+
 	// DPNRestoreWorker processed RestoreTransfer requests.
 	DPNRestoreWorker WorkerConfig
 
-	// DPNStoreWorker copies DPN bags to AWS Glacier.
-	DPNStoreWorker WorkerConfig
-
-	// DPNTroubleWorker records failed DPN tasks in the DPN
-	// trouble queue.
-	DPNTroubleWorker WorkerConfig
-
-	// DPNValidationWorker validates DPN bags.
+	// DPNValidationWorker validates DPN bags that we are replicating
+	// from other nodes.
 	DPNValidationWorker WorkerConfig
 
 	// LocalNode is the namespace of the node this code is running on.

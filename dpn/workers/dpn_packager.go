@@ -466,9 +466,9 @@ func (packager *DPNPackager) finishWithSuccess(manifest *models.DPNIngestManifes
 	// Push this WorkItem to the next NSQ topic.
 	packager.Context.MessageLog.Info("Pushing %s (DPN bag %s) to NSQ topic %s",
 		manifest.IntellectualObject.Identifier, manifest.DPNBag.UUID,
-		packager.Context.Config.DPN.DPNStoreWorker.NsqTopic)
+		packager.Context.Config.DPN.DPNIngestStoreWorker.NsqTopic)
 	PushToQueue(packager.Context, manifest, manifest.PackageSummary,
-		packager.Context.Config.DPN.DPNStoreWorker.NsqTopic)
+		packager.Context.Config.DPN.DPNIngestStoreWorker.NsqTopic)
 	if manifest.PackageSummary.HasErrors() {
 		packager.Context.MessageLog.Error(manifest.PackageSummary.Errors[0])
 	}

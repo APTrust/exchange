@@ -62,11 +62,11 @@ require_relative 'test_runner'
 #    of the files that make up the bag, and packs them all into a DPN
 #    bag. A DPN bag is slightly different from an APTrust bag, containing
 #    DPN-specific manifests, tag files, and tag manifests. The packager
-#    then pushes the WorkItem id into the dpn_store topic in NSQ.
-# 3. dpn_store pulls the WorkItem id from NSQ's dpn_store channel and
-#    copies the entire tarred bag as a single file into our DPN preservation
-#    storage area in Glacier/Virginia. dpn_store then pushes the WorkItem
-#    id into the dpn_record topic.
+#    then pushes the WorkItem id into the dpn_ingest_store topic in NSQ.
+# 3. dpn_ingest_store pulls the WorkItem id from NSQ's dpn_store channel
+#    and copies the entire tarred bag as a single file into our DPN preservation
+#    storage area in Glacier/Virginia. dpn_ingest_store then pushes the
+#    WorkItem id into the dpn_record topic.
 # 4. dpn_record reads from the dpn_record channel. It creates a new DPN
 #    bag record in the local DPN REST service, and it creates replication
 #    requests in the local DPN REST service for two other nodes to
@@ -93,8 +93,8 @@ require_relative 'test_runner'
 #    bag, and sends that checksum back to the originating node. If the
 #    originating says the checksum is good, dpn_copy will perform a full
 #    validation on the bag (which can take hours). If the bag is valid,
-#    dpn_copy pushes its DPNWorkItem id into the dpn_store queue.
-# 4. dpn_store stores the bag in Glacier/VA, as described above, and then
+#    dpn_copy pushes its DPNWorkItem id into the dpn_replication_store queue.
+# 4. dpn_replication_store stores the bag in Glacier/VA, as described above, and then
 #    pushes the DPNWorkItem into the dpn_record topic of NSQ.
 # 5. dpn_record tell the remote node that the bag was stored. Note that our
 #    own node will not know that the bag has been stored until next time
@@ -379,25 +379,25 @@ class IntegrationTest
 	end
   end
 
-  def dpn_store(more_tests_follow)
+  def dpn_replication_store(more_tests_follow)
 	begin
 	  # Build
-	  @build.build(@context.apps['dpn_store'])
+	  @build.build(@context.apps['dpn_replication_store'])
 
 	  # Run prerequisites
 	  validate_ok = dpn_validate(true)
 	  if !validate_ok
-		puts "Skipping dpn_store test because of prior failures."
+		puts "Skipping dpn_replication_store test because of prior failures."
 		print_results
 		return false
 	  end
 
 	  # Start service
-	  @service.app_start(@context.apps['dpn_store'])
+	  @service.app_start(@context.apps['dpn_replication_store'])
 	  sleep 20
 
 	  # Ensure expected post conditions
-	  @results['dpn_store_test'] = @test_runner.run_dpn_store_post_test
+	  @results['dpn_replication_store_test'] = @test_runner.run_dpn_replication_store_post_test
 	rescue Exception => ex
 	  print_exception(ex)
 	ensure

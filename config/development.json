@@ -31,8 +31,8 @@
     "FetchWorker": {
         "NetworkConnections": 4,
         "Workers": 4,
-        "NsqTopic": "fetch_topic",
-        "NsqChannel": "fetch_channel",
+        "NsqTopic": "apt_fetch_topic",
+        "NsqChannel": "apt_fetch_channel",
         "MaxAttempts": 3,
         "MaxInFlight": 20,
         "HeartbeatInterval": "10s",
@@ -44,8 +44,8 @@
     "StoreWorker": {
         "NetworkConnections": 4,
         "Workers": 8,
-        "NsqTopic": "store_topic",
-        "NsqChannel": "store_channel",
+        "NsqTopic": "apt_store_topic",
+        "NsqChannel": "apt_store_channel",
         "MaxAttempts": 3,
         "MaxInFlight": 20,
         "HeartbeatInterval": "10s",
@@ -57,8 +57,8 @@
     "RecordWorker": {
         "NetworkConnections": 4,
         "Workers": 4,
-        "NsqTopic": "record_topic",
-        "NsqChannel": "record_channel",
+        "NsqTopic": "apt_record_topic",
+        "NsqChannel": "apt_record_channel",
         "MaxAttempts": 3,
         "MaxInFlight": 20,
         "HeartbeatInterval": "10s",
@@ -70,8 +70,8 @@
     "ReplicationWorker": {
         "NetworkConnections": 4,
         "Workers": 8,
-        "NsqTopic": "replication_topic",
-        "NsqChannel": "replication_channel",
+        "NsqTopic": "apt_replication_topic",
+        "NsqChannel": "apt_replication_channel",
         "MaxAttempts": 3,
         "MaxInFlight": 20,
         "HeartbeatInterval": "10s",
@@ -80,24 +80,11 @@
         "MessageTimeout": "180m"
     },
 
-    "FailedReplicationWorker": {
-        "NetworkConnections": 4,
-        "Workers": 1,
-        "NsqTopic": "failed_replication_topic",
-        "NsqChannel": "failed_replication_channel",
-        "MaxAttempts": 3,
-        "MaxInFlight": 20,
-        "HeartbeatInterval": "10s",
-        "ReadTimeout": "60s",
-        "WriteTimeout": "10s",
-        "MessageTimeout": "5m"
-    },
-
     "RestoreWorker": {
         "NetworkConnections": 4,
         "Workers": 8,
-        "NsqTopic": "restore_topic",
-        "NsqChannel": "restore_channel",
+        "NsqTopic": "apt_restore_topic",
+        "NsqChannel": "apt_restore_channel",
         "MaxAttempts": 3,
         "MaxInFlight": 20,
         "HeartbeatInterval": "10s",
@@ -109,8 +96,8 @@
     "FileDeleteWorker": {
         "NetworkConnections": 4,
         "Workers": 4,
-        "NsqTopic": "file_delete_topic",
-        "NsqChannel": "file_delete_channel",
+        "NsqTopic": "apt_file_delete_topic",
+        "NsqChannel": "apt_file_delete_channel",
         "MaxAttempts": 3,
         "MaxInFlight": 20,
         "HeartbeatInterval": "10s",
@@ -119,24 +106,11 @@
         "MessageTimeout": "30m"
     },
 
-    "TroubleWorker": {
-        "NetworkConnections": 1,
-        "Workers": 1,
-        "NsqTopic": "trouble_topic",
-        "NsqChannel": "trouble_channel",
-        "MaxAttempts": 3,
-        "MaxInFlight": 20,
-        "HeartbeatInterval": "10s",
-        "ReadTimeout": "60s",
-        "WriteTimeout": "10s",
-        "MessageTimeout": "10m"
-    },
-
     "FixityWorker": {
         "NetworkConnections": 4,
         "Workers": 4,
-        "NsqTopic": "fixity_topic",
-        "NsqChannel": "fixity_channel",
+        "NsqTopic": "apt_fixity_topic",
+        "NsqChannel": "apt_fixity_channel",
         "MaxAttempts": 3,
         "MaxInFlight": 20,
         "HeartbeatInterval": "10s",
@@ -144,20 +118,6 @@
         "WriteTimeout": "10s",
         "MessageTimeout": "180m"
     },
-
-    "FailedFixityWorker": {
-        "NetworkConnections": 1,
-        "Workers": 1,
-        "NsqTopic": "failed_fixity_topic",
-        "NsqChannel": "failed_fixity_channel",
-        "MaxAttempts": 3,
-        "MaxInFlight": 20,
-        "HeartbeatInterval": "10s",
-        "ReadTimeout": "60s",
-        "WriteTimeout": "10s",
-        "MessageTimeout": "3m"
-    },
-
 
     "ReceivingBuckets": [
         "aptrust.receiving.test.test.edu"
@@ -246,11 +206,11 @@
             "WriteTimeout": "10s",
             "MessageTimeout": "180m"
         },
-        "DPNStoreWorker": {
+        "DPNIngestStoreWorker": {
             "NetworkConnections": 4,
             "Workers": 4,
-            "NsqTopic": "dpn_store_topic",
-            "NsqChannel": "dpn_store_channel",
+            "NsqTopic": "dpn_ingest_store_topic",
+            "NsqChannel": "dpn_ingest_store_channel",
             "MaxAttempts": 3,
             "MaxInFlight": 20,
             "HeartbeatInterval": "10s",
@@ -270,6 +230,18 @@
             "WriteTimeout": "10s",
             "MessageTimeout": "180m"
         },
+        "DPNReplicationStoreWorker": {
+            "NetworkConnections": 4,
+            "Workers": 4,
+            "NsqTopic": "dpn_replication_store_topic",
+            "NsqChannel": "dpn_replication_store_channel",
+            "MaxAttempts": 3,
+            "MaxInFlight": 20,
+            "HeartbeatInterval": "10s",
+            "ReadTimeout": "60s",
+            "WriteTimeout": "10s",
+            "MessageTimeout": "180m"
+        },
         "DPNRestoreWorker": {
             "NetworkConnections": 4,
             "Workers": 4,
@@ -281,18 +253,6 @@
             "ReadTimeout": "60s",
             "WriteTimeout": "10s",
             "MessageTimeout": "180m"
-        },
-        "DPNTroubleWorker": {
-            "NetworkConnections": 4,
-            "Workers": 4,
-            "NsqTopic": "dpn_trouble_topic",
-            "NsqChannel": "dpn_trouble_channel",
-            "MaxAttempts": 3,
-            "MaxInFlight": 20,
-            "HeartbeatInterval": "10s",
-            "ReadTimeout": "60s",
-            "WriteTimeout": "10s",
-            "MessageTimeout": "10m"
         }
     }
 }

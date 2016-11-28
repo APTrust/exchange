@@ -23,17 +23,17 @@ func main() {
 	_context := context.NewContext(config)
 	_context.MessageLog.Info("Connecting to NSQLookupd at %s", _context.Config.NsqLookupd)
 	_context.MessageLog.Info("NSQDHttpAddress is %s", _context.Config.NsqdHttpAddress)
-	consumer, err := apt_workers.CreateNsqConsumer(_context.Config, &_context.Config.DPN.DPNStoreWorker)
+	consumer, err := apt_workers.CreateNsqConsumer(_context.Config, &_context.Config.DPN.DPNReplicationStoreWorker)
 	if err != nil {
 		_context.MessageLog.Fatalf(err.Error())
 	}
-	storer, err := workers.NewDPNStorer(_context)
+	storer, err := workers.NewDPNReplicationStorer(_context)
 	if err != nil {
 		_context.MessageLog.Error(err.Error())
 		fmt.Fprintf(os.Stderr, err.Error())
 		os.Exit(1)
 	}
-	_context.MessageLog.Info("dpn_store started")
+	_context.MessageLog.Info("dpn_replication_store started")
 	consumer.AddHandler(storer)
 	consumer.ConnectToNSQLookupd(_context.Config.NsqLookupd)
 

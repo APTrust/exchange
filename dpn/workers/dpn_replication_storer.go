@@ -12,10 +12,10 @@ import (
 	"time"
 )
 
-// dpn_storer copies bags from our staging area to Glacier
+// dpn_storer copies replicated bags from our staging area to Glacier
 // long-term storage. We only copy bags that have been validated
 
-type DPNStorer struct {
+type DPNReplicationStorer struct {
 	StoreChannel       chan *models.ReplicationManifest
 	PostProcessChannel chan *models.ReplicationManifest
 	Context            *context.Context
@@ -23,7 +23,7 @@ type DPNStorer struct {
 	RemoteClients      map[string]*network.DPNRestClient
 }
 
-func NewDPNStorer(_context *context.Context) (*DPNStorer, error) {
+func NewDPNReplicationStorer(_context *context.Context) (*DPNReplicationStorer, error) {
 	localClient, err := network.NewDPNRestClient(
 		_context.Config.DPN.RestClient.LocalServiceURL,
 		_context.Config.DPN.RestClient.LocalAPIRoot,
@@ -37,22 +37,22 @@ func NewDPNStorer(_context *context.Context) (*DPNStorer, error) {
 	if err != nil {
 		return nil, err
 	}
-	storer := &DPNStorer{
+	storer := &DPNReplicationStorer{
 		Context:       _context,
 		LocalClient:   localClient,
 		RemoteClients: remoteClients,
 	}
-	workerBufferSize := _context.Config.DPN.DPNStoreWorker.Workers * 4
+	workerBufferSize := _context.Config.DPN.DPNReplicationStoreWorker.Workers * 4
 	storer.StoreChannel = make(chan *models.ReplicationManifest, workerBufferSize)
 	storer.PostProcessChannel = make(chan *models.ReplicationManifest, workerBufferSize)
-	for i := 0; i < _context.Config.DPN.DPNStoreWorker.Workers; i++ {
+	for i := 0; i < _context.Config.DPN.DPNReplicationStoreWorker.Workers; i++ {
 		go storer.store()
 		go storer.postProcess()
 	}
 	return storer, nil
 }
 
-func (storer *DPNStorer) HandleMessage(message *nsq.Message) error {
+func (storer *DPNReplicationStorer) HandleMessage(message *nsq.Message) error {
 	message.DisableAutoResponse()
 
 	storer.Context.MessageLog.Info("Storer is checking NSQ message %s", string(message.Body))
@@ -78,7 +78,7 @@ func (storer *DPNStorer) HandleMessage(message *nsq.Message) error {
 	return nil
 }
 
-func (storer *DPNStorer) store() {
+func (storer *DPNReplicationStorer) store() {
 	for manifest := range storer.StoreChannel {
 		// Don't time us out, NSQ!
 		manifest.NsqMessage.Touch()
@@ -103,7 +103,7 @@ func (storer *DPNStorer) store() {
 	}
 }
 
-func (storer *DPNStorer) postProcess() {
+func (storer *DPNReplicationStorer) postProcess() {
 	for manifest := range storer.PostProcessChannel {
 		if manifest.StoreSummary.HasErrors() {
 			storer.finishWithError(manifest)
@@ -113,7 +113,7 @@ func (storer *DPNStorer) postProcess() {
 	}
 }
 
-func (storer *DPNStorer) copyToLongTermStorage(manifest *models.ReplicationManifest) {
+func (storer *DPNReplicationStorer) copyToLongTermStorage(manifest *models.ReplicationManifest) {
 	manifest.StoreSummary.ClearErrors()
 	upload := apt_network.NewS3Upload(
 		constants.AWSVirginia,
@@ -141,11 +141,11 @@ func (storer *DPNStorer) copyToLongTermStorage(manifest *models.ReplicationManif
 	manifest.StorageURL = upload.Response.Location
 }
 
-func (storer *DPNStorer) finishWithError(manifest *models.ReplicationManifest) {
+func (storer *DPNReplicationStorer) finishWithError(manifest *models.ReplicationManifest) {
 
 	// Give up only if we've failed too many times.
 	note := "Bag could not be copied to long-term storage"
-	maxAttempts := storer.Context.Config.DPN.DPNStoreWorker.MaxAttempts
+	maxAttempts := storer.Context.Config.DPN.DPNReplicationStoreWorker.MaxAttempts
 	if manifest.StoreSummary.AttemptNumber > maxAttempts {
 		note := fmt.Sprintf("Failed to copy to Glacier too many times (%d). %s",
 			maxAttempts,
@@ -200,7 +200,7 @@ func (storer *DPNStorer) finishWithError(manifest *models.ReplicationManifest) {
 	}
 }
 
-func (storer *DPNStorer) finishWithSuccess(manifest *models.ReplicationManifest) {
+func (storer *DPNReplicationStorer) finishWithSuccess(manifest *models.ReplicationManifest) {
 	storer.Context.MessageLog.Info("Replication %s (bag %s) stored at %s",
 		manifest.ReplicationTransfer.ReplicationId,
 		manifest.ReplicationTransfer.Bag,

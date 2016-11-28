@@ -43,12 +43,12 @@ func TestValidItemInStorageQueue(t *testing.T) {
 	require.Nil(t, err)
 	foundTopic := false
 	for _, topic := range stats.Data.Topics {
-		if topic.TopicName == _context.Config.DPN.DPNStoreWorker.NsqTopic {
+		if topic.TopicName == _context.Config.DPN.DPNReplicationStoreWorker.NsqTopic {
 			// All 4 of the valid bags should appear in the store queue.
 			foundTopic = true
 			assert.EqualValues(t, uint64(4), topic.MessageCount)
 		}
 	}
 	assert.True(t, foundTopic, "Nothing was queued in %s",
-		_context.Config.DPN.DPNStoreWorker.NsqTopic)
+		_context.Config.DPN.DPNReplicationStoreWorker.NsqTopic)
 }
