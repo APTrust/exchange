@@ -25,6 +25,9 @@ const testFileSha256 string = "a909bbe46dedfc15918bfa94d0fd86bad9d9e1d2aa2afdedb
 var s3TestMessagePrinted = false
 
 func canTestS3() bool {
+	// Note that, to run S3 and Glacier tests, these vars not only have to be set,
+	// they have to be valid keys with read/write access to the buckets specified
+	// in the config file.
 	if os.Getenv("AWS_ACCESS_KEY_ID") == "" || os.Getenv("AWS_SECRET_ACCESS_KEY") == "" {
 		if !s3TestMessagePrinted {
 			fmt.Println("Skipping S3 tests because ENV vars are not set")
