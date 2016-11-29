@@ -138,7 +138,7 @@ func TestIngestStoreItemsAreInStorage(t *testing.T) {
 		tarFileName := parts[1]
 		s3List.GetList(tarFileName)
 		require.Empty(t, s3List.ErrorMessage)
-		require.EqualValues(t, 1, len(s3List.Response.Contents))
+		require.EqualValues(t, 1, len(s3List.Response.Contents), "Nothing in S3 for %s", tarFileName)
 		obj := s3List.Response.Contents[0]
 		assert.Equal(t, tarFileName, obj.Key)
 

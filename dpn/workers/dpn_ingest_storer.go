@@ -7,6 +7,7 @@ import (
 	"github.com/APTrust/exchange/dpn/models"
 	"github.com/APTrust/exchange/dpn/network"
 	apt_network "github.com/APTrust/exchange/network"
+	"github.com/APTrust/exchange/util/fileutil"
 	"github.com/nsqio/go-nsq"
 	"os"
 	"time"
@@ -210,6 +211,14 @@ func (storer *DPNIngestStorer) finishWithSuccess(manifest *models.DPNIngestManif
 		storer.Context.Config.DPN.DPNIngestRecordWorker.NsqTopic)
 	if manifest.PackageSummary.HasErrors() {
 		storer.Context.MessageLog.Error(manifest.PackageSummary.Errors[0])
+	}
+
+	if fileutil.LooksSafeToDelete(manifest.LocalTarFile, 12, 3) {
+		err := os.Remove(manifest.LocalTarFile)
+		if err != nil {
+			storer.Context.MessageLog.Error("Failed to delete %s after upload",
+				manifest.LocalTarFile)
+		}
 	}
 
 	// Tell NSQ we're done packaging this.

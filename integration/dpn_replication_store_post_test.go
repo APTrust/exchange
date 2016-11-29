@@ -100,7 +100,7 @@ func TestItemsAreInLongTermStorage(t *testing.T) {
 		int64(100),
 	)
 	// s3Head gets metadata about specific objects in S3/Glacier.
-	s3Head := network.NewS3Head(_context.Config.APTrustS3Region,
+	s3Head := apt_network.NewS3Head(_context.Config.APTrustS3Region,
 		_context.Config.DPN.DPNPreservationBucket)
 
 	for _, identifier := range dpn_testutil.BAG_IDS {
