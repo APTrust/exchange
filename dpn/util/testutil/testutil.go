@@ -4,11 +4,14 @@ package testutil
 
 import (
 	"fmt"
+	"github.com/APTrust/exchange/context"
 	"github.com/APTrust/exchange/dpn/models"
+	apt_models "github.com/APTrust/exchange/models"
 	apt_testutil "github.com/APTrust/exchange/util/testutil"
 	"github.com/icrowley/fake"
 	"github.com/nsqio/go-nsq"
 	"github.com/satori/go.uuid"
+	"net/url"
 	"time"
 )
 
@@ -190,4 +193,17 @@ func MakeIngest(bagUUID string) *models.Ingest {
 func MakeNsqMessage(body string) *nsq.Message {
 	messageId := [nsq.MsgIDLength]byte{'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F'}
 	return nsq.NewMessage(messageId, []byte(body))
+}
+
+// GetDPNWorkItems returns WorkItems whose action="DPN". This is
+// used in a number of DPN post tests in the integration/ directory.
+func GetDPNWorkItems() (*context.Context, []*apt_models.WorkItem, error) {
+	_context, err := apt_testutil.GetContext("integration.json")
+	return nil, nil, err
+	params := url.Values{}
+	params.Set("item_action", "DPN")
+	params.Set("page", "1")
+	params.Set("per_page", "100")
+	resp := _context.PharosClient.WorkItemList(params)
+	return _context, resp.WorkItems(), resp.Error
 }

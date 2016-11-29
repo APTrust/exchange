@@ -205,9 +205,9 @@ func (storer *DPNIngestStorer) finishWithSuccess(manifest *models.DPNIngestManif
 	// Push this WorkItem to the next NSQ topic.
 	storer.Context.MessageLog.Info("Pushing %s (DPN bag %s) to NSQ topic %s",
 		manifest.DPNBag.LocalId, manifest.DPNBag.UUID,
-		storer.Context.Config.DPN.DPNRecordWorker.NsqTopic)
+		storer.Context.Config.DPN.DPNIngestRecordWorker.NsqTopic)
 	PushToQueue(storer.Context, manifest, manifest.StoreSummary,
-		storer.Context.Config.DPN.DPNRecordWorker.NsqTopic)
+		storer.Context.Config.DPN.DPNIngestRecordWorker.NsqTopic)
 	if manifest.PackageSummary.HasErrors() {
 		storer.Context.MessageLog.Error(manifest.PackageSummary.Errors[0])
 	}

@@ -7,6 +7,7 @@ import (
 	"github.com/APTrust/exchange/context"
 	"github.com/APTrust/exchange/dpn/models"
 	dpn_testutil "github.com/APTrust/exchange/dpn/util/testutil"
+	"github.com/APTrust/exchange/network"
 	apt_testutil "github.com/APTrust/exchange/util/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -15,9 +16,9 @@ import (
 	"testing"
 )
 
-// TestPackageWorkItems checks to see if Pharos WorkItems
+// TestIngestStoreWorkItems checks to see if Pharos WorkItems
 // were updated correctly.
-func TestPackageWorkItems(t *testing.T) {
+func TestIngestStoreWorkItems(t *testing.T) {
 	if !apt_testutil.ShouldRunIntegrationTests() {
 		t.Skip("Skipping integration test. Set ENV var RUN_EXCHANGE_INTEGRATION=true if you want to run them.")
 	}
@@ -26,16 +27,16 @@ func TestPackageWorkItems(t *testing.T) {
 	for _, item := range workItems {
 		assert.Equal(t, constants.StageStore, item.Stage)
 		assert.Equal(t, constants.StatusPending, item.Status)
-		assert.Equal(t, "Packaging completed, awaiting storage", item.Note)
+		assert.Equal(t, "Bag copied to long-term storage", item.Note)
 		assert.Equal(t, "", item.Node)
 		assert.Equal(t, 0, item.Pid)
 		assert.True(t, item.Retry)
 	}
 }
 
-// TestPackageWorkItemState checks to see if Pharos WorkItemState
+// TestIngestStoreWorkItemState checks to see if Pharos WorkItemState
 // records were updated correctly.
-func TestPackageWorkItemState(t *testing.T) {
+func TestIngestStoreWorkItemState(t *testing.T) {
 	if !apt_testutil.ShouldRunIntegrationTests() {
 		t.Skip("Skipping integration test. Set ENV var RUN_EXCHANGE_INTEGRATION=true if you want to run them.")
 	}
@@ -52,20 +53,20 @@ func TestPackageWorkItemState(t *testing.T) {
 		assert.False(t, workItemState.UpdatedAt.IsZero())
 
 		detail := fmt.Sprintf("%s from Pharos", item.ObjectIdentifier)
-		testPackageWorkItemState(t, _context, workItemState.State, detail)
+		testIngestStoreWorkItemState(t, _context, workItemState.State, detail)
 	}
 
 }
 
-// TestPackageJsonLog checks that all expected entries are present
-// in the dpn_package.json log.
-func TestPackageJsonLog(t *testing.T) {
+// TestIngestStoreJsonLog checks that all expected entries are present
+// in the dpn_ingest_store.json log.
+func TestIngestStoreJsonLog(t *testing.T) {
 	if !apt_testutil.ShouldRunIntegrationTests() {
 		t.Skip("Skipping integration test. Set ENV var RUN_EXCHANGE_INTEGRATION=true if you want to run them.")
 	}
 	_context, err := apt_testutil.GetContext("integration.json")
 	require.Nil(t, err)
-	pathToLogFile := filepath.Join(_context.Config.LogDirectory, "dpn_package.json")
+	pathToLogFile := filepath.Join(_context.Config.LogDirectory, "dpn_ingest_store.json")
 	for _, s3Key := range apt_testutil.INTEGRATION_GOOD_BAGS[0:7] {
 		parts := strings.Split(s3Key, "/")
 		tarFileName := parts[1]
@@ -74,13 +75,13 @@ func TestPackageJsonLog(t *testing.T) {
 		require.NotNil(t, manifest)
 
 		detail := fmt.Sprintf("%s from JSON log", tarFileName)
-		testPackageManifest(t, _context, manifest, detail)
+		testIngestStoreManifest(t, _context, manifest, detail)
 	}
 }
 
-// TestPackageTarFilesPresent tests whether all expected DPN bags
-// (tar files) are present in the staging area.
-func TestPackageTarFilesPresent(t *testing.T) {
+// TestIngestStoreTarFilesDeleted tests whether all expected DPN bags
+// (tar files) have been deleted from the staging area.
+func TestIngestStoreTarFilesDeleted(t *testing.T) {
 	if !apt_testutil.ShouldRunIntegrationTests() {
 		t.Skip("Skipping integration test. Set ENV var RUN_EXCHANGE_INTEGRATION=true if you want to run them.")
 	}
@@ -89,34 +90,12 @@ func TestPackageTarFilesPresent(t *testing.T) {
 	pattern := filepath.Join(_context.Config.DPN.StagingDirectory, "test.edu", "*.tar")
 	files, err := filepath.Glob(pattern)
 	require.Nil(t, err)
-	assert.Equal(t, 7, len(files))
+	assert.Equal(t, 0, len(files))
 }
 
-// TestPackageCleanup checks to see whether dpn_package cleaned up
-// all of the intermediate files created during the bag building
-// process. Those are directories containing untarred bags.
-func TestPackageCleanup(t *testing.T) {
-	if !apt_testutil.ShouldRunIntegrationTests() {
-		t.Skip("Skipping integration test. Set ENV var RUN_EXCHANGE_INTEGRATION=true if you want to run them.")
-	}
-	_context, err := apt_testutil.GetContext("integration.json")
-	require.Nil(t, err)
-	pattern := filepath.Join(_context.Config.DPN.StagingDirectory, "test.edu", "*")
-	files, err := filepath.Glob(pattern)
-	require.Nil(t, err)
-
-	// Only the 7 tar file should remain. The 7 working directories
-	// should have been deleted. If anything other than a tar file
-	// remains, some part of cleanup failed.
-	assert.Equal(t, 7, len(files))
-	for _, file := range files {
-		assert.True(t, strings.HasSuffix(file, ".tar"))
-	}
-}
-
-// TestPackageItemsQueued checks to see if dpn_package pushed items
-// into the dpn_ingest_store NSQ topic.
-func TestPackageItemsQueued(t *testing.T) {
+// TestIngestStoreItemsQueued checks to see if dpn_ingest_store pushed items
+// into the dpn_ingest_record NSQ topic.
+func TestIngestStoreItemsQueued(t *testing.T) {
 	if !apt_testutil.ShouldRunIntegrationTests() {
 		t.Skip("Skipping integration test. Set ENV var RUN_EXCHANGE_INTEGRATION=true if you want to run them.")
 	}
@@ -126,30 +105,56 @@ func TestPackageItemsQueued(t *testing.T) {
 	require.Nil(t, err)
 	foundTopic := false
 	for _, topic := range stats.Data.Topics {
-		if topic.TopicName == _context.Config.DPN.DPNIngestStoreWorker.NsqTopic {
-			// All 7 packaged bags should show up in the storage queue
+		if topic.TopicName == _context.Config.DPN.DPNIngestRecordWorker.NsqTopic {
+			// All 7 stored bags should show up in the record queue
 			foundTopic = true
 			assert.EqualValues(t, uint64(7), topic.MessageCount)
 		}
 	}
 	assert.True(t, foundTopic, "Nothing was queued in %s",
-		_context.Config.DPN.DPNIngestStoreWorker.NsqTopic)
+		_context.Config.DPN.DPNIngestRecordWorker.NsqTopic)
+}
+
+// TestIngestStoreItemsAreInStorage makes sure that the items we sent off
+// to long-term storage in AWS actually made it there.
+func TestIngestStoreItemsAreInStorage(t *testing.T) {
+	if !apt_testutil.ShouldRunIntegrationTests() {
+		t.Skip("Skipping integration test. Set ENV var RUN_EXCHANGE_INTEGRATION=true if you want to run them.")
+	}
+	_context, err := apt_testutil.GetContext("integration.json")
+	require.Nil(t, err, "Could not create context")
+	maxItemsToList := int64(1)
+	s3Client := network.NewS3ObjectList(
+		constants.AWSVirginia,
+		_context.Config.DPN.DPNPreservationBucket,
+		maxItemsToList)
+	for _, s3Key := range apt_testutil.INTEGRATION_GOOD_BAGS[0:7] {
+		parts := strings.Split(s3Key, "/")
+		tarFileName := parts[1]
+		s3Client.GetList(tarFileName)
+		require.Empty(t, s3Client.ErrorMessage)
+		require.EqualValues(t, 1, len(s3Client.Response.Contents))
+		obj := s3Client.Response.Contents[0]
+		assert.Equal(t, tarFileName, obj.Key)
+		// TODO: HeadObject to get metadata
+	}
 }
 
 // Test the JSON serialized WorkItemState. Param WorkItemState is a
 // string of JSON data. Param detail describes which object we're
 // testing and where the JSON came from, so failure messages can be
 // more informative.
-func testPackageWorkItemState(t *testing.T, _context *context.Context, workItemState, detail string) {
+func testIngestStoreWorkItemState(t *testing.T, _context *context.Context, workItemState, detail string) {
 	dpnIngestManifest := models.NewDPNIngestManifest(nil)
 	err := json.Unmarshal([]byte(workItemState), dpnIngestManifest)
 	require.Nil(t, err, "Could not unmarshal state")
-	testPackageManifest(t, _context, dpnIngestManifest, detail)
+	testIngestStoreManifest(t, _context, dpnIngestManifest, detail)
 }
 
-func testPackageManifest(t *testing.T, _context *context.Context, dpnIngestManifest *models.DPNIngestManifest, detail string) {
+func testIngestStoreManifest(t *testing.T, _context *context.Context, dpnIngestManifest *models.DPNIngestManifest, detail string) {
 	require.NotNil(t, dpnIngestManifest.PackageSummary, detail)
 	require.NotNil(t, dpnIngestManifest.ValidateSummary, detail)
+	require.NotNil(t, dpnIngestManifest.RecordSummary, detail)
 
 	assert.False(t, dpnIngestManifest.PackageSummary.StartedAt.IsZero(), detail)
 	assert.False(t, dpnIngestManifest.PackageSummary.FinishedAt.IsZero(), detail)
@@ -158,6 +163,10 @@ func testPackageManifest(t *testing.T, _context *context.Context, dpnIngestManif
 	assert.False(t, dpnIngestManifest.ValidateSummary.StartedAt.IsZero(), detail)
 	assert.False(t, dpnIngestManifest.ValidateSummary.FinishedAt.IsZero(), detail)
 	assert.False(t, dpnIngestManifest.ValidateSummary.HasErrors(), detail)
+
+	assert.False(t, dpnIngestManifest.StoreSummary.StartedAt.IsZero(), detail)
+	assert.False(t, dpnIngestManifest.StoreSummary.FinishedAt.IsZero(), detail)
+	assert.False(t, dpnIngestManifest.StoreSummary.HasErrors(), detail)
 
 	assert.NotNil(t, dpnIngestManifest.WorkItem, detail)
 	require.NotNil(t, dpnIngestManifest.DPNBag, detail)
@@ -185,6 +194,10 @@ func testPackageManifest(t *testing.T, _context *context.Context, dpnIngestManif
 	assert.NotEmpty(t, dpnIngestManifest.LocalTarFile, detail)
 	assert.True(t, strings.HasSuffix(dpnIngestManifest.LocalTarFile, ".tar"), detail)
 
-	// Bag has not yet been stored in Glacier, so this should be empty.
-	assert.Empty(t, dpnIngestManifest.StorageURL, detail)
+	// Bag has been stored in Glacier, so this should be set to
+	// "https://s3.amazonaws.com/aptrust.dpn.test/<UUID>.tar"
+	expectedURL := fmt.Sprintf("https://s3.amazonaws.com/%s/%s.tar",
+		_context.Config.DPN.DPNPreservationBucket,
+		dpnIngestManifest.DPNBag.UUID)
+	assert.Equal(t, expectedURL, dpnIngestManifest.StorageURL, detail)
 }

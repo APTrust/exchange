@@ -466,9 +466,9 @@ type DPNConfig struct {
 	// The name of the long-term storage bucket for DPN
 	DPNPreservationBucket string
 
-	// DPNRecordWorker records DPN storage events in Pharos
-	// and through the DPN REST API.
-	DPNRecordWorker WorkerConfig
+	// DPNIngestRecordWorker records DPN ingest events in Pharos
+	// and in the DPN REST server.
+	DPNIngestRecordWorker WorkerConfig
 
 	// DPNReplicationStoreWorker copies DPN bags replicated from
 	// other nodes to AWS Glacier.

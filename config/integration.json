@@ -205,7 +205,7 @@
             "WriteTimeout": "10s",
             "MessageTimeout": "180m"
         },
-        "DPNRecordWorker": {
+        "DPNIngestRecordWorker": {
             "NetworkConnections": 4,
             "Workers": 4,
             "NsqTopic": "dpn_record_topic",
