@@ -82,7 +82,10 @@ class TestRunner
 	return run('go test dpn_package_post_test.go')
   end
 
-  # TODO: Write dpn_ingest_store_post_test.go
+  # Test post conditions for dpn_ingest_store.
+  def run_dpn_ingest_store_post_test
+	return run('go test dpn_package_post_test.go')
+  end
 
   def run_bucket_reader_post_test
 	return run('go test apt_bucket_reader_post_test.go')

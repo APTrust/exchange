@@ -463,7 +463,7 @@ class IntegrationTest
 	  sleep 50
 
 	  # Run the post test
-	  # @results['dpn_ingest_store_test'] = @test_runner.run_dpn_ingest_store_post_test
+	  @results['dpn_ingest_store_test'] = @test_runner.run_dpn_ingest_store_post_test
 	rescue Exception => ex
 	  print_exception(ex)
 	ensure

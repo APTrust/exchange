@@ -34,7 +34,14 @@ type S3Upload struct {
 	session      *session.Session
 }
 
-// Creates a new S3 upload object. Params:
+// Creates a new S3 upload object using the s3Manager.Uploader described at
+// https://godoc.org/github.com/aws/aws-sdk-go/service/s3/s3manager#Uploader
+//
+// The uploader uses concurrent goroutines for speed, and is smart enough
+// to handle both normal and multi-part uploads. It also cleans up stray
+// file parts in cases where a multi-part upload fails.
+//
+// Params:
 //
 // region     - The name of the AWS region to download from.
 //              E.g. us-east-1 (VA), us-west-2 (Oregon), or use
