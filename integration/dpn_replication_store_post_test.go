@@ -124,16 +124,17 @@ func TestItemsAreInLongTermStorage(t *testing.T) {
 		require.Empty(t, s3Head.ErrorMessage)
 		metadata := s3Head.Response.Metadata
 		require.NotNil(t, metadata)
-		require.NotNil(t, metadata["from_node"])
-		require.NotNil(t, metadata["transfer_id"])
-		require.NotNil(t, metadata["member"])
-		require.NotNil(t, metadata["local_id"])
-		require.NotNil(t, metadata["version"])
+		// Amazon library transforms first letters of keys to CAPS
+		require.NotNil(t, metadata["From_node"])
+		require.NotNil(t, metadata["Transfer_id"])
+		require.NotNil(t, metadata["Member"])
+		require.NotNil(t, metadata["Local_id"])
+		require.NotNil(t, metadata["Version"])
 
-		assert.NotEmpty(t, *metadata["from_node"])
-		assert.NotEmpty(t, *metadata["transfer_id"])
-		assert.NotEmpty(t, *metadata["member"])
-		assert.NotEmpty(t, *metadata["local_id"])
-		assert.NotEmpty(t, *metadata["version"])
+		assert.NotEmpty(t, *metadata["From_node"])
+		assert.NotEmpty(t, *metadata["Transfer_id"])
+		assert.NotEmpty(t, *metadata["Member"])
+		assert.NotEmpty(t, *metadata["Local_id"])
+		assert.NotEmpty(t, *metadata["Version"])
 	}
 }

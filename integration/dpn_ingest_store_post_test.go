@@ -40,6 +40,7 @@ func TestIngestStoreWorkItemState(t *testing.T) {
 	if !apt_testutil.ShouldRunIntegrationTests() {
 		t.Skip("Skipping integration test. Set ENV var RUN_EXCHANGE_INTEGRATION=true if you want to run them.")
 	}
+	// This actually retrieves DPN related WorkItems, not DPNWorkItems. Hmm...
 	_context, workItems, err := dpn_testutil.GetDPNWorkItems()
 	require.Nil(t, err)
 	for _, item := range workItems {
@@ -133,32 +134,39 @@ func TestIngestStoreItemsAreInStorage(t *testing.T) {
 	s3Head := network.NewS3Head(_context.Config.APTrustS3Region,
 		_context.Config.DPN.DPNPreservationBucket)
 
+	pathToLogFile := filepath.Join(_context.Config.LogDirectory, "dpn_ingest_store.json")
 	for _, s3Key := range apt_testutil.INTEGRATION_GOOD_BAGS[0:7] {
 		parts := strings.Split(s3Key, "/")
-		tarFileName := parts[1]
-		s3List.GetList(tarFileName)
+		localTarFileName := parts[1] // APTrust bag name. E.g. "test.edu.test_123.tar"
+		manifest, err := apt_testutil.FindDPNIngestManifestInLog(pathToLogFile, localTarFileName)
+		require.Nil(t, err, "Could not find JSON record for %s", localTarFileName)
+		parts = strings.Split(manifest.StorageURL, "/")
+		dpnTarFileName := parts[len(parts)-1] // DPN bag name: <uuid>.tar
+		s3List.GetList(dpnTarFileName)
 		require.Empty(t, s3List.ErrorMessage)
-		require.EqualValues(t, 1, len(s3List.Response.Contents), "Nothing in S3 for %s", tarFileName)
+		require.EqualValues(t, 1, len(s3List.Response.Contents), "Nothing in S3 for %s", dpnTarFileName)
 		obj := s3List.Response.Contents[0]
-		assert.Equal(t, tarFileName, obj.Key)
+		assert.Equal(t, dpnTarFileName, *obj.Key)
 
 		// Make sure each item has the expected metadata.
 		// s3Head.Response.Metadata is map[string]*string.
-		s3Head.Head(s3Key)
+		s3Head.Head(dpnTarFileName)
 		require.Empty(t, s3Head.ErrorMessage)
 		metadata := s3Head.Response.Metadata
-		require.NotNil(t, metadata)
-		require.NotNil(t, metadata["from_node"])
-		require.NotNil(t, metadata["transfer_id"])
-		require.NotNil(t, metadata["member"])
-		require.NotNil(t, metadata["local_id"])
-		require.NotNil(t, metadata["version"])
+		require.NotNil(t, metadata, dpnTarFileName)
+		// Notice the Amazon library transforms the first letter of
+		// all our keys to upper case. WTF?
+		require.NotNil(t, metadata["From_node"], dpnTarFileName)
+		require.NotNil(t, metadata["Transfer_id"], dpnTarFileName)
+		require.NotNil(t, metadata["Member"], dpnTarFileName)
+		require.NotNil(t, metadata["Local_id"], dpnTarFileName)
+		require.NotNil(t, metadata["Version"], dpnTarFileName)
 
-		assert.NotEmpty(t, *metadata["from_node"])
-		assert.NotEmpty(t, *metadata["transfer_id"])
-		assert.NotEmpty(t, *metadata["member"])
-		assert.NotEmpty(t, *metadata["local_id"])
-		assert.NotEmpty(t, *metadata["version"])
+		assert.NotEmpty(t, *metadata["From_node"], dpnTarFileName)
+		assert.NotEmpty(t, *metadata["Transfer_id"], dpnTarFileName)
+		assert.NotEmpty(t, *metadata["Member"], dpnTarFileName)
+		assert.NotEmpty(t, *metadata["Local_id"], dpnTarFileName)
+		assert.NotEmpty(t, *metadata["Version"], dpnTarFileName)
 	}
 }
 
