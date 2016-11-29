@@ -93,11 +93,15 @@ func TestItemsAreInLongTermStorage(t *testing.T) {
 		_context.Config.DPN)
 	require.Nil(t, err)
 
-	s3ObjectList := apt_network.NewS3ObjectList(
+	// s3List lists bucket contents.
+	s3List := apt_network.NewS3ObjectList(
 		constants.AWSVirginia,
 		_context.Config.DPN.DPNPreservationBucket,
 		int64(100),
 	)
+	// s3Head gets metadata about specific objects in S3/Glacier.
+	s3Head := network.NewS3Head(_context.Config.APTrustS3Region,
+		_context.Config.DPN.DPNPreservationBucket)
 
 	for _, identifier := range dpn_testutil.BAG_IDS {
 		resp := localClient.DPNBagGet(identifier)
@@ -107,11 +111,29 @@ func TestItemsAreInLongTermStorage(t *testing.T) {
 			continue // we would not have replicated our own bag
 		}
 		tarFileName := fmt.Sprintf("%s.tar", identifier)
-		s3ObjectList.GetList(tarFileName)
-		require.NotEmpty(t, s3ObjectList.Response.Contents, "%s not found in S3", tarFileName)
-		object := s3ObjectList.Response.Contents[0]
+		s3List.GetList(tarFileName)
+		require.NotEmpty(t, s3List.Response.Contents, "%s not found in S3", tarFileName)
+		object := s3List.Response.Contents[0]
 		fiveMinutesAgo := time.Now().UTC().Add(-5 * time.Minute)
 		require.NotNil(t, object.LastModified)
 		assert.True(t, object.LastModified.After(fiveMinutesAgo))
+
+		// Make sure each item has the expected metadata.
+		// s3Head.Response.Metadata is map[string]*string.
+		s3Head.Head(tarFileName)
+		require.Empty(t, s3Head.ErrorMessage)
+		metadata := s3Head.Response.Metadata
+		require.NotNil(t, metadata)
+		require.NotNil(t, metadata["from_node"])
+		require.NotNil(t, metadata["transfer_id"])
+		require.NotNil(t, metadata["member"])
+		require.NotNil(t, metadata["local_id"])
+		require.NotNil(t, metadata["version"])
+
+		assert.NotEmpty(t, *metadata["from_node"])
+		assert.NotEmpty(t, *metadata["transfer_id"])
+		assert.NotEmpty(t, *metadata["member"])
+		assert.NotEmpty(t, *metadata["local_id"])
+		assert.NotEmpty(t, *metadata["version"])
 	}
 }

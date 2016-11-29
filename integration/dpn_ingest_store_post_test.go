@@ -124,19 +124,41 @@ func TestIngestStoreItemsAreInStorage(t *testing.T) {
 	_context, err := apt_testutil.GetContext("integration.json")
 	require.Nil(t, err, "Could not create context")
 	maxItemsToList := int64(1)
-	s3Client := network.NewS3ObjectList(
+	// s3List lists bucket contents.
+	s3List := network.NewS3ObjectList(
 		constants.AWSVirginia,
 		_context.Config.DPN.DPNPreservationBucket,
 		maxItemsToList)
+	// s3Head gets metadata about specific objects in S3/Glacier.
+	s3Head := network.NewS3Head(_context.Config.APTrustS3Region,
+		_context.Config.DPN.DPNPreservationBucket)
+
 	for _, s3Key := range apt_testutil.INTEGRATION_GOOD_BAGS[0:7] {
 		parts := strings.Split(s3Key, "/")
 		tarFileName := parts[1]
-		s3Client.GetList(tarFileName)
-		require.Empty(t, s3Client.ErrorMessage)
-		require.EqualValues(t, 1, len(s3Client.Response.Contents))
-		obj := s3Client.Response.Contents[0]
+		s3List.GetList(tarFileName)
+		require.Empty(t, s3List.ErrorMessage)
+		require.EqualValues(t, 1, len(s3List.Response.Contents))
+		obj := s3List.Response.Contents[0]
 		assert.Equal(t, tarFileName, obj.Key)
-		// TODO: HeadObject to get metadata
+
+		// Make sure each item has the expected metadata.
+		// s3Head.Response.Metadata is map[string]*string.
+		s3Head.Head(s3Key)
+		require.Empty(t, s3Head.ErrorMessage)
+		metadata := s3Head.Response.Metadata
+		require.NotNil(t, metadata)
+		require.NotNil(t, metadata["from_node"])
+		require.NotNil(t, metadata["transfer_id"])
+		require.NotNil(t, metadata["member"])
+		require.NotNil(t, metadata["local_id"])
+		require.NotNil(t, metadata["version"])
+
+		assert.NotEmpty(t, *metadata["from_node"])
+		assert.NotEmpty(t, *metadata["transfer_id"])
+		assert.NotEmpty(t, *metadata["member"])
+		assert.NotEmpty(t, *metadata["local_id"])
+		assert.NotEmpty(t, *metadata["version"])
 	}
 }
 
