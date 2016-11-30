@@ -1,6 +1,5 @@
 require_relative 'build'
 require_relative 'service'
-require_relative 'test_runner'
 
 # --------------------------------------------------------------------------
 # IntegrationTest runs integration tests for APTrust and DPN code,
@@ -115,7 +114,6 @@ class IntegrationTest
 	@context = context
 	@build = Build.new(context)
 	@service = Service.new(context)
-	@test_runner = TestRunner.new(context)
 	@results = {}
 	@context.make_test_dirs
 	@context.clear_logs
@@ -142,7 +140,7 @@ class IntegrationTest
 	  sleep 5
 
 	  # Run the post tests.
-	  @results['apt_bucket_reader_test'] = @test_runner.run_bucket_reader_post_test
+	  @results['apt_bucket_reader_test'] = run('apt_bucket_reader_post_test.go')
 	rescue Exception => ex
 	  print_exception(ex)
 	  return false
@@ -188,9 +186,9 @@ class IntegrationTest
 	  # Run the post tests. This is where we check to see if the
 	  # ingest services (fetch, store, record) correctly performed
 	  # all of the expected work.
-	  @results['apt_fetch_test'] = @test_runner.run_apt_fetch_post_test
-	  @results['apt_store_test'] = @test_runner.run_apt_store_post_test
-	  @results['apt_record_test'] = @test_runner.run_apt_record_post_test
+	  @results['apt_fetch_test'] = run('apt_fetch_post_test.go')
+	  @results['apt_store_test'] = run('apt_store_post_test.go')
+	  @results['apt_record_test'] = run('apt_record_post_test.go')
 	rescue Exception => ex
 	  print_exception(ex)
 	  return false
@@ -218,7 +216,7 @@ class IntegrationTest
   def dpn_rest_client(more_tests_follow)
 	begin
 	  @service.dpn_cluster_start
-	  @results['dpn_rest_client_test'] = @test_runner.run_dpn_rest_client_test
+	  @results['dpn_rest_client_test'] = run_dpn_rest_client_test
 	rescue Exception => ex
 	  print_exception(ex)
 	ensure
@@ -254,7 +252,7 @@ class IntegrationTest
 	  @service.app_start(@context.apps['dpn_sync'])
 
 	  # Post test
-	  @results['dpn_sync_test'] = @test_runner.run_dpn_sync_post_test
+	  @results['dpn_sync_test'] = run('dpn_sync_post_test.go')
 	rescue Exception => ex
 	  print_exception(ex)
 	ensure
@@ -293,7 +291,7 @@ class IntegrationTest
 
 	  # Push some APTrust bags to DPN. We want to make sure
 	  # that dpn_queue picks these up.
-	  @results['apt_push_to_dpn'] = @test_runner.run_apt_push_to_dpn_test
+	  @results['apt_push_to_dpn'] = run('apt_push_to_dpn_test.go')
 	  if @results['apt_push_to_dpn'] == false
 		puts "Skipping dpn_queue test because apt_push_to_dpn failed."
 		print_results
@@ -304,7 +302,7 @@ class IntegrationTest
 	  @service.app_start(@context.apps['dpn_queue'])
 
 	  # Run the post test
-	  @results['dpn_queue_test'] = @test_runner.run_dpn_queue_post_test
+	  @results['dpn_queue_test'] = run('dpn_queue_post_test.go')
 	rescue Exception => ex
 	  print_exception(ex)
 	ensure
@@ -335,7 +333,7 @@ class IntegrationTest
 	  sleep 30
 
 	  # Run the post test
-	  @results['dpn_copy_test'] = @test_runner.run_dpn_copy_post_test
+	  @results['dpn_copy_test'] = run('dpn_copy_post_test.go')
 	rescue Exception => ex
 	  print_exception(ex)
 	ensure
@@ -366,7 +364,7 @@ class IntegrationTest
 	  sleep 20
 
 	  # Ensure expected post conditions
-	  @results['dpn_validate_test'] = @test_runner.run_dpn_validate_post_test
+	  @results['dpn_validate_test'] = run('dpn_validate_post_test.go')
 	rescue Exception => ex
 	  print_exception(ex)
 	ensure
@@ -397,7 +395,7 @@ class IntegrationTest
 	  sleep 20
 
 	  # Ensure expected post conditions
-	  @results['dpn_replication_store_test'] = @test_runner.run_dpn_replication_store_post_test
+	  @results['dpn_replication_store_test'] = run('dpn_replication_store_post_test.go')
 	rescue Exception => ex
 	  print_exception(ex)
 	ensure
@@ -429,7 +427,7 @@ class IntegrationTest
 	  sleep 50
 
 	  # Run the post test
-	  @results['dpn_package_test'] = @test_runner.run_dpn_package_post_test
+	  @results['dpn_package_test'] = run('dpn_package_post_test.go')
 	rescue Exception => ex
 	  print_exception(ex)
 	ensure
@@ -463,7 +461,7 @@ class IntegrationTest
 	  sleep 50
 
 	  # Run the post test
-	  @results['dpn_ingest_store_test'] = @test_runner.run_dpn_ingest_store_post_test
+	  @results['dpn_ingest_store_test'] = run('dpn_ingest_store_post_test.go')
 	rescue Exception => ex
 	  print_exception(ex)
 	ensure
@@ -480,9 +478,11 @@ class IntegrationTest
   # rely on external services. Returns true/false to indicate whether all
   # tests passed.
   def units(more_tests_follow)
-	@results['unit_tests'] = @test_runner.run_all_unit_tests
+	@results['unit_tests'] = run_all_unit_tests
 	print_results
   end
+
+  private
 
   def print_exception(ex)
 	puts ex
@@ -512,6 +512,41 @@ class IntegrationTest
 	  return false unless passed
 	end
 	return true
+  end
+
+  # run_all_unit_tests runs all of the APTrust and DPN unit tests.
+  # These tests do not require any outside services to run, and
+  # they omit a handful of tests that do require outside services.
+  def run_all_unit_tests
+	env = @context.env_hash
+	cmd = "go test $(go list ./... | grep -v /vendor/)"
+	pid = Process.spawn(env, cmd, chdir: @context.exchange_root)
+	Process.wait pid
+	return $?.exitstatus == 0
+  end
+
+  # dpn_rest_client test runs our Go DPN REST client against a locally-running
+  # DPN cluster. The DPN REST client is in exchange/dpn/network.
+  # Returns true if tests passed.
+  def run_dpn_rest_client_test
+	env = @context.env_hash
+	cmd = "go test dpn_rest_client_test.go"
+	dir = "#{@context.exchange_root}/dpn/network"
+	pid = Process.spawn(env, cmd, chdir: dir)
+	Process.wait pid
+	return $?.exitstatus == 0
+  end
+
+  # Runs the specified integration test, setting up the necessary
+  # environment first.
+  def run(test_file)
+	env = @context.env_hash
+	env['RUN_EXCHANGE_INTEGRATION'] = 'true'
+	dir = "#{@context.exchange_root}/integration"
+    cmd = "go test #{test_file}"
+	pid = Process.spawn(env, cmd, chdir: dir)
+	Process.wait pid
+	return $?.exitstatus == 0
   end
 
 end
