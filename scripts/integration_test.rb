@@ -142,17 +142,6 @@ class IntegrationTest
 	  # Run the post tests.
 	  @results['apt_bucket_reader_test'] = run('apt_bucket_reader_post_test.go')
     end
-	# rescue Exception => ex
-	#   print_exception(ex)
-	#   return false
-	# ensure
-	#   @service.stop_everything unless more_tests_follow
-	# end
-	# if more_tests_follow
-	#   return all_tests_passed?
-	# else
-	#   return print_results
-	# end
   end
 
   def apt_ingest(more_tests_follow)
@@ -191,17 +180,6 @@ class IntegrationTest
 	  @results['apt_store_test'] = run('apt_store_post_test.go')
 	  @results['apt_record_test'] = run('apt_record_post_test.go')
     end
-	# rescue Exception => ex
-	#   print_exception(ex)
-	#   return false
-	# ensure
-	#   @service.stop_everything unless more_tests_follow
-	# end
-	# if more_tests_follow
-	#   return all_tests_passed?
-	# else
-	#   return print_results
-	# end
   end
 
   def apt_restore(more_tests_follow)
@@ -220,16 +198,6 @@ class IntegrationTest
 	  @service.dpn_cluster_start
 	  @results['dpn_rest_client_test'] = run_dpn_rest_client_test
     end
-	# rescue Exception => ex
-	#   print_exception(ex)
-	# ensure
-	#   @service.stop_everything unless more_tests_follow
-	# end
-	# if more_tests_follow
-	#   return all_tests_passed?
-	# else
-	#   return print_results
-	# end
   end
 
   # dpn_sync tests the dpn_sync app against a locally-running
@@ -257,16 +225,6 @@ class IntegrationTest
 	  # Post test
 	  @results['dpn_sync_test'] = run('dpn_sync_post_test.go')
     end
-	# rescue Exception => ex
-	#   print_exception(ex)
-	# ensure
-	#   @service.stop_everything unless more_tests_follow
-	# end
-	# if more_tests_follow
-	#   return all_tests_passed?
-	# else
-	#   return print_results
-	# end
   end
 
   # dpn_queue tests the dpn_queue application, which is responsible
@@ -308,16 +266,6 @@ class IntegrationTest
 	  # Run the post test
 	  @results['dpn_queue_test'] = run('dpn_queue_post_test.go')
     end
-	# rescue Exception => ex
-	#   print_exception(ex)
-	# ensure
-	#   @service.stop_everything unless more_tests_follow
-	# end
-	# if more_tests_follow
-	#   return all_tests_passed?
-	# else
-	#   return print_results
-	# end
   end
 
   def dpn_copy(more_tests_follow)
@@ -340,16 +288,6 @@ class IntegrationTest
 	  # Run the post test
 	  @results['dpn_copy_test'] = run('dpn_copy_post_test.go')
     end
-	# rescue Exception => ex
-	#   print_exception(ex)
-	# ensure
-	#   @service.stop_everything unless more_tests_follow
-	# end
-	# if more_tests_follow
-	#   return all_tests_passed?
-	# else
-	#   return print_results
-	# end
   end
 
   def dpn_validate(more_tests_follow)
@@ -372,16 +310,6 @@ class IntegrationTest
 	  # Ensure expected post conditions
 	  @results['dpn_validate_test'] = run('dpn_validate_post_test.go')
     end
-	# rescue Exception => ex
-	#   print_exception(ex)
-	# ensure
-	#   @service.stop_everything unless more_tests_follow
-	# end
-	# if more_tests_follow
-	#   return all_tests_passed?
-	# else
-	#   return print_results
-	# end
   end
 
   def dpn_replication_store(more_tests_follow)
@@ -404,16 +332,6 @@ class IntegrationTest
 	  # Ensure expected post conditions
 	  @results['dpn_replication_store_test'] = run('dpn_replication_store_post_test.go')
     end
-	# rescue Exception => ex
-	#   print_exception(ex)
-	# ensure
-	#   @service.stop_everything unless more_tests_follow
-	# end
-	# if more_tests_follow
-	#   return all_tests_passed?
-	# else
-	#   return print_results
-	# end
   end
 
   # dpn_package packages an APTrust bag for ingest into DPN.
@@ -437,16 +355,6 @@ class IntegrationTest
 	  # Run the post test
 	  @results['dpn_package_test'] = run('dpn_package_post_test.go')
     end
-	# rescue Exception => ex
-	#   print_exception(ex)
-	# ensure
-	#   @service.stop_everything unless more_tests_follow
-	# end
-	# if more_tests_follow
-	#   return all_tests_passed?
-	# else
-	#   return print_results
-	# end
   end
 
   # dpn_ingest_store copies locally ingested DPN bags to long-term
@@ -472,16 +380,6 @@ class IntegrationTest
 	  # Run the post test
 	  @results['dpn_ingest_store_test'] = run('dpn_ingest_store_post_test.go')
     end
-	# rescue Exception => ex
-	#   print_exception(ex)
-	# ensure
-	#   @service.stop_everything unless more_tests_follow
-	# end
-	# if more_tests_follow
-	#   return all_tests_passed?
-	# else
-	#   return print_results
-	# end
   end
 
   # Runs all the APTrust and DPN unit tests. Does not run any tests that
