@@ -87,11 +87,11 @@ type Node struct {
 // (the howMany param) exceeds the number of nodes that this node
 // actually replicates to.
 func (node *Node) ChooseNodesForReplication(howMany int) ([]string, error) {
+	selectedNodes := make([]string, 0)
 	if howMany > len(node.ReplicateTo) {
-		return nil, fmt.Errorf("Cannot choose %d nodes for replication when "+
+		return selectedNodes, fmt.Errorf("Cannot choose %d nodes for replication when "+
 			"we're only replicating to %d nodes.", howMany, len(node.ReplicateTo))
 	}
-	selectedNodes := make([]string, 0)
 	if howMany >= len(node.ReplicateTo) {
 		for _, namespace := range node.ReplicateTo {
 			selectedNodes = append(selectedNodes, namespace)
