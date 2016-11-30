@@ -1,7 +1,10 @@
 package models
 
 import (
+	"fmt"
 	"math/rand"
+	"net/url"
+	"strings"
 	"time"
 )
 
@@ -69,9 +72,9 @@ type Node struct {
 	LastPullDate time.Time `json:"last_pull_date"`
 }
 
-// This randomly chooses nodes for replication, returning
-// a slice of strings. Each string is the namespace of a node
-// we should replicate to. This may return fewer nodes than
+// ChooseNodesForReplication randomly chooses nodes for replication,
+// returning a slice of strings. Each string is the namespace of a
+// node we should replicate to. This may return fewer nodes than
 // you specified in the howMany param if this node replicates
 // to fewer nodes.
 //
@@ -79,7 +82,15 @@ type Node struct {
 // logic for how to choose remote nodes. For now, we can choose
 // any node, because they are all geographically diverse and
 // all use different storage backends.
-func (node *Node) ChooseNodesForReplication(howMany int) []string {
+//
+// This will return an error if the number of nodes you want to select
+// (the howMany param) exceeds the number of nodes that this node
+// actually replicates to.
+func (node *Node) ChooseNodesForReplication(howMany int) ([]string, error) {
+	if howMany > len(node.ReplicateTo) {
+		return nil, fmt.Errorf("Cannot choose %d nodes for replication when "+
+			"we're only replicating to %d nodes.", howMany, len(node.ReplicateTo))
+	}
 	selectedNodes := make([]string, 0)
 	if howMany >= len(node.ReplicateTo) {
 		for _, namespace := range node.ReplicateTo {
@@ -96,5 +107,20 @@ func (node *Node) ChooseNodesForReplication(howMany int) []string {
 			}
 		}
 	}
-	return selectedNodes
+	return selectedNodes, nil
+}
+
+// FQDN returns the fully-qualified domain name of this node's APIRoot.
+// This will return an error if the APIRoot is not a valid URL
+func (node *Node) FQDN() (string, error) {
+	host := ""
+	nodeUrl, err := url.Parse(node.APIRoot)
+	if err == nil {
+		host = nodeUrl.Host
+		colonIndex := strings.Index(host, ":")
+		if colonIndex > -1 {
+			host = host[0:colonIndex]
+		}
+	}
+	return host, err
 }

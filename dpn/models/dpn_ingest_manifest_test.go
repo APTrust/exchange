@@ -19,6 +19,9 @@ func TestNewDPNIngestManifest(t *testing.T) {
 	assert.NotNil(t, manifest.ValidateSummary)
 	assert.NotNil(t, manifest.StoreSummary)
 	assert.NotNil(t, manifest.RecordSummary)
+	require.NotNil(t, manifest.ReplicationTransfers)
+	assert.Equal(t, 0, len(manifest.ReplicationTransfers))
+	assert.Empty(t, manifest.StorageURL)
 }
 
 func TestManifestBuildReplicationTransfer(t *testing.T) {

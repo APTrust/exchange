@@ -113,20 +113,89 @@ func (recorder *DPNIngestRecorder) postProcess() {
 
 func (recorder *DPNIngestRecorder) saveDPNBagRecord(manifest *models.DPNIngestManifest) {
 	// Save the DPNBag record to our local DPN REST server
+	resp := recorder.LocalClient.DPNBagGet(manifest.DPNBag.UUID)
+	if resp.Error != nil {
+		manifest.RecordSummary.AddError("Error checking local DPN node for bag %s: %v",
+			manifest.DPNBag.UUID, resp.Error)
+		return
+	}
+	if resp.Bag() == nil {
+		resp = recorder.LocalClient.DPNBagCreate(manifest.DPNBag)
+		if resp.Error != nil {
+			data, _ := resp.RawResponseData()
+			manifest.RecordSummary.AddError("Error creating bag %s in local DPN Node: %v "+
+				"Server response: %s", manifest.DPNBag.UUID, resp.Error, string(data))
+		}
+		if resp.Bag() == nil {
+			// This should be impossible.
+			data, _ := resp.RawResponseData()
+			manifest.RecordSummary.AddError("After creating bag %s in local DPN Node, "+
+				"server returned no ReplicationTransfer object. Server response: %s",
+				manifest.DPNBag.UUID, string(data))
+		} else {
+			manifest.DPNBag = resp.Bag()
+		}
+	} else {
+		recorder.Context.MessageLog.Info("DPN Bag %s is already in the registry",
+			manifest.DPNBag.UUID)
+	}
 }
 
-func (recorder *DPNIngestRecorder) chooseReplicationNodes(manifest *models.DPNIngestManifest) []string {
-	// Fetch our local node record from DPN server
-	// Choose N nodes from localNode.ReplicateTo to replicate to
-	// where N is recorder.Context.Config.DPN.ReplicateToNumNodes.
-	// Return the selected nodes.
-	return nil
+func (recorder *DPNIngestRecorder) getLocalNode(manifest *models.DPNIngestManifest) *models.Node {
+	resp := recorder.LocalClient.NodeGet(recorder.Context.Config.DPN.LocalNode)
+	if resp.Error != nil {
+		data, _ := resp.RawResponseData()
+		manifest.RecordSummary.AddError("Error fetching local node record %s: %v "+
+			"Server response: %s", recorder.Context.Config.DPN.LocalNode,
+			resp.Error, string(data))
+		return nil
+	}
+	return resp.Node()
+}
+
+func (recorder *DPNIngestRecorder) chooseReplicationNodes(manifest *models.DPNIngestManifest, localNode *models.Node) []string {
+	howMany := recorder.Context.Config.DPN.ReplicateToNumNodes
+	replicateToNodes, err := localNode.ChooseNodesForReplication(howMany)
+	if err != nil {
+		manifest.RecordSummary.AddError("Cannot choose nodes for replication: %v", err)
+		return nil
+	}
+	return replicateToNodes
+}
+
+func (recorder *DPNIngestRecorder) buildTransferRequests(manifest *models.DPNIngestManifest) {
+	localNode := recorder.getLocalNode(manifest)
+	if manifest.RecordSummary.HasErrors() {
+		return
+	}
+	remoteNodes := recorder.chooseReplicationNodes(manifest, localNode)
+	if manifest.RecordSummary.HasErrors() {
+		return
+	}
+	for _, toNode := range remoteNodes {
+		domain, err := localNode.FQDN()
+		if err != nil {
+			manifest.RecordSummary.AddError("Can't get FQDN from node %s. APIRoot is %s. "+
+				"Error is %v", localNode.Namespace, localNode.APIRoot, err)
+			return
+		}
+		link := fmt.Sprintf("dpn.%s@%s:outbound/%s.tar",
+			toNode, domain, manifest.DPNBag.UUID)
+		xfer, err := manifest.BuildReplicationTransfer(
+			recorder.Context.Config.DPN.LocalNode, toNode, link)
+		if err != nil {
+			manifest.RecordSummary.AddError("Error building ReplicationTransfer: %v ", err)
+			return
+		}
+		manifest.ReplicationTransfers = append(manifest.ReplicationTransfers, xfer)
+	}
 }
 
 func (recorder *DPNIngestRecorder) saveDPNReplicationRequests(manifest *models.DPNIngestManifest) {
-	// If replication requests don't already exist on manifest
-	//   Pick two nodes
-	//   Create a replication request for each node
+	if len(manifest.ReplicationTransfers) == 0 {
+		recorder.buildTransferRequests(manifest)
+	}
+	// -------- START HERE ------------
 	// For each replication request
 	//   Check if it exists in Pharos
 	//   If not, create it
