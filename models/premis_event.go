@@ -96,7 +96,7 @@ func NewEventObjectCreation() *PremisEvent {
 	return &PremisEvent{
 		Identifier:         eventId.String(),
 		EventType:          constants.EventCreation,
-		DateTime:           time.Now(),
+		DateTime:           time.Now().UTC(),
 		Detail:             "Object created.",
 		Outcome:            string(constants.StatusSuccess),
 		OutcomeDetail:      "Intellectual object created.",
@@ -114,7 +114,7 @@ func NewEventObjectIngest(numberOfFilesIngested int) (*PremisEvent, error) {
 	return &PremisEvent{
 		Identifier:         eventId.String(),
 		EventType:          constants.EventIngestion,
-		DateTime:           time.Now(),
+		DateTime:           time.Now().UTC(),
 		Detail:             "Copied all files to perservation bucket",
 		Outcome:            string(constants.StatusSuccess),
 		OutcomeDetail:      fmt.Sprintf("%d files copied", numberOfFilesIngested),
@@ -132,7 +132,7 @@ func NewEventObjectIdentifierAssignment(objectIdentifier string) (*PremisEvent, 
 	return &PremisEvent{
 		Identifier:         eventId.String(),
 		EventType:          constants.EventIdentifierAssignment,
-		DateTime:           time.Now(),
+		DateTime:           time.Now().UTC(),
 		Detail:             "Assigned bag identifier",
 		Outcome:            string(constants.StatusSuccess),
 		OutcomeDetail:      objectIdentifier,
@@ -150,7 +150,7 @@ func NewEventObjectRights(accessSetting string) (*PremisEvent, error) {
 	return &PremisEvent{
 		Identifier:         eventId.String(),
 		EventType:          constants.EventAccessAssignment,
-		DateTime:           time.Now(),
+		DateTime:           time.Now().UTC(),
 		Detail:             "Assigned bag access rights",
 		Outcome:            string(constants.StatusSuccess),
 		OutcomeDetail:      accessSetting,
