@@ -124,7 +124,7 @@ class IntegrationTest
 
 
   def bucket_reader(more_tests_follow)
-	begin
+	run_suite(more_tests_follow) do
 	  # Build everything anew
 	  @build.build(@context.apps['nsq_service'])
 	  @build.build(@context.apps['apt_bucket_reader'])
@@ -141,21 +141,22 @@ class IntegrationTest
 
 	  # Run the post tests.
 	  @results['apt_bucket_reader_test'] = run('apt_bucket_reader_post_test.go')
-	rescue Exception => ex
-	  print_exception(ex)
-	  return false
-	ensure
-	  @service.stop_everything unless more_tests_follow
-	end
-	if more_tests_follow
-	  return all_tests_passed?
-	else
-	  return print_results
-	end
+    end
+	# rescue Exception => ex
+	#   print_exception(ex)
+	#   return false
+	# ensure
+	#   @service.stop_everything unless more_tests_follow
+	# end
+	# if more_tests_follow
+	#   return all_tests_passed?
+	# else
+	#   return print_results
+	# end
   end
 
   def apt_ingest(more_tests_follow)
-	begin
+	run_suite(more_tests_follow) do
 	  # Rebuild binaries
 	  @build.build(@context.apps['apt_volume_service'])
 	  @build.build(@context.apps['apt_fetch'])
@@ -189,17 +190,18 @@ class IntegrationTest
 	  @results['apt_fetch_test'] = run('apt_fetch_post_test.go')
 	  @results['apt_store_test'] = run('apt_store_post_test.go')
 	  @results['apt_record_test'] = run('apt_record_post_test.go')
-	rescue Exception => ex
-	  print_exception(ex)
-	  return false
-	ensure
-	  @service.stop_everything unless more_tests_follow
-	end
-	if more_tests_follow
-	  return all_tests_passed?
-	else
-	  return print_results
-	end
+    end
+	# rescue Exception => ex
+	#   print_exception(ex)
+	#   return false
+	# ensure
+	#   @service.stop_everything unless more_tests_follow
+	# end
+	# if more_tests_follow
+	#   return all_tests_passed?
+	# else
+	#   return print_results
+	# end
   end
 
   def apt_restore(more_tests_follow)
@@ -214,19 +216,20 @@ class IntegrationTest
   # locally-running DPN cluster. Returns true if all tests passed,
   # false otherwise.
   def dpn_rest_client(more_tests_follow)
-	begin
+	run_suite(more_tests_follow) do
 	  @service.dpn_cluster_start
 	  @results['dpn_rest_client_test'] = run_dpn_rest_client_test
-	rescue Exception => ex
-	  print_exception(ex)
-	ensure
-	  @service.stop_everything unless more_tests_follow
-	end
-	if more_tests_follow
-	  return all_tests_passed?
-	else
-	  return print_results
-	end
+    end
+	# rescue Exception => ex
+	#   print_exception(ex)
+	# ensure
+	#   @service.stop_everything unless more_tests_follow
+	# end
+	# if more_tests_follow
+	#   return all_tests_passed?
+	# else
+	#   return print_results
+	# end
   end
 
   # dpn_sync tests the dpn_sync app against a locally-running
@@ -236,7 +239,7 @@ class IntegrationTest
   # were synched as expected to the local node. Returns true/false
   # to indicate whether all tests passed.
   def dpn_sync(more_tests_follow)
-	begin
+    run_suite(more_tests_follow) do
 	  # Build
 	  @build.build(@context.apps['dpn_sync'])
 
@@ -253,16 +256,17 @@ class IntegrationTest
 
 	  # Post test
 	  @results['dpn_sync_test'] = run('dpn_sync_post_test.go')
-	rescue Exception => ex
-	  print_exception(ex)
-	ensure
-	  @service.stop_everything unless more_tests_follow
-	end
-	if more_tests_follow
-	  return all_tests_passed?
-	else
-	  return print_results
-	end
+    end
+	# rescue Exception => ex
+	#   print_exception(ex)
+	# ensure
+	#   @service.stop_everything unless more_tests_follow
+	# end
+	# if more_tests_follow
+	#   return all_tests_passed?
+	# else
+	#   return print_results
+	# end
   end
 
   # dpn_queue tests the dpn_queue application, which is responsible
@@ -277,7 +281,7 @@ class IntegrationTest
   # because we need to ingest the APTrust bags that we're going to
   # mark for DPN.
   def dpn_queue(more_tests_follow)
-	begin
+    run_suite(more_tests_follow) do
 	  # Build
 	  @build.build(@context.apps['dpn_queue'])
 
@@ -303,20 +307,21 @@ class IntegrationTest
 
 	  # Run the post test
 	  @results['dpn_queue_test'] = run('dpn_queue_post_test.go')
-	rescue Exception => ex
-	  print_exception(ex)
-	ensure
-	  @service.stop_everything unless more_tests_follow
-	end
-	if more_tests_follow
-	  return all_tests_passed?
-	else
-	  return print_results
-	end
+    end
+	# rescue Exception => ex
+	#   print_exception(ex)
+	# ensure
+	#   @service.stop_everything unless more_tests_follow
+	# end
+	# if more_tests_follow
+	#   return all_tests_passed?
+	# else
+	#   return print_results
+	# end
   end
 
   def dpn_copy(more_tests_follow)
-	begin
+	run_suite(more_tests_follow) do
 	  # Build
 	  @build.build(@context.apps['dpn_copy'])
 
@@ -334,20 +339,21 @@ class IntegrationTest
 
 	  # Run the post test
 	  @results['dpn_copy_test'] = run('dpn_copy_post_test.go')
-	rescue Exception => ex
-	  print_exception(ex)
-	ensure
-	  @service.stop_everything unless more_tests_follow
-	end
-	if more_tests_follow
-	  return all_tests_passed?
-	else
-	  return print_results
-	end
+    end
+	# rescue Exception => ex
+	#   print_exception(ex)
+	# ensure
+	#   @service.stop_everything unless more_tests_follow
+	# end
+	# if more_tests_follow
+	#   return all_tests_passed?
+	# else
+	#   return print_results
+	# end
   end
 
   def dpn_validate(more_tests_follow)
-	begin
+	run_suite(more_tests_follow) do
 	  # Build
 	  @build.build(@context.apps['dpn_validate'])
 
@@ -365,20 +371,21 @@ class IntegrationTest
 
 	  # Ensure expected post conditions
 	  @results['dpn_validate_test'] = run('dpn_validate_post_test.go')
-	rescue Exception => ex
-	  print_exception(ex)
-	ensure
-	  @service.stop_everything unless more_tests_follow
-	end
-	if more_tests_follow
-	  return all_tests_passed?
-	else
-	  return print_results
-	end
+    end
+	# rescue Exception => ex
+	#   print_exception(ex)
+	# ensure
+	#   @service.stop_everything unless more_tests_follow
+	# end
+	# if more_tests_follow
+	#   return all_tests_passed?
+	# else
+	#   return print_results
+	# end
   end
 
   def dpn_replication_store(more_tests_follow)
-	begin
+	run_suite(more_tests_follow) do
 	  # Build
 	  @build.build(@context.apps['dpn_replication_store'])
 
@@ -396,21 +403,22 @@ class IntegrationTest
 
 	  # Ensure expected post conditions
 	  @results['dpn_replication_store_test'] = run('dpn_replication_store_post_test.go')
-	rescue Exception => ex
-	  print_exception(ex)
-	ensure
-	  @service.stop_everything unless more_tests_follow
-	end
-	if more_tests_follow
-	  return all_tests_passed?
-	else
-	  return print_results
-	end
+    end
+	# rescue Exception => ex
+	#   print_exception(ex)
+	# ensure
+	#   @service.stop_everything unless more_tests_follow
+	# end
+	# if more_tests_follow
+	#   return all_tests_passed?
+	# else
+	#   return print_results
+	# end
   end
 
   # dpn_package packages an APTrust bag for ingest into DPN.
   def dpn_package(more_tests_follow)
-	begin
+	run_suite(more_tests_follow) do
 	  # Build
 	  @build.build(@context.apps['dpn_package'])
 
@@ -428,23 +436,24 @@ class IntegrationTest
 
 	  # Run the post test
 	  @results['dpn_package_test'] = run('dpn_package_post_test.go')
-	rescue Exception => ex
-	  print_exception(ex)
-	ensure
-	  @service.stop_everything unless more_tests_follow
-	end
-	if more_tests_follow
-	  return all_tests_passed?
-	else
-	  return print_results
-	end
+    end
+	# rescue Exception => ex
+	#   print_exception(ex)
+	# ensure
+	#   @service.stop_everything unless more_tests_follow
+	# end
+	# if more_tests_follow
+	#   return all_tests_passed?
+	# else
+	#   return print_results
+	# end
   end
 
   # dpn_ingest_store copies locally ingested DPN bags to long-term
   # storage in AWS Glacier. This is the second step of DPN ingest,
   # after dpn_package
   def dpn_ingest_store(more_tests_follow)
-	begin
+	run_suite(more_tests_follow) do
 	  # Build
 	  @build.build(@context.apps['dpn_ingest_store'])
 
@@ -462,16 +471,17 @@ class IntegrationTest
 
 	  # Run the post test
 	  @results['dpn_ingest_store_test'] = run('dpn_ingest_store_post_test.go')
-	rescue Exception => ex
-	  print_exception(ex)
-	ensure
-	  @service.stop_everything unless more_tests_follow
-	end
-	if more_tests_follow
-	  return all_tests_passed?
-	else
-	  return print_results
-	end
+    end
+	# rescue Exception => ex
+	#   print_exception(ex)
+	# ensure
+	#   @service.stop_everything unless more_tests_follow
+	# end
+	# if more_tests_follow
+	#   return all_tests_passed?
+	# else
+	#   return print_results
+	# end
   end
 
   # Runs all the APTrust and DPN unit tests. Does not run any tests that
@@ -547,6 +557,25 @@ class IntegrationTest
 	pid = Process.spawn(env, cmd, chdir: dir)
 	Process.wait pid
 	return $?.exitstatus == 0
+  end
+
+  # run_suite runs the suite of commands in the given block.
+  # That usually includes building binaries, starting services,
+  # and running tests.
+  def run_suite(more_tests_follow, &block)
+	begin
+      yield
+	rescue Exception => ex
+	  print_exception(ex)
+	  return false
+	ensure
+	  @service.stop_everything unless more_tests_follow
+	end
+	if more_tests_follow
+	  return all_tests_passed?
+	else
+	  return print_results
+	end
   end
 
 end
