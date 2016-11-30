@@ -200,7 +200,7 @@ func (validator *DPNValidator) finishWithSuccess(manifest *models.ReplicationMan
 	topic := validator.Context.Config.DPN.DPNReplicationStoreWorker.NsqTopic
 	err := validator.Context.NSQClient.Enqueue(topic, manifest.DPNWorkItem.Id)
 	if err != nil {
-		msg := fmt.Sprintf("Error pushing into NSQ %s: %v", err)
+		msg := fmt.Sprintf("Error pushing into NSQ %s: %v", manifest.DPNWorkItem.Identifier, err)
 		manifest.ValidateSummary.AddError(msg)
 		validator.Context.MessageLog.Error(msg)
 	} else {

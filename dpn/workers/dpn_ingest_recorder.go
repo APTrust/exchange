@@ -90,12 +90,14 @@ func (recorder *DPNIngestRecorder) HandleMessage(message *nsq.Message) error {
 
 func (recorder *DPNIngestRecorder) record() {
 	for manifest := range recorder.RecordChannel {
-		// Don't time us out, NSQ!
 		manifest.NsqMessage.Touch()
 
 		// Create bag record in DPN
 		// Create replication requests in DPN
 		// Create DPN replication event in APTrust
+
+		manifest.NsqMessage.Touch()
+		recorder.PostProcessChannel <- manifest
 	}
 }
 
@@ -107,6 +109,34 @@ func (recorder *DPNIngestRecorder) postProcess() {
 			recorder.finishWithSuccess(manifest)
 		}
 	}
+}
+
+func (recorder *DPNIngestRecorder) saveDPNBagRecord(manifest *models.DPNIngestManifest) {
+	// Save the DPNBag record to our local DPN REST server
+}
+
+func (recorder *DPNIngestRecorder) chooseReplicationNodes(manifest *models.DPNIngestManifest) []string {
+	// Fetch our local node record from DPN server
+	// Choose N nodes from localNode.ReplicateTo to replicate to
+	// where N is recorder.Context.Config.DPN.ReplicateToNumNodes.
+	// Return the selected nodes.
+	return nil
+}
+
+func (recorder *DPNIngestRecorder) saveDPNReplicationRequests(manifest *models.DPNIngestManifest) {
+	// If replication requests don't already exist on manifest
+	//   Pick two nodes
+	//   Create a replication request for each node
+	// For each replication request
+	//   Check if it exists in Pharos
+	//   If not, create it
+}
+
+func (recorder *DPNIngestRecorder) saveDPNIngestEvents(manifest *models.DPNIngestManifest) {
+	// If DPN ingest events don't already exist on the manifest, create them
+	// For each ingest event:
+	//   Check if event already exists in Pharos
+	//   If not, create it
 }
 
 func (recorder *DPNIngestRecorder) finishWithError(manifest *models.DPNIngestManifest) {
