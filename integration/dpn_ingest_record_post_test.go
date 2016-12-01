@@ -7,7 +7,6 @@ import (
 	"github.com/APTrust/exchange/context"
 	"github.com/APTrust/exchange/dpn/models"
 	dpn_testutil "github.com/APTrust/exchange/dpn/util/testutil"
-	"github.com/APTrust/exchange/network"
 	apt_testutil "github.com/APTrust/exchange/util/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -16,9 +15,9 @@ import (
 	"testing"
 )
 
-// TestIngestStoreWorkItems checks to see if Pharos WorkItems
+// TestIngestRecordWorkItems checks to see if Pharos WorkItems
 // were updated correctly.
-func TestIngestStoreWorkItems(t *testing.T) {
+func TestIngestRecordWorkItems(t *testing.T) {
 	if !apt_testutil.ShouldRunIntegrationTests() {
 		t.Skip("Skipping integration test. Set ENV var RUN_EXCHANGE_INTEGRATION=true if you want to run them.")
 	}
@@ -26,17 +25,17 @@ func TestIngestStoreWorkItems(t *testing.T) {
 	require.Nil(t, err)
 	for _, item := range workItems {
 		assert.Equal(t, constants.StageRecord, item.Stage)
-		assert.Equal(t, constants.StatusPending, item.Status)
-		assert.Equal(t, "Bag copied to long-term storage", item.Note)
+		assert.Equal(t, constants.StatusSuccess, item.Status)
+		assert.Equal(t, "DPN ingest complete", item.Note)
 		assert.Equal(t, "", item.Node)
 		assert.Equal(t, 0, item.Pid)
 		assert.True(t, item.Retry)
 	}
 }
 
-// TestIngestStoreWorkItemState checks to see if Pharos WorkItemState
+// TestIngestRecordWorkItemState checks to see if Pharos WorkItemState
 // records were updated correctly.
-func TestIngestStoreWorkItemState(t *testing.T) {
+func TestIngestRecordWorkItemState(t *testing.T) {
 	if !apt_testutil.ShouldRunIntegrationTests() {
 		t.Skip("Skipping integration test. Set ENV var RUN_EXCHANGE_INTEGRATION=true if you want to run them.")
 	}
@@ -52,121 +51,28 @@ func TestIngestStoreWorkItemState(t *testing.T) {
 		assert.Equal(t, constants.ActionDPN, workItemState.Action)
 		assert.False(t, workItemState.CreatedAt.IsZero())
 		assert.False(t, workItemState.UpdatedAt.IsZero())
-
 		detail := fmt.Sprintf("%s from Pharos", item.ObjectIdentifier)
-		testIngestStoreWorkItemState(t, _context, workItemState.State, detail)
+		testIngestRecordWorkItemState(t, _context, workItemState.State, detail)
 	}
-
 }
 
-// TestIngestStoreJsonLog checks that all expected entries are present
-// in the dpn_ingest_store.json log.
-func TestIngestStoreJsonLog(t *testing.T) {
+// TestIngestRecordJsonLog checks that all expected entries are present
+// in the dpn_ingest_record.json log.
+func TestIngestRecordJsonLog(t *testing.T) {
 	if !apt_testutil.ShouldRunIntegrationTests() {
 		t.Skip("Skipping integration test. Set ENV var RUN_EXCHANGE_INTEGRATION=true if you want to run them.")
 	}
 	_context, err := apt_testutil.GetContext("integration.json")
 	require.Nil(t, err)
-	pathToLogFile := filepath.Join(_context.Config.LogDirectory, "dpn_ingest_store.json")
+	pathToLogFile := filepath.Join(_context.Config.LogDirectory, "dpn_ingest_record.json")
 	for _, s3Key := range apt_testutil.INTEGRATION_GOOD_BAGS[0:7] {
 		parts := strings.Split(s3Key, "/")
 		tarFileName := parts[1]
 		manifest, err := apt_testutil.FindDPNIngestManifestInLog(pathToLogFile, tarFileName)
 		require.Nil(t, err)
 		require.NotNil(t, manifest)
-
 		detail := fmt.Sprintf("%s from JSON log", tarFileName)
-		testIngestStoreManifest(t, _context, manifest, detail)
-	}
-}
-
-// TestIngestStoreTarFilesDeleted tests whether all expected DPN bags
-// (tar files) have been deleted from the staging area.
-func TestIngestStoreTarFilesDeleted(t *testing.T) {
-	if !apt_testutil.ShouldRunIntegrationTests() {
-		t.Skip("Skipping integration test. Set ENV var RUN_EXCHANGE_INTEGRATION=true if you want to run them.")
-	}
-	_context, err := apt_testutil.GetContext("integration.json")
-	require.Nil(t, err)
-	pattern := filepath.Join(_context.Config.DPN.StagingDirectory, "test.edu", "*.tar")
-	files, err := filepath.Glob(pattern)
-	require.Nil(t, err)
-	assert.Equal(t, 0, len(files))
-}
-
-// TestIngestStoreItemsQueued checks to see if dpn_ingest_store pushed items
-// into the dpn_ingest_record NSQ topic.
-func TestIngestStoreItemsQueued(t *testing.T) {
-	if !apt_testutil.ShouldRunIntegrationTests() {
-		t.Skip("Skipping integration test. Set ENV var RUN_EXCHANGE_INTEGRATION=true if you want to run them.")
-	}
-	_context, err := apt_testutil.GetContext("integration.json")
-	require.Nil(t, err, "Could not create context")
-	stats, err := _context.NSQClient.GetStats()
-	require.Nil(t, err)
-	foundTopic := false
-	for _, topic := range stats.Data.Topics {
-		if topic.TopicName == _context.Config.DPN.DPNIngestRecordWorker.NsqTopic {
-			// All 7 stored bags should show up in the record queue
-			foundTopic = true
-			assert.EqualValues(t, uint64(7), topic.MessageCount)
-		}
-	}
-	assert.True(t, foundTopic, "Nothing was queued in %s",
-		_context.Config.DPN.DPNIngestRecordWorker.NsqTopic)
-}
-
-// TestIngestStoreItemsAreInStorage makes sure that the items we sent off
-// to long-term storage in AWS actually made it there.
-func TestIngestStoreItemsAreInStorage(t *testing.T) {
-	if !apt_testutil.ShouldRunIntegrationTests() {
-		t.Skip("Skipping integration test. Set ENV var RUN_EXCHANGE_INTEGRATION=true if you want to run them.")
-	}
-	_context, err := apt_testutil.GetContext("integration.json")
-	require.Nil(t, err, "Could not create context")
-	maxItemsToList := int64(1)
-	// s3List lists bucket contents.
-	s3List := network.NewS3ObjectList(
-		constants.AWSVirginia,
-		_context.Config.DPN.DPNPreservationBucket,
-		maxItemsToList)
-	// s3Head gets metadata about specific objects in S3/Glacier.
-	s3Head := network.NewS3Head(_context.Config.APTrustS3Region,
-		_context.Config.DPN.DPNPreservationBucket)
-
-	pathToLogFile := filepath.Join(_context.Config.LogDirectory, "dpn_ingest_store.json")
-	for _, s3Key := range apt_testutil.INTEGRATION_GOOD_BAGS[0:7] {
-		parts := strings.Split(s3Key, "/")
-		localTarFileName := parts[1] // APTrust bag name. E.g. "test.edu.test_123.tar"
-		manifest, err := apt_testutil.FindDPNIngestManifestInLog(pathToLogFile, localTarFileName)
-		require.Nil(t, err, "Could not find JSON record for %s", localTarFileName)
-		parts = strings.Split(manifest.StorageURL, "/")
-		dpnTarFileName := parts[len(parts)-1] // DPN bag name: <uuid>.tar
-		s3List.GetList(dpnTarFileName)
-		require.Empty(t, s3List.ErrorMessage)
-		require.EqualValues(t, 1, len(s3List.Response.Contents), "Nothing in S3 for %s", dpnTarFileName)
-		obj := s3List.Response.Contents[0]
-		assert.Equal(t, dpnTarFileName, *obj.Key)
-
-		// Make sure each item has the expected metadata.
-		// s3Head.Response.Metadata is map[string]*string.
-		s3Head.Head(dpnTarFileName)
-		require.Empty(t, s3Head.ErrorMessage)
-		metadata := s3Head.Response.Metadata
-		require.NotNil(t, metadata, dpnTarFileName)
-		// Notice the Amazon library transforms the first letter of
-		// all our keys to upper case. WTF?
-		require.NotNil(t, metadata["From_node"], dpnTarFileName)
-		require.NotNil(t, metadata["Transfer_id"], dpnTarFileName)
-		require.NotNil(t, metadata["Member"], dpnTarFileName)
-		require.NotNil(t, metadata["Local_id"], dpnTarFileName)
-		require.NotNil(t, metadata["Version"], dpnTarFileName)
-
-		assert.NotEmpty(t, *metadata["From_node"], dpnTarFileName)
-		assert.NotEmpty(t, *metadata["Transfer_id"], dpnTarFileName)
-		assert.NotEmpty(t, *metadata["Member"], dpnTarFileName)
-		assert.NotEmpty(t, *metadata["Local_id"], dpnTarFileName)
-		assert.NotEmpty(t, *metadata["Version"], dpnTarFileName)
+		testIngestRecordManifest(t, _context, manifest, detail)
 	}
 }
 
@@ -174,14 +80,14 @@ func TestIngestStoreItemsAreInStorage(t *testing.T) {
 // string of JSON data. Param detail describes which object we're
 // testing and where the JSON came from, so failure messages can be
 // more informative.
-func testIngestStoreWorkItemState(t *testing.T, _context *context.Context, workItemState, detail string) {
+func testIngestRecordWorkItemState(t *testing.T, _context *context.Context, workItemState, detail string) {
 	dpnIngestManifest := models.NewDPNIngestManifest(nil)
 	err := json.Unmarshal([]byte(workItemState), dpnIngestManifest)
 	require.Nil(t, err, "Could not unmarshal state")
-	testIngestStoreManifest(t, _context, dpnIngestManifest, detail)
+	testIngestRecordManifest(t, _context, dpnIngestManifest, detail)
 }
 
-func testIngestStoreManifest(t *testing.T, _context *context.Context, dpnIngestManifest *models.DPNIngestManifest, detail string) {
+func testIngestRecordManifest(t *testing.T, _context *context.Context, dpnIngestManifest *models.DPNIngestManifest, detail string) {
 	require.NotNil(t, dpnIngestManifest.PackageSummary, detail)
 	require.NotNil(t, dpnIngestManifest.ValidateSummary, detail)
 	require.NotNil(t, dpnIngestManifest.RecordSummary, detail)
@@ -197,6 +103,10 @@ func testIngestStoreManifest(t *testing.T, _context *context.Context, dpnIngestM
 	assert.False(t, dpnIngestManifest.StoreSummary.StartedAt.IsZero(), detail)
 	assert.False(t, dpnIngestManifest.StoreSummary.FinishedAt.IsZero(), detail)
 	assert.False(t, dpnIngestManifest.StoreSummary.HasErrors(), detail)
+
+	assert.False(t, dpnIngestManifest.RecordSummary.StartedAt.IsZero(), detail)
+	assert.False(t, dpnIngestManifest.RecordSummary.FinishedAt.IsZero(), detail)
+	assert.False(t, dpnIngestManifest.RecordSummary.HasErrors(), detail)
 
 	assert.NotNil(t, dpnIngestManifest.WorkItem, detail)
 	require.NotNil(t, dpnIngestManifest.DPNBag, detail)

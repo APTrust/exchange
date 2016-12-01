@@ -139,9 +139,13 @@ func (recorder *DPNIngestRecorder) saveDPNBagRecord(manifest *models.DPNIngestMa
 			manifest.RecordSummary.AddError("After creating bag %s in local DPN Node, "+
 				"server returned no ReplicationTransfer object. Server response: %s",
 				manifest.DPNBag.UUID, string(data))
-		} else {
-			manifest.DPNBag = resp.Bag()
 		}
+		// For other objects, we may set <object> = resp.<object>()
+		// However, the DPN server does not return the bag's message digests,
+		// which are currently attached to manifest.DPNBag, so we'll keep the
+		// bag we have in manifest.DPNBag. DPN server doesn't change anything
+		// else on the DPNBag object when we save it, so our copy will be
+		// in line with what's on the server.
 	} else {
 		recorder.Context.MessageLog.Info("DPN Bag %s is already in the registry",
 			manifest.DPNBag.UUID)
