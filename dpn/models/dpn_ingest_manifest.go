@@ -134,15 +134,16 @@ func (manifest *DPNIngestManifest) BuildDPNIngestEvent() (*apt_models.PremisEven
 		return nil, fmt.Errorf("Can't build DPNIdentifierEvent: DPNBag is nil")
 	}
 	return &apt_models.PremisEvent{
-		Identifier:         uuid.NewV4().String(),
-		EventType:          constants.EventIngestion,
-		DateTime:           time.Now().UTC(),
-		Detail:             "Item ingested into DPN",
-		Outcome:            string(constants.StatusSuccess),
-		OutcomeDetail:      manifest.StorageURL,
-		Object:             "APTrust exchange",
-		Agent:              "https://github.com/APTrust/exchange",
-		OutcomeInformation: fmt.Sprintf("Item stored in DPN at %s", manifest.StorageURL),
+		Identifier:                   uuid.NewV4().String(),
+		EventType:                    constants.EventIngestion,
+		DateTime:                     time.Now().UTC(),
+		Detail:                       "Item ingested into DPN",
+		Outcome:                      string(constants.StatusSuccess),
+		OutcomeDetail:                manifest.StorageURL,
+		Object:                       "APTrust exchange",
+		Agent:                        "https://github.com/APTrust/exchange",
+		OutcomeInformation:           fmt.Sprintf("Item stored in DPN at %s", manifest.StorageURL),
+		IntellectualObjectIdentifier: manifest.DPNBag.LocalId,
 	}, nil
 }
 
@@ -154,14 +155,15 @@ func (manifest *DPNIngestManifest) BuildDPNIdentifierEvent() (*apt_models.Premis
 		return nil, fmt.Errorf("Can't build DPNIngestEvent: DPNBag is nil")
 	}
 	return &apt_models.PremisEvent{
-		Identifier:         uuid.NewV4().String(),
-		EventType:          constants.EventIdentifierAssignment,
-		DateTime:           time.Now().UTC(),
-		Detail:             "Item assigned DPN UUID",
-		Outcome:            string(constants.StatusSuccess),
-		OutcomeDetail:      manifest.DPNBag.UUID,
-		Object:             "APTrust exchange using Satori go.uuid",
-		Agent:              "https://github.com/satori/go.uuid",
-		OutcomeInformation: fmt.Sprintf("Item assigned DPN UUID %s", manifest.DPNBag.UUID),
+		Identifier:                   uuid.NewV4().String(),
+		EventType:                    constants.EventIdentifierAssignment,
+		DateTime:                     time.Now().UTC(),
+		Detail:                       "Item assigned DPN UUID",
+		Outcome:                      string(constants.StatusSuccess),
+		OutcomeDetail:                manifest.DPNBag.UUID,
+		Object:                       "APTrust exchange using Satori go.uuid",
+		Agent:                        "https://github.com/satori/go.uuid",
+		OutcomeInformation:           fmt.Sprintf("Item assigned DPN UUID %s", manifest.DPNBag.UUID),
+		IntellectualObjectIdentifier: manifest.DPNBag.LocalId,
 	}, nil
 }

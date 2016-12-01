@@ -76,6 +76,7 @@ func TestManifestBuildDPNIngestEvent(t *testing.T) {
 	assert.Equal(t, "APTrust exchange", event.Object)
 	assert.Equal(t, "https://github.com/APTrust/exchange", event.Agent)
 	assert.True(t, strings.Contains(event.OutcomeInformation, manifest.StorageURL))
+	assert.Equal(t, manifest.DPNBag.LocalId, event.IntellectualObjectIdentifier)
 }
 
 func TestManifestBuildDPNIdentifierEvent(t *testing.T) {
@@ -101,5 +102,5 @@ func TestManifestBuildDPNIdentifierEvent(t *testing.T) {
 	assert.Equal(t, "APTrust exchange using Satori go.uuid", event.Object)
 	assert.Equal(t, "https://github.com/satori/go.uuid", event.Agent)
 	assert.True(t, strings.Contains(event.OutcomeInformation, manifest.DPNBag.UUID))
-
+	assert.Equal(t, manifest.DPNBag.LocalId, event.IntellectualObjectIdentifier)
 }
