@@ -6,8 +6,7 @@ import (
 	"github.com/APTrust/exchange/context"
 	"github.com/APTrust/exchange/dpn/models"
 	"github.com/APTrust/exchange/dpn/network"
-	//	apt_network "github.com/APTrust/exchange/network"
-	//	"github.com/APTrust/exchange/util/fileutil"
+	apt_models "github.com/APTrust/exchange/models"
 	"github.com/nsqio/go-nsq"
 	"os"
 	"time"
@@ -88,19 +87,25 @@ func (recorder *DPNIngestRecorder) HandleMessage(message *nsq.Message) error {
 	return nil
 }
 
+// record saves all necessary info about this ingest to Pharos and to
+// our local DPN REST server.
 func (recorder *DPNIngestRecorder) record() {
 	for manifest := range recorder.RecordChannel {
 		manifest.NsqMessage.Touch()
-
-		// Create bag record in DPN
-		// Create replication requests in DPN
-		// Create DPN replication event in APTrust
-
+		recorder.saveDPNBagRecord(manifest)
+		if !manifest.RecordSummary.HasErrors() {
+			recorder.saveDPNReplicationRequests(manifest)
+		}
+		if !manifest.RecordSummary.HasErrors() {
+			recorder.saveDPNPremisEvents(manifest)
+		}
 		manifest.NsqMessage.Touch()
 		recorder.PostProcessChannel <- manifest
 	}
 }
 
+// postProcess records the outcome of this attempt to record info,
+// and finishes or requeues the NSQ message.
 func (recorder *DPNIngestRecorder) postProcess() {
 	for manifest := range recorder.PostProcessChannel {
 		if manifest.RecordSummary.HasErrors() {
@@ -111,8 +116,10 @@ func (recorder *DPNIngestRecorder) postProcess() {
 	}
 }
 
+// saveDPNBagRecord saves the new DPN bag to our local DPN REST server.
 func (recorder *DPNIngestRecorder) saveDPNBagRecord(manifest *models.DPNIngestManifest) {
-	// Save the DPNBag record to our local DPN REST server
+	recorder.Context.MessageLog.Info("Saving DPN bag %s (%s)",
+		manifest.DPNBag.UUID, manifest.WorkItem.ObjectIdentifier)
 	resp := recorder.LocalClient.DPNBagGet(manifest.DPNBag.UUID)
 	if resp.Error != nil {
 		manifest.RecordSummary.AddError("Error checking local DPN node for bag %s: %v",
@@ -141,6 +148,13 @@ func (recorder *DPNIngestRecorder) saveDPNBagRecord(manifest *models.DPNIngestMa
 	}
 }
 
+// getLocalNode returns the full Node record for our local node. We need
+// this in order to get a list of which remote nodes we can replicate to.
+// Fetching the local node record for each new ingest may seem redundant,
+// since we could just fetch the node record once and then cache it.
+// However, we occasionally manually add or remove nodes from the ReplicateTo
+// list, and fetching the node record for each ingest guarantees that our
+// service will pick up those changes immediately.
 func (recorder *DPNIngestRecorder) getLocalNode(manifest *models.DPNIngestManifest) *models.Node {
 	resp := recorder.LocalClient.NodeGet(recorder.Context.Config.DPN.LocalNode)
 	if resp.Error != nil {
@@ -153,6 +167,8 @@ func (recorder *DPNIngestRecorder) getLocalNode(manifest *models.DPNIngestManife
 	return resp.Node()
 }
 
+// chooseReplicationNodes randomly chooses which remote DPN nodes we will
+// ask to replicate our new DPN bag.
 func (recorder *DPNIngestRecorder) chooseReplicationNodes(manifest *models.DPNIngestManifest, localNode *models.Node) []string {
 	howMany := recorder.Context.Config.DPN.ReplicateToNumNodes
 	replicateToNodes, err := localNode.ChooseNodesForReplication(howMany)
@@ -163,6 +179,10 @@ func (recorder *DPNIngestRecorder) chooseReplicationNodes(manifest *models.DPNIn
 	return replicateToNodes
 }
 
+// buildTransferRequests builds the DPN ReplicationTransfer requests
+// that we need to create with the new DPN bag. The ReplicationTransfers
+// will be attached to the DPNIngestManifest and saved in our local DPN
+// REST server, after we save the DPN bag.
 func (recorder *DPNIngestRecorder) buildTransferRequests(manifest *models.DPNIngestManifest) {
 	localNode := recorder.getLocalNode(manifest)
 	if manifest.RecordSummary.HasErrors() {
@@ -191,21 +211,91 @@ func (recorder *DPNIngestRecorder) buildTransferRequests(manifest *models.DPNIng
 	}
 }
 
+// saveReplicationRequests saves the ReplicationTransfer requests associated
+// with our new DPN bag. As of late 2016, we create two replication requests
+// for each bag, so the bag is replicated to two remote nodes.
 func (recorder *DPNIngestRecorder) saveDPNReplicationRequests(manifest *models.DPNIngestManifest) {
 	if len(manifest.ReplicationTransfers) == 0 {
 		recorder.buildTransferRequests(manifest)
 	}
-	// -------- START HERE ------------
-	// For each replication request
-	//   Check if it exists in Pharos
-	//   If not, create it
+	for _, xfer := range manifest.ReplicationTransfers {
+		recorder.Context.MessageLog.Info("Saving ReplicationTransfer %s with ToNode % for bag %s (%s)",
+			xfer.ReplicationId, xfer.ToNode, manifest.DPNBag.UUID,
+			manifest.WorkItem.ObjectIdentifier)
+		resp := recorder.LocalClient.ReplicationTransferGet(xfer.ReplicationId)
+		if resp.Error != nil {
+			data, _ := resp.RawResponseData()
+			manifest.RecordSummary.AddError("When checking for existence of replication %s, "+
+				"Local DPN server returned error: %v Server response: %s",
+				xfer.ReplicationId, resp.Error, string(data))
+			return
+		}
+		// Save this transfer request only if it was not saved before.
+		// There's no need to update it if it already exists, because
+		// it will not have changed.
+		if resp.ReplicationTransfer() == nil {
+			saveResp := recorder.LocalClient.ReplicationTransferCreate(xfer)
+			if saveResp.Error != nil {
+				data, _ := resp.RawResponseData()
+				manifest.RecordSummary.AddError("When saving new replication %s, "+
+					"Local DPN server returned error: %v Server response: %s",
+					xfer.ReplicationId, resp.Error, string(data))
+				return
+			} else {
+				xfer = saveResp.ReplicationTransfer()
+			}
+		} else {
+			recorder.Context.MessageLog.Info("Replication %s for bag %s already exists "+
+				"on our DPN server. Not saving.", xfer.ReplicationId, xfer.Bag)
+		}
+	}
 }
 
-func (recorder *DPNIngestRecorder) saveDPNIngestEvents(manifest *models.DPNIngestManifest) {
+// addEventsToManifest adds PremisEvents to the ingest manifest, if they
+// don't already exist.
+func (recorder *DPNIngestRecorder) addEventsToManifest(manifest *models.DPNIngestManifest) {
+	if manifest.DPNIdentifierEvent == nil {
+		event, err := manifest.BuildDPNIdentifierEvent()
+		if err != nil {
+			manifest.RecordSummary.AddError(err.Error())
+		}
+		manifest.DPNIdentifierEvent = event
+	}
+	if manifest.DPNIngestEvent == nil {
+		event, err := manifest.BuildDPNIngestEvent()
+		if err != nil {
+			manifest.RecordSummary.AddError(err.Error())
+		}
+		manifest.DPNIngestEvent = event
+	}
+}
+
+// saveDPNPremisEvents saves PremisEvents in Pharos saying that the original
+// APTrust bag was 1) assigned a DPN identifier, and 2) ingested into DPN.
+func (recorder *DPNIngestRecorder) saveDPNPremisEvents(manifest *models.DPNIngestManifest) {
 	// If DPN ingest events don't already exist on the manifest, create them
 	// For each ingest event:
 	//   Check if event already exists in Pharos
 	//   If not, create it
+	recorder.addEventsToManifest(manifest)
+	if manifest.RecordSummary.HasErrors() {
+		return
+	}
+	recorder.saveEvent(manifest, manifest.DPNIdentifierEvent)
+	recorder.saveEvent(manifest, manifest.DPNIngestEvent)
+}
+
+// saveEvent saves a single PremisEvent to Pharos.
+func (recorder *DPNIngestRecorder) saveEvent(manifest *models.DPNIngestManifest, event *apt_models.PremisEvent) {
+	recorder.Context.MessageLog.Info("Saving event %s DPN bag %s (%s)",
+		event.EventType, manifest.DPNBag.UUID, manifest.WorkItem.ObjectIdentifier)
+	resp := recorder.Context.PharosClient.PremisEventSave(event)
+	if resp.Error != nil {
+		data, _ := resp.RawResponseData()
+		manifest.RecordSummary.AddError("Error saving PremisEvent %s (%s): %v Server response: %s",
+			event.Identifier, event.EventType, resp.Error, string(data))
+	}
+	event = resp.PremisEvent()
 }
 
 func (recorder *DPNIngestRecorder) finishWithError(manifest *models.DPNIngestManifest) {

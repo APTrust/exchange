@@ -408,7 +408,7 @@ func (client *DPNRestClient) dpnBagSave(bag *models.DPNBag, httpMethod string) *
 }
 
 // ReplicationTransferGet returns the ReplicationTransfer with the
-// specified id, if it exists.
+// specified ReplicationId, if it exists. The ReplicationId is a UUID string.
 func (client *DPNRestClient) ReplicationTransferGet(identifier string) *DPNResponse {
 	resp := NewDPNResponse(dpn.DPNTypeReplication)
 	resp.replications = make([]*models.ReplicationTransfer, 1)
