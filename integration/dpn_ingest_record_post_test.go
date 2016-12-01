@@ -108,6 +108,9 @@ func testIngestRecordManifest(t *testing.T, _context *context.Context, dpnIngest
 	assert.False(t, dpnIngestManifest.RecordSummary.FinishedAt.IsZero(), detail)
 	assert.False(t, dpnIngestManifest.RecordSummary.HasErrors(), detail)
 
+	// The items below were covered in prior post-tests, but we want to make
+	// sure no data is wiped out by dpn_ingest_record.
+
 	assert.NotNil(t, dpnIngestManifest.WorkItem, detail)
 	require.NotNil(t, dpnIngestManifest.DPNBag, detail)
 	assert.NotEmpty(t, dpnIngestManifest.DPNBag.UUID, detail)
