@@ -175,11 +175,6 @@ func (storer *DPNIngestStorer) finishWithError(manifest *models.DPNIngestManifes
 		manifest.StoreSummary.AllErrorsAsString())
 	storer.Context.MessageLog.Warning("Tar file %s is still in staging!",
 		manifest.LocalTarFile)
-
-	// Dump the JSON info about this validation attempt,
-	// and tell NSQ we're done.
-	LogIngestJson(manifest, storer.Context.JsonLog)
-
 	if manifest.StoreSummary.ErrorIsFatal {
 		manifest.NsqMessage.Finish()
 	} else {
@@ -221,6 +216,6 @@ func (storer *DPNIngestStorer) finishWithSuccess(manifest *models.DPNIngestManif
 		}
 	}
 
-	// Tell NSQ we're done packaging this.
+	// Tell NSQ we're done storing this.
 	manifest.NsqMessage.Finish()
 }

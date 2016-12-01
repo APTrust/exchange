@@ -298,19 +298,52 @@ func (recorder *DPNIngestRecorder) saveEvent(manifest *models.DPNIngestManifest,
 	event = resp.PremisEvent()
 }
 
+// finishWithError logs JSON data and tells Pharos and NSQ about this
+// failed attempt to record ingest data. The WorkItem will be requeued
+// if the errors are not fatal and we have not exceeded the maximum number
+// of attempts.
 func (recorder *DPNIngestRecorder) finishWithError(manifest *models.DPNIngestManifest) {
-	// If fatal error or exceeded max attempts
-	//    set failed, set note & retry false
-	//    finish NSQ message
-	// If non-fatal error and not max attempts
-	//    set note
-	//    requeue NSQ message
-	// Save WorkItem
-	// Save WorkItemState
+	note := "Could not record all necessary info in DPN and/or Pharos."
+	maxAttempts := recorder.Context.Config.DPN.DPNIngestRecordWorker.MaxAttempts
+	if manifest.RecordSummary.AttemptNumber > maxAttempts {
+		note = fmt.Sprintf("Failed after %d attempts. Last error: %s",
+			maxAttempts,
+			manifest.RecordSummary.Errors[0])
+		manifest.RecordSummary.ErrorIsFatal = true
+		manifest.RecordSummary.Retry = false
+		manifest.WorkItem.Status = constants.StatusFailed
+	}
+	manifest.RecordSummary.Finish()
+	manifest.WorkItem.Note = note
+	manifest.WorkItem.Node = ""
+	manifest.WorkItem.Pid = 0
+	SaveWorkItem(recorder.Context, manifest, manifest.RecordSummary)
+	SaveWorkItemState(recorder.Context, manifest, manifest.RecordSummary)
+	recorder.Context.MessageLog.Error("Failed to record %s (%s): %s",
+		manifest.DPNBag.UUID,
+		manifest.DPNBag.LocalId,
+		manifest.RecordSummary.AllErrorsAsString())
+	if manifest.RecordSummary.ErrorIsFatal {
+		manifest.NsqMessage.Finish()
+	} else {
+		manifest.NsqMessage.Requeue(1 * time.Minute)
+	}
 }
 
+// finishWithSuccess tells Pharos and NSQ that this item has successfully
+// completed the DPN ingest process.
 func (recorder *DPNIngestRecorder) finishWithSuccess(manifest *models.DPNIngestManifest) {
-	// Save WorkItem
-	// Save WorkItemState
-	// Finish NSQ message
+	recorder.Context.MessageLog.Info("Ingest complete for bag %s (%s)",
+		manifest.DPNBag.UUID,
+		manifest.DPNBag.LocalId)
+	manifest.WorkItem.Note = "DPN ingest complete"
+	manifest.WorkItem.Stage = constants.StageResolve
+	manifest.WorkItem.StageStartedAt = nil
+	manifest.WorkItem.Status = constants.StatusSuccess
+	manifest.WorkItem.Node = ""
+	manifest.WorkItem.Pid = 0
+	SaveWorkItem(recorder.Context, manifest, manifest.RecordSummary)
+	manifest.RecordSummary.Finish()
+	SaveWorkItemState(recorder.Context, manifest, manifest.RecordSummary)
+	manifest.NsqMessage.Finish()
 }
