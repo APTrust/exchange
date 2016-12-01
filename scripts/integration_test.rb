@@ -382,6 +382,31 @@ class IntegrationTest
     end
   end
 
+  # dpn_ingest_record is the last step of the DPN ingest process. It
+  # records info about the newly ingested bag in Pharos and the local
+  # DPN REST server.
+  def dpn_ingest_record(more_tests_follow)
+	run_suite(more_tests_follow) do
+	  # Build
+	  @build.build(@context.apps['dpn_ingest_record'])
+
+	  # Run prerequisites
+	  package_ok = dpn_ingest_store(true)
+	  if !package_ok
+		puts "Skipping dpn_ingest_record test because of prior failures."
+		print_results
+		return false
+	  end
+
+	  # Start service
+	  @service.app_start(@context.apps['dpn_ingest_record'])
+	  sleep 50
+
+	  # Run the post test
+	  # @results['dpn_ingest_record_test'] = run('dpn_ingest_record_post_test.go')
+    end
+  end
+
   # Runs all the APTrust and DPN unit tests. Does not run any tests that
   # rely on external services. Returns true/false to indicate whether all
   # tests passed.
