@@ -219,7 +219,7 @@ func (recorder *DPNIngestRecorder) saveDPNReplicationRequests(manifest *models.D
 		recorder.buildTransferRequests(manifest)
 	}
 	for _, xfer := range manifest.ReplicationTransfers {
-		recorder.Context.MessageLog.Info("Saving ReplicationTransfer %s with ToNode % for bag %s (%s)",
+		recorder.Context.MessageLog.Info("Saving ReplicationTransfer %s with ToNode %s for bag %s (%s)",
 			xfer.ReplicationId, xfer.ToNode, manifest.DPNBag.UUID,
 			manifest.WorkItem.ObjectIdentifier)
 		resp := recorder.LocalClient.ReplicationTransferGet(xfer.ReplicationId)
@@ -333,9 +333,6 @@ func (recorder *DPNIngestRecorder) finishWithError(manifest *models.DPNIngestMan
 // finishWithSuccess tells Pharos and NSQ that this item has successfully
 // completed the DPN ingest process.
 func (recorder *DPNIngestRecorder) finishWithSuccess(manifest *models.DPNIngestManifest) {
-	recorder.Context.MessageLog.Info("Ingest complete for bag %s (%s)",
-		manifest.DPNBag.UUID,
-		manifest.DPNBag.LocalId)
 	manifest.WorkItem.Note = "DPN ingest complete"
 	manifest.WorkItem.Stage = constants.StageResolve
 	manifest.WorkItem.StageStartedAt = nil
@@ -346,4 +343,7 @@ func (recorder *DPNIngestRecorder) finishWithSuccess(manifest *models.DPNIngestM
 	manifest.RecordSummary.Finish()
 	SaveWorkItemState(recorder.Context, manifest, manifest.RecordSummary)
 	manifest.NsqMessage.Finish()
+	recorder.Context.MessageLog.Info("Ingest complete for bag %s (%s)",
+		manifest.DPNBag.UUID,
+		manifest.DPNBag.LocalId)
 }

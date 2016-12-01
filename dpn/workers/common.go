@@ -187,8 +187,12 @@ func SaveWorkItemState(_context *context.Context, manifest *models.DPNIngestMani
 	// Serialize the IngestManifest to JSON, and stuff it into the
 	// WorkItemState.State. Subsequent workers need this info to
 	// store the object's files in S3 and Glacier, and to record
-	// results in Pharos.
+	// results in Pharos. Don't serialize WorkItemState.State, because
+	// that duplicates info already in the serialized manifest.
+	currentState := manifest.WorkItemState.State
+	manifest.WorkItemState.State = ""
 	data, err := json.Marshal(manifest)
+	manifest.WorkItemState.State = currentState
 	if err != nil {
 		// If we couldn't serialize the IngestManifest, subsequent workers
 		// won't have the info they need to process this bag. We'll have to
