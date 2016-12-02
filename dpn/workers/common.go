@@ -400,7 +400,7 @@ func LogReplicationJson(manifest *models.ReplicationManifest, jsonLog *log.Logge
 	}
 	jsonLog.Println(startMessage, "\n",
 		state, "\n",
-		endMessage, "\n")
+		endMessage)
 }
 
 // LogIntestJson dumps the WorkItemState.State into the JSON log, surrounded
@@ -417,7 +417,7 @@ func LogIngestJson(manifest *models.DPNIngestManifest, jsonLog *log.Logger) {
 	}
 	jsonLog.Println(startMessage, "\n",
 		state, "\n",
-		endMessage, "\n")
+		endMessage)
 }
 
 // SaveDPNWorkItemState saves the manifest.DPNWorkItem to Pharos,

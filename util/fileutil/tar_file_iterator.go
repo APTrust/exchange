@@ -84,7 +84,6 @@ func (iter *TarFileIterator) Find(originalPathWithBagName string) (io.ReadCloser
 			return tarReadCloser, nil
 		}
 	}
-	return nil, fmt.Errorf("File '%s' not found in archive", originalPathWithBagName)
 }
 
 // Keep track of any top-level directory names we encounter.

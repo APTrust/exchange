@@ -260,7 +260,7 @@ func LoadConfigFile(pathToConfigFile string) (*Config, error) {
 	config := &Config{}
 	err = json.Unmarshal(file, config)
 	if err != nil {
-		detailedError := fmt.Errorf("Error parsing JSON from config file '%s':",
+		detailedError := fmt.Errorf("Error parsing JSON from config file '%s': %v",
 			pathToConfigFile, err)
 		return nil, detailedError
 	}

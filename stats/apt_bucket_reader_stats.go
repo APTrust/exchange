@@ -57,7 +57,7 @@ func APTBucketReaderStatsLoadFromFile(pathToFile string) (*APTBucketReaderStats,
 	_stats := &APTBucketReaderStats{}
 	err = json.Unmarshal(file, _stats)
 	if err != nil {
-		detailedError := fmt.Errorf("Error parsing JSON from file '%s':",
+		detailedError := fmt.Errorf("Error parsing JSON from file '%s': %v",
 			pathToFile, err)
 		return nil, detailedError
 	}

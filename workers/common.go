@@ -131,7 +131,7 @@ func GetWorkItemState(workItem *models.WorkItem, _context *context.Context, init
 		}
 	} else if resp.Error != nil {
 		// We got some other 4xx/5xx error from the Pharos REST service.
-		return nil, fmt.Errorf("Error getting WorkItemState for WorkItem %d from Pharos: %v", resp.Error)
+		return nil, fmt.Errorf("Error getting WorkItemState for WorkItem %d from Pharos: %v", workItem.Id, resp.Error)
 	} else {
 		// We didn't get a 404 or any other error. The WorkItemState should be in
 		// the response.
@@ -358,7 +358,7 @@ func LogJson(ingestState *models.IngestState, jsonLog *log.Logger) {
 		timestamp)
 	jsonLog.Println(startMessage, "\n",
 		ingestState.WorkItemState.State, "\n",
-		endMessage, "\n")
+		endMessage)
 }
 
 // Deletes the bag from the staging area, and releases the reserved
