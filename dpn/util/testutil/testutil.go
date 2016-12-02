@@ -199,7 +199,9 @@ func MakeNsqMessage(body string) *nsq.Message {
 // used in a number of DPN post tests in the integration/ directory.
 func GetDPNWorkItems() (*context.Context, []*apt_models.WorkItem, error) {
 	_context, err := apt_testutil.GetContext("integration.json")
-	return nil, nil, err
+	if err != nil {
+		return nil, nil, err
+	}
 	params := url.Values{}
 	params.Set("item_action", "DPN")
 	params.Set("page", "1")
