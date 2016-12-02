@@ -23,8 +23,8 @@ type PharosClient struct {
 	transport  *http.Transport
 }
 
-// Creates a new pharos client. Param hostUrl should come from
-// the config.json file.
+// NewPharosClient creates a new pharos client. Param hostUrl should
+// come from the config.json file.
 func NewPharosClient(hostUrl, apiVersion, apiUser, apiKey string) (*PharosClient, error) {
 	// see security warning on nil PublicSuffixList here:
 	// http://gotour.golang.org/src/pkg/net/http/cookiejar/jar.go?s=1011:1492#L24
@@ -46,7 +46,7 @@ func NewPharosClient(hostUrl, apiVersion, apiUser, apiKey string) (*PharosClient
 		transport:  transport}, nil
 }
 
-// Returns the institution with the specified identifier.
+// InstitutionGet returns the institution with the specified identifier.
 func (client *PharosClient) InstitutionGet(identifier string) *PharosResponse {
 	// Set up the response object
 	resp := NewPharosResponse(PharosInstitution)
@@ -71,7 +71,7 @@ func (client *PharosClient) InstitutionGet(identifier string) *PharosResponse {
 	return resp
 }
 
-// Returns a list of APTrust depositor institutions.
+// InstitutionList returns a list of APTrust depositor institutions.
 func (client *PharosClient) InstitutionList(params url.Values) *PharosResponse {
 	// Set up the response object
 	resp := NewPharosResponse(PharosInstitution)
@@ -93,8 +93,8 @@ func (client *PharosClient) InstitutionList(params url.Values) *PharosResponse {
 	return resp
 }
 
-// Returns the object with the specified identifier, if it
-// exists. Param identifier is an IntellectualObject identifier
+// IntellectualObjectGet returns the object with the specified identifier,
+// if it exists. Param identifier is an IntellectualObject identifier
 // in the format "institution.edu/object_name". If param
 // includeFiles is true, Pharos will return an IntellectualObject
 // with all of its GenericFiles and their checksums. If param
@@ -133,8 +133,8 @@ func (client *PharosClient) IntellectualObjectGet(identifier string, includeFile
 	return resp
 }
 
-// Returns a list of IntellectualObjects matching the filter criteria
-// specified in params. Params include:
+// IntellectualObjectList returns a list of IntellectualObjects matching
+// the filter criteria specified in params. Params include:
 //
 // * institution - Return objects belonging to this institution.
 // * updated_since - Return object updated since this date.
@@ -162,11 +162,11 @@ func (client *PharosClient) IntellectualObjectList(params url.Values) *PharosRes
 	return resp
 }
 
-// Saves the intellectual object to Pharos. If the object has an ID of zero,
-// this performs a POST to create a new Intellectual Object. If the ID is
-// non-zero, this updates the existing object with a PUT. The response object
-// will contain a new copy of the IntellectualObject if it was successfully
-// saved.
+// IntellectualObjectSave saves the intellectual object to Pharos. If the
+// object has an ID of zero, this performs a POST to create a new
+// Intellectual Object. If the ID is non-zero, this updates the existing
+// object with a PUT. The response object will contain a new copy of the
+// IntellectualObject if it was successfully saved.
 func (client *PharosClient) IntellectualObjectSave(obj *models.IntellectualObject) *PharosResponse {
 	// Set up the response object
 	resp := NewPharosResponse(PharosIntellectualObject)
@@ -233,8 +233,9 @@ func (client *PharosClient) IntellectualObjectPushToDPN(identifier string) *Phar
 	return resp
 }
 
-// Returns the GenericFile having the specified identifier. The identifier
-// should be in the format "institution.edu/object_name/path/to/file.ext"
+// GenericFileGet returns the GenericFile having the specified identifier.
+// The identifier should be in the format
+// "institution.edu/object_name/path/to/file.ext"
 func (client *PharosClient) GenericFileGet(identifier string) *PharosResponse {
 	// Set up the response object
 	resp := NewPharosResponse(PharosGenericFile)
@@ -259,7 +260,7 @@ func (client *PharosClient) GenericFileGet(identifier string) *PharosResponse {
 	return resp
 }
 
-// Returns a list of Generic Files. Params include:
+// GenericFileList returns a list of Generic Files. Params include:
 //
 // * intellectual_object_identifier - The identifier of the object to which
 //   the files belong.
@@ -284,11 +285,11 @@ func (client *PharosClient) GenericFileList(params url.Values) *PharosResponse {
 	return resp
 }
 
-// Saves a Generic File record to Pharos. If the Generic File's ID is zero,
-// this performs a POST to create a new record. For non-zero IDs, this
-// performs a PUT to update the existing record. Either way, the record
-// must have an IntellectualObject ID. The response object will have a new
-// copy of the GenericFile if the save was successful.
+// GenericFileSave saves a Generic File record to Pharos. If the Generic
+// File's ID is zero, this performs a POST to create a new record.
+// For non-zero IDs, this performs a PUT to update the existing record.
+// Either way, the record must have an IntellectualObject ID. The response
+// object will have a new copy of the GenericFile if the save was successful.
 func (client *PharosClient) GenericFileSave(obj *models.GenericFile) *PharosResponse {
 	// Set up the response object
 	resp := NewPharosResponse(PharosGenericFile)
@@ -325,7 +326,7 @@ func (client *PharosClient) GenericFileSave(obj *models.GenericFile) *PharosResp
 	return resp
 }
 
-// Saves a batch of Generic File records to Pharos.
+// GenericFileSaveBatch saves a batch of Generic File records to Pharos.
 // This performs a POST to create a new records, so all of the GenericFiles
 // passed in param objList should have Ids of zero. Each record
 // must also have an IntellectualObject ID. The response object will
@@ -382,7 +383,7 @@ func (client *PharosClient) GenericFileSaveBatch(objList []*models.GenericFile) 
 	return resp
 }
 
-// Returns the checksum with the specified id
+// ChecksumGet returns the checksum with the specified id
 func (client *PharosClient) ChecksumGet(id int) *PharosResponse {
 	// Set up the response object
 	resp := NewPharosResponse(PharosChecksum)
@@ -407,7 +408,7 @@ func (client *PharosClient) ChecksumGet(id int) *PharosResponse {
 	return resp
 }
 
-// Returns a list of checksums. Params include:
+// ChecksumList returns a list of checksums. Params include:
 //
 // * generic_file_identifier - The identifier of the file to which
 //   the checksum belongs.
@@ -433,9 +434,9 @@ func (client *PharosClient) ChecksumList(params url.Values) *PharosResponse {
 	return resp
 }
 
-// Saves a Checksum to Pharos. The checksum Id should be zero, since
-// we can create but not update Checksums. Param gfIdentifier is
-// the identifier of the GenericFile to which the checksum belongs.
+// ChecksumSave saves a Checksum to Pharos. The checksum Id should be
+// zero, since we can create but not update Checksums. Param gfIdentifier
+// is the identifier of the GenericFile to which the checksum belongs.
 // The response object will have a new copy of the Checksum if the
 // save was successful.
 func (client *PharosClient) ChecksumSave(obj *models.Checksum, gfIdentifier string) *PharosResponse {
@@ -470,8 +471,8 @@ func (client *PharosClient) ChecksumSave(obj *models.Checksum, gfIdentifier stri
 	return resp
 }
 
-// Returns the PREMIS event with the specified identifier. The identifier
-// should be a UUID in string format, with dashes. E.g.
+// PremisEventGet returns the PREMIS event with the specified identifier.
+// The identifier should be a UUID in string format, with dashes. E.g.
 // "49a7d6b5-cdc1-4912-812e-885c08e90c68"
 func (client *PharosClient) PremisEventGet(identifier string) *PharosResponse {
 	// Set up the response object
@@ -497,8 +498,8 @@ func (client *PharosClient) PremisEventGet(identifier string) *PharosResponse {
 	return resp
 }
 
-// Returns a list of PREMIS events matching the specified criteria.
-// Parameters include:
+// PremisEventList returns a list of PREMIS events matching the specified
+// criteria. Parameters include:
 //
 // * intellectual_object_identifier - (string) Return events associated with
 //   the specified intellectual object (but not its generic files).
@@ -529,10 +530,10 @@ func (client *PharosClient) PremisEventList(params url.Values) *PharosResponse {
 	return resp
 }
 
-// Saves a PREMIS event to Pharos. If the event ID is zero, this issues a
-// POST request to create a new event record. If the ID is non-zero, this
-// issues a PUT to update the existing event. The response object will
-// have a new copy of the Premis event if the save was successful.
+// PremisEventSave saves a PREMIS event to Pharos. If the event ID is zero,
+// this issues a POST request to create a new event record. If the ID is
+// non-zero, this issues a PUT to update the existing event. The response
+// object will have a new copy of the Premis event if the save was successful.
 func (client *PharosClient) PremisEventSave(obj *models.PremisEvent) *PharosResponse {
 	// Set up the response object
 	resp := NewPharosResponse(PharosPremisEvent)
@@ -570,8 +571,8 @@ func (client *PharosClient) PremisEventSave(obj *models.PremisEvent) *PharosResp
 	return resp
 }
 
-// Lists the work items meeting the specified filters, or all work
-// items if no filter params are set. Params include:
+// WorkItemList lists the work items meeting the specified filters, or
+// all work items if no filter params are set. Params include:
 //
 // created_before - DateTime in RFC3339 format
 // created_after - DateTime in RFC3339 format
@@ -612,8 +613,8 @@ func (client *PharosClient) WorkItemList(params url.Values) *PharosResponse {
 	return resp
 }
 
-// Saves a WorkItem record to Pharos. If the WorkItems's ID is zero,
-// this performs a POST to create a new record. For non-zero IDs, this
+// WorkItemSave saves a WorkItem record to Pharos. If the WorkItems's ID
+// is zero, this performs a POST to create a new record. For non-zero IDs, this
 // performs a PUT to update the existing record. The response object
 // will include a new copy of the WorkItem if it was saved successfully.
 func (client *PharosClient) WorkItemSave(obj *models.WorkItem) *PharosResponse {
@@ -652,7 +653,7 @@ func (client *PharosClient) WorkItemSave(obj *models.WorkItem) *PharosResponse {
 	return resp
 }
 
-// Returns the WorkItem with the specified ID.
+// WorkItemGet returns the WorkItem with the specified ID.
 func (client *PharosClient) WorkItemGet(id int) *PharosResponse {
 	// Set up the response object
 	resp := NewPharosResponse(PharosWorkItem)
@@ -677,10 +678,11 @@ func (client *PharosClient) WorkItemGet(id int) *PharosResponse {
 	return resp
 }
 
-// Saves a WorkItemState record to Pharos. If the WorkItemState's ID is zero,
-// this performs a POST to create a new record. For non-zero IDs, this
-// performs a PUT to update the existing record. The response object
-// will include a new copy of the WorkItemState if it was saved successfully.
+// WorkItemStateSave saves a WorkItemState record to Pharos. If the
+// WorkItemState's ID is zero, this performs a POST to create a new record.
+// For non-zero IDs, this performs a PUT to update the existing record.
+// The response object will include a new copy of the WorkItemState if it
+// was saved successfully.
 func (client *PharosClient) WorkItemStateSave(obj *models.WorkItemState) *PharosResponse {
 	// Set up the response object
 	resp := NewPharosResponse(PharosWorkItemState)
@@ -718,7 +720,7 @@ func (client *PharosClient) WorkItemStateSave(obj *models.WorkItemState) *Pharos
 	return resp
 }
 
-// Returns the WorkItemState with the specified WorkItemStateId.
+// WorkItemStateGet returns the WorkItemState with the specified WorkItemStateId.
 func (client *PharosClient) WorkItemStateGet(workItemStateId int) *PharosResponse {
 	// Set up the response object
 	resp := NewPharosResponse(PharosWorkItemState)
@@ -767,9 +769,9 @@ func (client *PharosClient) DPNWorkItemList(params url.Values) *PharosResponse {
 	return resp
 }
 
-// Saves a DPNWorkItem record to Pharos. If the WorkItems's ID is zero,
-// this performs a POST to create a new record. For non-zero IDs, this
-// performs a PUT to update the existing record. The response object
+// DPNWorkItemSave saves a DPNWorkItem record to Pharos. If the WorkItems's
+// ID is zero, this performs a POST to create a new record. For non-zero
+// IDs, this performs a PUT to update the existing record. The response object
 // will include a new copy of the WorkItem if it was saved successfully.
 func (client *PharosClient) DPNWorkItemSave(obj *models.DPNWorkItem) *PharosResponse {
 	// Set up the response object
@@ -807,7 +809,7 @@ func (client *PharosClient) DPNWorkItemSave(obj *models.DPNWorkItem) *PharosResp
 	return resp
 }
 
-// Returns the DPNWorkItem with the specified Id.
+// DPNWorkItemGet returns the DPNWorkItem with the specified Id.
 func (client *PharosClient) DPNWorkItemGet(id int) *PharosResponse {
 	// Set up the response object
 	resp := NewPharosResponse(PharosDPNWorkItem)

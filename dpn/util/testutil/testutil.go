@@ -17,8 +17,8 @@ import (
 
 var fluctusUrl string = "http://localhost:3000"
 
-// Each of the ids below is hard-coded into the DPN server
-// fixture set in dpn-server/test/fixtures/integration.
+// BAG_IDS match the Bag.UUID values in the DPN server cluster
+// fixture set at dpn-server/test/fixtures/integration.
 var BAG_IDS = []string{
 	"00000000-0000-4000-a000-000000000001",
 	"00000000-0000-4000-a000-000000000002",
@@ -26,6 +26,9 @@ var BAG_IDS = []string{
 	"00000000-0000-4000-a000-000000000004",
 	"00000000-0000-4000-a000-000000000005",
 }
+
+// REPLICATION_IDS match ReplicationTransfer.ReplicationIds
+// in the DPN cluster fixture set at dpn-server/test/fixtures/integration.
 var REPLICATION_IDS = []string{
 	"10000000-0000-4111-a000-000000000001",
 	"10000000-0000-4111-a000-000000000007",
@@ -48,6 +51,9 @@ var REPLICATION_IDS = []string{
 	"50000000-0000-4000-a000-000000000013",
 	"50000000-0000-4000-a000-000000000019",
 }
+
+// RESTORE_IDS match RestorationTransfer.RestoreIds
+// in the DPN cluster fixture set at dpn-server/test/fixtures/integration.
 var RESTORE_IDS = []string{
 	"11000000-0000-4111-a000-000000000001",
 	"11000000-0000-4111-a000-000000000002",
@@ -115,7 +121,7 @@ func MakeDPNBag() *models.DPNBag {
 	}
 }
 
-// Creates a DPN replication transfer object.
+// MakeXferRequest creates a DPN ReplicationTransfer object.
 func MakeXferRequest(fromNode, toNode, bagUuid string) *models.ReplicationTransfer {
 	id := uuid.NewV4()
 	idString := id.String()
@@ -135,7 +141,7 @@ func MakeXferRequest(fromNode, toNode, bagUuid string) *models.ReplicationTransf
 	}
 }
 
-// Creates a DPN restore transfer object.
+// MakeRestoreRequest creates a DPN RestoreTransfer object.
 func MakeRestoreRequest(fromNode, toNode, bagUuid string) *models.RestoreTransfer {
 	id := uuid.NewV4()
 	idString := id.String()
@@ -152,6 +158,7 @@ func MakeRestoreRequest(fromNode, toNode, bagUuid string) *models.RestoreTransfe
 	}
 }
 
+// MakeMessageDigest creates a DPN MessageDigest object for testing.
 func MakeMessageDigest(bagUUID, node string) *models.MessageDigest {
 	return &models.MessageDigest{
 		Bag:       bagUUID,
@@ -162,6 +169,7 @@ func MakeMessageDigest(bagUUID, node string) *models.MessageDigest {
 	}
 }
 
+// MakeFixityCheck creates a DPN FixityCheck object for testing.
 func MakeFixityCheck(bagUUID, node string) *models.FixityCheck {
 	id := uuid.NewV4()
 	idString := id.String()
@@ -175,6 +183,7 @@ func MakeFixityCheck(bagUUID, node string) *models.FixityCheck {
 	}
 }
 
+// MakeIngest creates a new DPN Ingest object for testing.
 func MakeIngest(bagUUID string) *models.Ingest {
 	id := uuid.NewV4()
 	idString := id.String()
@@ -187,8 +196,8 @@ func MakeIngest(bagUUID string) *models.Ingest {
 	}
 }
 
-// Creates an NSQ Message with the specified body. For our
-// purposes, param body should be an integer in string format,
+// MakeNsqMessage creates an NSQ Message with the specified body.
+// For our purposes, param body should be an integer in string format,
 // like "1234" or "999".
 func MakeNsqMessage(body string) *nsq.Message {
 	messageId := [nsq.MsgIDLength]byte{'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F'}

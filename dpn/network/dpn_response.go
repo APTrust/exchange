@@ -10,6 +10,10 @@ import (
 	"net/url"
 )
 
+// DPNResponse is the structure returned by all requests to the DPN
+// REST servers. After making a request to a DPN REST server, you'll
+// want to check the Error property of the response struct, and then
+// call the method to return the type of object you requested.
 type DPNResponse struct {
 	Count    int
 	Next     *string
@@ -45,8 +49,8 @@ func NewDPNResponse(objType dpn.DPNObjectType) *DPNResponse {
 	}
 }
 
-// Returns the raw body of the HTTP response as a byte slice.
-// The return value may be nil.
+// RawResponseData returns the raw body of the HTTP response as a
+// byte slice. The return value may be nil.
 func (resp *DPNResponse) RawResponseData() ([]byte, error) {
 	if !resp.hasBeenRead {
 		resp.readResponse()
@@ -65,25 +69,25 @@ func (resp *DPNResponse) readResponse() {
 	}
 }
 
-// Returns the type of object(s) contained in this response.
+// ObjectType returns the type of object(s) contained in this response.
 func (resp *DPNResponse) ObjectType() dpn.DPNObjectType {
 	return resp.objectType
 }
 
-// Returns true if the response includes a link to the next page
-// of results.
+// HasNextPage returns true if the response includes a link to the
+// next page of results.
 func (resp *DPNResponse) HasNextPage() bool {
 	return resp.Next != nil && *resp.Next != ""
 }
 
-// Returns true if the response includes a link to the previous page
-// of results.
+// HasPreviousPage returns true if the response includes a link to the
+// previous page of results.
 func (resp *DPNResponse) HasPreviousPage() bool {
 	return resp.Previous != nil && *resp.Previous != ""
 }
 
-// Returns the URL parameters to request the next page of results,
-// or nil if there is no next page.
+// ParamsForNextPage returns the URL parameters to request the next
+// page of results, or nil if there is no next page.
 func (resp *DPNResponse) ParamsForNextPage() url.Values {
 	if resp.HasNextPage() {
 		nextUrl, _ := url.Parse(*resp.Next)
@@ -94,8 +98,8 @@ func (resp *DPNResponse) ParamsForNextPage() url.Values {
 	return nil
 }
 
-// Returns the URL parameters to request the previous page of results,
-// or nil if there is no previous page.
+// ParamsForPreviousPage returns the URL parameters to request the
+// previous page of results, or nil if there is no previous page.
 func (resp *DPNResponse) ParamsForPreviousPage() url.Values {
 	if resp.HasPreviousPage() {
 		previousUrl, _ := url.Parse(*resp.Previous)
@@ -106,7 +110,7 @@ func (resp *DPNResponse) ParamsForPreviousPage() url.Values {
 	return nil
 }
 
-// Returns the Bag parsed from the HTTP response body, or nil.
+// Bag returns the Bag parsed from the HTTP response body, or nil.
 func (resp *DPNResponse) Bag() *models.DPNBag {
 	if resp.bags != nil && len(resp.bags) > 0 {
 		return resp.bags[0]
@@ -114,7 +118,7 @@ func (resp *DPNResponse) Bag() *models.DPNBag {
 	return nil
 }
 
-// Returns a list of Bags parsed from the HTTP response body.
+// Bags returns a list of Bags parsed from the HTTP response body.
 func (resp *DPNResponse) Bags() []*models.DPNBag {
 	if resp.bags == nil {
 		return make([]*models.DPNBag, 0)
@@ -122,7 +126,8 @@ func (resp *DPNResponse) Bags() []*models.DPNBag {
 	return resp.bags
 }
 
-// Returns the Digest parsed from the HTTP response body, or nil.
+// Digest returns the Digest object parsed from the HTTP response
+// body, or nil.
 func (resp *DPNResponse) Digest() *models.MessageDigest {
 	if resp.digests != nil && len(resp.digests) > 0 {
 		return resp.digests[0]
@@ -130,7 +135,7 @@ func (resp *DPNResponse) Digest() *models.MessageDigest {
 	return nil
 }
 
-// Returns a list of Digests parsed from the HTTP response body.
+// Digests returns a list of Digests parsed from the HTTP response body.
 func (resp *DPNResponse) Digests() []*models.MessageDigest {
 	if resp.digests == nil {
 		return make([]*models.MessageDigest, 0)
@@ -138,7 +143,8 @@ func (resp *DPNResponse) Digests() []*models.MessageDigest {
 	return resp.digests
 }
 
-// Returns the FixityCheck parsed from the HTTP response body, or nil.
+// FixityCheck returns the FixityCheck object parsed from the HTTP
+// response body, or nil.
 func (resp *DPNResponse) FixityCheck() *models.FixityCheck {
 	if resp.fixities != nil && len(resp.fixities) > 0 {
 		return resp.fixities[0]
@@ -146,7 +152,8 @@ func (resp *DPNResponse) FixityCheck() *models.FixityCheck {
 	return nil
 }
 
-// Returns a list of FixityChecks parsed from the HTTP response body.
+// FixityChecks returns a list of FixityChecks parsed from the HTTP
+// response body.
 func (resp *DPNResponse) FixityChecks() []*models.FixityCheck {
 	if resp.fixities == nil {
 		return make([]*models.FixityCheck, 0)
@@ -154,7 +161,8 @@ func (resp *DPNResponse) FixityChecks() []*models.FixityCheck {
 	return resp.fixities
 }
 
-// Returns the Ingest parsed from the HTTP response body, or nil.
+// Ingest returns the Ingest object parsed from the HTTP response
+// body, or nil.
 func (resp *DPNResponse) Ingest() *models.Ingest {
 	if resp.ingests != nil && len(resp.ingests) > 0 {
 		return resp.ingests[0]
@@ -162,7 +170,7 @@ func (resp *DPNResponse) Ingest() *models.Ingest {
 	return nil
 }
 
-// Returns a list of Ingests parsed from the HTTP response body.
+// Ingests returns a list of Ingests parsed from the HTTP response body.
 func (resp *DPNResponse) Ingests() []*models.Ingest {
 	if resp.ingests == nil {
 		return make([]*models.Ingest, 0)
@@ -170,7 +178,8 @@ func (resp *DPNResponse) Ingests() []*models.Ingest {
 	return resp.ingests
 }
 
-// Returns the Member parsed from the HTTP response body, or nil.
+// Member returns the Member object parsed from the HTTP response body,
+// or nil.
 func (resp *DPNResponse) Member() *models.Member {
 	if resp.members != nil && len(resp.members) > 0 {
 		return resp.members[0]
@@ -178,7 +187,7 @@ func (resp *DPNResponse) Member() *models.Member {
 	return nil
 }
 
-// Returns a list of Members parsed from the HTTP response body.
+// Members returns a list of Members parsed from the HTTP response body.
 func (resp *DPNResponse) Members() []*models.Member {
 	if resp.members == nil {
 		return make([]*models.Member, 0)
@@ -186,7 +195,8 @@ func (resp *DPNResponse) Members() []*models.Member {
 	return resp.members
 }
 
-// Returns the Node parsed from the HTTP response body, or nil.
+// Node returns the Node object parsed from the HTTP response body,
+// or nil.
 func (resp *DPNResponse) Node() *models.Node {
 	if resp.nodes != nil && len(resp.nodes) > 0 {
 		return resp.nodes[0]
@@ -194,7 +204,7 @@ func (resp *DPNResponse) Node() *models.Node {
 	return nil
 }
 
-// Returns a list of Nodes parsed from the HTTP response body.
+// Nodes returns a list of Nodes parsed from the HTTP response body.
 func (resp *DPNResponse) Nodes() []*models.Node {
 	if resp.nodes == nil {
 		return make([]*models.Node, 0)
@@ -202,7 +212,8 @@ func (resp *DPNResponse) Nodes() []*models.Node {
 	return resp.nodes
 }
 
-// Returns the ReplicationTransfer parsed from the HTTP response body, or nil.
+// ReplicationTransfer returns the ReplicationTransfer object parsed from
+// the HTTP response body, or nil.
 func (resp *DPNResponse) ReplicationTransfer() *models.ReplicationTransfer {
 	if resp.replications != nil && len(resp.replications) > 0 {
 		return resp.replications[0]
@@ -210,7 +221,8 @@ func (resp *DPNResponse) ReplicationTransfer() *models.ReplicationTransfer {
 	return nil
 }
 
-// Returns a list of ReplicationTransfers parsed from the HTTP response body.
+// ReplicationTransfers returns a list of ReplicationTransfers parsed from
+// the HTTP response body.
 func (resp *DPNResponse) ReplicationTransfers() []*models.ReplicationTransfer {
 	if resp.replications == nil {
 		return make([]*models.ReplicationTransfer, 0)
@@ -218,7 +230,8 @@ func (resp *DPNResponse) ReplicationTransfers() []*models.ReplicationTransfer {
 	return resp.replications
 }
 
-// Returns the RestoreTransfer parsed from the HTTP response body, or nil.
+// RestoreTransfer returns the RestoreTransfer parsed from the HTTP response
+// body, or nil.
 func (resp *DPNResponse) RestoreTransfer() *models.RestoreTransfer {
 	if resp.restores != nil && len(resp.restores) > 0 {
 		return resp.restores[0]
@@ -226,7 +239,8 @@ func (resp *DPNResponse) RestoreTransfer() *models.RestoreTransfer {
 	return nil
 }
 
-// Returns a list of RestoreTransfers parsed from the HTTP response body.
+// RestoreTransfers returns a list of RestoreTransfers parsed from the HTTP
+// response body.
 func (resp *DPNResponse) RestoreTransfers() []*models.RestoreTransfer {
 	if resp.restores == nil {
 		return make([]*models.RestoreTransfer, 0)
@@ -234,6 +248,8 @@ func (resp *DPNResponse) RestoreTransfers() []*models.RestoreTransfer {
 	return resp.restores
 }
 
+// UnmashalJsonList deserializes the JSON response data from the server
+// into a list of DPN objects.
 func (resp *DPNResponse) UnmarshalJsonList() error {
 	switch resp.objectType {
 	case dpn.DPNTypeBag:

@@ -12,18 +12,26 @@ import (
 	"time"
 )
 
+// ValidationResult contains information about the outcome of a bag
+// validation operation, including parse errors in the ParseSummary,
+// validation errors in the ValidationSummary, and a representation of
+// the IntellectualObject that the bag contains.
 type ValidationResult struct {
 	ParseSummary       *models.WorkSummary
 	ValidationSummary  *models.WorkSummary
 	IntellectualObject *models.IntellectualObject
 }
 
+// HasErrors returns true if the validator encountered errors while
+// parsing or validating the bag.
 func (result *ValidationResult) HasErrors() bool {
 	return result.ParseSummary.HasErrors() ||
 		result.ValidationSummary.HasErrors() ||
 		result.IntellectualObject.IngestErrorMessage != ""
 }
 
+// BagValidator validates a BagIt bag using a BagValidationConfig
+// object, which describes the bag's requirements.
 type BagValidator struct {
 	PathToBag           string
 	BagValidationConfig *BagValidationConfig
@@ -70,7 +78,8 @@ func NewBagValidator(pathToBag string, bagValidationConfig *BagValidationConfig)
 	return bagValidator, nil
 }
 
-// Reads and validates the bag.
+// Validate reads and validates the bag, and returns a ValidationResult with
+// the IntellectualObject and any errors encountered during validation.
 func (validator *BagValidator) Validate() *ValidationResult {
 	result := &ValidationResult{
 		ValidationSummary: models.NewWorkSummary(),

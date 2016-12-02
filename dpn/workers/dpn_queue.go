@@ -348,34 +348,33 @@ func (dpnQueue *DPNQueue) getOrCreateWorkItem(identifier, remoteNode, taskType s
 		dpnQueue.Context.MessageLog.Info("Found DPNWorkItem %d for %s %s with QueuedAt = %s",
 			existingItem.Id, taskType, existingItem.Identifier, queuedAt)
 		return existingItem
-	} else {
-		dpnWorkItem := &apt_models.DPNWorkItem{
-			Task:       taskType,
-			Identifier: identifier,
-			RemoteNode: remoteNode,
-			QueuedAt:   nil,
-		}
-
-		createResp := dpnQueue.Context.PharosClient.DPNWorkItemSave(dpnWorkItem)
-		if createResp.Error != nil {
-			dpnQueue.err("Error creating DPNWorkItem for %s Xfer %s: %v",
-				taskType, identifier, getResp.Error)
-			return nil
-		}
-		newItem := createResp.DPNWorkItem()
-		if newItem == nil {
-			dpnQueue.err("DPNWorkItemSave returned nil for %s Xfer %s: %v",
-				taskType, identifier, getResp.Error)
-		} else {
-			queuedAt := "[never]"
-			if newItem.QueuedAt != nil {
-				queuedAt = newItem.QueuedAt.Format(time.RFC3339)
-			}
-			dpnQueue.Context.MessageLog.Info("Created DPNWorkItem %d for %s %s with QueuedAt = %s",
-				newItem.Id, taskType, newItem.Identifier, queuedAt)
-		}
-		return newItem
 	}
+	// If we get this far, there's no existing item, so we have to create one.
+	dpnWorkItem := &apt_models.DPNWorkItem{
+		Task:       taskType,
+		Identifier: identifier,
+		RemoteNode: remoteNode,
+		QueuedAt:   nil,
+	}
+	createResp := dpnQueue.Context.PharosClient.DPNWorkItemSave(dpnWorkItem)
+	if createResp.Error != nil {
+		dpnQueue.err("Error creating DPNWorkItem for %s Xfer %s: %v",
+			taskType, identifier, getResp.Error)
+		return nil
+	}
+	newItem := createResp.DPNWorkItem()
+	if newItem == nil {
+		dpnQueue.err("DPNWorkItemSave returned nil for %s Xfer %s: %v",
+			taskType, identifier, getResp.Error)
+	} else {
+		queuedAt := "[never]"
+		if newItem.QueuedAt != nil {
+			queuedAt = newItem.QueuedAt.Format(time.RFC3339)
+		}
+		dpnQueue.Context.MessageLog.Info("Created DPNWorkItem %d for %s %s with QueuedAt = %s",
+			newItem.Id, taskType, newItem.Identifier, queuedAt)
+	}
+	return newItem
 }
 
 // err logs an error and adds it to the QueueResult.Errors list.
