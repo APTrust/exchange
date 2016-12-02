@@ -26,9 +26,9 @@ type Checksum struct {
 	UpdatedAt     time.Time `json:"updated_at,omitempty"`
 }
 
-// Sets the Id, CreatedAt and UpdatedAt properties of this checksum to
-// match those os savedChecksum. We call this after saving a record to
-// Pharos, which sets all of those properties. Generally, savedChecksum
+// MergeAttributes sets the Id, CreatedAt and UpdatedAt properties of this
+// checksum to match those os savedChecksum. We call this after saving a record
+// to Pharos, which sets all of those properties. Generally, savedChecksum
 // is a temporary record returned from Pharos, while this checksum
 // is one we want to keep.
 func (checksum *Checksum) MergeAttributes(savedChecksum *Checksum) error {
@@ -42,7 +42,8 @@ func (checksum *Checksum) MergeAttributes(savedChecksum *Checksum) error {
 	return nil
 }
 
-// Serialize for Pharos create
+// SerializeForPharos serializes a Checksum into a JSON format that
+// the Pharos server will accept for PUT and POST calls.
 func (checksum *Checksum) SerializeForPharos() ([]byte, error) {
 	pharosObj := NewChecksumForPharos(checksum)
 	dataStruct := make(map[string]interface{})

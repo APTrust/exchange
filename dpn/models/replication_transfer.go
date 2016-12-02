@@ -4,6 +4,9 @@ import (
 	"time"
 )
 
+// ReplicationTransfer represents a request from FromNode asking ToNode
+// to copy bag Bag into its long-term storage. The ToNode is responsible
+// for telling the FromNode when the transfer is complete, cancelled, etc.
 type ReplicationTransfer struct {
 
 	// FromNode is the node where the bag is coming from.
