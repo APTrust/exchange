@@ -24,7 +24,7 @@ func TestIngestRecordWorkItems(t *testing.T) {
 	_, workItems, err := dpn_testutil.GetDPNWorkItems()
 	require.Nil(t, err)
 	for _, item := range workItems {
-		assert.Equal(t, constants.StageRecord, item.Stage)
+		assert.Equal(t, constants.StageResolve, item.Stage)
 		assert.Equal(t, constants.StatusSuccess, item.Status)
 		assert.Equal(t, "DPN ingest complete", item.Note)
 		assert.Equal(t, "", item.Node)
