@@ -17,7 +17,7 @@ import (
 	"time"
 )
 
-// Creates and returns an NSQ consumer for a worker process.
+// CreateNSQConsumer creates and returns an NSQ consumer for a worker process.
 func CreateNsqConsumer(config *models.Config, workerConfig *models.WorkerConfig) (*nsq.Consumer, error) {
 	nsqConfig := nsq.NewConfig()
 	nsqConfig.Set("max_in_flight", workerConfig.MaxInFlight)
@@ -29,8 +29,8 @@ func CreateNsqConsumer(config *models.Config, workerConfig *models.WorkerConfig)
 	return nsq.NewConsumer(workerConfig.NsqTopic, workerConfig.NsqChannel, nsqConfig)
 }
 
-// Set up the basic pieces of data we'll need to process a request.
-// Param initIfEmpty says we should initialize an IntellectualObject
+// GetIngestState sets up the basic pieces of data we'll need to process a
+// request. Param initIfEmpty says we should initialize an IntellectualObject
 // if we can't find one in the IngestManifest. That should only happen
 // in apt_fetcher, where we're often fetching new bags that Pharos has
 // never seen before. All other workers should pass in false for initIfEmpty.
@@ -87,7 +87,8 @@ func GetIngestState(message *nsq.Message, _context *context.Context, initIfEmpty
 	return ingestState, err
 }
 
-// Gets the WorkItem with the specified Id from Pharos.
+// GetWorkItem returns the WorkItem with the specified Id from Pharos,
+// or nil.
 func GetWorkItem(message *nsq.Message, _context *context.Context) (*models.WorkItem, error) {
 	workItemId, err := strconv.Atoi(string(message.Body))
 	if err != nil {
@@ -104,9 +105,10 @@ func GetWorkItem(message *nsq.Message, _context *context.Context) (*models.WorkI
 	return workItem, nil
 }
 
-// Gets the WorkItemState associated with the specified WorkItem from Pharos.
-// Param initIfEmpty should be true ONLY when calling from apt_fetcher, which
-// is working with objects that are not yet in the system.
+// GetWorkItemState returns the WorkItemState associated with the specified
+// WorkItem from Pharos, or nil if none exists. Param initIfEmpty should be
+// true ONLY when calling from apt_fetcher, which is working with objects
+// that are not yet in the system.
 func GetWorkItemState(workItem *models.WorkItem, _context *context.Context, initIfEmpty bool) (*models.WorkItemState, error) {
 	var workItemState *models.WorkItemState
 	var err error
@@ -143,8 +145,11 @@ func GetWorkItemState(workItem *models.WorkItem, _context *context.Context, init
 	return workItemState, nil
 }
 
+// InitWorkItemState returns a new WorkItemState object.
 // This is used only by apt_fetcher, when we're working on a brand new
 // ingest bag that doesn't yet have a WorkItemState record.
+// Param workItem is the workItem to be associated with the
+// WorkItemState.
 func InitWorkItemState(workItem *models.WorkItem) (*models.WorkItemState, error) {
 	ingestManifest := models.NewIngestManifest()
 	ingestManifest.WorkItemId = workItem.Id
@@ -159,8 +164,10 @@ func InitWorkItemState(workItem *models.WorkItem) (*models.WorkItemState, error)
 	return workItemState, nil
 }
 
-// This is really only used by apt_fetcher to initialize some barebones data on
-// an empty IntellectualObject. This is only ever called during the fetch stage.
+// SetBasicObjectInfo sets initial essential properties on the
+// IntellectualObject associated with an ingestState
+// (ingestState.IngestManifest.Object). This is only used by
+// apt_fetcher and is only ever called during the fetch stage.
 func SetBasicObjectInfo(ingestState *models.IngestState, _context *context.Context) {
 	// instIdentifier is, e.g., virginia.edu, ncsu.edu, etc.
 	// We'll download the tar file from the receiving bucket to
@@ -195,9 +202,9 @@ func SetBasicObjectInfo(ingestState *models.IngestState, _context *context.Conte
 	}
 }
 
-// Record the WorkItemState for this task. We drop a copy into our
-// JSON log as a backup, and updated the WorkItemState in Pharos,
-// so the next worker knows what to do with this item.
+// RecordWorkItemState saves the WorkItemState for this task. We drop a
+// copy into our JSON log as a backup, and update the WorkItemState in
+// Pharos, so the next worker knows what to do with this item.
 //
 // Param activeResult will change, depending on what stage of processing
 // we're in. It could be the IngestState.FetchResult, IngestState.RecordResult,
@@ -240,7 +247,8 @@ func RecordWorkItemState(ingestState *models.IngestState, _context *context.Cont
 	}
 }
 
-// Tell Pharos that this item failed processing due to a fatal error.
+// MarkWorkItemFailed tells Pharos that this item failed processing
+// due to a fatal error or too many unsuccessful attempts.
 func MarkWorkItemFailed(ingestState *models.IngestState, _context *context.Context) error {
 	_context.MessageLog.Info("Telling Pharos processing failed for %s/%s",
 		ingestState.WorkItem.Bucket, ingestState.WorkItem.Name)
@@ -261,7 +269,8 @@ func MarkWorkItemFailed(ingestState *models.IngestState, _context *context.Conte
 	return nil
 }
 
-// Tell Pharos that this item has been requeued due to transient errors.
+// MarkWorkItemRequeued tells Pharos that this item has been requeued
+// due to transient errors.
 func MarkWorkItemRequeued(ingestState *models.IngestState, _context *context.Context) error {
 	_context.MessageLog.Info("Telling Pharos we are requeueing %s/%s",
 		ingestState.WorkItem.Bucket, ingestState.WorkItem.Name)
@@ -283,7 +292,7 @@ func MarkWorkItemRequeued(ingestState *models.IngestState, _context *context.Con
 	return nil
 }
 
-// Tell Pharos that we've started work on this item.
+// MarkWorkItemStarted tells Pharos that we've started work on this item.
 func MarkWorkItemStarted(ingestState *models.IngestState, _context *context.Context, stage, message string) error {
 	_context.MessageLog.Info("Telling Pharos we're starting %s for %s/%s",
 		stage, ingestState.WorkItem.Bucket, ingestState.WorkItem.Name)
@@ -303,7 +312,7 @@ func MarkWorkItemStarted(ingestState *models.IngestState, _context *context.Cont
 	return nil
 }
 
-// Tell Pharos that this item was processed successfully.
+// MarkWorkItemSucceeded tells Pharos that this item was processed successfully.
 func MarkWorkItemSucceeded(ingestState *models.IngestState, _context *context.Context, nextStage string) error {
 	_context.MessageLog.Info("Telling Pharos processing can proceed for %s/%s",
 		ingestState.WorkItem.Bucket, ingestState.WorkItem.Name)
@@ -329,7 +338,8 @@ func MarkWorkItemSucceeded(ingestState *models.IngestState, _context *context.Co
 	return nil
 }
 
-// Push this item into the specified NSQ topic.
+// PushToQueue pushes the WorkItem in ingestState into the specified
+// NSQ topic.
 func PushToQueue(ingestState *models.IngestState, _context *context.Context, queueTopic string) {
 	err := _context.NSQClient.Enqueue(
 		queueTopic,
@@ -346,8 +356,8 @@ func PushToQueue(ingestState *models.IngestState, _context *context.Context, que
 	}
 }
 
-// Dump the WorkItemState.State into the JSON log, surrounded my markers that
-// make it easy to find. This log gets big.
+// LogJson dumps the WorkItemState.State into the JSON log, surrounded by
+// markers that make it easy to find. This log gets big.
 func LogJson(ingestState *models.IngestState, jsonLog *log.Logger) {
 	timestamp := time.Now().UTC().Format(time.RFC3339)
 	startMessage := fmt.Sprintf("-------- BEGIN %s/%s | Etag: %s | Time: %s --------",
@@ -361,8 +371,9 @@ func LogJson(ingestState *models.IngestState, jsonLog *log.Logger) {
 		endMessage)
 }
 
-// Deletes the bag from the staging area, and releases the reserved
-// storage from the volume manager.
+// DeleteBagFromStaging deletes the bag from the staging area, and releases
+// the reserved storage from the volume manager. This deletes both the tarred
+// and untarred version of the bag, if they both exist.
 func DeleteBagFromStaging(ingestState *models.IngestState, _context *context.Context, activeResult *models.WorkSummary) {
 	tarFile := ingestState.IngestManifest.Object.IngestTarFilePath
 	if tarFile != "" && fileutil.FileExists(tarFile) {
