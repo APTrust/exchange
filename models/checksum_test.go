@@ -30,6 +30,7 @@ func TestChecksumSerializeForPharos(t *testing.T) {
 	}
 	checksum := intelObj.GenericFiles[0].Checksums[0]
 	jsonData, err := checksum.SerializeForPharos()
+	require.Nil(t, err)
 	expected := `{"checksum":{"generic_file_id":0,"algorithm":"md5","datetime":"2014-04-25T18:05:51Z","digest":"8d7b0e3a24fc899b1d92a73537401805"}}`
 	assert.Equal(t, expected, string(jsonData))
 }

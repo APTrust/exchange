@@ -74,6 +74,9 @@ func (client *VolumeClient) doRequest(url string, params url.Values) (bool, erro
 	}
 	volumeResponse := &models.VolumeResponse{}
 	err = json.Unmarshal(data, volumeResponse)
+	if err != nil {
+		return false, err
+	}
 	if volumeResponse.ErrorMessage != "" {
 		return false, fmt.Errorf(volumeResponse.ErrorMessage)
 	}
@@ -96,6 +99,9 @@ func (client *VolumeClient) Report(path string) (map[string]uint64, error) {
 	}
 	volumeResponse := &models.VolumeResponse{}
 	err = json.Unmarshal(data, volumeResponse)
+	if err != nil {
+		return nil, err
+	}
 	if volumeResponse.ErrorMessage != "" {
 		return nil, fmt.Errorf(volumeResponse.ErrorMessage)
 	}

@@ -148,7 +148,7 @@ func TestGetInstitutionFromBagName(t *testing.T) {
 	if inst != "miami" {
 		t.Error("GetInstitutionFromBagName return institution name '%s', expected 'miami'", inst)
 	}
-	inst, err = util.GetInstitutionFromBagName("miami.edu.chc0390_metadata.tar")
+	_, err = util.GetInstitutionFromBagName("miami.edu.chc0390_metadata.tar")
 	if err != nil {
 		t.Error("GetInstitutionFromBagName should have accepted bag name 'miami.edu.chc0390_metadata.tar'")
 	}

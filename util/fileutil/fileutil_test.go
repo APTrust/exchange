@@ -43,7 +43,7 @@ func TestExchangeHome(t *testing.T) {
 	os.Setenv("GOPATH", "")
 
 	// Without EXCHANGE_HOME and GOPATH, we should get an error
-	exchangeHome, err = fileutil.ExchangeHome()
+	_, err = fileutil.ExchangeHome()
 	if err == nil {
 		t.Error("ExchangeHome should have an thrown exception.")
 	}
