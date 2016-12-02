@@ -1,5 +1,6 @@
 // +build !partners
 
+// Package platform provides build options for different platforms.
 // This requires an external C library that our partners won't have,
 // so this file is not compiled when the flag -tags=partners
 package platform
@@ -11,6 +12,8 @@ import (
 	"sync"
 )
 
+// IsPartnerBuild will be true when we're building partner tools,
+// and false otherwise.
 var IsPartnerBuild = false
 
 // decoder is the MimeMagic database. We want
@@ -23,8 +26,12 @@ var decoder *magicmime.Decoder
 // at once.
 var mutex = &sync.Mutex{}
 
+// validaMimeType describes what a valid mime type should look like.
 var validMimeType = regexp.MustCompile(`^\w+/\w+$`)
 
+// GuessMimeType uses the Mime Magic library to figure out the mime
+// type of the file at absPath. If this can't figure out the mime type,
+// it returns "application/binary".
 func GuessMimeType(absPath string) (mimeType string, err error) {
 	// Open the Mime Magic DB only once.
 	if decoder == nil {
@@ -50,6 +57,11 @@ func GuessMimeType(absPath string) (mimeType string, err error) {
 	return mimeType, nil
 }
 
+// GuessMimeTypeByBuffer uses the Mime Magic library to figure out the mime
+// type of the file by examining the first N bytes (however long buffer is).
+// Use this for very large files, when you don't want GuessMimeType to try
+// to read the whole file. Usually, the first few bytes are sufficient for buf.
+// If this can't figure out the mime type, it returns "application/binary".
 func GuessMimeTypeByBuffer(buf []byte) (mimeType string, err error) {
 	// Open the Mime Magic DB only once.
 	if decoder == nil {

@@ -18,7 +18,7 @@ type NSQStats struct {
 	Data       NSQStatsData `json:"data"`
 }
 
-// NSQStats data contains the important info returned by a call
+// NSQStatsData contains the important info returned by a call
 // to NSQ's /stats endpoint, including the number of items in each
 // topic and queue.
 type NSQStatsData struct {
@@ -27,12 +27,14 @@ type NSQStatsData struct {
 	Topics  []nsqd.TopicStats `json:"topics"`
 }
 
+// NSQClient provides methods for queueing items and querying
+// stats from the NSQ server at URL.
 type NSQClient struct {
 	URL string
 }
 
-// Returns a new NSQ client that will connect to the NSQ server
-// and the specified url. The URL is typically available through
+// NewNSQClient returns a new NSQ client that will connect to the NSQ
+// server and the specified url. The URL is typically available through
 // Config.NsqdHttpAddress, and usually ends with :4151. This is
 // the URL to which we post items we want to queue, and from
 // which our workers read.
@@ -44,8 +46,8 @@ func NewNSQClient(url string) *NSQClient {
 	return &NSQClient{URL: url}
 }
 
-// Posts data to NSQ, which essentially means putting it into a work topic.
-// Param topic is the topic under which you want to queue something.
+// Enqueue posts data to NSQ, which essentially means putting it into a work
+// topic. Param topic is the topic under which you want to queue something.
 // For example, prepare_topic, fixity_topic, etc.
 // Param workItemId is the id of the WorkItem record in Pharos we want to queue.
 func (client *NSQClient) Enqueue(topic string, workItemId int) error {
