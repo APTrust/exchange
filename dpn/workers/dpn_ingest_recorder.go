@@ -12,9 +12,8 @@ import (
 	"time"
 )
 
-// dpn_ingest_recorder records information about locally-ingested
+// DPNIngestRecorder records information about locally-ingested
 // DPN bags in both APTrust and DPN.
-
 type DPNIngestRecorder struct {
 	RecordChannel      chan *models.DPNIngestManifest
 	PostProcessChannel chan *models.DPNIngestManifest
@@ -23,6 +22,7 @@ type DPNIngestRecorder struct {
 	RemoteClients      map[string]*network.DPNRestClient
 }
 
+// NewDPNIngestRecord returns a new DPNIngestRecorder.
 func NewDPNIngestRecorder(_context *context.Context) (*DPNIngestRecorder, error) {
 	localClient, err := network.NewDPNRestClient(
 		_context.Config.DPN.RestClient.LocalServiceURL,
@@ -52,6 +52,8 @@ func NewDPNIngestRecorder(_context *context.Context) (*DPNIngestRecorder, error)
 	return recorder, nil
 }
 
+// HandleMessage is the NSQ message handler. The NSQ consumer will pass each
+// message in the subscribed channel to this function.
 func (recorder *DPNIngestRecorder) HandleMessage(message *nsq.Message) error {
 	message.DisableAutoResponse()
 	recorder.Context.MessageLog.Info("Recorder is checking NSQ message %s", string(message.Body))

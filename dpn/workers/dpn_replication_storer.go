@@ -12,10 +12,9 @@ import (
 	"time"
 )
 
-// dpn_replication_storer copies replicated bags from our staging
+// DPNReplicationStorer copies replicated bags from our staging
 // area to Glacier long-term storage. We only copy bags that have
 // been validated.
-
 type DPNReplicationStorer struct {
 	StoreChannel       chan *models.ReplicationManifest
 	PostProcessChannel chan *models.ReplicationManifest
@@ -24,6 +23,7 @@ type DPNReplicationStorer struct {
 	RemoteClients      map[string]*network.DPNRestClient
 }
 
+// NewDPNReplicationStorer creates a new DPNReplicationStorer object.
 func NewDPNReplicationStorer(_context *context.Context) (*DPNReplicationStorer, error) {
 	localClient, err := network.NewDPNRestClient(
 		_context.Config.DPN.RestClient.LocalServiceURL,
@@ -53,6 +53,8 @@ func NewDPNReplicationStorer(_context *context.Context) (*DPNReplicationStorer, 
 	return storer, nil
 }
 
+// HandleMessage is the NSQ message handler. The NSQ consumer will pass each
+// message in the subscribed channel to this function.
 func (storer *DPNReplicationStorer) HandleMessage(message *nsq.Message) error {
 	message.DisableAutoResponse()
 

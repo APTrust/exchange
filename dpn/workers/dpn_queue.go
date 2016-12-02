@@ -13,6 +13,10 @@ import (
 	"time"
 )
 
+// DPNQueue queues DPN ingest requests (found in the Pharos WorkItems table)
+// and DPN replication requests (found in the Pharos DPNWorkItems table).
+// These items will go into the proper NSQ topics for DPN ingest or
+// replication.
 type DPNQueue struct {
 	// LocalClient is the DPN REST client that talks to our own
 	// local DPN REST server.
