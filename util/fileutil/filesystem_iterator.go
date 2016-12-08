@@ -69,7 +69,7 @@ func (iter *FileSystemIterator) Next() (io.ReadCloser, *FileSummary, error) {
 	}
 	file, err := os.Open(filePath)
 	if err != nil {
-		return nil, fs, fmt.Errorf("Cannot read file '%s': %v", err)
+		return nil, fs, fmt.Errorf("Cannot read file '%s': %v", filePath, err)
 	}
 	return file, fs, nil
 }

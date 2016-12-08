@@ -12,7 +12,7 @@ type SynchronizedMap struct {
 	mutex *sync.RWMutex
 }
 
-// Creates a new empty SynchronizedMap
+// NewSynchronizedMap creates a new empty SynchronizedMap
 func NewSynchronizedMap() *SynchronizedMap {
 	return &SynchronizedMap{
 		data:  make(map[string]string),
@@ -20,7 +20,7 @@ func NewSynchronizedMap() *SynchronizedMap {
 	}
 }
 
-// Returns true if the key exists in the map.
+// HasKey returns true if the key exists in the map.
 func (syncMap *SynchronizedMap) HasKey(key string) bool {
 	syncMap.mutex.RLock()
 	_, hasKey := syncMap.data[key]
@@ -28,14 +28,14 @@ func (syncMap *SynchronizedMap) HasKey(key string) bool {
 	return hasKey
 }
 
-// Adds a key/value pair to the map.
+// Add adds a key/value pair to the map.
 func (syncMap *SynchronizedMap) Add(key, value string) {
 	syncMap.mutex.Lock()
 	syncMap.data[key] = value
 	syncMap.mutex.Unlock()
 }
 
-// Returns the value of key from the map.
+// Get returns the value of key from the map.
 func (syncMap *SynchronizedMap) Get(key string) string {
 	syncMap.mutex.RLock()
 	value, _ := syncMap.data[key]
@@ -43,14 +43,14 @@ func (syncMap *SynchronizedMap) Get(key string) string {
 	return value
 }
 
-// Deletes the specified key from the map.
+// Delete deletes the specified key from the map.
 func (syncMap *SynchronizedMap) Delete(key string) {
 	syncMap.mutex.Lock()
 	delete(syncMap.data, key)
 	syncMap.mutex.Unlock()
 }
 
-// Returns a slice of all keys in the map.
+// Keys returns a slice of all keys in the map.
 func (syncMap *SynchronizedMap) Keys() []string {
 	keys := make([]string, len(syncMap.data))
 	syncMap.mutex.RLock()
@@ -63,7 +63,7 @@ func (syncMap *SynchronizedMap) Keys() []string {
 	return keys
 }
 
-// Returns a slice of all values in the map.
+// Values returns a slice of all values in the map.
 func (syncMap *SynchronizedMap) Values() []string {
 	vals := make([]string, len(syncMap.data))
 	syncMap.mutex.RLock()

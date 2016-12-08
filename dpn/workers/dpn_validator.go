@@ -10,8 +10,8 @@ import (
 	"os"
 )
 
-// dpn_validator validates DPN bags (tar files).
-
+// DPNValidator validates DPN bags (tar files) before we send them off
+// to long-term storage.
 type DPNValidator struct {
 	ValidationChannel   chan *models.ReplicationManifest
 	PostProcessChannel  chan *models.ReplicationManifest
@@ -21,6 +21,7 @@ type DPNValidator struct {
 	RemoteClients       map[string]*network.DPNRestClient
 }
 
+// NewDPNValidator returns a new DPNValidator object.
 func NewDPNValidator(_context *context.Context) (*DPNValidator, error) {
 	localClient, err := network.NewDPNRestClient(
 		_context.Config.DPN.RestClient.LocalServiceURL,
@@ -51,6 +52,8 @@ func NewDPNValidator(_context *context.Context) (*DPNValidator, error) {
 	return validator, nil
 }
 
+// HandleMessage is the NSQ message handler. The NSQ consumer will pass each
+// message in the subscribed channel to this function.
 func (validator *DPNValidator) HandleMessage(message *nsq.Message) error {
 	message.DisableAutoResponse()
 
@@ -118,13 +121,13 @@ func (validator *DPNValidator) validate() {
   Step 2 of 2: Record results and push to the next queue, if bag is valid.
 
   Recording includes:
-    a) Updating the DPNWorkItem in Pharos to say this bag
-       passed validation.
-    b) Pushing the DPNWorkItem id into the dpn_store topic
-       in NSQ, so the store worker knows to copy it to Glacier.
+	a) Updating the DPNWorkItem in Pharos to say this bag
+	   passed validation.
+	b) Pushing the DPNWorkItem id into the dpn_store topic
+	   in NSQ, so the store worker knows to copy it to Glacier.
   If bag is not valid:
-    a) Cancel the transfer on the FromNode.
-    b) Update the DPNWorkItem and record the failure in Pharos.
+	a) Cancel the transfer on the FromNode.
+	b) Update the DPNWorkItem and record the failure in Pharos.
 
 ***************************************************************************/
 func (validator *DPNValidator) postProcess() {

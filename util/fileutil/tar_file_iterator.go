@@ -16,6 +16,8 @@ type TarFileIterator struct {
 	topLevelDirNames []string
 }
 
+// NewTarFileIterator returns a new TarFileIterator. Param pathToTarFile
+// should be an absolute path to the tar file.
 func NewTarFileIterator(pathToTarFile string) (*TarFileIterator, error) {
 	file, err := os.Open(pathToTarFile)
 	if err != nil {
@@ -28,7 +30,7 @@ func NewTarFileIterator(pathToTarFile string) (*TarFileIterator, error) {
 	}, nil
 }
 
-// Returns an open reader for the next file, along with a FileSummary.
+// Next returns an open reader for the next file, along with a FileSummary.
 // Returns io.EOF when it reaches the last file.
 func (iter *TarFileIterator) Next() (io.ReadCloser, *FileSummary, error) {
 	header, err := iter.tarReader.Next()
@@ -63,7 +65,7 @@ func (iter *TarFileIterator) Next() (io.ReadCloser, *FileSummary, error) {
 	return tarReadCloser, fs, nil
 }
 
-// Returns an open reader for the file with the specified name,
+// Find returns an open reader for the file with the specified name,
 // or nil if that file cannot be found. Caller is responsible
 // for closing the reader. Note that the iterator is forward-only,
 // which makes it unsuitable for re-use. Create a new iterator each
@@ -84,7 +86,6 @@ func (iter *TarFileIterator) Find(originalPathWithBagName string) (io.ReadCloser
 			return tarReadCloser, nil
 		}
 	}
-	return nil, fmt.Errorf("File '%s' not found in archive", originalPathWithBagName)
 }
 
 // Keep track of any top-level directory names we encounter.
@@ -104,8 +105,8 @@ func (iter *TarFileIterator) setTopLevelDirName(headerName string) {
 	iter.topLevelDirNames = append(iter.topLevelDirNames, topLevelDir)
 }
 
-// Returns the names of the top level directories to which the tar
-// file expands. For APTrust purposes, the tar file should expand to
+// GetTopLevelDirNames returns the names of the top level directories to which
+// the tar file expands. For APTrust purposes, the tar file should expand to
 // one directory whose name matches that of the tar file, minus the
 // .tar extension. In reality, tar files can expand to multiple
 // top-level directories with any names.
@@ -116,21 +117,26 @@ func (iter *TarFileIterator) GetTopLevelDirNames() []string {
 	return iter.topLevelDirNames
 }
 
-// Close the underlying tar file.
+// Close closes the underlying tar file.
 func (iter *TarFileIterator) Close() {
 	if iter.file != nil {
 		iter.file.Close()
 	}
 }
 
+// TarReaderCloser implements the io.ReadCloser interface.
 type TarReadCloser struct {
 	tarReader *tar.Reader
 }
 
+// Read reads bytes into buffer p, returning number of bytes read
+// and an error, if there was one.
 func (tarReadCloser TarReadCloser) Read(p []byte) (int, error) {
 	return tarReadCloser.tarReader.Read(p)
 }
 
+// Close is a no-op that pretends to close something that is not
+// a file and does not need to be closed.
 func (tarReadCloser TarReadCloser) Close() error {
 	return nil // noop
 }

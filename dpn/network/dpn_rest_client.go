@@ -14,7 +14,7 @@ import (
 	"net/http"
 	"net/http/cookiejar"
 	"net/url"
-	// 	"regexp"  // TODO: Delete with HackNullDates
+	//	"regexp"  // TODO: Delete with HackNullDates
 	"strings"
 	"time"
 )
@@ -783,7 +783,7 @@ func (client *DPNRestClient) GetRemoteClient(remoteNodeNamespace string, dpnConf
 	}
 	remoteNode := nodeResult.Node()
 	if remoteNode == nil {
-		detailedError := fmt.Errorf("Local DPN REST service has no record of node %d",
+		detailedError := fmt.Errorf("Local DPN REST service has no record of node %s",
 			remoteNodeNamespace)
 		return nil, detailedError
 	}
@@ -891,10 +891,10 @@ func (client *DPNRestClient) doRequest(resp *DPNResponse, method, absoluteUrl st
 // node for all items updated since that time. "Reasonably old" is
 // anything before about June 1, 2015.
 // func HackNullDates(jsonBytes []byte)([]byte) {
-// 	// Problem fixed with regex == two problems
-// 	dummyDate := "\"last_pull_date\":\"1980-01-01T00:00:00Z\""
-// 	re := regexp.MustCompile("\"last_pull_date\":\\s*null")
-// 	return re.ReplaceAll(jsonBytes, []byte(dummyDate))
+//	// Problem fixed with regex == two problems
+//	dummyDate := "\"last_pull_date\":\"1980-01-01T00:00:00Z\""
+//	re := regexp.MustCompile("\"last_pull_date\":\\s*null")
+//	return re.ReplaceAll(jsonBytes, []byte(dummyDate))
 // }
 
 // By default, the Go HTTP client does not send headers from the

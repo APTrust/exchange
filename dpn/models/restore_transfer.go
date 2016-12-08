@@ -4,6 +4,12 @@ import (
 	"time"
 )
 
+// RestoreTransfer contains information about a request initiated
+// by ToNode for FromNode to restore bag Bag. The restoration process
+// involves the FromNode copying the bag from long-term storage into
+// a local staging area that the ToNode can access via rsync/ssh.
+// The FromNode is responsible for telling the ToNode the status of
+// the restore operation.
 type RestoreTransfer struct {
 
 	// RestoreId is the UUID for this restoration request.

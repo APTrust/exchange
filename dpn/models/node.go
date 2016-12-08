@@ -8,6 +8,10 @@ import (
 	"time"
 )
 
+// Node represents a node in the DPN network. Each node includes a DPN
+// REST server, some kind of long-term storage, and ingest and/or
+// replication services. Nodes include APTrust, Chronopolis, Hathi Trust,
+// University of Texas and Stanford.
 type Node struct {
 
 	// Name is the full name of the node.

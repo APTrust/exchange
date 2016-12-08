@@ -34,20 +34,14 @@ end
 
 def tests
   {
+    'apt_bucket_reader' => 'Test the APTrust bucket reader',
     'apt_ingest' => 'Test the APTrust ingest process.',
     'apt_restore' => 'Test the APTrust restore process',
     'apt_delete' => 'Test APTrust file deletion',
-    'bucket_reader' => 'Test the APTrust bucket reader',
-    'dpn_rest_client' => 'Test the DPN REST client',
-    'dpn_sync' => 'Test synching data from other nodes',
-    'dpn_queue' => 'Test queueing ingest and transfer requests',
-    'dpn_copy' => 'Test copying bags from remote nodes',
-    'dpn_validate' => 'Test validation of bags from remote nodes',
-    'dpn_replication_store' => 'Test storing bags from remote nodes',
-    'dpn_package' => 'Test packaging APTrust bags for DPN ingest',
-    'dpn_ingest_store' => 'Test storing locally-ingested DPN bags',
-    'dpn_ingest_record' => 'Test recording of locally-ingested DPN bags',
-    #'dpn_replicate' => 'Test replicating bags from other DPN nodes',
+    'dpn_rest_client' => 'Test the DPN REST client against a local cluster',
+    'dpn_sync' => 'Test DPN sync against a local cluster',
+    'dpn_replicate' => 'Test DPN replication',
+    'dpn_ingest' => 'Test DPN ingest',
     'units' => 'Run all unit tests. Starts no external services.',
   }
 end

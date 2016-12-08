@@ -17,6 +17,13 @@ import (
 // replication requests, etc.
 const SYNC_BATCH_SIZE = 50
 
+// DPNSync copies data from remote DPN nodes to our local DPN node.
+// Data includes information about bags, replication transfers, etc.
+// Each node is the authority on bags where they are listed as the admin
+// node, so when synching from DPN node X, we ask for all bags where
+// X is the admin node, as well as all ReplicationTransfers, RestoreTransfers,
+// FixityChecks, etc. We do NOT ask node X for info about or related to
+// bags whose admin node is Y or Z.
 type DPNSync struct {
 	// LocalClient is the DPN REST client that talks to our own
 	// local DPN REST server.

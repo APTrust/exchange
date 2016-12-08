@@ -1,7 +1,7 @@
 // +build !partners
 
-// Don't include this in the partners build: it's not needed
-// in the partner apps, and the syscall.Stat* functions inside
+// Package service is not included  in the partners build: it's not
+// needed in the partner apps, and the syscall.Stat* functions inside
 // the models.Volume code cause the build to fail on Windows.
 package service
 
@@ -15,6 +15,8 @@ import (
 	"strconv"
 )
 
+// VolumeService keeps track of the space available to workers
+// processing APTrust and DPN bags.
 type VolumeService struct {
 	port    int
 	volumes map[string]*models.Volume
@@ -32,6 +34,9 @@ func NewVolumeService(port int, logger *logging.Logger) *VolumeService {
 	}
 }
 
+// Serve starts an HTTP server, so the VolumeService can respond to
+// requests from the VolumeClient(s). See the VolumeClient for available
+// calls.
 func (service *VolumeService) Serve() {
 	http.HandleFunc("/reserve/", service.makeReserveHandler())
 	http.HandleFunc("/release/", service.makeReleaseHandler())

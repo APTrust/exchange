@@ -20,7 +20,9 @@ type DPNWorkItem struct {
 	UpdatedAt   time.Time  `json:"updated_at"`
 }
 
-// Serializes a version of DPNWorkItem that Pharos will accept as post/put input.
+// SerializeForPharos serializes a version of DPNWorkItem that Pharos
+// will accept as post/put input. The Pharos post/put serialization
+// omits some fields that are not allowed by Rails strong params.
 func (item *DPNWorkItem) SerializeForPharos() ([]byte, error) {
 	data := make(map[string]*DPNWorkItemForPharos)
 	data["dpn_work_item"] = NewDPNWorkItemForPharos(item)

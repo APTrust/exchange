@@ -319,7 +319,7 @@ func (gf *GenericFile) MergeAttributes(savedFile *GenericFile) []error {
 		event := gf.FindEventByIdentifier(savedEvent.Identifier)
 		if event == nil {
 			err := fmt.Errorf("After save, could not find event '%s' "+
-				"in GenericFile.", savedEvent.Identifier, gf.Identifier)
+				"in GenericFile %s.", savedEvent.Identifier, gf.Identifier)
 			errors = append(errors, err)
 			continue
 		}
@@ -332,7 +332,7 @@ func (gf *GenericFile) MergeAttributes(savedFile *GenericFile) []error {
 		checksum := gf.GetChecksumByDigest(savedChecksum.Digest)
 		if checksum == nil {
 			err := fmt.Errorf("After save, could not find %s "+
-				"checksum in GenericFile.", savedChecksum.Algorithm, gf.Identifier)
+				"checksum in GenericFile %s.", savedChecksum.Algorithm, gf.Identifier)
 			errors = append(errors, err)
 			continue
 		}

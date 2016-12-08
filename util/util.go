@@ -14,9 +14,9 @@ var reManifest *regexp.Regexp = regexp.MustCompile("^manifest-[A-Za-z0-9]+\\.txt
 var reTagManifest *regexp.Regexp = regexp.MustCompile("^tagmanifest-[A-Za-z0-9]+\\.txt$")
 var reLegal *regexp.Regexp = regexp.MustCompile("^[A-Za-z0-9\\-_\\.]+$")
 
-// Returns the domain name of the institution that owns the specified bucket.
-// For example, if bucketName is 'aptrust.receiving.unc.edu' the return value
-// will be 'unc.edu'.
+// OwnerOf returns the domain name of the institution that owns the
+// specified bucket. For example, if bucketName is 'aptrust.receiving.unc.edu'
+// the return value will be 'unc.edu'.
 func OwnerOf(bucketName string) (institution string) {
 	if strings.HasPrefix(bucketName, constants.ReceiveTestBucketPrefix) {
 		institution = strings.Replace(bucketName, constants.ReceiveTestBucketPrefix, "", 1)
@@ -28,19 +28,23 @@ func OwnerOf(bucketName string) (institution string) {
 	return institution
 }
 
-// Returns the name of the specified institution's restoration bucket.
-// E.g. institution 'unc.edu' returns bucketName 'aptrust.restore.unc.edu'
+// RestorationBucketFor returns the name of the specified institution's
+// restoration bucket. E.g. institution 'unc.edu' returns bucketName
+// 'aptrust.restore.unc.edu'
 func RestorationBucketFor(institution string) (bucketName string) {
 	return constants.RestoreBucketPrefix + institution
 }
 
+// BagNameFromTarFileName returns the bag name of the specified tar file.
+// This works even for tar files with names like 'test.edu.my_bag.b01.of12.tar'.
+// That will return 'test.edu.my_bag'.
 func BagNameFromTarFileName(pathToTarFile string) string {
 	fileName := path.Base(pathToTarFile)
 	return CleanBagName(fileName)
 }
 
-// Given the name of a tar file, returns the clean bag name. That's
-// the tar file name minus the tar extension and any ".bagN.ofN" suffix.
+// CleanBagName returns the clean bag name. That's the tar file name minus
+// the tar extension and any ".bagN.ofN" suffix.
 func CleanBagName(bagName string) string {
 	// Strip the .tar suffix
 	nameWithoutTar := bagName
@@ -62,7 +66,7 @@ func Min(x, y int) int {
 	}
 }
 
-// Returns a base64-encoded md5 digest. The is the format S3 wants.
+// Base64EncodeMd5 returns a base64-encoded md5 digest. The is the format S3 wants.
 func Base64EncodeMd5(md5Digest string) (string, error) {
 	// We'll get error if md5 contains non-hex characters. Catch
 	// that below, when S3 tells us our md5 sum is invalid.
@@ -77,18 +81,19 @@ func Base64EncodeMd5(md5Digest string) (string, error) {
 	return base64md5, nil
 }
 
-// Returns true if url looks like a URL.
+// LooksLikeURL returns true if url looks like a URL.
 func LooksLikeURL(url string) bool {
 	reUrl := regexp.MustCompile(`^(https?:\/\/)?([\da-z\.-]+)\.([a-z\.]{2,6})([\/\w \.-]*)*\/?$`)
 	return reUrl.Match([]byte(url))
 }
 
+// LooksLikeUUID returns true if uuid looks like a valid UUID.
 func LooksLikeUUID(uuid string) bool {
 	reUUID := regexp.MustCompile(`(?i)^([a-f\d]{8}(-[a-f\d]{4}){3}-[a-f\d]{12}?)$`)
 	return reUUID.Match([]byte(uuid))
 }
 
-// Cleans a string we might find a config file, trimming leading
+// CleanString cleans a string we might find a config file, trimming leading
 // and trailing spaces, single quotes and double quoted. Note that
 // leading and trailing spaces inside the quotes are not trimmed.
 func CleanString(str string) string {
@@ -102,16 +107,17 @@ func CleanString(str string) string {
 	return cleanStr
 }
 
-// Given an S3 URI, returns the bucket name and key.
+// BucketNameAndKey returns the bucket name and key of the specified
+// url, which is expected to be an S3 URI.
 func BucketNameAndKey(uri string) (string, string) {
 	relativeUri := strings.Replace(uri, constants.S3UriPrefix, "", 1)
 	parts := strings.SplitN(relativeUri, "/", 2)
 	return parts[0], parts[1]
 }
 
-// Returns the instution name from the bag name, or an error if
-// the bag name does not contain the institution name. For example,
-// "virginia.edu.bag_of_videos.tar" returns "virginia.edu" and no
+// GetInstitutionFromBagName returns the instution name from the bag name,
+// or an error if the bag name does not contain the institution name.
+// For example, "virginia.edu.bag_of_videos.tar" returns "virginia.edu" and no
 // errors. "virginia.edu.bag_of_videos" returns the same thing.
 // But "bag_of_videos.tar" or "virginia.bag_of_videos.tar" returns
 // an error because the institution identifier is missing from
@@ -133,8 +139,8 @@ func GetInstitutionFromBagName(bagName string) (string, error) {
 	return parts[0], nil
 }
 
-// Returns true if the file name indicates this is something we should
-// save to long-term storage. As of late March, 2016, we save everything
+// HasSavableNamereturns true if the file name indicates this is something we
+// should save to long-term storage. As of late March, 2016, we save everything
 // in the bag except bagit.txt, manifest-<algo>.txt and
 // tagmanifest-<algo>.txt. Those files we don't save will be reconstructed
 // when the bag is restored.
@@ -164,7 +170,7 @@ func HasSavableName(filename string) bool {
 		reManifest.MatchString(filename))
 }
 
-// Returns true if the list of strings contains item.
+// StringListContains returns true if the list of strings contains item.
 func StringListContains(list []string, item string) bool {
 	if list != nil {
 		for i := range list {
@@ -176,7 +182,7 @@ func StringListContains(list []string, item string) bool {
 	return false
 }
 
-// Returns true if the list of ints contains item.
+// IntListContains returns true if the list of ints contains item.
 func IntListContains(list []int, item int) bool {
 	if list != nil {
 		for i := range list {

@@ -259,7 +259,7 @@ func (builder *BagBuilder) AddTagFile(tagFileName string) (*bagins.TagFile, erro
 	}
 	tagFile, err := builder.Bag.TagFile(tagFileName)
 	if err != nil {
-		return nil, fmt.Errorf("Error retrieving tag file %s: %s", err.Error())
+		return nil, fmt.Errorf("Error retrieving tag file %s: %s", tagFileName, err.Error())
 	}
 	return tagFile, nil
 }

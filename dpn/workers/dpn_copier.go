@@ -16,10 +16,9 @@ import (
 	"time"
 )
 
-// dpn_copier copies tarred bags from other nodes via rsync.
+// DPNCopier copies tarred bags from other nodes via rsync.
 // This is used when replicating content from other nodes.
 // For putting together DPN bags from APTrust files, see fetcher.go.
-
 type DPNCopier struct {
 	CopyChannel        chan *models.ReplicationManifest
 	ChecksumChannel    chan *models.ReplicationManifest
@@ -29,6 +28,7 @@ type DPNCopier struct {
 	RemoteClients      map[string]*network.DPNRestClient
 }
 
+// NewDPNCopier returns a new DPNCopier object.
 func NewDPNCopier(_context *context.Context) (*DPNCopier, error) {
 	localClient, err := network.NewDPNRestClient(
 		_context.Config.DPN.RestClient.LocalServiceURL,
@@ -60,6 +60,8 @@ func NewDPNCopier(_context *context.Context) (*DPNCopier, error) {
 	return copier, nil
 }
 
+// HandleMessage is the NSQ message handler. The NSQ consumer will pass each
+// message in the subscribed channel to this function.
 func (copier *DPNCopier) HandleMessage(message *nsq.Message) error {
 	message.DisableAutoResponse()
 
@@ -144,6 +146,8 @@ func (copier *DPNCopier) verifyChecksum() {
 	}
 }
 
+// postProcess tells Pharos, NSQ, and DPN REST server whether the copy
+// succeeded or failed.
 func (copier *DPNCopier) postProcess() {
 	for manifest := range copier.PostProcessChannel {
 		if manifest.CopySummary.HasErrors() {

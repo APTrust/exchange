@@ -77,7 +77,7 @@ func InitJsonLogger(config *models.Config) (*stdlog.Logger, string) {
 }
 
 /*
-Discard logger returns a logger that writes to dev/null.
+DiscardLogger returns a logger that writes to dev/null.
 Suitable for use in testing.
 */
 func DiscardLogger(module string) *logging.Logger {

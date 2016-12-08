@@ -13,9 +13,8 @@ import (
 	"time"
 )
 
-// dpn_ingest_storer copies bags ingested from APTrust into Glacier
+// DPNIngestStorer copies bags ingested from APTrust into Glacier
 // long-term storage.
-
 type DPNIngestStorer struct {
 	StoreChannel       chan *models.DPNIngestManifest
 	PostProcessChannel chan *models.DPNIngestManifest
@@ -24,6 +23,7 @@ type DPNIngestStorer struct {
 	RemoteClients      map[string]*network.DPNRestClient
 }
 
+// NewDPNIngestStorer returns a new DPNIngestStorer object.
 func NewDPNIngestStorer(_context *context.Context) (*DPNIngestStorer, error) {
 	localClient, err := network.NewDPNRestClient(
 		_context.Config.DPN.RestClient.LocalServiceURL,
@@ -53,6 +53,8 @@ func NewDPNIngestStorer(_context *context.Context) (*DPNIngestStorer, error) {
 	return storer, nil
 }
 
+// HandleMessage is the NSQ message handler. The NSQ consumer will pass each
+// message in the subscribed channel to this function.
 func (storer *DPNIngestStorer) HandleMessage(message *nsq.Message) error {
 	message.DisableAutoResponse()
 	storer.Context.MessageLog.Info("Storer is checking NSQ message %s", string(message.Body))

@@ -517,7 +517,7 @@ func TestReplicationTransferCreate(t *testing.T) {
 	assert.Equal(t, xfer.Stored, newXfer.Stored)
 	assert.Equal(t, xfer.StoreRequested, newXfer.StoreRequested)
 	assert.Equal(t, xfer.Cancelled, newXfer.Cancelled)
-	assert.Equal(t, xfer.CancelReason, &newXfer.CancelReason)
+	assert.Equal(t, xfer.CancelReason, newXfer.CancelReason)
 	assert.Equal(t, xfer.Protocol, newXfer.Protocol)
 	assert.Equal(t, xfer.Link, newXfer.Link)
 	assert.NotEmpty(t, newXfer.CreatedAt)
@@ -731,24 +731,24 @@ func TestGetRemoteClients(t *testing.T) {
 
 // TODO: Delete this when we're sure it's no longer used.
 // func TestHackNullDates(t *testing.T) {
-// 	jsonString := `{ "id": 5, "last_pull_date": null }`
-// 	testHackNullDates(jsonString, t)
-// 	jsonString = `{"id":5,"last_pull_date":null}`
-// 	testHackNullDates(jsonString, t)
-// 	jsonString = `{
-// 					 "id": 5,
-// 					 "last_pull_date": null
-// 				   }`
-// 	testHackNullDates(jsonString, t)
+//  jsonString := `{ "id": 5, "last_pull_date": null }`
+//  testHackNullDates(jsonString, t)
+//  jsonString = `{"id":5,"last_pull_date":null}`
+//  testHackNullDates(jsonString, t)
+//  jsonString = `{
+//                   "id": 5,
+//                   "last_pull_date": null
+//                 }`
+//  testHackNullDates(jsonString, t)
 // }
 
 // TODO: Delete this when we're sure it's no longer used.
 // func testHackNullDates(jsonString string, t *testing.T) {
-// 	data := make(map[string]interface{})
-// 	jsonBytes := []byte(jsonString)
-// 	hackedBytes := dpn.HackNullDates(jsonBytes)
-// 	json.Unmarshal(hackedBytes, &data)
-// 	assert.Equal(t, "1980-01-01T00:00:00Z", data["last_pull_date"])
+//  data := make(map[string]interface{})
+//  jsonBytes := []byte(jsonString)
+//  hackedBytes := dpn.HackNullDates(jsonBytes)
+//  json.Unmarshal(hackedBytes, &data)
+//  assert.Equal(t, "1980-01-01T00:00:00Z", data["last_pull_date"])
 // }
 
 func TestDigestGet(t *testing.T) {

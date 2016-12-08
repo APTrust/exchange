@@ -21,9 +21,8 @@ import (
 	"time"
 )
 
-// dpn_packager repackages APTrust bags as DPN bags so they
+// DPNPackager repackages APTrust bags as DPN bags so they
 // can be copied into DPN.
-
 type DPNPackager struct {
 	PackageChannel      chan *models.DPNIngestManifest
 	TarChannel          chan *models.DPNIngestManifest
@@ -35,6 +34,7 @@ type DPNPackager struct {
 	RemoteClients       map[string]*network.DPNRestClient
 }
 
+// NewDPNPackager creates a new DPNPackager.
 func NewDPNPackager(_context *context.Context) (*DPNPackager, error) {
 	localClient, err := network.NewDPNRestClient(
 		_context.Config.DPN.RestClient.LocalServiceURL,
@@ -69,6 +69,8 @@ func NewDPNPackager(_context *context.Context) (*DPNPackager, error) {
 	return packager, nil
 }
 
+// HandleMessage is the NSQ message handler. The NSQ consumer will pass each
+// message in the subscribed channel to this function.
 func (packager *DPNPackager) HandleMessage(message *nsq.Message) error {
 	message.DisableAutoResponse()
 
