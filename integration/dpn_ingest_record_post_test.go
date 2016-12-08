@@ -7,6 +7,7 @@ import (
 	"github.com/APTrust/exchange/context"
 	"github.com/APTrust/exchange/dpn/models"
 	dpn_testutil "github.com/APTrust/exchange/dpn/util/testutil"
+	"github.com/APTrust/exchange/util"
 	apt_testutil "github.com/APTrust/exchange/util/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -73,6 +74,26 @@ func TestIngestRecordJsonLog(t *testing.T) {
 		require.NotNil(t, manifest)
 		detail := fmt.Sprintf("%s from JSON log", tarFileName)
 		testIngestRecordManifest(t, _context, manifest, detail)
+	}
+}
+
+// TestInteObjDPNUUID makes sure the DPN UUID was set on the
+// IntellectualObject record in Pharos.
+func TestInteObjDPNUUID(t *testing.T) {
+	if !apt_testutil.ShouldRunIntegrationTests() {
+		t.Skip("Skipping integration test. Set ENV var RUN_EXCHANGE_INTEGRATION=true if you want to run them.")
+	}
+	_context, err := apt_testutil.GetContext("integration.json")
+	require.Nil(t, err)
+	for _, s3Key := range apt_testutil.INTEGRATION_GOOD_BAGS[0:7] {
+		tar := strings.Replace(s3Key, "aptrust.receiving.test.", "", 1)
+		objIdentifier := strings.Replace(tar, ".tar", "", 1)
+		resp := _context.PharosClient.IntellectualObjectGet(objIdentifier, false, false)
+		require.Nil(t, resp.Error)
+		obj := resp.IntellectualObject()
+		require.NotNil(t, obj)
+		// DPNUUID is null in fixture data. It should be set after DPN ingest.
+		assert.True(t, util.LooksLikeUUID(obj.DPNUUID))
 	}
 }
 

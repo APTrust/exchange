@@ -98,6 +98,7 @@ func (recorder *DPNIngestRecorder) record() {
 		}
 		if !manifest.RecordSummary.HasErrors() {
 			recorder.saveDPNPremisEvents(manifest)
+			recorder.saveIntellectualObject(manifest)
 		}
 		manifest.NsqMessage.Touch()
 		recorder.PostProcessChannel <- manifest
@@ -300,6 +301,30 @@ func (recorder *DPNIngestRecorder) saveEvent(manifest *models.DPNIngestManifest,
 			event.Identifier, event.EventType, resp.Error, string(data))
 	}
 	event = resp.PremisEvent()
+}
+
+// saveIntellectualObject re-saves the IntellectualObject record in Pharos,
+// setting the new DPN UUID on that object.
+func (recorder *DPNIngestRecorder) saveIntellectualObject(manifest *models.DPNIngestManifest) {
+	resp := recorder.Context.PharosClient.IntellectualObjectGet(manifest.WorkItem.ObjectIdentifier, false, false)
+	if resp.Error != nil {
+		manifest.RecordSummary.AddError("Error retrieving IntellectualObject %s: %v",
+			manifest.WorkItem.ObjectIdentifier, resp.Error)
+		return
+	}
+	obj := resp.IntellectualObject()
+	if obj == nil {
+		// Impossible
+		manifest.RecordSummary.AddError("Pharos returned nil IntellectualObject for %s.",
+			manifest.WorkItem.ObjectIdentifier)
+		return
+	}
+	obj.DPNUUID = manifest.DPNBag.UUID
+	resp = recorder.Context.PharosClient.IntellectualObjectSave(obj)
+	if resp.Error != nil {
+		manifest.RecordSummary.AddError("Could not save IntellectualObject.DPNUUID: %v", resp.Error)
+		return
+	}
 }
 
 // finishWithError logs JSON data and tells Pharos and NSQ about this

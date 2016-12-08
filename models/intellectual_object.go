@@ -30,6 +30,7 @@ type IntellectualObject struct {
 	Description   string         `json:"description"`
 	Access        string         `json:"access"`
 	AltIdentifier string         `json:"alt_identifier"`
+	DPNUUID       string         `json:"dpn_uuid"`
 	GenericFiles  []*GenericFile `json:"generic_files"`
 	PremisEvents  []*PremisEvent `json:"events"`
 	CreatedAt     time.Time      `json:"created_at"`

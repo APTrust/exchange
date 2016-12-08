@@ -40,6 +40,7 @@ func TestNewIntellectualObjectForPharos(t *testing.T) {
 	intelObj, err := testutil.LoadIntelObjFixture(filename)
 	require.Nil(t, err)
 	intelObj.Access = "INSTITUTION" // Just so we can test lowercase
+	intelObj.DPNUUID = "a0903223-e956-40d8-a6e1-4d09edf7cea2"
 	pharosObj := models.NewIntellectualObjectForPharos(intelObj)
 	assert.Equal(t, intelObj.Identifier, pharosObj.Identifier)
 	assert.Equal(t, intelObj.BagName, pharosObj.BagName)
@@ -48,6 +49,7 @@ func TestNewIntellectualObjectForPharos(t *testing.T) {
 	assert.Equal(t, intelObj.Description, pharosObj.Description)
 	assert.Equal(t, intelObj.AltIdentifier, pharosObj.AltIdentifier)
 	assert.Equal(t, strings.ToLower(intelObj.Access), pharosObj.Access)
+	assert.Equal(t, intelObj.DPNUUID, pharosObj.DPNUUID)
 }
 
 func TestNewPremisEventForPharos(t *testing.T) {

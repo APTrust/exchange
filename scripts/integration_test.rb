@@ -400,7 +400,7 @@ class IntegrationTest
 
 	  # Start service
 	  @service.app_start(@context.apps['dpn_ingest_record'])
-	  sleep 30
+	  sleep 45
 
 	  # Run the post test
 	  @results['dpn_ingest_record_test'] = run('dpn_ingest_record_post_test.go')
