@@ -13,7 +13,10 @@ import (
 )
 
 const (
-	GENERIC_FILE_BATCH_SIZE = 50
+	// GENERIC_FILE_BATCH_SIZE describes how many generic files
+	// we should batch into a single HTTP POST when recording a
+	// new IntellectualObject.
+	GENERIC_FILE_BATCH_SIZE = 100
 )
 
 // Records ingest data (objects, files and events) in Pharos
