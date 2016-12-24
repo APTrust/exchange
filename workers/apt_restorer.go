@@ -116,8 +116,37 @@ func (restorer *APTRestorer) buildBag() {
 	for restoreState := range restorer.PackageChannel {
 		restoreState.TouchNSQ()
 		restoreState.PackageSummary.Start()
-		// Assemble all files and tar the bag.
+
+		// Download all of the IntellectualObject's files to the
+		// local bag directory.
+		restorer.fetchAllFiles(restoreState)
+		if restoreState.PackageSummary.HasErrors() {
+			restorer.PostProcessChannel <- restoreState
+		}
+		restoreState.TouchNSQ()
+
+		// Write info files and  md5 and sha256 manifests
+		restorer.writeBagitFile(restoreState)
+		restorer.writeBagInfoFile(restoreState)
+		restorer.writeManifest(constants.AlgMd5, restoreState)
+		restorer.writeManifest(constants.AlgSha256, restoreState)
+		if restoreState.PackageSummary.HasErrors() {
+			restorer.PostProcessChannel <- restoreState
+		}
+		restoreState.TouchNSQ()
+
+		// Tar the bag.
+		restorer.tarBag(restoreState)
+		if restoreState.PackageSummary.HasErrors() {
+			restorer.PostProcessChannel <- restoreState
+		}
+		restoreState.TouchNSQ()
+
+		// Done with packaging. On to validation...
 		restoreState.PackageSummary.Finish()
+		restorer.Context.MessageLog.Info("Putting %s into the validation channel",
+			restoreState.WorkItem.ObjectIdentifier)
+		restorer.ValidateChannel <- restoreState
 	}
 }
 
@@ -214,7 +243,62 @@ func (restorer *APTRestorer) logWhereThisIsGoing(restoreState *models.RestoreSta
 		restoreState.WorkItem.ObjectIdentifier, channelName)
 }
 
+// tarBag tars up the entire bag, after all files have been downloaded
+// and manifests written.
+func (restorer *APTRestorer) tarBag(restoreState *models.RestoreState) {
+
+}
+
+// TODO: Write bagit and bag-info files.
+// TODO: Calculate checksums for bagit and bag-info.
+// Make sure aptrust-info checksum is also there.
+func (restorer *APTRestorer) writeBagitFile(restoreState *models.RestoreState) {
+
+}
+
+func (restorer *APTRestorer) writeBagInfoFile(restoreState *models.RestoreState) {
+
+}
+
+// writeManifest writes the manifest-md5.txt file or the manifest-sha256.txt file
+// for this bag.
+func (restorer *APTRestorer) writeManifest(algorithm string, restoreState *models.RestoreState) {
+	if algorithm != constants.AlgMd5 && algorithm != constants.AlgSha256 {
+		restorer.Context.MessageLog.Fatal("writeManifest: Unsupported algorithm: %s", algorithm)
+	}
+	manifestPath := filepath.Join(restoreState.LocalBagDir, fmt.Sprintf("manifest-%s.txt", algorithm))
+	manifestFile, err := os.Create(manifestPath)
+	if err != nil {
+		restoreState.PackageSummary.AddError("Cannot create manifest file %s: %v",
+			manifestPath, err)
+		return
+	}
+	defer manifestFile.Close()
+	for _, gf := range restoreState.IntellectualObject.GenericFiles {
+		checksum := gf.GetChecksumByAlgorithm(constants.AlgSha256)
+		if checksum == nil {
+			restoreState.PackageSummary.AddError("Cannot find %s checksum for file %s",
+				algorithm, gf.OriginalPath())
+			return
+		}
+		_, err := fmt.Fprintln(manifestFile, checksum.Digest, gf.OriginalPath())
+		if err != nil {
+			restoreState.PackageSummary.AddError("Error writing checksum for file %s "+
+				"to manifest %s: %v", gf.OriginalPath(), manifestPath, err)
+			return
+		}
+	}
+}
+
 func (restorer *APTRestorer) fetchAllFiles(restoreState *models.RestoreState) {
+	// Create the local bag directory.
+	if err := os.MkdirAll(restoreState.LocalBagDir, 0755); err != nil {
+		restoreState.PackageSummary.AddError("Cannot create local bag path %s: %v",
+			restoreState.LocalBagDir, err)
+		return
+	}
+
+	// Set up a downloader to fetch files from S3 long-term storage.
 	downloader := network.NewS3Download(
 		constants.AWSVirginia,
 		restorer.Context.Config.PreservationBucket,
@@ -222,7 +306,9 @@ func (restorer *APTRestorer) fetchAllFiles(restoreState *models.RestoreState) {
 		"",   // local path at which to save the s3 file - set below
 		true, // calculate md5 for manifest
 		true) // calculate sha256 for manifest and fixity verification
-	restorer.Context.MessageLog.Info("Object %s has %d saved files",
+
+	// Fetch all of the files from S3 to our local bag dir.
+	restorer.Context.MessageLog.Info("Starting fetch. Object %s has %d saved files",
 		restoreState.IntellectualObject.Identifier,
 		len(restoreState.IntellectualObject.GenericFiles))
 	downloaded := 0
@@ -231,12 +317,19 @@ func (restorer *APTRestorer) fetchAllFiles(restoreState *models.RestoreState) {
 		downloader.Md5Digest = ""
 		downloader.ErrorMessage = ""
 
+		// Except these losers. We don't want them.
+		if gf.State == "D" {
+			restorer.Context.MessageLog.Info("Skipping deleted file %s", gf.Identifier)
+			continue
+		}
+
 		// We're going to want to confirm the sha256 digest of the download...
 		existingSha256 := gf.GetChecksumByAlgorithm(constants.AlgSha256)
 		if existingSha256 == nil {
 			restoreState.PackageSummary.AddError("Cannot find sha256 digest for file %s", gf.Identifier)
 			break
 		}
+
 		// Figure out what the key name is for this file. It's a UUID.
 		s3KeyName, err := gf.PreservationStorageFileName()
 		if err != nil {
@@ -274,6 +367,9 @@ func (restorer *APTRestorer) fetchAllFiles(restoreState *models.RestoreState) {
 			restoreState.PackageSummary.AddError(msg)
 			break
 		}
+
+		// Validate checksums now, so we don't have to re-calculate
+		// them when we create the file manifests.
 		if downloader.Sha256Digest != existingSha256.Digest {
 			msg := fmt.Sprintf("sha256 digest mismatch for for file %s."+
 				"Our digest: %s. Digest of fetched file: %s",
@@ -289,12 +385,16 @@ func (restorer *APTRestorer) fetchAllFiles(restoreState *models.RestoreState) {
 			restoreState.TouchNSQ()
 		}
 	}
+
+	// Housekeeping.
 	totalFileCount := len(restoreState.IntellectualObject.GenericFiles)
 	if downloaded == totalFileCount {
 		restorer.Context.MessageLog.Info("Downloaded all %d files for %s",
 			downloaded, restoreState.IntellectualObject.Identifier)
 	} else {
-		restorer.Context.MessageLog.Error("Downloaded only %d of %d files for %s",
+		msg := fmt.Sprintf("Downloaded only %d of %d files for %s",
 			downloaded, totalFileCount, restoreState.IntellectualObject.Identifier)
+		restoreState.PackageSummary.AddError(msg)
+		restorer.Context.MessageLog.Error(msg)
 	}
 }
