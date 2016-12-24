@@ -3,15 +3,14 @@ package workers
 import (
 	"encoding/json"
 	"fmt"
-	//	"github.com/APTrust/exchange/constants"
+	"github.com/APTrust/exchange/constants"
 	"github.com/APTrust/exchange/context"
 	"github.com/APTrust/exchange/models"
 	//	"github.com/APTrust/exchange/network"
 	//	"github.com/APTrust/exchange/util"
 	"github.com/nsqio/go-nsq"
+	"os"
 	"path/filepath"
-	//	"sync"
-	//	"time"
 )
 
 // APTRestorer restores bags by reassmbling their contents and
@@ -83,21 +82,31 @@ func (restorer *APTRestorer) HandleMessage(message *nsq.Message) error {
 	// that we're still working on this item.
 	message.DisableAutoResponse()
 
-	// Clear out any old errors, because we're going to retry
-	// whatever may have failed on the last run.
-	restoreState.RestoreSummary.ClearErrors()
-
-	// Figure out where we should start.
-	// If packaging is incomplete, start there.
-	// If packaging is complete, but copy is not, start there.
-	// If copy is complete, but recording is not, start there.
-
 	// Tell Pharos that we're building the bag: constants.StagePackage, constants.StatusStarted
+	restorer.markWorkItemStarted(restoreState)
 
-	//restorer.Context.MessageLog.Info("Putting %s/%s into record channel",
-	//	ingestState.IngestManifest.S3Bucket, ingestState.IngestManifest.S3Key)
-
-	//restorer.RecordChannel <- ingestState
+	// We may have partially processed this item before and then been
+	// forced to quit due to some transient error like not being able
+	// to contact Pharos or S3. Figure out how far we got on the last
+	// attempt to process, and resume there. Clear errors from prior
+	// processing before resuming.
+	if restoreState.CopySummary.Finished() {
+		restorer.logWhereThisIsGoing(restoreState, "PostProcessChannel")
+		restoreState.RecordSummary.ClearErrors()
+		restorer.PostProcessChannel <- restoreState
+	} else if restoreState.ValidateSummary.Finished() {
+		restorer.logWhereThisIsGoing(restoreState, "CopyChannel")
+		restoreState.CopySummary.ClearErrors()
+		restorer.CopyChannel <- restoreState
+	} else if restoreState.PackageSummary.Finished() {
+		restorer.logWhereThisIsGoing(restoreState, "ValidateChannel")
+		restoreState.ValidateSummary.ClearErrors()
+		restorer.ValidateChannel <- restoreState
+	} else {
+		restorer.logWhereThisIsGoing(restoreState, "PackageChannel")
+		restoreState.PackageSummary.ClearErrors()
+		restorer.PackageChannel <- restoreState
+	}
 
 	// Return no error, so NSQ knows we're OK.
 	return nil
@@ -105,9 +114,10 @@ func (restorer *APTRestorer) HandleMessage(message *nsq.Message) error {
 
 func (restorer *APTRestorer) buildBag() {
 	for restoreState := range restorer.PackageChannel {
-		// Assemble all files, tar, and validate.
-		// Touch NSQ often.
-		fmt.Println(restoreState)
+		restoreState.TouchNSQ()
+		restoreState.PackageSummary.Start()
+		// Assemble all files and tar the bag.
+		restoreState.PackageSummary.Finish()
 	}
 }
 
@@ -115,21 +125,21 @@ func (restorer *APTRestorer) validateBag() {
 	for restoreState := range restorer.PackageChannel {
 		// Assemble all files, tar, and validate.
 		// Touch NSQ often.
-		fmt.Println(restoreState)
+		restoreState.TouchNSQ()
 	}
 }
 
 func (restorer *APTRestorer) copyToRestorationBucket() {
 	for restoreState := range restorer.CopyChannel {
 		// Copy bag to S3
-		fmt.Println(restoreState)
+		restoreState.TouchNSQ()
 	}
 }
 
 func (restorer *APTRestorer) postProcess() {
 	for restoreState := range restorer.PostProcessChannel {
 		// Mark item completed in Pharos and finish NSQ.
-		fmt.Println(restoreState)
+		restoreState.TouchNSQ()
 	}
 }
 
@@ -156,7 +166,8 @@ func (restorer *APTRestorer) buildState(message *nsq.Message) (*models.RestoreSt
 			}
 			restoreState.PackageSummary = savedState.PackageSummary
 			restoreState.ValidateSummary = savedState.ValidateSummary
-			restoreState.RestoreSummary = savedState.RestoreSummary
+			restoreState.CopySummary = savedState.CopySummary
+			restoreState.RecordSummary = savedState.RecordSummary
 			restoreState.LocalBagDir = savedState.LocalBagDir
 			restoreState.LocalTarFile = savedState.LocalTarFile
 			restoreState.RestoredToUrl = savedState.RestoredToUrl
@@ -182,4 +193,23 @@ func (restorer *APTRestorer) buildState(message *nsq.Message) (*models.RestoreSt
 			restoreState.IntellectualObject.Identifier)
 	}
 	return restoreState, nil
+}
+
+func (restorer *APTRestorer) markWorkItemStarted(restoreState *models.RestoreState) {
+	restoreState.WorkItem.Stage = constants.StagePackage
+	restoreState.WorkItem.Status = constants.StatusStarted
+	restoreState.WorkItem.Node, _ = os.Hostname()
+	restoreState.WorkItem.Pid = os.Getpid()
+	resp := restorer.Context.PharosClient.WorkItemSave(restoreState.WorkItem)
+	// We can proceed if this call fails. Pharos just won't show users
+	// the current state of processing for this item.
+	if resp.Error != nil {
+		restorer.Context.MessageLog.Warning("Error marking WorkItem %d started for object %s: %v",
+			restoreState.WorkItem.Id, restoreState.IntellectualObject.Identifier, resp.Error)
+	}
+}
+
+func (restorer *APTRestorer) logWhereThisIsGoing(restoreState *models.RestoreState, channelName string) {
+	restorer.Context.MessageLog.Info("Putting %s into %s channel",
+		restoreState.WorkItem.ObjectIdentifier, channelName)
 }

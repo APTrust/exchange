@@ -24,15 +24,20 @@ type RestoreState struct {
 	// PackageSummary contains information about the outcome of the
 	// attempt to reassemble this bag for restoration.
 	PackageSummary *WorkSummary
-	// RestoreSummary contains information about the outcome
-	// of this attempt to restore a bag.
+	// ValidateSummary contains information about the outcome
+	// of validating this newly reassembled bag. We must validate
+	// it before sending it to the restoration bucket.
 	ValidateSummary *WorkSummary
+	// CopySummary contains information about the outcome of the
+	// attempt to copy the tarred bag to the depositor's restoration
+	// bucket.
+	CopySummary *WorkSummary
+	// RecordSummary contains information about the outcome of
+	// attempts to record the restoration event and the completion
+	// of the WorkItem in Pharos.
+	RecordSummary *WorkSummary
 	// LocalBagDir is the absolute path to the untarred bag. We'll be
 	// assembling the bag contents in this directory.
-	RestoreSummary *WorkSummary
-	// ValidateSummary contains validation information about the
-	// bag that we have assembled and tarred. The bag must be valid
-	// before we copy it to the restoration bucket.
 	LocalBagDir string
 	// LocalTarFile is the absolute path the tarred version of this
 	// bag. The local tar file will not exist until the bag has been
@@ -54,7 +59,8 @@ func NewRestoreState(message *nsq.Message) *RestoreState {
 		NSQMessage:      message,
 		PackageSummary:  NewWorkSummary(),
 		ValidateSummary: NewWorkSummary(),
-		RestoreSummary:  NewWorkSummary(),
+		RecordSummary:   NewWorkSummary(),
+		CopySummary:     NewWorkSummary(),
 	}
 }
 
