@@ -74,15 +74,18 @@ type GenericFile struct {
 	// our repository.
 	CreatedAt time.Time `json:"created_at"`
 
-	// A timestamp indicating when this GenericFile record was last updated in
+	// UpdatedAt indicates when this GenericFile record was last updated in
 	// our repository.
 	UpdatedAt time.Time `json:"updated_at"`
 
-	// A list of checksums for this file.
+	// Checksums is a list of checksums for this file.
 	Checksums []*Checksum `json:"checksums"`
 
-	// A list of PREMIS events for this file.
+	// PremisEvents is a list of PREMIS events for this file.
 	PremisEvents []*PremisEvent `json:"premis_events"`
+
+	// State will be "A" for active files, "D" for deleted files.
+	State string `json:"state"`
 
 	// ----------------------------------------------------
 	// The fields below are for internal housekeeping
