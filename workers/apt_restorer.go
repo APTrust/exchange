@@ -6,7 +6,7 @@ import (
 	"github.com/APTrust/exchange/constants"
 	"github.com/APTrust/exchange/context"
 	"github.com/APTrust/exchange/models"
-	//	"github.com/APTrust/exchange/network"
+	"github.com/APTrust/exchange/network"
 	//	"github.com/APTrust/exchange/util"
 	"github.com/nsqio/go-nsq"
 	"os"
@@ -212,4 +212,89 @@ func (restorer *APTRestorer) markWorkItemStarted(restoreState *models.RestoreSta
 func (restorer *APTRestorer) logWhereThisIsGoing(restoreState *models.RestoreState, channelName string) {
 	restorer.Context.MessageLog.Info("Putting %s into %s channel",
 		restoreState.WorkItem.ObjectIdentifier, channelName)
+}
+
+func (restorer *APTRestorer) fetchAllFiles(restoreState *models.RestoreState) {
+	downloader := network.NewS3Download(
+		constants.AWSVirginia,
+		restorer.Context.Config.PreservationBucket,
+		"",   // s3 key to fetch - to be set below
+		"",   // local path at which to save the s3 file - set below
+		true, // calculate md5 for manifest
+		true) // calculate sha256 for manifest and fixity verification
+	restorer.Context.MessageLog.Info("Object %s has %d saved files",
+		restoreState.IntellectualObject.Identifier,
+		len(restoreState.IntellectualObject.GenericFiles))
+	downloaded := 0
+	for _, gf := range restoreState.IntellectualObject.GenericFiles {
+		downloader.Sha256Digest = ""
+		downloader.Md5Digest = ""
+		downloader.ErrorMessage = ""
+
+		// We're going to want to confirm the sha256 digest of the download...
+		existingSha256 := gf.GetChecksumByAlgorithm(constants.AlgSha256)
+		if existingSha256 == nil {
+			restoreState.PackageSummary.AddError("Cannot find sha256 digest for file %s", gf.Identifier)
+			break
+		}
+		// Figure out what the key name is for this file. It's a UUID.
+		s3KeyName, err := gf.PreservationStorageFileName()
+		if err != nil {
+			restoreState.PackageSummary.AddError("File %s: %v", gf.Identifier, err)
+			break
+		}
+
+		// Tell the downloader what we're downloading, and where to put it.
+		downloader.KeyName = s3KeyName
+		targetPath := gf.OriginalPath()
+		downloader.LocalPath = filepath.Join(restoreState.LocalBagDir, targetPath)
+
+		// See if we already have this file on disk. That may be the case if
+		// a recent prior attempt to restore this bag failed with a transient
+		// error. We'll assume the file is good if it has the same name and size
+		// as the one we're fetching. If the file is bad, we'll catch that in the
+		// bag validation step. When bags have tens of thousands of files, or
+		// very large files, we want to avoid re-downloading them.
+		fileStat, err := os.Stat(downloader.LocalPath)
+		if err == nil && fileStat.Size() == gf.Size {
+			restorer.Context.MessageLog.Info("File %s is already on disk with size %s, "+
+				"so we won't download it again. Will verify checksum in validation step.",
+				downloader.LocalPath, fileStat.Size())
+			continue
+		}
+
+		// Fetch is the expensive part, so we don't even want to get to this
+		// point if we don't have the info above.
+		restorer.Context.MessageLog.Info("Downloading %s (%s) to %s", gf.Identifier,
+			s3KeyName, downloader.LocalPath)
+		downloader.Fetch()
+		if downloader.ErrorMessage != "" {
+			msg := fmt.Sprintf("Error fetching %s from S3: %s", gf.Identifier, downloader.ErrorMessage)
+			restorer.Context.MessageLog.Error(msg)
+			restoreState.PackageSummary.AddError(msg)
+			break
+		}
+		if downloader.Sha256Digest != existingSha256.Digest {
+			msg := fmt.Sprintf("sha256 digest mismatch for for file %s."+
+				"Our digest: %s. Digest of fetched file: %s",
+				gf.Identifier, existingSha256, downloader.Sha256Digest)
+			restorer.Context.MessageLog.Error(msg)
+			restoreState.PackageSummary.AddError(msg)
+			break
+		}
+		downloaded += 1
+
+		// Touch NSQ every now and then, so we don't time out.
+		if downloaded%10 == 0 {
+			restoreState.TouchNSQ()
+		}
+	}
+	totalFileCount := len(restoreState.IntellectualObject.GenericFiles)
+	if downloaded == totalFileCount {
+		restorer.Context.MessageLog.Info("Downloaded all %d files for %s",
+			downloaded, restoreState.IntellectualObject.Identifier)
+	} else {
+		restorer.Context.MessageLog.Error("Downloaded only %d of %d files for %s",
+			downloaded, totalFileCount, restoreState.IntellectualObject.Identifier)
+	}
 }
