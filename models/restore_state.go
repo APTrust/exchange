@@ -6,24 +6,33 @@ import (
 )
 
 // RestoreState stores information about the state of a bag restoration
-// operation.
+// operation. This entire structure will be converted to JSON and saved
+// as a WorkItemState object in Pharos.
 type RestoreState struct {
 	// NSQMessage is the NSQ message being processed in this restore
-	// request.
-	NSQMessage *nsq.Message
+	// request. Not serialized because it will change each time we
+	// try to process a request.
+	NSQMessage *nsq.Message `json"-"`
 	// WorkItem is the Pharos WorkItem we're processing.
-	WorkItem *WorkItem
-	// IntellectualObject is the object we're restoring.
-	IntellectualObject *IntellectualObject
+	// Not serialized because the Pharos WorkItem record will be
+	// more up-to-date and authoritative.
+	WorkItem *WorkItem `json"-"`
+	// IntellectualObject is the object we're restoring. Not serialized
+	// because if the object has thousands of files, the serialization is
+	// huge.
+	IntellectualObject *IntellectualObject `json"-"`
+	// PackageSummary contains information about the outcome of the
+	// attempt to reassemble this bag for restoration.
+	PackageSummary *WorkSummary
 	// RestoreSummary contains information about the outcome
 	// of this attempt to restore a bag.
+	ValidateSummary *WorkSummary
+	// LocalBagDir is the absolute path to the untarred bag. We'll be
+	// assembling the bag contents in this directory.
 	RestoreSummary *WorkSummary
 	// ValidateSummary contains validation information about the
 	// bag that we have assembled and tarred. The bag must be valid
 	// before we copy it to the restoration bucket.
-	ValidateSummary *WorkSummary
-	// LocalBagDir is the absolute path to the untarred bag. We'll be
-	// assembling the bag contents in this directory.
 	LocalBagDir string
 	// LocalTarFile is the absolute path the tarred version of this
 	// bag. The local tar file will not exist until the bag has been
@@ -36,6 +45,17 @@ type RestoreState struct {
 	// reassembled bag was copied to the depositor's S3 restoration
 	// bucket.
 	CopiedToRestorationAt time.Time
+}
+
+// NewRestoreState creates a new RestoreState object with empty
+// PackageSummary, RestoreSummary, and ValidationSummary.
+func NewRestoreState(message *nsq.Message) *RestoreState {
+	return &RestoreState{
+		NSQMessage:      message,
+		PackageSummary:  NewWorkSummary(),
+		ValidateSummary: NewWorkSummary(),
+		RestoreSummary:  NewWorkSummary(),
+	}
 }
 
 // TouchNSQ tells NSQ we're still working on this item.
