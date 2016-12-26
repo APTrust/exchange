@@ -1,8 +1,14 @@
 package fileutil
 
 import (
+	"crypto/md5"
+	"crypto/sha256"
 	"encoding/json"
 	"fmt"
+	"github.com/APTrust/exchange/constants"
+	"github.com/APTrust/exchange/util"
+	"hash"
+	"io"
 	"io/ioutil"
 	"os"
 	"os/user"
@@ -122,4 +128,31 @@ func LooksSafeToDelete(dir string, minLength, minSeparators int) bool {
 	separator := string(os.PathSeparator)
 	separatorCount := (len(dir) - len(strings.Replace(dir, separator, "", -1)))
 	return len(dir) >= minLength && separatorCount >= minSeparators
+}
+
+// CalculateChecksum calculates the md5 or sha256 checksum of a file.
+// Param pathToFile is the path the file, and algorithm should be one
+// of constants.AlgMd5 or constante.AlgSha256. Returns the hex-encoded
+// digest or an error.
+func CalculateChecksum(pathToFile, algorithm string) (string, error) {
+	if !util.StringListContains(constants.ChecksumAlgorithms, algorithm) {
+		return "", fmt.Errorf("Unsupported algorithm: %s", algorithm)
+	}
+	var _hash hash.Hash = nil
+	if algorithm == constants.AlgMd5 {
+		_hash = md5.New()
+	} else if algorithm == constants.AlgSha256 {
+		_hash = sha256.New()
+	} else {
+		// In case we someday add a new algorithm to constants.ChecksumAlgorithms
+		return "", fmt.Errorf("Need to write in support for new digest algorithm %s", algorithm)
+	}
+	inputFile, err := os.Open(pathToFile)
+	if err != nil {
+		return "", err
+	}
+	defer inputFile.Close()
+	io.Copy(_hash, inputFile)
+	digest := fmt.Sprintf("%x", _hash.Sum(nil))
+	return digest, nil
 }

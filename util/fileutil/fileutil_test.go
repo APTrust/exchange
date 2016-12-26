@@ -2,8 +2,10 @@ package fileutil_test
 
 import (
 	"fmt"
+	"github.com/APTrust/exchange/constants"
 	"github.com/APTrust/exchange/util/fileutil"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"os"
 	"path/filepath"
 	"strings"
@@ -168,4 +170,21 @@ func TestRecursiveFileList(t *testing.T) {
 func TestLooksSafeToDelete(t *testing.T) {
 	assert.True(t, fileutil.LooksSafeToDelete("/mnt/apt/data/some_dir", 15, 3))
 	assert.False(t, fileutil.LooksSafeToDelete("/usr/local", 12, 3))
+}
+
+func TestGetChecksum(t *testing.T) {
+	filePath, _ := fileutil.RelativeToAbsPath("testdata/unit_test_bags/example.edu.sample_good.tar")
+	md5, err := fileutil.CalculateChecksum(filePath, constants.AlgMd5)
+	require.Nil(t, err)
+	assert.Equal(t, "05e68e69767c772d36bd8a2baf693428", md5)
+
+	sha256, err := fileutil.CalculateChecksum(filePath, constants.AlgSha256)
+	require.Nil(t, err)
+	assert.Equal(t, "24f4ea194115efa3e8a9bd229cbfa7ac23ded35917af6bd2ec24ffcb1a067f55", sha256)
+
+	_, err = fileutil.CalculateChecksum(filePath, "fake_algorithm")
+	require.NotNil(t, err)
+
+	_, err = fileutil.CalculateChecksum("file/does/not/exist", constants.AlgMd5)
+	require.NotNil(t, err)
 }
