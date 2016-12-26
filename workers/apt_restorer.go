@@ -7,6 +7,7 @@ import (
 	"github.com/APTrust/exchange/context"
 	"github.com/APTrust/exchange/models"
 	"github.com/APTrust/exchange/network"
+	"github.com/APTrust/exchange/tarfile"
 	"github.com/APTrust/exchange/util/fileutil"
 	"github.com/nsqio/go-nsq"
 	"os"
@@ -128,6 +129,7 @@ func (restorer *APTRestorer) buildBag() {
 		restoreState.TouchNSQ()
 
 		// Write info files and  md5 and sha256 manifests
+		restorer.writeAPTrustInfoFile(restoreState)
 		restorer.writeBagitFile(restoreState)
 		restorer.writeBagInfoFile(restoreState)
 		restorer.writeManifest(constants.AlgMd5, restoreState)
@@ -228,6 +230,7 @@ func (restorer *APTRestorer) buildState(message *nsq.Message) (*models.RestoreSt
 	return restoreState, nil
 }
 
+// markWorkItemStarted tells Pharos that we're starting work on this.
 func (restorer *APTRestorer) markWorkItemStarted(restoreState *models.RestoreState) {
 	restoreState.WorkItem.Stage = constants.StagePackage
 	restoreState.WorkItem.Status = constants.StatusStarted
@@ -242,6 +245,7 @@ func (restorer *APTRestorer) markWorkItemStarted(restoreState *models.RestoreSta
 	}
 }
 
+// Log a message saying which channel we're putting this into.
 func (restorer *APTRestorer) logWhereThisIsGoing(restoreState *models.RestoreState, channelName string) {
 	restorer.Context.MessageLog.Info("Putting %s into %s channel",
 		restoreState.WorkItem.ObjectIdentifier, channelName)
@@ -250,7 +254,39 @@ func (restorer *APTRestorer) logWhereThisIsGoing(restoreState *models.RestoreSta
 // tarBag tars up the entire bag, after all files have been downloaded
 // and manifests written.
 func (restorer *APTRestorer) tarBag(restoreState *models.RestoreState) {
+	restorer.Context.MessageLog.Info("Tarring %s", restoreState.LocalBagDir)
+	files, err := fileutil.RecursiveFileList(restoreState.LocalBagDir)
+	if err != nil {
+		restoreState.PackageSummary.AddError("Cannot get list of files in directory %s: %s",
+			restoreState.LocalBagDir, err.Error())
+		return
+	}
 
+	// Set up our tar writer...
+	restoreState.LocalTarFile = fmt.Sprintf("%s.tar", restoreState.LocalBagDir)
+	tarWriter := tarfile.NewWriter(restoreState.LocalTarFile)
+	err = tarWriter.Open()
+	if err != nil {
+		restoreState.PackageSummary.AddError("Error creating tar file %s for bag %s: %v",
+			restoreState.LocalTarFile, restoreState.IntellectualObject.Identifier, err)
+		return
+	}
+
+	// ... and start filling it up.
+	for _, filePath := range files {
+		// We want to transform filePath to pathWithinArchive, like so:
+		// /mnt/aptrust/restore/ncsu.edu/bag123/bagit.txt -> bag123/bagit.txt
+		pathInBag := strings.Split(filePath, restoreState.IntellectualObject.Identifier)[1]
+		pathWithinArchive := filepath.Join(restoreState.IntellectualObject.BagName, pathInBag)
+		err = tarWriter.AddToArchive(filePath, pathWithinArchive)
+		if err != nil {
+			restoreState.PackageSummary.AddError("Error adding file %s to archive %s: %v",
+				filePath, pathWithinArchive, err)
+			tarWriter.Close()
+			return
+		}
+	}
+	tarWriter.Close()
 }
 
 // writeBagitFile creates the bagit.txt file for this bag.
