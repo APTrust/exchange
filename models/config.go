@@ -93,6 +93,14 @@ type Config struct {
 	// Configuration options for apt_bag_delete
 	BagDeleteWorker WorkerConfig
 
+	// BagItVersion is the version number we write into the
+	// bagit.txt file when we restore a bag.
+	BagItVersion string
+
+	// BagItEncoding is the encoding value we write into the
+	// bagit.txt file when we restore a bag.
+	BagItEncoding string
+
 	// Location of the config file for bag validation.
 	// Config will differ for APTrust and DPN. This is
 	// for the APTrust config file.
