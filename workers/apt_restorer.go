@@ -7,7 +7,7 @@ import (
 	"github.com/APTrust/exchange/context"
 	"github.com/APTrust/exchange/models"
 	"github.com/APTrust/exchange/network"
-	//	"github.com/APTrust/exchange/util"
+	"github.com/APTrust/exchange/util/fileutil"
 	"github.com/nsqio/go-nsq"
 	"os"
 	"path/filepath"
@@ -253,7 +253,41 @@ func (restorer *APTRestorer) tarBag(restoreState *models.RestoreState) {
 // TODO: Calculate checksums for bagit and bag-info.
 // Make sure aptrust-info checksum is also there.
 func (restorer *APTRestorer) writeBagitFile(restoreState *models.RestoreState) {
+	bagitPath := filepath.Join(restoreState.LocalBagDir, "bagit.txt")
+	bagitFile, err := os.Create(bagitPath)
+	if err != nil {
+		restoreState.PackageSummary.AddError("Cannot create bagit file %s: %v",
+			bagitPath, err)
+		return
+	}
+	fmt.Fprintf(bagitFile, "BagIt-Version: %s", restorer.Context.Config.BagItVersion)
+	fmt.Fprintf(bagitFile, "Tag-File-Character-Encoding: %s", restorer.Context.Config.BagItEncoding)
+	bagitFile.Close()
 
+	// Add this (temporarily) to the intellectual object's GenericFiles
+	// list, so that writeManifest can include the bagit file and its
+	// checksum in the manifests. We do not save this GenericFile record
+	// to Pharos.
+	gf := models.NewGenericFile()
+	gf.Identifier = fmt.Sprintf("%s/bagit.txt", restoreState.IntellectualObject.Identifier)
+	md5, err := fileutil.CalculateChecksum(bagitPath, constants.AlgMd5)
+	if err != nil {
+		restoreState.PackageSummary.AddError("Can't get md5 digest of %s: %v", bagitPath, err)
+	}
+	sha256, err := fileutil.CalculateChecksum(bagitPath, constants.AlgSha256)
+	if err != nil {
+		restoreState.PackageSummary.AddError("Can't get sha256 digest of %s: %v", bagitPath, err)
+	}
+	checksumMd5 := &models.Checksum{
+		Algorithm: constants.AlgMd5,
+		Digest:    md5,
+	}
+	checksumSha256 := &models.Checksum{
+		Algorithm: constants.AlgSha256,
+		Digest:    sha256,
+	}
+	gf.Checksums = append(gf.Checksums, checksumMd5)
+	gf.Checksums = append(gf.Checksums, checksumSha256)
 }
 
 func (restorer *APTRestorer) writeBagInfoFile(restoreState *models.RestoreState) {
