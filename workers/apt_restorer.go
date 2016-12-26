@@ -11,6 +11,8 @@ import (
 	"github.com/nsqio/go-nsq"
 	"os"
 	"path/filepath"
+	"strings"
+	"time"
 )
 
 // APTRestorer restores bags by reassmbling their contents and
@@ -172,6 +174,8 @@ func (restorer *APTRestorer) postProcess() {
 	}
 }
 
+// buildState builds the RestoreState object, which keeps track of which
+// parts of the restore operation have been completed.
 func (restorer *APTRestorer) buildState(message *nsq.Message) (*models.RestoreState, error) {
 	restoreState := models.NewRestoreState(message)
 	workItem, err := GetWorkItem(message, restorer.Context)
@@ -249,34 +253,99 @@ func (restorer *APTRestorer) tarBag(restoreState *models.RestoreState) {
 
 }
 
-// TODO: Write bagit and bag-info files.
-// TODO: Calculate checksums for bagit and bag-info.
-// Make sure aptrust-info checksum is also there.
+// writeBagitFile creates the bagit.txt file for this bag.
 func (restorer *APTRestorer) writeBagitFile(restoreState *models.RestoreState) {
 	bagitPath := filepath.Join(restoreState.LocalBagDir, "bagit.txt")
 	bagitFile, err := os.Create(bagitPath)
 	if err != nil {
-		restoreState.PackageSummary.AddError("Cannot create bagit file %s: %v",
+		restoreState.PackageSummary.AddError("Cannot create bagit.txt file %s: %v",
 			bagitPath, err)
 		return
 	}
 	fmt.Fprintf(bagitFile, "BagIt-Version: %s", restorer.Context.Config.BagItVersion)
 	fmt.Fprintf(bagitFile, "Tag-File-Character-Encoding: %s", restorer.Context.Config.BagItEncoding)
 	bagitFile.Close()
+	restorer.addFile(restoreState, bagitPath, "bagit.txt")
+}
 
-	// Add this (temporarily) to the intellectual object's GenericFiles
-	// list, so that writeManifest can include the bagit file and its
-	// checksum in the manifests. We do not save this GenericFile record
-	// to Pharos.
-	gf := models.NewGenericFile()
-	gf.Identifier = fmt.Sprintf("%s/bagit.txt", restoreState.IntellectualObject.Identifier)
-	md5, err := fileutil.CalculateChecksum(bagitPath, constants.AlgMd5)
-	if err != nil {
-		restoreState.PackageSummary.AddError("Can't get md5 digest of %s: %v", bagitPath, err)
+// writeAPTrustInfo creates and writes a basic aptrust-info file into the
+// bag directory, if that file does not exist. Prior to 2016 (?), we did not
+// save the aptrust-info.txt file to long-term storage, so we do need to
+// rebuild this file for some older bags. For newer bags, we omit this step.
+func (restorer *APTRestorer) writeAPTrustInfoFile(restoreState *models.RestoreState) {
+	aptInfoPath := filepath.Join(restoreState.LocalBagDir, "aptrust-info.txt")
+	if fileutil.FileExists(aptInfoPath) {
+		restorer.Context.MessageLog.Info("aptrust-info.txt already exists for %s",
+			restoreState.IntellectualObject.Identifier)
+		return
+	} else {
+		restorer.Context.MessageLog.Info("Creating aptrust-info.txt for older bag %s",
+			restoreState.IntellectualObject.Identifier)
 	}
-	sha256, err := fileutil.CalculateChecksum(bagitPath, constants.AlgSha256)
+	aptInfoFile, err := os.Create(aptInfoPath)
 	if err != nil {
-		restoreState.PackageSummary.AddError("Can't get sha256 digest of %s: %v", bagitPath, err)
+		restoreState.PackageSummary.AddError("Cannot create aptrust-info.txt file %s: %v",
+			aptInfoPath, err)
+		return
+	}
+	fmt.Fprintf(aptInfoFile, "Title: %s", restoreState.IntellectualObject.Title)
+	fmt.Fprintf(aptInfoFile, "Access: %s", strings.Title(restoreState.IntellectualObject.Access))
+	fmt.Fprintf(aptInfoFile, "Description: %s", restoreState.IntellectualObject.Description)
+	aptInfoFile.Close()
+	restorer.addFile(restoreState, aptInfoPath, "aptrust-info.txt")
+}
+
+// writeBagInfoFile creates the bag-info.txt file, if it does not already
+// exist. We started saving bag-info.txt in mid(?) 2016. Bags ingested
+// prior to that date need a reconstructed bag-info.txt file.
+func (restorer *APTRestorer) writeBagInfoFile(restoreState *models.RestoreState) {
+	bagInfoPath := filepath.Join(restoreState.LocalBagDir, "bag-info.txt")
+	if fileutil.FileExists(bagInfoPath) {
+		restorer.Context.MessageLog.Info("bag-info.txt already exists for %s",
+			restoreState.IntellectualObject.Identifier)
+		return
+	} else {
+		restorer.Context.MessageLog.Info("Creating bag-info.txt for older bag %s",
+			restoreState.IntellectualObject.Identifier)
+	}
+	bagInfoFile, err := os.Create(bagInfoPath)
+	if err != nil {
+		restoreState.PackageSummary.AddError("Cannot create bag-info.txt file %s: %v",
+			bagInfoPath, err)
+		return
+	}
+
+	// In APTrust 1.0, we had a bag size limit of 250GB. When we restored a multi-part
+	// bag that exceeded that size, we broke it up into multiple bags, and the
+	// Bag-Count tag might say something like "1 of 2". In APTrust 2.0, we're moving
+	// away from size limits, and we're going to restore bags all in one piece.
+	// So Bag-Count will be "1 of 1".
+
+	fmt.Fprintf(bagInfoFile, "Source-Organization: %s", restoreState.IntellectualObject.Institution)
+	fmt.Fprintf(bagInfoFile, "Bagging-Date: %s", time.Now().UTC().Format(time.RFC3339))
+	fmt.Fprintf(bagInfoFile, "Bag-Count: %s", "1 of 1")
+	fmt.Fprintf(bagInfoFile, "Bag-Group-Identifier: %s", "")
+	fmt.Fprintf(bagInfoFile, "Internal-Sender-Description: %s", restoreState.IntellectualObject.Description)
+	fmt.Fprintf(bagInfoFile, "Internal-Sender-Identifier: %s", restoreState.IntellectualObject.AltIdentifier)
+	bagInfoFile.Close()
+	restorer.addFile(restoreState, bagInfoPath, "bag-info.txt")
+}
+
+// addFile temporarily adds a file to the intellectual object's GenericFiles
+// list, so that writeManifest can include the bagit file and its
+// checksum in the manifests. We do not save this GenericFile record
+// to Pharos. We do this for bagit.txt, and if necessary, for bag-info.txt and
+// aptrust-info.txt.
+func (restorer *APTRestorer) addFile(restoreState *models.RestoreState, absPath, relativePath string) {
+	gf := models.NewGenericFile()
+	gf.Identifier = fmt.Sprintf("%s/%s", restoreState.IntellectualObject.Identifier, relativePath)
+	md5, err := fileutil.CalculateChecksum(absPath, constants.AlgMd5)
+	if err != nil {
+		restoreState.PackageSummary.AddError("Can't get md5 digest of %s: %v", absPath, err)
+	}
+	sha256, err := fileutil.CalculateChecksum(absPath, constants.AlgSha256)
+	if err != nil {
+		restoreState.PackageSummary.AddError("Can't get sha256 digest of %s: %v", absPath, err)
 	}
 	checksumMd5 := &models.Checksum{
 		Algorithm: constants.AlgMd5,
@@ -288,10 +357,8 @@ func (restorer *APTRestorer) writeBagitFile(restoreState *models.RestoreState) {
 	}
 	gf.Checksums = append(gf.Checksums, checksumMd5)
 	gf.Checksums = append(gf.Checksums, checksumSha256)
-}
-
-func (restorer *APTRestorer) writeBagInfoFile(restoreState *models.RestoreState) {
-
+	restoreState.IntellectualObject.GenericFiles = append(
+		restoreState.IntellectualObject.GenericFiles, gf)
 }
 
 // writeManifest writes the manifest-md5.txt file or the manifest-sha256.txt file
@@ -420,7 +487,7 @@ func (restorer *APTRestorer) fetchAllFiles(restoreState *models.RestoreState) {
 		}
 	}
 
-	// Housekeeping.
+	// Final status report for logging and troubleshooting.
 	totalFileCount := len(restoreState.IntellectualObject.GenericFiles)
 	if downloaded == totalFileCount {
 		restorer.Context.MessageLog.Info("Downloaded all %d files for %s",

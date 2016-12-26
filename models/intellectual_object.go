@@ -74,7 +74,9 @@ func NewIntellectualObject() *IntellectualObject {
 }
 
 // MissingFile defines a file that is not in the bag, despite the
-// fact that its checksum was found in a manifest.
+// fact that its checksum was found in a manifest. We keep track
+// of these during bag validation, so we can report which files
+// were not found.
 type MissingFile struct {
 	Manifest   string
 	LineNumber int
@@ -82,6 +84,7 @@ type MissingFile struct {
 	Digest     string
 }
 
+// NewMissingFile creates a new missing file record.
 func NewMissingFile(manifest string, lineNumber int, filePath, digest string) *MissingFile {
 	return &MissingFile{
 		Manifest:   manifest,
