@@ -41,7 +41,7 @@ func NewDPNValidator(_context *context.Context) (*DPNValidator, error) {
 		LocalClient:   localClient,
 		RemoteClients: remoteClients,
 	}
-	validator.BagValidationConfig = LoadBagValidationConfig(validator.Context)
+	validator.BagValidationConfig = LoadDPNBagValidationConfig(validator.Context)
 	workerBufferSize := _context.Config.DPN.DPNValidationWorker.Workers * 4
 	validator.ValidationChannel = make(chan *models.ReplicationManifest, workerBufferSize)
 	validator.PostProcessChannel = make(chan *models.ReplicationManifest, workerBufferSize)

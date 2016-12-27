@@ -610,7 +610,7 @@ func restoreIngestState(_context *context.Context, manifest *models.DPNIngestMan
 // LoadBagValidationConfig loads the bag validation config file specified
 // in the general config options. This will die if the bag validation
 // config cannot be loaded or is invalid.
-func LoadBagValidationConfig(_context *context.Context) *validation.BagValidationConfig {
+func LoadDPNBagValidationConfig(_context *context.Context) *validation.BagValidationConfig {
 	bagValidationConfig, errors := validation.LoadBagValidationConfig(
 		_context.Config.DPN.BagValidationConfigFile)
 	if errors != nil && len(errors) > 0 {

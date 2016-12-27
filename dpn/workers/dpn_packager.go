@@ -54,7 +54,7 @@ func NewDPNPackager(_context *context.Context) (*DPNPackager, error) {
 		LocalClient:   localClient,
 		RemoteClients: remoteClients,
 	}
-	packager.BagValidationConfig = LoadBagValidationConfig(packager.Context)
+	packager.BagValidationConfig = LoadDPNBagValidationConfig(packager.Context)
 	workerBufferSize := _context.Config.DPN.DPNPackageWorker.Workers * 4
 	packager.PackageChannel = make(chan *models.DPNIngestManifest, workerBufferSize)
 	packager.TarChannel = make(chan *models.DPNIngestManifest, workerBufferSize)
