@@ -9,7 +9,6 @@ import (
 	"github.com/APTrust/exchange/util/fileutil"
 	"github.com/APTrust/exchange/validation"
 	"github.com/nsqio/go-nsq"
-	"os"
 	"strings"
 	"sync"
 	"time"
@@ -34,7 +33,7 @@ func NewAPTFetcher(_context *context.Context) *APTFetcher {
 	// Load the config settings that describe how to validate
 	// APTrust bags. We'll exit here if the config can't be
 	// loaded or is invalid.
-	fetcher.loadBagValidationConfig()
+	fetcher.BagValidationConfig = LoadAPTrustBagValidationConfig(_context)
 
 	// Set up buffered channels
 	fetcherBufferSize := _context.Config.FetchWorker.NetworkConnections * 4
@@ -273,27 +272,6 @@ func (fetcher *APTFetcher) record() {
 			PushToQueue(ingestState, fetcher.Context, fetcher.Context.Config.StoreWorker.NsqTopic)
 		}
 	}
-}
-
-// Loads the bag validation config file specified in the general config
-// options. This will die if the bag validation config cannot be loaded
-// or is invalid.
-func (fetcher *APTFetcher) loadBagValidationConfig() {
-	bagValidationConfig, errors := validation.LoadBagValidationConfig(
-		fetcher.Context.Config.BagValidationConfigFile)
-	if errors != nil && len(errors) > 0 {
-		msg := fmt.Sprintf("Could not load bag validation config from %s",
-			fetcher.Context.Config.BagValidationConfigFile)
-		for _, err := range errors {
-			msg += fmt.Sprintf("%s ... ", err.Error())
-		}
-		fmt.Fprintln(os.Stderr, msg)
-		fetcher.Context.MessageLog.Fatal(msg)
-	} else {
-		fetcher.Context.MessageLog.Info("Loaded bag validation config file %s",
-			fetcher.Context.Config.BagValidationConfigFile)
-	}
-	fetcher.BagValidationConfig = bagValidationConfig
 }
 
 // Make sure we have space to download this item.
