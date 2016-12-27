@@ -8,6 +8,7 @@ import (
 	"github.com/APTrust/exchange/models"
 	"github.com/APTrust/exchange/network"
 	"github.com/APTrust/exchange/tarfile"
+	"github.com/APTrust/exchange/util"
 	"github.com/APTrust/exchange/util/fileutil"
 	"github.com/APTrust/exchange/validation"
 	"github.com/nsqio/go-nsq"
@@ -180,25 +181,33 @@ func (restorer *APTRestorer) validateBag() {
 		}
 		if validationResult == nil {
 			// This should be impossible
-			restoreState.PackageSummary.AddError("Bag validator returned nil result!")
+			restoreState.ValidateSummary.AddError("Bag validator returned nil result!")
 		} else if validationResult.ParseSummary.HasErrors() || validationResult.ValidationSummary.HasErrors() {
 			for _, errMsg := range validationResult.ParseSummary.Errors {
-				restoreState.PackageSummary.AddError("Validator parse error: %s", errMsg)
+				restoreState.ValidateSummary.AddError("Validator parse error: %s", errMsg)
 			}
 			for _, errMsg := range validationResult.ValidationSummary.Errors {
-				restoreState.PackageSummary.AddError("Validation error: %s", errMsg)
+				restoreState.ValidateSummary.AddError("Validation error: %s", errMsg)
 			}
 		}
 		restoreState.ValidateSummary.Finish()
 		restoreState.TouchNSQ()
-		restorer.PostProcessChannel <- restoreState
+		if restoreState.ValidateSummary.HasErrors() {
+			restorer.PostProcessChannel <- restoreState
+		} else {
+			restorer.CopyChannel <- restoreState
+		}
 	}
 }
 
 func (restorer *APTRestorer) copyToRestorationBucket() {
 	for restoreState := range restorer.CopyChannel {
-		// Copy bag to S3
 		restoreState.TouchNSQ()
+		restoreState.CopySummary.Attempted = true
+		restoreState.CopySummary.AttemptNumber += 1
+		restoreState.CopySummary.Start()
+		restorer.uploadBag(restoreState)
+		restoreState.CopySummary.Finish()
 	}
 }
 
@@ -207,6 +216,35 @@ func (restorer *APTRestorer) postProcess() {
 		// Mark item completed in Pharos and finish NSQ.
 		restoreState.TouchNSQ()
 	}
+}
+
+func (restorer *APTRestorer) uploadBag(restoreState *models.RestoreState) {
+	upload := network.NewS3Upload(
+		constants.AWSVirginia,
+		util.RestorationBucketFor(restoreState.IntellectualObject.Institution),
+		fmt.Sprintf("%s.tar", restoreState.IntellectualObject.BagName),
+		"application/x-tar")
+
+	// Open a reader for the tarred bag.
+	reader, err := os.Open(restoreState.LocalTarFile)
+	if reader != nil {
+		defer reader.Close()
+	}
+	if err != nil {
+		restoreState.CopySummary.AddError("Error opening reader for tar file %s: %v",
+			restoreState.LocalTarFile, err)
+		return
+	}
+
+	// Send the tarred bag to the depositor's restoration bucket.
+	upload.Send(reader)
+	if upload.ErrorMessage != "" {
+		restoreState.CopySummary.AddError("Error uploading tar file %s: %s",
+			restoreState.LocalTarFile, upload.ErrorMessage)
+		return
+	}
+	restoreState.RestoredToUrl = upload.Response.Location
+	restoreState.CopiedToRestorationAt = time.Now().UTC()
 }
 
 // buildState builds the RestoreState object, which keeps track of which
