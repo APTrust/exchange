@@ -9,6 +9,7 @@ import (
 	"github.com/APTrust/exchange/network"
 	"github.com/APTrust/exchange/tarfile"
 	"github.com/APTrust/exchange/util/fileutil"
+	"github.com/APTrust/exchange/validation"
 	"github.com/nsqio/go-nsq"
 	"os"
 	"path/filepath"
@@ -35,12 +36,19 @@ type APTRestorer struct {
 	// the outcome of the restoration in Pharos and NSQ, and
 	// do any other required cleanup.
 	PostProcessChannel chan *models.RestoreState
+	// BagValidationConfig is loaded from a JSON file in the
+	// config directory. It describes what constitutes a valid
+	// APTrust bag.
+	BagValidationConfig *validation.BagValidationConfig
 }
 
 func NewAPTRestorer(_context *context.Context) *APTRestorer {
 	restorer := &APTRestorer{
 		Context: _context,
 	}
+
+	restorer.BagValidationConfig = LoadAPTrustBagValidationConfig(restorer.Context)
+
 	// Set up buffered channels
 	workerBufferSize := _context.Config.RestoreWorker.Workers * 10
 	restorer.PackageChannel = make(chan *models.RestoreState, workerBufferSize)
@@ -118,6 +126,8 @@ func (restorer *APTRestorer) HandleMessage(message *nsq.Message) error {
 func (restorer *APTRestorer) buildBag() {
 	for restoreState := range restorer.PackageChannel {
 		restoreState.TouchNSQ()
+		restoreState.PackageSummary.Attempted = true
+		restoreState.PackageSummary.AttemptNumber += 1
 		restoreState.PackageSummary.Start()
 
 		// Download all of the IntellectualObject's files to the
@@ -156,9 +166,32 @@ func (restorer *APTRestorer) buildBag() {
 
 func (restorer *APTRestorer) validateBag() {
 	for restoreState := range restorer.PackageChannel {
-		// Assemble all files, tar, and validate.
-		// Touch NSQ often.
 		restoreState.TouchNSQ()
+		restoreState.ValidateSummary.Attempted = true
+		restoreState.ValidateSummary.AttemptNumber += 1
+		restoreState.ValidateSummary.Start()
+		var validationResult *validation.ValidationResult
+		validator, err := validation.NewBagValidator(restoreState.LocalTarFile, restorer.BagValidationConfig)
+		if err != nil {
+			restoreState.ValidateSummary.AddError(err.Error())
+		} else {
+			// Validation can take a long time for large bags.
+			validationResult = validator.Validate()
+		}
+		if validationResult == nil {
+			// This should be impossible
+			restoreState.PackageSummary.AddError("Bag validator returned nil result!")
+		} else if validationResult.ParseSummary.HasErrors() || validationResult.ValidationSummary.HasErrors() {
+			for _, errMsg := range validationResult.ParseSummary.Errors {
+				restoreState.PackageSummary.AddError("Validator parse error: %s", errMsg)
+			}
+			for _, errMsg := range validationResult.ValidationSummary.Errors {
+				restoreState.PackageSummary.AddError("Validation error: %s", errMsg)
+			}
+		}
+		restoreState.ValidateSummary.Finish()
+		restoreState.TouchNSQ()
+		restorer.PostProcessChannel <- restoreState
 	}
 }
 
