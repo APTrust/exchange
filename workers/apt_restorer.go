@@ -214,7 +214,114 @@ func (restorer *APTRestorer) copyToRestorationBucket() {
 func (restorer *APTRestorer) postProcess() {
 	for restoreState := range restorer.PostProcessChannel {
 		// Mark item completed in Pharos and finish NSQ.
-		restoreState.TouchNSQ()
+		if restoreState.HasErrors() {
+			restorer.finishWithError(restoreState)
+		} else {
+			restorer.finishWithSuccess(restoreState)
+		}
+	}
+}
+
+func (restorer *APTRestorer) finishWithError(restoreState *models.RestoreState) {
+	mostRecentSummary := restoreState.MostRecentSummary()
+	note := fmt.Sprintf("Bag could not be restored: %s", mostRecentSummary.AllErrorsAsString())
+	maxAttempts := restorer.Context.Config.RestoreWorker.MaxAttempts
+	if mostRecentSummary.AttemptNumber > maxAttempts {
+		note = fmt.Sprintf("Too many failed restore attempts (%d). "+
+			"Errors: %s",
+			maxAttempts,
+			mostRecentSummary.AllErrorsAsString())
+		mostRecentSummary.ErrorIsFatal = true
+	}
+
+	// Delete the tar file no matter what...
+	restorer.deleteTarFile(restoreState)
+
+	// ...but delete the bag directory only if this is a fatal error.
+	// We may have cases where we've downloaded 99,000 of a bag's 100,000
+	// files, and if we're going to retry, we should leave those files
+	// on disk, so we don't have to re-download them. The fetchAllFiles
+	// function includes logic to check for existing files in the
+	// LocalBagDir.
+	//
+	// Fatal errors can be due to 1) exceeding max processing attempts,
+	// 2) inability to fetch all of the bag's files, 3) inability to
+	// create a valid bag.
+	if restoreState.HasFatalErrors() {
+		restorer.deleteBagDir(restoreState)
+		mostRecentSummary.Retry = false
+		restoreState.WorkItem.Status = constants.StatusFailed
+	} else {
+		// Set this back to pending, and we'll try again.
+		restoreState.WorkItem.Status = constants.StatusPending
+	}
+
+	restoreState.WorkItem.Note = note
+	restoreState.WorkItem.Node = ""
+	restoreState.WorkItem.Pid = 0
+	restoreState.WorkItem.StageStartedAt = nil
+	restorer.saveWorkItem(restoreState)
+	restorer.saveWorkItemState(restoreState)
+
+	restorer.Context.MessageLog.Error("Failed to restore %s: %s",
+		restoreState.WorkItem.ObjectIdentifier,
+		mostRecentSummary.AllErrorsAsString())
+
+	if mostRecentSummary.ErrorIsFatal {
+		restorer.Context.MessageLog.Error("Error for %s is fatal",
+			restoreState.WorkItem.ObjectIdentifier)
+		restoreState.NSQMessage.Finish()
+	} else {
+		restorer.Context.MessageLog.Info("Requeuing WorkItem %d (%s)",
+			restoreState.WorkItem.Id,
+			restoreState.WorkItem.ObjectIdentifier)
+		restoreState.NSQMessage.Requeue(1 * time.Minute)
+	}
+}
+
+func (restorer *APTRestorer) finishWithSuccess(restoreState *models.RestoreState) {
+	message := fmt.Sprintf("Bag %s restored to %s",
+		restoreState.WorkItem.ObjectIdentifier,
+		restoreState.RestoredToUrl)
+	restorer.Context.MessageLog.Info(message)
+
+	restoreState.WorkItem.Note = message
+	restoreState.WorkItem.Stage = constants.StageResolve
+	restoreState.WorkItem.StageStartedAt = nil
+	restoreState.WorkItem.Status = constants.StatusSuccess
+	restoreState.WorkItem.Node = ""
+	restoreState.WorkItem.Pid = 0
+
+	restorer.deleteTarFile(restoreState)
+	restorer.deleteBagDir(restoreState)
+	restorer.saveWorkItem(restoreState)
+	restorer.saveWorkItemState(restoreState)
+
+	// Tell NSQ we're done storing this.
+	restoreState.NSQMessage.Finish()
+}
+
+func (restorer *APTRestorer) deleteTarFile(restoreState *models.RestoreState) {
+	if fileutil.FileExists(restoreState.LocalTarFile) &&
+		fileutil.LooksSafeToDelete(restoreState.LocalTarFile, 12, 3) {
+		err := os.Remove(restoreState.LocalTarFile)
+		if err != nil {
+			message := fmt.Sprintf("Failed to delete %s", restoreState.LocalTarFile)
+			restoreState.MostRecentSummary().AddError(message)
+			restorer.Context.MessageLog.Error(message)
+		}
+	}
+}
+
+func (restorer *APTRestorer) deleteBagDir(restoreState *models.RestoreState) {
+	if fileutil.FileExists(restoreState.LocalBagDir) &&
+		fileutil.LooksSafeToDelete(restoreState.LocalBagDir, 12, 3) {
+		err := os.RemoveAll(restoreState.LocalBagDir)
+		if err != nil {
+			message := fmt.Sprintf("Failed to delete %s", restoreState.LocalBagDir)
+			restoreState.MostRecentSummary().AddError(message)
+			restorer.Context.MessageLog.Error(message)
+		}
 	}
 }
 
@@ -303,16 +410,46 @@ func (restorer *APTRestorer) buildState(message *nsq.Message) (*models.RestoreSt
 
 // markWorkItemStarted tells Pharos that we're starting work on this.
 func (restorer *APTRestorer) markWorkItemStarted(restoreState *models.RestoreState) {
+	now := time.Now().UTC()
 	restoreState.WorkItem.Stage = constants.StagePackage
 	restoreState.WorkItem.Status = constants.StatusStarted
 	restoreState.WorkItem.Node, _ = os.Hostname()
 	restoreState.WorkItem.Pid = os.Getpid()
+	restoreState.WorkItem.StageStartedAt = &now
+	restorer.saveWorkItem(restoreState)
+}
+
+func (restorer *APTRestorer) saveWorkItem(restoreState *models.RestoreState) {
 	resp := restorer.Context.PharosClient.WorkItemSave(restoreState.WorkItem)
 	// We can proceed if this call fails. Pharos just won't show users
 	// the current state of processing for this item.
 	if resp.Error != nil {
-		restorer.Context.MessageLog.Warning("Error marking WorkItem %d started for object %s: %v",
-			restoreState.WorkItem.Id, restoreState.IntellectualObject.Identifier, resp.Error)
+		restorer.Context.MessageLog.Warning(
+			"Error marking WorkItem %d as %s/%s for object %s: %v",
+			restoreState.WorkItem.Id,
+			restoreState.WorkItem.Stage,
+			restoreState.WorkItem.Status,
+			restoreState.IntellectualObject.Identifier,
+			resp.Error)
+	}
+}
+
+func (restorer *APTRestorer) saveWorkItemState(restoreState *models.RestoreState) {
+	stateJson, err := json.Marshal(restoreState)
+	if err != nil {
+		errMessage := fmt.Sprintf("Cannot marshal restoreState JSON: %v", err)
+		restorer.Context.MessageLog.Error(errMessage)
+		restoreState.MostRecentSummary().AddError(errMessage)
+		return
+	}
+	workItemState := models.NewWorkItemState(restoreState.WorkItem.Id,
+		constants.ActionRestore, string(stateJson))
+	resp := restorer.Context.PharosClient.WorkItemStateSave(workItemState)
+	if resp.Error != nil {
+		restorer.Context.MessageLog.Warning(
+			"Error saving WorkItemState for object %s: %v",
+			restoreState.IntellectualObject.Identifier,
+			resp.Error)
 	}
 }
 
