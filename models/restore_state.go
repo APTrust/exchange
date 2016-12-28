@@ -64,6 +64,41 @@ func NewRestoreState(message *nsq.Message) *RestoreState {
 	}
 }
 
+// HasErrors returns true if any of the work summaries have errors.
+func (restoreState *RestoreState) HasErrors() bool {
+	return restoreState.PackageSummary.HasErrors() ||
+		restoreState.ValidateSummary.HasErrors() ||
+		restoreState.RecordSummary.HasErrors() ||
+		restoreState.CopySummary.HasErrors()
+}
+
+// HasFatalErrors returns true if any of the work summaries have
+// a fatal error.
+func (restoreState *RestoreState) HasFatalErrors() bool {
+	return (restoreState.PackageSummary.ErrorIsFatal ||
+		restoreState.ValidateSummary.ErrorIsFatal ||
+		restoreState.RecordSummary.ErrorIsFatal ||
+		restoreState.CopySummary.ErrorIsFatal)
+}
+
+// AllErrorsAsString returns all error messages from all work summaries
+// as a single string.
+func (restoreState *RestoreState) AllErrorsAsString() string {
+	errors := []string{
+		restoreState.PackageSummary.AllErrorsAsString(),
+		restoreState.ValidateSummary.AllErrorsAsString(),
+		restoreState.RecordSummary.AllErrorsAsString(),
+		restoreState.CopySummary.AllErrorsAsString(),
+	}
+	allErrors := ""
+	for _, err := range errors {
+		if err != "" {
+			allErrors += err + "\n"
+		}
+	}
+	return allErrors
+}
+
 // TouchNSQ tells NSQ we're still working on this item.
 func (restoreState *RestoreState) TouchNSQ() {
 	if restoreState.NSQMessage != nil {
