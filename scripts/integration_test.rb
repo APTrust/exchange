@@ -210,6 +210,14 @@ class IntegrationTest
         return false
       end
 
+      # Mark some IntellectualObjects for restoration in Pharos,
+      # so that apt_restore will have something to work on.
+      @results['apt_mark_for_restore'] = run('apt_mark_for_restore_test.go')
+
+      # ---------------------------------------
+      # TODO: Push these new WorkItems into NSQ.
+      # ---------------------------------------
+
       # Start services required for this specific set of tests.
       @service.app_start(@context.apps['apt_restore'])
       sleep 5
