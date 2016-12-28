@@ -99,6 +99,20 @@ func (restoreState *RestoreState) AllErrorsAsString() string {
 	return allErrors
 }
 
+// MostRecentSummary returns the WorkSummary for the most recent
+// operation.
+func (restoreState *RestoreState) MostRecentSummary() *WorkSummary {
+	summary := restoreState.PackageSummary
+	if restoreState.RecordSummary.Started() {
+		summary = restoreState.RecordSummary
+	} else if restoreState.CopySummary.Started() {
+		summary = restoreState.CopySummary
+	} else if restoreState.ValidateSummary.Started() {
+		summary = restoreState.ValidateSummary
+	}
+	return summary
+}
+
 // TouchNSQ tells NSQ we're still working on this item.
 func (restoreState *RestoreState) TouchNSQ() {
 	if restoreState.NSQMessage != nil {

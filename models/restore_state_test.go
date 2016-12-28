@@ -79,3 +79,14 @@ func TestRestoreState_AllErrorsAsString(t *testing.T) {
 	expected := "error 1\nerror 2\nerror 3\nerror 4\nerror 5\nerror 6\n"
 	assert.Equal(t, expected, restoreState.AllErrorsAsString())
 }
+
+func TestRestoreState_MostRecentSummary(t *testing.T) {
+	restoreState := models.NewRestoreState(testutil.MakeNsqMessage("999"))
+	assert.Equal(t, restoreState.PackageSummary, restoreState.MostRecentSummary())
+	restoreState.ValidateSummary.Start()
+	assert.Equal(t, restoreState.ValidateSummary, restoreState.MostRecentSummary())
+	restoreState.CopySummary.Start()
+	assert.Equal(t, restoreState.CopySummary, restoreState.MostRecentSummary())
+	restoreState.RecordSummary.Start()
+	assert.Equal(t, restoreState.RecordSummary, restoreState.MostRecentSummary())
+}
