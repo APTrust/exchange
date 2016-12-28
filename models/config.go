@@ -467,8 +467,8 @@ type DPNConfig struct {
 	// to AWS Glacier.
 	DPNIngestStoreWorker WorkerConfig
 
-	// DPNPackageWorker records details about fixity checks
-	// that could not be completed.
+	// DPNPackageWorker packages APTrust IntellectualObjects into
+	// DPN bags, so they can be ingested into DPN.
 	DPNPackageWorker WorkerConfig
 
 	// The name of the long-term storage bucket for DPN
