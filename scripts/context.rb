@@ -36,6 +36,7 @@ class Context
       'apt_fetch' => App.new('apt_fetch', 'service'),
       'apt_store' => App.new('apt_store', 'service'),
       'apt_record' => App.new('apt_record', 'service'),
+      'apt_restore' => App.new('apt_restore', 'service'),
       'apt_volume_service' => App.new('apt_volume_service', 'service'),
       'dpn_copy' => App.new('dpn_copy', 'service'),
       'dpn_queue' => App.new('dpn_queue', 'application'),

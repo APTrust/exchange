@@ -152,6 +152,14 @@ class IntegrationTest
   # apt_ingest runs the entire APTrust ingest process, from end to end,
   # using fixtures, local services, and AWS S3/Glacier.
   def apt_ingest(more_tests_follow)
+
+    # apt_ingest can be called from more than one method below.
+    # If it has already run, it will have recorded the results
+    # of apt_record_test, and we don't want to run it again.
+    if !@results['apt_record_test'].nil?
+      return true
+    end
+
     run_suite(more_tests_follow) do
       # Rebuild binaries
       @build.build(@context.apps['apt_volume_service'])
@@ -191,8 +199,24 @@ class IntegrationTest
   # apt_restore runs the APTrust bag restoration service to restore
   # a number of bags.
   def apt_restore(more_tests_follow)
-    puts 'apt_restore is not yet implemented'
-    return true
+    run_suite(more_tests_follow) do
+      @build.build(@context.apps['apt_restore'])
+
+      # Run the prerequisite process (with tests)
+      # Note that the prereq starts most of the required services.
+      apt_ingest_ok = apt_ingest(true)
+      if !apt_ingest_ok
+        puts "Skipping apt_restore test because of prior failures."
+        return false
+      end
+
+      # Start services required for this specific set of tests.
+      @service.app_start(@context.apps['apt_restore'])
+      sleep 5
+
+      # Run the post tests.
+      # @results['apt_restore_test'] = run('apt_restore_post_test.go')
+    end
   end
 
   # apt_delete runs the APTrust file deletion service to delete a
