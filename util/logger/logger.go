@@ -35,14 +35,14 @@ func InitLogger(config *models.Config) (*logging.Logger, string) {
 	}
 
 	log := logging.MustGetLogger(processName)
-	format := logging.MustStringFormatter("[%{level}] %{message}")
+	format := logging.MustStringFormatter("%{time} [%{level}] %{message}")
 	logging.SetFormatter(format)
 	logging.SetLevel(config.LogLevel, processName)
 
 	logBackend := logging.NewLogBackend(writer, "", 0)
 	if config.LogToStderr {
 		// Log to BOTH file and stderr
-		stderrBackend := logging.NewLogBackend(os.Stderr, "", stdlog.LstdFlags|stdlog.Lshortfile)
+		stderrBackend := logging.NewLogBackend(os.Stderr, "", stdlog.Lshortfile)
 		stderrBackend.Color = true
 		logging.SetBackend(logBackend, stderrBackend)
 	} else {
