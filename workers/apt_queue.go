@@ -21,6 +21,7 @@ type APTQueue struct {
 }
 
 func NewAPTQueue(_context *context.Context, enableStats bool) *APTQueue {
+	_context.MessageLog.Info("NSQ address: %s", _context.Config.NsqdHttpAddress)
 	nsqClient := network.NewNSQClient(_context.Config.NsqdHttpAddress)
 	aptQueue := &APTQueue{
 		Context:      _context,

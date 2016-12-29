@@ -57,6 +57,28 @@ func TestQueueStats(t *testing.T) {
 	testQueueWarnings(t, expected, actual)
 }
 
+func TestRestorationQueue(t *testing.T) {
+	// Make sure items marked for restoration made it into the restoration queue.
+	if !testutil.ShouldRunIntegrationTests() {
+		t.Skip("Skipping integration test. Set ENV var RUN_EXCHANGE_INTEGRATION=true if you want to run them.")
+	}
+	_context, err := testutil.GetContext("integration.json")
+	require.Nil(t, err, "Could not create context")
+	stats, err := _context.NSQClient.GetStats()
+	require.Nil(t, err)
+	foundTopic := false
+	for _, topic := range stats.Data.Topics {
+		if topic.TopicName == _context.Config.RestoreWorker.NsqTopic {
+			// Should have 7 items. See apt_mark_for_restore_test.go
+			foundTopic = true
+			assert.EqualValues(t, uint64(7), topic.MessageCount,
+				"NSQ restore topic should have 7 items")
+		}
+	}
+	assert.True(t, foundTopic, "Nothing was queued in %s",
+		_context.Config.RestoreWorker.NsqTopic)
+}
+
 func testItemsQueued(t *testing.T, expected *stats.APTQueueStats, actual *stats.APTQueueStats) {
 	for _, itemList := range expected.ItemsQueued {
 		for _, item := range itemList {
