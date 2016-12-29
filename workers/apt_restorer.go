@@ -166,7 +166,7 @@ func (restorer *APTRestorer) buildBag() {
 }
 
 func (restorer *APTRestorer) validateBag() {
-	for restoreState := range restorer.PackageChannel {
+	for restoreState := range restorer.ValidateChannel {
 		restoreState.TouchNSQ()
 		restoreState.ValidateSummary.Attempted = true
 		restoreState.ValidateSummary.AttemptNumber += 1
@@ -193,8 +193,12 @@ func (restorer *APTRestorer) validateBag() {
 		restoreState.ValidateSummary.Finish()
 		restoreState.TouchNSQ()
 		if restoreState.ValidateSummary.HasErrors() {
+			restorer.Context.MessageLog.Info("Putting %s into PostProcess channel",
+				restoreState.WorkItem.ObjectIdentifier)
 			restorer.PostProcessChannel <- restoreState
 		} else {
+			restorer.Context.MessageLog.Info("Putting %s into Copy channel",
+				restoreState.WorkItem.ObjectIdentifier)
 			restorer.CopyChannel <- restoreState
 		}
 	}
@@ -208,6 +212,7 @@ func (restorer *APTRestorer) copyToRestorationBucket() {
 		restoreState.CopySummary.Start()
 		restorer.uploadBag(restoreState)
 		restoreState.CopySummary.Finish()
+		restorer.PostProcessChannel <- restoreState
 	}
 }
 
@@ -326,10 +331,15 @@ func (restorer *APTRestorer) deleteBagDir(restoreState *models.RestoreState) {
 }
 
 func (restorer *APTRestorer) uploadBag(restoreState *models.RestoreState) {
+	// Each institution has its own restoration bucket.
+	restorationBucket := util.RestorationBucketFor(restoreState.IntellectualObject.Institution)
+	s3Key := fmt.Sprintf("%s.tar", restoreState.IntellectualObject.BagName)
+	restorer.Context.MessageLog.Info("Uploading %s to %s/%s",
+		restoreState.LocalTarFile, restorationBucket, s3Key)
 	upload := network.NewS3Upload(
 		constants.AWSVirginia,
-		util.RestorationBucketFor(restoreState.IntellectualObject.Institution),
-		fmt.Sprintf("%s.tar", restoreState.IntellectualObject.BagName),
+		restorationBucket,
+		s3Key,
 		"application/x-tar")
 
 	// Open a reader for the tarred bag.
@@ -338,7 +348,7 @@ func (restorer *APTRestorer) uploadBag(restoreState *models.RestoreState) {
 		defer reader.Close()
 	}
 	if err != nil {
-		restoreState.CopySummary.AddError("Error opening reader for tar file %s: %v",
+		restoreState.CopySummary.AddError("Upload: error opening reader for tar file %s: %v",
 			restoreState.LocalTarFile, err)
 		return
 	}
@@ -582,6 +592,7 @@ func (restorer *APTRestorer) writeBagInfoFile(restoreState *models.RestoreState)
 // aptrust-info.txt.
 func (restorer *APTRestorer) addFile(restoreState *models.RestoreState, absPath, relativePath string) {
 	gf := models.NewGenericFile()
+	gf.IntellectualObjectIdentifier = restoreState.IntellectualObject.Identifier
 	gf.Identifier = fmt.Sprintf("%s/%s", restoreState.IntellectualObject.Identifier, relativePath)
 	md5, err := fileutil.CalculateChecksum(absPath, constants.AlgMd5)
 	if err != nil {
@@ -601,6 +612,10 @@ func (restorer *APTRestorer) addFile(restoreState *models.RestoreState, absPath,
 	}
 	gf.Checksums = append(gf.Checksums, checksumMd5)
 	gf.Checksums = append(gf.Checksums, checksumSha256)
+	restorer.Context.MessageLog.Info("Added file %s to bag. Abs path: %s. Relative path: %s",
+		gf.Identifier, absPath, relativePath)
+	//restorer.Context.MessageLog.Info("ObjIdentifer: %s, gf.OriginalPath: %s",
+	//	restoreState.IntellectualObject.Identifier, gf.OriginalPath())
 	restoreState.IntellectualObject.GenericFiles = append(
 		restoreState.IntellectualObject.GenericFiles, gf)
 }
@@ -620,7 +635,7 @@ func (restorer *APTRestorer) writeManifest(algorithm string, restoreState *model
 	}
 	defer manifestFile.Close()
 	for _, gf := range restoreState.IntellectualObject.GenericFiles {
-		checksum := gf.GetChecksumByAlgorithm(constants.AlgSha256)
+		checksum := gf.GetChecksumByAlgorithm(algorithm)
 		if checksum == nil {
 			restoreState.PackageSummary.AddError("Cannot find %s checksum for file %s",
 				algorithm, gf.OriginalPath())
@@ -657,6 +672,7 @@ func (restorer *APTRestorer) fetchAllFiles(restoreState *models.RestoreState) {
 		restoreState.IntellectualObject.Identifier,
 		len(restoreState.IntellectualObject.GenericFiles))
 	downloaded := 0
+	alreadyOnDisk := 0
 	for _, gf := range restoreState.IntellectualObject.GenericFiles {
 		downloader.Sha256Digest = ""
 		downloader.Md5Digest = ""
@@ -698,6 +714,7 @@ func (restorer *APTRestorer) fetchAllFiles(restoreState *models.RestoreState) {
 			restorer.Context.MessageLog.Info("File %s is already on disk with size %s, "+
 				"so we won't download it again. Will verify checksum in validation step.",
 				downloader.LocalPath, fileStat.Size())
+			alreadyOnDisk += 1
 			continue
 		}
 
@@ -733,12 +750,16 @@ func (restorer *APTRestorer) fetchAllFiles(restoreState *models.RestoreState) {
 
 	// Final status report for logging and troubleshooting.
 	totalFileCount := len(restoreState.IntellectualObject.GenericFiles)
-	if downloaded == totalFileCount {
-		restorer.Context.MessageLog.Info("Downloaded all %d files for %s",
-			downloaded, restoreState.IntellectualObject.Identifier)
+	totalFilesPresent := downloaded + alreadyOnDisk
+	if totalFilesPresent == totalFileCount {
+		restorer.Context.MessageLog.Info("Found all %d files for %s (%d downloaded, %d already on disk)",
+			totalFileCount, restoreState.IntellectualObject.Identifier,
+			downloaded, alreadyOnDisk)
 	} else {
-		msg := fmt.Sprintf("Downloaded only %d of %d files for %s",
-			downloaded, totalFileCount, restoreState.IntellectualObject.Identifier)
+		msg := fmt.Sprintf("Found only %d of %d files for %s (%d downloaded, %d already on disk)",
+			totalFilesPresent, totalFileCount,
+			restoreState.IntellectualObject.Identifier,
+			downloaded, alreadyOnDisk)
 		restoreState.PackageSummary.AddError(msg)
 		restorer.Context.MessageLog.Error(msg)
 	}

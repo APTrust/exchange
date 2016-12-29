@@ -118,6 +118,7 @@ class IntegrationTest
     @context.make_test_dirs
     @context.clear_logs
     @context.clear_staging
+    @context.clear_restore
     @context.clear_binaries
     @context.clear_nsq_data
   end
@@ -254,7 +255,7 @@ class IntegrationTest
 
       # Start services required for this specific set of tests.
       @service.app_start(@context.apps['apt_restore'])
-      sleep 5
+      sleep 45
 
       # Run the post tests.
       # @results['apt_restore_test'] = run('apt_restore_post_test.go')
