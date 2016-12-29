@@ -53,8 +53,8 @@ func TestQueueStats(t *testing.T) {
 	expected, actual := getQueueOutputs(t)
 	testItemsQueued(t, expected, actual)
 	testItemsMarkedAsQueued(t, expected, actual)
-	testErrors(t, expected, actual)
-	testWarnings(t, expected, actual)
+	testQueueErrors(t, expected, actual)
+	testQueueWarnings(t, expected, actual)
 }
 
 func testItemsQueued(t *testing.T, expected *stats.APTQueueStats, actual *stats.APTQueueStats) {
@@ -74,10 +74,10 @@ func testItemsMarkedAsQueued(t *testing.T, expected *stats.APTQueueStats, actual
 	}
 }
 
-func testErrors(t *testing.T, expected *stats.APTQueueStats, actual *stats.APTQueueStats) {
+func testQueueErrors(t *testing.T, expected *stats.APTQueueStats, actual *stats.APTQueueStats) {
 	assert.Equal(t, 0, len(actual.Errors))
 }
 
-func testWarnings(t *testing.T, expected *stats.APTQueueStats, actual *stats.APTQueueStats) {
+func testQueueWarnings(t *testing.T, expected *stats.APTQueueStats, actual *stats.APTQueueStats) {
 	assert.Equal(t, 0, len(actual.Warnings))
 }
