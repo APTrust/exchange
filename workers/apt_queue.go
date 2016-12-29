@@ -33,14 +33,16 @@ func NewAPTQueue(_context *context.Context, enableStats bool) *APTQueue {
 	return aptQueue
 }
 
-// getWorkItems retrieves all unqueued work items from NSQ.
-func (aptQueue *APTQueue) getWorkItems() {
+// Run retrieves all unqueued work items from Pharos and pushes
+// them into the appropriate NSQ topic.
+func (aptQueue *APTQueue) Run() {
 	params := url.Values{}
 	params.Set("queued", "false")
 	params.Set("page", "1")
 	params.Set("per_page", "100")
 	for {
 		resp := aptQueue.Context.PharosClient.WorkItemList(params)
+		aptQueue.Context.MessageLog.Info("GET %s", resp.Request.URL)
 		if resp.Error != nil {
 			aptQueue.recordError(
 				"Error getting WorkItem list from Pharos: %s",
@@ -71,8 +73,8 @@ func (aptQueue *APTQueue) addToNSQ(workItem *models.WorkItem) bool {
 			workItem.Id, topic, err)
 		return false
 	}
-	aptQueue.Context.MessageLog.Info("Added WorkItem id %d to NSQ topic %s",
-		workItem.Id, topic)
+	aptQueue.Context.MessageLog.Info("Added WorkItem id %d (%s/%s/%s) to NSQ topic %s",
+		workItem.Id, workItem.Action, workItem.Stage, workItem.Status, topic)
 	if aptQueue.stats != nil {
 		aptQueue.stats.AddWorkItem(topic, workItem)
 	}
@@ -92,6 +94,8 @@ func (aptQueue *APTQueue) markAsQueued(workItem *models.WorkItem) *models.WorkIt
 		aptQueue.processPharosError(resp)
 		return nil
 	}
+	aptQueue.Context.MessageLog.Info("Marked WorkItem id %d (%s/%s/%s) as queued in Pharos",
+		workItem.Id, workItem.Action, workItem.Stage, workItem.Status)
 	if aptQueue.stats != nil {
 		aptQueue.stats.AddItemMarkedAsQueued(workItem)
 	}

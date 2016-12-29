@@ -35,6 +35,8 @@ class Service
       # HACK!
       if app.name == 'apt_bucket_reader'
         cmd += " -stats=#{@context.log_dir}/bucket_reader_stats.json"
+      elsif app.name == 'apt_queue'
+        cmd += " -stats=#{@context.log_dir}/apt_queue_stats.json"
       elsif app.name == 'dpn_queue'
         cmd += " -hours=240000"
       end

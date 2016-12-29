@@ -35,6 +35,7 @@ end
 def tests
   {
     'apt_bucket_reader' => 'Test the APTrust bucket reader',
+    'apt_queue' => 'Test queueing of WorkItems',
     'apt_ingest' => 'Test the APTrust ingest process.',
     'apt_restore' => 'Test the APTrust restore process',
     'apt_delete' => 'Test APTrust file deletion',

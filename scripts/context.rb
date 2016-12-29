@@ -33,6 +33,7 @@ class Context
     # Special apps have special methods in service.rb to run them.
     @apps = {
       'apt_bucket_reader' => App.new('apt_bucket_reader', 'application'),
+      'apt_queue' => App.new('apt_queue', 'application'),
       'apt_fetch' => App.new('apt_fetch', 'service'),
       'apt_store' => App.new('apt_store', 'service'),
       'apt_record' => App.new('apt_record', 'service'),

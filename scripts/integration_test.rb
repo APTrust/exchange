@@ -196,17 +196,23 @@ class IntegrationTest
     end
   end
 
-  # apt_restore runs the APTrust bag restoration service to restore
-  # a number of bags.
-  def apt_restore(more_tests_follow)
+  # apt_queue copies WorkItems into NSQ. For example, any oustanding
+  # requests to delete files, restore files, send files to DPN, etc.,
+  # that have no queued_at timestamp will be put into the appropriate
+  # NSQ topic.
+  def apt_queue(more_tests_follow)
+    # Don't run this if it's already been run.
+    if !@results['apt_queue_test'].nil?
+      return true
+    end
     run_suite(more_tests_follow) do
-      @build.build(@context.apps['apt_restore'])
+      @build.build(@context.apps['apt_queue'])
 
       # Run the prerequisite process (with tests)
       # Note that the prereq starts most of the required services.
       apt_ingest_ok = apt_ingest(true)
       if !apt_ingest_ok
-        puts "Skipping apt_restore test because of prior failures."
+        puts "Skipping apt_queue test because of prior failures."
         return false
       end
 
@@ -214,9 +220,37 @@ class IntegrationTest
       # so that apt_restore will have something to work on.
       @results['apt_mark_for_restore'] = run('apt_mark_for_restore_test.go')
 
-      # ---------------------------------------
-      # TODO: Push these new WorkItems into NSQ.
-      # ---------------------------------------
+      # ----------------------------------------
+      # TODO: Add code to mark items for delete.
+      # @results['apt_mark_for_delete'] = run('apt_mark_for_delete_test.go')
+      # ----------------------------------------
+
+      # apt_queue is not a service. It runs to completion, then exits.
+      # For integration tests, it should take just a second or two.
+      @service.app_start(@context.apps['apt_queue'])
+      @service.stop_everything unless more_tests_follow
+      sleep 5
+
+      # Run the post tests.
+      # @results['apt_queue_test'] = run('apt_queue_post_test.go')
+    end
+  end
+
+  # apt_restore runs the APTrust bag restoration service to restore
+  # a number of bags.
+  def apt_restore(more_tests_follow)
+    run_suite(more_tests_follow) do
+      @build.build(@context.apps['apt_restore'])
+
+      # Run the prerequisite process (with tests)
+      # Note that the prereq starts most of the required services,
+      # and apt_queue marks items for restore and pushes them into
+      # NSQ.
+      apt_queue_ok = apt_queue(true)
+      if !apt_queue_ok
+        puts "Skipping apt_restore test because of prior failures."
+        return false
+      end
 
       # Start services required for this specific set of tests.
       @service.app_start(@context.apps['apt_restore'])
