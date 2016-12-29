@@ -13,7 +13,7 @@ import (
 
 /*
 These tests check the results of the integration tests for
-the app apt_bucket_reader. See the ingest_test.sh script in
+the app apt_bucket_reader. See the ingest_test.rb script in
 the scripts folder, which sets up an integration context, runs
 the bucket reader, and then runs this program to check the
 stats output of the bucket reader to make sure all went well.
@@ -46,7 +46,7 @@ func getBucketReaderOutputs(t *testing.T) (expected *stats.APTBucketReaderStats,
 	return expected, actual
 }
 
-func TestInstutionsCached(t *testing.T) {
+func TestBucketReaderStats(t *testing.T) {
 	if !testutil.ShouldRunIntegrationTests() {
 		t.Skip("Skipping integration test. Set ENV var RUN_EXCHANGE_INTEGRATION=true if you want to run them.")
 	}

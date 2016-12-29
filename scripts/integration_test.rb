@@ -232,7 +232,7 @@ class IntegrationTest
       sleep 5
 
       # Run the post tests.
-      # @results['apt_queue_test'] = run('apt_queue_post_test.go')
+      @results['apt_queue_test'] = run('apt_queue_post_test.go')
     end
   end
 
