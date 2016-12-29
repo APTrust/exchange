@@ -27,7 +27,7 @@
 	"APTrustGlacierRegion": "us-west-2",
 	"PreservationBucket": "aptrust.test.preservation",
 	"ReplicationBucket": "aptrust.test.preservation.oregon",
-	"CustomRestoreBucket": "aptrust.test.restore",
+	"CustomRestoreBucket": "aptrust.restore.test",
 	"RestoreToTestBuckets": false,
 	"MaxDaysSinceFixityCheck": 60,
 
