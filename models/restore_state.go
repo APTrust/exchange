@@ -12,15 +12,15 @@ type RestoreState struct {
 	// NSQMessage is the NSQ message being processed in this restore
 	// request. Not serialized because it will change each time we
 	// try to process a request.
-	NSQMessage *nsq.Message `json"-"`
+	NSQMessage *nsq.Message `json:"-"`
 	// WorkItem is the Pharos WorkItem we're processing.
 	// Not serialized because the Pharos WorkItem record will be
 	// more up-to-date and authoritative.
-	WorkItem *WorkItem `json"-"`
+	WorkItem *WorkItem `json:"-"`
 	// IntellectualObject is the object we're restoring. Not serialized
 	// because if the object has thousands of files, the serialization is
 	// huge.
-	IntellectualObject *IntellectualObject `json"-"`
+	IntellectualObject *IntellectualObject `json:"-"`
 	// PackageSummary contains information about the outcome of the
 	// attempt to reassemble this bag for restoration.
 	PackageSummary *WorkSummary
