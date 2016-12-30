@@ -798,7 +798,7 @@ func (aptRestorer *APTRestorer) logJson(restoreState *models.RestoreState, jsonS
 	timestamp := time.Now().UTC().Format(time.RFC3339)
 	startMessage := fmt.Sprintf("-------- BEGIN %s | WorkItem: %d | Time: %s --------",
 		restoreState.WorkItem.ObjectIdentifier, restoreState.WorkItem.Id, timestamp)
-	endMessage := fmt.Sprintf("-------- END %s | WorkItem: %s | Time: %s --------",
+	endMessage := fmt.Sprintf("-------- END %s | WorkItem: %d | Time: %s --------",
 		restoreState.WorkItem.ObjectIdentifier, restoreState.WorkItem.Id, timestamp)
 	aptRestorer.Context.JsonLog.Println(startMessage, "\n",
 		jsonString, "\n",
