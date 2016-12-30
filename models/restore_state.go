@@ -50,6 +50,16 @@ type RestoreState struct {
 	// reassembled bag was copied to the depositor's S3 restoration
 	// bucket.
 	CopiedToRestorationAt time.Time
+	// BagDirDeletedAt is a timestamp saying when the bag directory
+	// was deleted. Check this to ensure apt_restorer cleaned up
+	// after itself. If LocalBagDir is an empty string, there was
+	// nothing to delete.
+	BagDirDeletedAt time.Time
+	// TarFileDeletedAt is a timestamp saying when the local tar file
+	// was deleted. Check this to ensure apt_restorer cleaned up
+	// after itself. If LocalTarFile is an empty string, there was
+	// nothing to delete.
+	TarFileDeletedAt time.Time
 }
 
 // NewRestoreState creates a new RestoreState object with empty

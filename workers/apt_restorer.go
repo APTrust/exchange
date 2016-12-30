@@ -253,6 +253,9 @@ func (restorer *APTRestorer) finishWithError(restoreState *models.RestoreState) 
 	// 2) inability to fetch all of the bag's files, 3) inability to
 	// create a valid bag.
 	if restoreState.HasFatalErrors() {
+		restoreState.RecordSummary.Attempted = true
+		restoreState.RecordSummary.AttemptNumber += 1
+		restoreState.RecordSummary.Start()
 		restorer.deleteBagDir(restoreState)
 		mostRecentSummary.Retry = false
 		restoreState.WorkItem.Status = constants.StatusFailed
@@ -265,6 +268,10 @@ func (restorer *APTRestorer) finishWithError(restoreState *models.RestoreState) 
 	restoreState.WorkItem.Node = ""
 	restoreState.WorkItem.Pid = 0
 	restoreState.WorkItem.StageStartedAt = nil
+
+	if restoreState.HasFatalErrors() {
+		restoreState.RecordSummary.Finish()
+	}
 	restorer.saveWorkItem(restoreState)
 	restorer.saveWorkItemState(restoreState)
 
@@ -285,6 +292,9 @@ func (restorer *APTRestorer) finishWithError(restoreState *models.RestoreState) 
 }
 
 func (restorer *APTRestorer) finishWithSuccess(restoreState *models.RestoreState) {
+	restoreState.RecordSummary.Attempted = true
+	restoreState.RecordSummary.AttemptNumber += 1
+	restoreState.RecordSummary.Start()
 	message := fmt.Sprintf("Bag %s restored to %s",
 		restoreState.WorkItem.ObjectIdentifier,
 		restoreState.RestoredToUrl)
@@ -299,6 +309,7 @@ func (restorer *APTRestorer) finishWithSuccess(restoreState *models.RestoreState
 
 	restorer.deleteTarFile(restoreState)
 	restorer.deleteBagDir(restoreState)
+	restoreState.RecordSummary.Finish()
 	restorer.saveWorkItem(restoreState)
 	restorer.saveWorkItemState(restoreState)
 
@@ -314,6 +325,8 @@ func (restorer *APTRestorer) deleteTarFile(restoreState *models.RestoreState) {
 			message := fmt.Sprintf("Failed to delete %s", restoreState.LocalTarFile)
 			restoreState.MostRecentSummary().AddError(message)
 			restorer.Context.MessageLog.Error(message)
+		} else {
+			restoreState.TarFileDeletedAt = time.Now().UTC()
 		}
 	}
 }
@@ -326,6 +339,8 @@ func (restorer *APTRestorer) deleteBagDir(restoreState *models.RestoreState) {
 			message := fmt.Sprintf("Failed to delete %s", restoreState.LocalBagDir)
 			restoreState.MostRecentSummary().AddError(message)
 			restorer.Context.MessageLog.Error(message)
+		} else {
+			restoreState.BagDirDeletedAt = time.Now().UTC()
 		}
 	}
 }
