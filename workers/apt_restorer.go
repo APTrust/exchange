@@ -460,8 +460,12 @@ func (restorer *APTRestorer) saveWorkItemState(restoreState *models.RestoreState
 		restoreState.MostRecentSummary().AddError(errMessage)
 		return
 	}
+	restorer.logJson(restoreState, string(stateJson))
 	workItemState := models.NewWorkItemState(restoreState.WorkItem.Id,
 		constants.ActionRestore, string(stateJson))
+	if restoreState.WorkItem.WorkItemStateId != nil {
+		workItemState.Id = *restoreState.WorkItem.WorkItemStateId
+	}
 	resp := restorer.Context.PharosClient.WorkItemStateSave(workItemState)
 	if resp.Error != nil {
 		restorer.Context.MessageLog.Warning(
@@ -771,4 +775,19 @@ func (restorer *APTRestorer) fetchAllFiles(restoreState *models.RestoreState) {
 		restoreState.PackageSummary.AddError(msg)
 		restorer.Context.MessageLog.Error(msg)
 	}
+}
+
+// LogJson dumps the WorkItemState.State into the JSON log, surrounded by
+// markers that make it easy to find.
+func (aptRestorer *APTRestorer) logJson(restoreState *models.RestoreState, jsonString string) {
+	timestamp := time.Now().UTC().Format(time.RFC3339)
+	startMessage := fmt.Sprintf("-------- BEGIN %s/%s | ObjIdentifer: %s | Time: %s --------",
+		restoreState.WorkItem.Bucket, restoreState.WorkItem.Name,
+		restoreState.WorkItem.ObjectIdentifier, timestamp)
+	endMessage := fmt.Sprintf("-------- END %s/%s | ObjIdentifier: %s | Time: %s --------",
+		restoreState.WorkItem.Bucket, restoreState.WorkItem.Name,
+		restoreState.WorkItem.ObjectIdentifier, timestamp)
+	aptRestorer.Context.JsonLog.Println(startMessage, "\n",
+		jsonString, "\n",
+		endMessage)
 }
