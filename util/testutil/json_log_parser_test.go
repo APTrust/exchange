@@ -84,3 +84,21 @@ func TestFindReplicationManifestInLog(t *testing.T) {
 	assert.NotNil(t, err)
 	assert.Nil(t, manifest)
 }
+
+func TestFindRestoreStateInLog(t *testing.T) {
+	pathToLogFile, _ := fileutil.RelativeToAbsPath(
+		filepath.Join("testdata", "integration_results", "apt_restore.json"))
+
+	// Should get a RestoreState object
+	restoreState, err := testutil.FindRestoreStateInLog(pathToLogFile,
+		"test.edu/ncsu.1840.16-1004")
+	assert.Nil(t, err)
+	assert.NotNil(t, restoreState)
+	assert.NotNil(t, restoreState.ValidateSummary)
+
+	// Should get an error if the item does not exist
+	restoreState, err = testutil.FindRestoreStateInLog(pathToLogFile,
+		"aptrust.receiving.x/does_not_exist.tar")
+	assert.NotNil(t, err)
+	assert.Nil(t, restoreState)
+}
