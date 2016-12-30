@@ -796,12 +796,10 @@ func (restorer *APTRestorer) fetchAllFiles(restoreState *models.RestoreState) {
 // markers that make it easy to find.
 func (aptRestorer *APTRestorer) logJson(restoreState *models.RestoreState, jsonString string) {
 	timestamp := time.Now().UTC().Format(time.RFC3339)
-	startMessage := fmt.Sprintf("-------- BEGIN %s/%s | ObjIdentifer: %s | Time: %s --------",
-		restoreState.WorkItem.Bucket, restoreState.WorkItem.Name,
-		restoreState.WorkItem.ObjectIdentifier, timestamp)
-	endMessage := fmt.Sprintf("-------- END %s/%s | ObjIdentifier: %s | Time: %s --------",
-		restoreState.WorkItem.Bucket, restoreState.WorkItem.Name,
-		restoreState.WorkItem.ObjectIdentifier, timestamp)
+	startMessage := fmt.Sprintf("-------- BEGIN %s | WorkItem: %d | Time: %s --------",
+		restoreState.WorkItem.ObjectIdentifier, restoreState.WorkItem.Id, timestamp)
+	endMessage := fmt.Sprintf("-------- END %s | WorkItem: %s | Time: %s --------",
+		restoreState.WorkItem.ObjectIdentifier, restoreState.WorkItem.Id, timestamp)
 	aptRestorer.Context.JsonLog.Println(startMessage, "\n",
 		jsonString, "\n",
 		endMessage)

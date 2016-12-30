@@ -66,6 +66,24 @@ func FindReplicationManifestInLog(pathToLogFile, replicationId string) (manifest
 	return manifest, err
 }
 
+// FindRestoreStateInLog returns the RestoreState for the specified
+// IntellectualObject identifier in the specified JSON log file.
+func FindRestoreStateInLog(pathToLogFile, objIdentifier string) (restoreState *apt_models.RestoreState, err error) {
+	file, err := os.Open(pathToLogFile)
+	if err != nil {
+		return nil, err
+	}
+	defer file.Close()
+	jsonString := findJsonString(file, objIdentifier)
+	if len(jsonString) == 0 {
+		err = fmt.Errorf("Bag %s not found in %s", objIdentifier, pathToLogFile)
+	} else {
+		restoreState = &apt_models.RestoreState{}
+		err = json.Unmarshal([]byte(jsonString), restoreState)
+	}
+	return restoreState, err
+}
+
 // findJsonString returns the string of JSON found between the beginning
 // and end markers for the specified bag in the file reader.
 // If there is more than one JSON record for the specified marker,
