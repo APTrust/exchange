@@ -2,24 +2,29 @@ package models
 
 import (
 	"fmt"
+	"github.com/nsqio/go-nsq"
 	"strings"
 )
 
 // FixityResult descibes the results of fetching a file from S3
 // and verification of the file's sha256 checksum.
 type FixityResult struct {
-
+	// NSQMessage is the NSQ message being processed in this restore
+	// request. Not serialized because it will change each time we
+	// try to process a request.
+	NSQMessage *nsq.Message `json:"-"`
+	// WorkItem is the Pharos WorkItem we're processing.
+	// Not serialized because the Pharos WorkItem record will be
+	// more up-to-date and authoritative.
+	WorkItem *WorkItem `json:"-"`
 	// The generic file we're going to look at.
 	// This file is sitting somewhere on S3.
 	GenericFile *GenericFile
-
 	// Does the file exist in S3?
 	S3FileExists bool
-
 	// The sha256 sum we calculated after downloading
 	// the file.
 	Sha256 string
-
 	// Information about the result of this operation.
 	WorkSummary *WorkSummary
 }
