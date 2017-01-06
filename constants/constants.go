@@ -55,7 +55,7 @@ var StatusTypes []string = []string{
 const (
 	StageRequested = "Requested"
 	StageReceive   = "Receive"
-	StageFetch     = "Fetch"    // TODO: Delete if we're no longer using this.
+	StageFetch     = "Fetch"
 	StageUnpack    = "Unpack"   // TODO: Delete if we're no longer using this.
 	StageValidate  = "Validate" // TODO: Delete if we're no longer using this.
 	StageStore     = "Store"
