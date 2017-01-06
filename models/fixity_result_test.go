@@ -61,78 +61,10 @@ func TestBucketAndKeyWithNilFile(t *testing.T) {
 	}
 }
 
-func TestSha256Matches(t *testing.T) {
+func TestPharosSha256(t *testing.T) {
 	result := models.NewFixityResult(testutil.MakeNsqMessage("999"))
 	result.GenericFile = getGenericFile()
-	result.Sha256 = sha256sum
-	matches, err := result.Sha256Matches()
-	if err != nil {
-		t.Error(err)
-	}
-	assert.True(t, matches)
-
-	result.Sha256 = "some random string"
-	matches, err = result.Sha256Matches()
-	if err != nil {
-		t.Error(err)
-	}
-	assert.False(t, matches)
-}
-
-func TestMissingChecksums(t *testing.T) {
-	result := models.NewFixityResult(testutil.MakeNsqMessage("999"))
-	result.GenericFile = getGenericFile()
-	_, err := result.Sha256Matches()
-	assert.NotNil(t, err, "Sha256Matches should have returned a usage error")
-
-	result.Sha256 = sha256sum
-	result.GenericFile.Checksums = make([]*models.Checksum, 2)
-	_, err = result.Sha256Matches()
-	assert.NotNil(t, err, "Sha256Matches should have returned a usage error")
-
-}
-
-func TestGotDigestFromPreservationFile(t *testing.T) {
-	result := models.NewFixityResult(testutil.MakeNsqMessage("999"))
-	result.GenericFile = getGenericFile()
-	assert.False(t, result.GotDigestFromPreservationFile())
-	result.Sha256 = sha256sum
-	assert.True(t, result.GotDigestFromPreservationFile())
-}
-
-func TestGenericFileHasDigest(t *testing.T) {
-	result := models.NewFixityResult(testutil.MakeNsqMessage("999"))
-	result.GenericFile = getGenericFile()
-	assert.True(t, result.GenericFileHasDigest())
-
-	// Make the SHA256 checksum disappear
-	for i := range result.GenericFile.Checksums {
-		result.GenericFile.Checksums[i].Algorithm = "Md five and a half"
-	}
-	assert.False(t, result.GenericFileHasDigest())
-}
-
-func TestFedoraSha256(t *testing.T) {
-	result := models.NewFixityResult(testutil.MakeNsqMessage("999"))
-	result.GenericFile = getGenericFile()
-	if result.FedoraSha256() != sha256sum {
+	if result.PharosSha256() != sha256sum {
 		t.Errorf("FedoraSha256() should have returned", sha256sum)
 	}
-}
-
-func TestFixityCheckPossible(t *testing.T) {
-	result := models.NewFixityResult(testutil.MakeNsqMessage("999"))
-	result.GenericFile = getGenericFile()
-	result.Sha256 = sha256sum
-	assert.True(t, result.FixityCheckPossible())
-
-	result.Sha256 = ""
-	assert.False(t, result.FixityCheckPossible())
-
-	result.Sha256 = sha256sum
-	// Make the SHA256 checksum disappear
-	for i := range result.GenericFile.Checksums {
-		result.GenericFile.Checksums[i].Algorithm = "Md five and a half"
-	}
-	assert.False(t, result.FixityCheckPossible())
 }

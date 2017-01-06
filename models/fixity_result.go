@@ -40,7 +40,7 @@ type FixityResult struct {
 func NewFixityResult(message *nsq.Message) *FixityResult {
 	return &FixityResult{
 		NSQMessage:         message,
-		S3FileExists:       true,
+		S3FileExists:       false,
 		FixityCheckSummary: NewWorkSummary(),
 		RecordSummary:      NewWorkSummary(),
 	}
@@ -61,19 +61,8 @@ func (result *FixityResult) BucketAndKey() (string, string, error) {
 	return bucket, key, nil
 }
 
-// GotDigestFromPreservationFile returns true if result.Sha256 was set.
-func (result *FixityResult) GotDigestFromPreservationFile() bool {
-	return result.Sha256 != ""
-}
-
-// GenericFileHasDigest returns true if the underlying GenericFile
-// includes a SHA256 checksum.
-func (result *FixityResult) GenericFileHasDigest() bool {
-	return result.FedoraSha256() != ""
-}
-
-// FedoraSha256 returns the SHA256 checksum that Fedora has on record.
-func (result *FixityResult) FedoraSha256() string {
+// PharosSha256 returns the SHA256 checksum that Pharos has on record.
+func (result *FixityResult) PharosSha256() string {
 	if result.GenericFile == nil {
 		return ""
 	}
@@ -82,19 +71,4 @@ func (result *FixityResult) FedoraSha256() string {
 		return ""
 	}
 	return checksum.Digest
-}
-
-// FixityCheckPossible returns true if we have all the data we need to
-// compare the existing checksum with the checksum of the S3 file.
-func (result *FixityResult) FixityCheckPossible() bool {
-	return result.GotDigestFromPreservationFile() && result.GenericFileHasDigest()
-}
-
-// Sha256Matches returns true if the sha256 sum we calculated for this
-// file matches the sha256 sum recorded in Fedora.
-func (result *FixityResult) Sha256Matches() (bool, error) {
-	if result.FixityCheckPossible() == false {
-		return false, fmt.Errorf("Fixity check is not possible because one or more checksums are not available.")
-	}
-	return result.FedoraSha256() == result.Sha256, nil
 }
