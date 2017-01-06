@@ -1,10 +1,10 @@
 {
 	"Comment": "Config file for APTrust demo server.",
 
-	"TarDirectory": "/mnt/apt/data",
-	"RestoreDirectory": "/mnt/apt/restore",
-	"LogDirectory": "/mnt/apt/logs",
-	"ReplicationDirectory": "/mnt/apt/replication",
+	"TarDirectory": "/mnt/efs/aptrust/data",
+	"RestoreDirectory": "/mnt/efs/aptrust/restore",
+	"LogDirectory": "/mnt/efs/aptrust/logs",
+	"ReplicationDirectory": "/mnt/efs/aptrust/replication",
 	"MaxFileSize": 100000000,
 	"SkipAlreadyProcessed": true,
 	"DeleteOnSuccess": true,
@@ -145,8 +145,8 @@
 
 	"DPN": {
 		"LocalNode": "aptrust",
-		"LogDirectory": "/mnt/dpn/logs",
-		"StagingDirectory": "/mnt/dpn/staging",
+		"LogDirectory": "/mnt/efs/dpn/logs",
+		"StagingDirectory": "/mnt/efs/dpn/staging",
 		"RemoteNodeHomeDirectory": "/home",
 		"LogLevel": 4,
 		"LogToStderr": false,
