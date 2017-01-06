@@ -8,7 +8,6 @@ import (
 	"github.com/APTrust/exchange/network"
 	"github.com/APTrust/exchange/util"
 	"github.com/nsqio/go-nsq"
-	"sync"
 	"time"
 )
 
@@ -24,7 +23,6 @@ type APTRecorder struct {
 	Context        *context.Context
 	RecordChannel  chan *models.IngestState
 	CleanupChannel chan *models.IngestState
-	WaitGroup      sync.WaitGroup
 }
 
 func NewAPTRecorder(_context *context.Context) *APTRecorder {

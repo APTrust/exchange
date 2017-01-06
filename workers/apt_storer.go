@@ -12,7 +12,6 @@ import (
 	"io"
 	"net/url"
 	"strings"
-	"sync"
 	"time"
 )
 
@@ -26,7 +25,6 @@ type APTStorer struct {
 	StorageChannel chan *models.IngestState
 	CleanupChannel chan *models.IngestState
 	RecordChannel  chan *models.IngestState
-	WaitGroup      sync.WaitGroup
 }
 
 func NewAPTStorer(_context *context.Context) *APTStorer {
