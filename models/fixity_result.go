@@ -17,37 +17,44 @@ type FixityResult struct {
 	// Not serialized because the Pharos WorkItem record will be
 	// more up-to-date and authoritative.
 	WorkItem *WorkItem `json:"-"`
-	// The generic file we're going to look at.
+	// GenericFile is the generic file whose fixity we're going to check.
 	// This file is sitting somewhere on S3.
 	GenericFile *GenericFile
-	// Does the file exist in S3?
+	// S3FileExists describes whether the GenericFile file exist in S3.
 	S3FileExists bool
-	// The sha256 sum we calculated after downloading
-	// the file.
+	// Sha256 contains sha256 digest we calculated after downloading
+	// the file. This will be empty initially.
 	Sha256 string
-	// Information about the result of this operation.
-	WorkSummary *WorkSummary
+	// FixityCheckSumary contains information about the result of the
+	// fixity check.
+	FixityCheckSummary *WorkSummary
+	// RecordSummary contains information about the result of the
+	// attempt to record the fixity check PREMIS event in Pharos.
+	RecordSummary *WorkSummary
 }
 
 // NewFixityResult returns a new empty FixityResult object for the specified
 // GenericFile.
-func NewFixityResult(gf *GenericFile) *FixityResult {
+//
+// TODO: Change constructor to use nsq.Message?
+func NewFixityResult(message *nsq.Message) *FixityResult {
 	return &FixityResult{
-		GenericFile:  gf,
-		S3FileExists: true,
-		WorkSummary:  NewWorkSummary(),
+		NSQMessage:         message,
+		S3FileExists:       true,
+		FixityCheckSummary: NewWorkSummary(),
+		RecordSummary:      NewWorkSummary(),
 	}
 }
 
 // BucketAndKey returns the name of the S3 bucket and key for the GenericFile.
 func (result *FixityResult) BucketAndKey() (string, string, error) {
+	if result.GenericFile == nil {
+		return "", "", fmt.Errorf("FixityResult.GenericFile is nil")
+	}
 	parts := strings.Split(result.GenericFile.URI, "/")
 	length := len(parts)
 	if length < 4 {
-		// This error is fatal, so don't retry.
-		result.WorkSummary.AddError("GenericFile URI '%s' is invalid", result.GenericFile.URI)
-		result.WorkSummary.Retry = false
-		return "", "", fmt.Errorf(result.WorkSummary.FirstError())
+		return "", "", fmt.Errorf("GenericFile URI '%s' is invalid", result.GenericFile.URI)
 	}
 	bucket := parts[length-2]
 	key := parts[length-1]
@@ -67,6 +74,9 @@ func (result *FixityResult) GenericFileHasDigest() bool {
 
 // FedoraSha256 returns the SHA256 checksum that Fedora has on record.
 func (result *FixityResult) FedoraSha256() string {
+	if result.GenericFile == nil {
+		return ""
+	}
 	checksum := result.GenericFile.GetChecksumByAlgorithm("sha256")
 	if checksum == nil {
 		return ""

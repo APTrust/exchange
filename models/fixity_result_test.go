@@ -1,6 +1,7 @@
 package models_test
 
 import (
+	"github.com/APTrust/exchange/dpn/util/testutil"
 	"github.com/APTrust/exchange/models"
 	"github.com/stretchr/testify/assert"
 	"testing"
@@ -29,7 +30,8 @@ func getGenericFile() *models.GenericFile {
 }
 
 func TestBucketAndKey(t *testing.T) {
-	result := models.NewFixityResult(getGenericFile())
+	result := models.NewFixityResult(testutil.MakeNsqMessage("999"))
+	result.GenericFile = getGenericFile()
 	bucket, key, err := result.BucketAndKey()
 	if err != nil {
 		t.Errorf("BucketAndKey() returned error: %v", err)
@@ -40,19 +42,28 @@ func TestBucketAndKey(t *testing.T) {
 }
 
 func TestBucketAndKeyWithBadUri(t *testing.T) {
-	result := models.NewFixityResult(getGenericFile())
+	result := models.NewFixityResult(testutil.MakeNsqMessage("999"))
+	result.GenericFile = getGenericFile()
 	result.GenericFile.URI = "http://example.com"
 	_, _, err := result.BucketAndKey()
 	if err == nil {
 		t.Errorf("BucketAndKey() should have returned an error for invalid URI")
 		return
 	}
-	assert.Equal(t, "GenericFile URI 'http://example.com' is invalid", result.WorkSummary.FirstError())
-	assert.False(t, result.WorkSummary.Retry, "Retry should be false after fatal error.")
+}
+
+func TestBucketAndKeyWithNilFile(t *testing.T) {
+	result := models.NewFixityResult(testutil.MakeNsqMessage("999"))
+	_, _, err := result.BucketAndKey()
+	if err == nil {
+		t.Errorf("BucketAndKey() should have returned an error for missing GenericFile")
+		return
+	}
 }
 
 func TestSha256Matches(t *testing.T) {
-	result := models.NewFixityResult(getGenericFile())
+	result := models.NewFixityResult(testutil.MakeNsqMessage("999"))
+	result.GenericFile = getGenericFile()
 	result.Sha256 = sha256sum
 	matches, err := result.Sha256Matches()
 	if err != nil {
@@ -69,7 +80,8 @@ func TestSha256Matches(t *testing.T) {
 }
 
 func TestMissingChecksums(t *testing.T) {
-	result := models.NewFixityResult(getGenericFile())
+	result := models.NewFixityResult(testutil.MakeNsqMessage("999"))
+	result.GenericFile = getGenericFile()
 	_, err := result.Sha256Matches()
 	assert.NotNil(t, err, "Sha256Matches should have returned a usage error")
 
@@ -81,14 +93,16 @@ func TestMissingChecksums(t *testing.T) {
 }
 
 func TestGotDigestFromPreservationFile(t *testing.T) {
-	result := models.NewFixityResult(getGenericFile())
+	result := models.NewFixityResult(testutil.MakeNsqMessage("999"))
+	result.GenericFile = getGenericFile()
 	assert.False(t, result.GotDigestFromPreservationFile())
 	result.Sha256 = sha256sum
 	assert.True(t, result.GotDigestFromPreservationFile())
 }
 
 func TestGenericFileHasDigest(t *testing.T) {
-	result := models.NewFixityResult(getGenericFile())
+	result := models.NewFixityResult(testutil.MakeNsqMessage("999"))
+	result.GenericFile = getGenericFile()
 	assert.True(t, result.GenericFileHasDigest())
 
 	// Make the SHA256 checksum disappear
@@ -99,14 +113,16 @@ func TestGenericFileHasDigest(t *testing.T) {
 }
 
 func TestFedoraSha256(t *testing.T) {
-	result := models.NewFixityResult(getGenericFile())
+	result := models.NewFixityResult(testutil.MakeNsqMessage("999"))
+	result.GenericFile = getGenericFile()
 	if result.FedoraSha256() != sha256sum {
 		t.Errorf("FedoraSha256() should have returned", sha256sum)
 	}
 }
 
 func TestFixityCheckPossible(t *testing.T) {
-	result := models.NewFixityResult(getGenericFile())
+	result := models.NewFixityResult(testutil.MakeNsqMessage("999"))
+	result.GenericFile = getGenericFile()
 	result.Sha256 = sha256sum
 	assert.True(t, result.FixityCheckPossible())
 
