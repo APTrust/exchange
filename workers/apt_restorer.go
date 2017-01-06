@@ -462,7 +462,7 @@ func (restorer *APTRestorer) saveWorkItem(restoreState *models.RestoreState) {
 			restoreState.WorkItem.Id,
 			restoreState.WorkItem.Stage,
 			restoreState.WorkItem.Status,
-			restoreState.IntellectualObject.Identifier,
+			restoreState.WorkItem.ObjectIdentifier,
 			resp.Error)
 	}
 }
