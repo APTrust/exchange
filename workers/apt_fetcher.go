@@ -10,7 +10,6 @@ import (
 	"github.com/APTrust/exchange/validation"
 	"github.com/nsqio/go-nsq"
 	"strings"
-	"sync"
 	"time"
 )
 
@@ -22,7 +21,6 @@ type APTFetcher struct {
 	ValidationChannel   chan *models.IngestState
 	CleanupChannel      chan *models.IngestState
 	RecordChannel       chan *models.IngestState
-	WaitGroup           sync.WaitGroup
 }
 
 func NewAPTFetcher(_context *context.Context) *APTFetcher {
@@ -367,12 +365,4 @@ func (fetcher *APTFetcher) downloadFile(ingestState *models.IngestState) error {
 	}
 
 	return nil
-}
-
-// This is for direct testing without NSQ.
-func (fetcher *APTFetcher) RunWithoutNsq(ingestState *models.IngestState) {
-	fetcher.WaitGroup.Add(1)
-	fetcher.FetchChannel <- ingestState
-	fetcher.Context.MessageLog.Debug("Put %s into Fluctus channel", ingestState.IngestManifest.S3Key)
-	fetcher.WaitGroup.Wait()
 }
