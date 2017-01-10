@@ -32,7 +32,20 @@ end
 
 
 if __FILE__ == $0
+  # context.rb expects the following ENV vars to be set for
+  # integration testing, but if we're just doing a
+  # command-line build, we don't need them.
+  ENV['DPN_SERVER_ROOT'] ||= '/dev/null'
+  ENV['PHAROS_ROOT'] ||= '/dev/null'
+  go_bin_dir = ARGV[0]
+  if !go_bin_dir
+    puts "Usage: ruby build.rb /path/bin/dir"
+    puts "Binaries will be copied into /path/bin/dir"
+    exit(1)
+  end
   context = Context.new
+  context.go_bin_dir = go_bin_dir
   build = Build.new(context)
   build.build_all()
+  puts "Binaries are in #{go_bin_dir}"
 end

@@ -5,8 +5,8 @@ require_relative 'app'
 class Context
 
   attr_reader(:dpn_server_root, :exchange_root, :pharos_root, :log_dir,
-              :staging_dir, :restore_dir, :go_bin_dir, :apps)
-  attr_accessor(:verbose, :run_dpn_cluster_init)
+              :staging_dir, :restore_dir, :apps)
+  attr_accessor(:verbose, :run_dpn_cluster_init, :go_bin_dir)
 
   def initialize
     @dpn_server_root = ENV['DPN_SERVER_ROOT'] || abort("Set env var DPN_SERVER_ROOT")
