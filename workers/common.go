@@ -91,6 +91,7 @@ func GetIngestState(message *nsq.Message, _context *context.Context, initIfEmpty
 // GetWorkItem returns the WorkItem with the specified Id from Pharos,
 // or nil.
 func GetWorkItem(message *nsq.Message, _context *context.Context) (*models.WorkItem, error) {
+	_context.MessageLog.Info("NSQ Message body: %s", message.Body)
 	workItemId, err := strconv.Atoi(string(message.Body))
 	if err != nil {
 		return nil, fmt.Errorf("Could not get WorkItemId from NSQ message body: %v", err)
