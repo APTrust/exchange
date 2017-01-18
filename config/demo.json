@@ -1,10 +1,10 @@
 {
 	"Comment": "Config file for APTrust demo server.",
 
-	"TarDirectory": "/mnt/efs/aptrust/data",
-	"RestoreDirectory": "/mnt/efs/aptrust/restore",
-	"LogDirectory": "/mnt/efs/aptrust/logs",
-	"ReplicationDirectory": "/mnt/efs/aptrust/replication",
+	"TarDirectory": "/mnt/efs/apt/data",
+	"RestoreDirectory": "/mnt/efs/aptrestore",
+	"LogDirectory": "/mnt/efs/apt/logs",
+	"ReplicationDirectory": "/mnt/efs/apt/replication",
 	"MaxFileSize": 100000000,
 	"SkipAlreadyProcessed": true,
 	"DeleteOnSuccess": true,
@@ -17,11 +17,11 @@
 	"BagItVersion": "0.97",
 	"BagItEncoding": "UTF-8",
 
-	"PharosURL": "http://test.aptrust.org",
+	"PharosURL": "http://demo.aptrust.org",
 	"PharosAPIVersion": "v2",
 
-	"NsqdHttpAddress": "http://apt-util.aptrust.org:4151",
-	"NsqLookupd": "apt-util.aptrust.org:4161",
+	"NsqdHttpAddress": "http://demo-services.aptrust.org:4151",
+	"NsqLookupd": "demo-services.aptrust.org:4161",
 
 	"APTrustS3Region": "us-east-1",
 	"APTrustGlacierRegion": "us-west-2",

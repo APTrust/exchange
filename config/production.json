@@ -1,8 +1,8 @@
 {
-	"TarDirectory": "/mnt/efs/aptrust/data",
-	"RestoreDirectory": "/mnt/efs/aptrust/restore",
-	"LogDirectory": "/mnt/efs/aptrust/logs",
-	"ReplicationDirectory": "/mnt/efs/aptrust/replication",
+	"TarDirectory": "/mnt/efs/apt/data",
+	"RestoreDirectory": "/mnt/efs/apt/restore",
+	"LogDirectory": "/mnt/efs/apt/logs",
+	"ReplicationDirectory": "/mnt/efs/apt/replication",
 	"MaxFileSize": 0,
 	"SkipAlreadyProcessed": true,
 	"DeleteOnSuccess": true,
@@ -15,11 +15,11 @@
 	"BagItVersion": "0.97",
 	"BagItEncoding": "UTF-8",
 
-	"PharosURL": "https://repository.aptrust.org",
+	"PharosURL": "https://repo.aptrust.org",
 	"PharosAPIVersion": "v2",
 
-	"NsqdHttpAddress": "http://54.175.41.111:4151",
-	"NsqLookupd": "54.175.41.111:4161",
+	"NsqdHttpAddress": "http://prod-services.aptrust.org:4151",
+	"NsqLookupd": "prod-services.aptrust.org:4161",
 
 	"APTrustS3Region": "us-east-1",
 	"APTrustGlacierRegion": "us-west-2",
