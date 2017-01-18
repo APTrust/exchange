@@ -105,6 +105,11 @@ func GetWorkItem(message *nsq.Message, _context *context.Context) (*models.WorkI
 	if workItem == nil {
 		return nil, fmt.Errorf("Pharos returned nil for WorkItem %d", workItemId)
 	}
+	// TODO: Remove after testing, or change to MessageLog.Debug
+	rawResp, err := resp.RawResponseData()
+	if rawResp != nil && err != nil {
+		_context.MessageLog.Info("Pharos raw response: %s", string(rawResp))
+	}
 	return workItem, nil
 }
 
