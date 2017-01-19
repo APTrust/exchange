@@ -106,6 +106,12 @@ func (fetcher *APTFetcher) HandleMessage(message *nsq.Message) error {
 		// Reserve disk space to download this item, or requeue it
 		// if we can't get the disk space.
 		if !fetcher.reserveSpaceForDownload(ingestState) {
+			err = MarkWorkItemRequeued(ingestState, fetcher.Context)
+			if err != nil {
+				fetcher.Context.MessageLog.Error(
+					"Error telling Pharos this item is being requeued: %v",
+					err.Error())
+			}
 			message.Requeue(1 * time.Minute)
 			return nil
 		}
