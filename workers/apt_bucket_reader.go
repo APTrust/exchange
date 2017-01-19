@@ -147,7 +147,7 @@ func (reader *APTBucketReader) cacheRecentIngestItems() error {
 }
 
 func (reader *APTBucketReader) makeHashKey(key, etag string) string {
-	return fmt.Sprintf("%s|%s", key, etag)
+	return fmt.Sprintf("%s|%s", key, strings.Replace(etag, "\"", "", -1))
 }
 
 func (reader *APTBucketReader) readAllBuckets() {
@@ -215,6 +215,7 @@ func (reader *APTBucketReader) processS3Object(s3Object *s3.Object, bucketName s
 }
 
 func (reader *APTBucketReader) findWorkItem(key, etag string) (*models.WorkItem, error) {
+	etag = strings.Replace(etag, "\"", "", -1)
 	hashKey := reader.makeHashKey(key, etag)
 	if workItem, ok := reader.RecentIngestItems[hashKey]; ok {
 		reader.Context.MessageLog.Debug("Found hash key '%s' in cache", hashKey)
@@ -230,8 +231,8 @@ func (reader *APTBucketReader) findWorkItem(key, etag string) (*models.WorkItem,
 	//params.Add("bag_date", lastModified.Format(time.RFC3339))
 	resp := reader.Context.PharosClient.WorkItemList(params)
 	if resp.Error != nil {
-		errMsg := fmt.Sprintf("Error getting WorkItem for name '%s', etag '%s', time '%s': %v",
-			params.Get("name"), params.Get("etag"), params.Get("bag_date"), resp.Error)
+		errMsg := fmt.Sprintf("Error getting WorkItem for name '%s', etag '%s': %v",
+			params.Get("name"), params.Get("etag"), resp.Error)
 		reader.Context.MessageLog.Debug("%s", resp.Request.URL.String())
 		reader.Context.MessageLog.Error(errMsg)
 		if reader.stats != nil {
