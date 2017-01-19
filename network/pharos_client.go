@@ -952,6 +952,12 @@ func (client *PharosClient) DoRequest(resp *PharosResponse, method, absoluteUrl 
 	// If there's an error reading the response body, it will
 	// be recorded in resp.Error.
 	resp.readResponse()
+
+	if resp.Error == nil && resp.Response.StatusCode >= 400 {
+		body, _ := resp.RawResponseData()
+		resp.Error = fmt.Errorf("Server returned status code %d. Body: %s",
+			resp.Response.StatusCode, string(body))
+	}
 }
 
 // Replaces "/" with "%2F", which golang's url.QueryEscape does not do.
