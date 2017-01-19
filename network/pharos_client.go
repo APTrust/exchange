@@ -26,6 +26,9 @@ type PharosClient struct {
 // NewPharosClient creates a new pharos client. Param hostUrl should
 // come from the config.json file.
 func NewPharosClient(hostUrl, apiVersion, apiUser, apiKey string) (*PharosClient, error) {
+	if apiUser == "" || apiKey == "" {
+		panic("Env vars PHAROS_API_USER and PHAROS_API_KEY cannot be empty.")
+	}
 	// see security warning on nil PublicSuffixList here:
 	// http://gotour.golang.org/src/pkg/net/http/cookiejar/jar.go?s=1011:1492#L24
 	cookieJar, err := cookiejar.New(nil)

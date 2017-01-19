@@ -11,8 +11,7 @@ import (
 // Returns an S3 session for this objectList.
 func GetS3Session(awsRegion string) (*session.Session, error) {
 	if os.Getenv("AWS_ACCESS_KEY_ID") == "" || os.Getenv("AWS_SECRET_ACCESS_KEY") == "" {
-		return nil, fmt.Errorf("AWS_ACCESS_KEY_ID and/or " +
-			"AWS_SECRET_ACCESS_KEY not set in environment")
+		panic("AWS_ACCESS_KEY_ID and/or AWS_SECRET_ACCESS_KEY not set in environment")
 	}
 	creds := credentials.NewEnvCredentials()
 	_session := session.New(&aws.Config{
