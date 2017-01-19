@@ -228,7 +228,7 @@ func (reader *APTBucketReader) findWorkItem(key, etag string, lastModified time.
 	params.Add("item_action", constants.ActionIngest)
 	params.Add("name", key)
 	params.Add("etag", etag)
-	params.Add("bag_date", lastModified.Format(time.RFC3339))
+	//params.Add("bag_date", lastModified.Format(time.RFC3339))
 	resp := reader.Context.PharosClient.WorkItemList(params)
 	if resp.Error != nil {
 		errMsg := fmt.Sprintf("Error getting WorkItem for name '%s', etag '%s', time '%s': %v",
