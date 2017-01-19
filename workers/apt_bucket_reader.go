@@ -189,7 +189,7 @@ func (reader *APTBucketReader) processS3Object(s3Object *s3.Object, bucketName s
 		reader.Context.MessageLog.Debug(msg)
 		return
 	}
-	workItem, err := reader.findWorkItem(bucketName, *s3Object.Key)
+	workItem, err := reader.findWorkItem(*s3Object.Key, *s3Object.ETag)
 	if err != nil {
 		// Don't create a work item, because one may already exist.
 		// Error will be logged and added to stats at source.
