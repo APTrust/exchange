@@ -122,8 +122,7 @@ func (reader *APTBucketReader) cacheRecentIngestItems() error {
 		}
 		reader.Context.MessageLog.Debug("%s", resp.Request.URL.String())
 		for _, workItem := range resp.WorkItems() {
-			hashKey := reader.makeHashKey(workItem.Name, workItem.ETag,
-				workItem.BagDate.Format(time.RFC3339))
+			hashKey := reader.makeHashKey(workItem.Name, workItem.ETag)
 			reader.RecentIngestItems[hashKey] = workItem
 			if reader.stats != nil {
 				reader.stats.AddWorkItem("WorkItemsCached", workItem)
@@ -147,8 +146,8 @@ func (reader *APTBucketReader) cacheRecentIngestItems() error {
 	return nil
 }
 
-func (reader *APTBucketReader) makeHashKey(key, etag, lastModified string) string {
-	return fmt.Sprintf("%s|%s|%s", key, etag, lastModified)
+func (reader *APTBucketReader) makeHashKey(key, etag string) string {
+	return fmt.Sprintf("%s|%s", key, etag)
 }
 
 func (reader *APTBucketReader) readAllBuckets() {
@@ -190,7 +189,7 @@ func (reader *APTBucketReader) processS3Object(s3Object *s3.Object, bucketName s
 		reader.Context.MessageLog.Debug(msg)
 		return
 	}
-	workItem, err := reader.findWorkItem(bucketName, *s3Object.Key, *s3Object.LastModified)
+	workItem, err := reader.findWorkItem(bucketName, *s3Object.Key)
 	if err != nil {
 		// Don't create a work item, because one may already exist.
 		// Error will be logged and added to stats at source.
@@ -215,8 +214,8 @@ func (reader *APTBucketReader) processS3Object(s3Object *s3.Object, bucketName s
 	}
 }
 
-func (reader *APTBucketReader) findWorkItem(key, etag string, lastModified time.Time) (*models.WorkItem, error) {
-	hashKey := reader.makeHashKey(key, etag, lastModified.Format(time.RFC3339))
+func (reader *APTBucketReader) findWorkItem(key, etag string) (*models.WorkItem, error) {
+	hashKey := reader.makeHashKey(key, etag)
 	if workItem, ok := reader.RecentIngestItems[hashKey]; ok {
 		reader.Context.MessageLog.Debug("Found hash key '%s' in cache", hashKey)
 		return workItem, nil
@@ -269,6 +268,7 @@ func (reader *APTBucketReader) createWorkItem(bucket string, s3Object *s3.Object
 		return nil
 	}
 	workItem := &models.WorkItem{}
+	workItem.Id = 0
 	workItem.Name = *s3Object.Key
 	workItem.Bucket = bucket
 	workItem.ETag = strings.Replace(*s3Object.ETag, "\"", "", -1)
