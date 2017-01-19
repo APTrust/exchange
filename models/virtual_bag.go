@@ -107,7 +107,7 @@ func (vbag *VirtualBag) Read() (*IntellectualObject, *WorkSummary) {
 func (vbag *VirtualBag) addGenericFiles() {
 	for {
 		err := vbag.addGenericFile()
-		if err == io.EOF {
+		if err != nil && (err == io.EOF || err.Error() == "EOF") {
 			break
 		} else if err != nil {
 			vbag.summary.AddError(err.Error())
