@@ -129,6 +129,8 @@ func (config *BagValidationConfig) CompileFileNameRegex() error {
 		config.FileNameRegex = constants.APTrustFileNamePattern
 	} else if strings.ToUpper(config.FileNamePattern) == "POSIX" {
 		config.FileNameRegex = constants.PosixFileNamePattern
+	} else if strings.ToUpper(config.FileNamePattern) == "PERMISSIVE" {
+		config.FileNameRegex = constants.PermissivePattern
 	} else if config.FileNamePattern != "" {
 		config.FileNameRegex, err = regexp.Compile(config.FileNamePattern)
 		if err != nil {

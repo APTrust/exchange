@@ -10,15 +10,19 @@ import (
 // the .tar suffix, you'll have a name like "my_bag.b04.of12"
 var MultipartSuffix = regexp.MustCompile("\\.b\\d+\\.of\\d+$")
 
-// Regex for a valid APTrust file name, according to the spec at
+// APTrustFileNamePattern matches a valid APTrust file name, according to the spec at
 // https://sites.google.com/a/aptrust.org/member-wiki/basic-operations/bagging
 // This regex says a valid file name can be exactly one alpha-numeric character,
 // or 2+ characters, beginning with alpha-numerics or dot or underscore,
 // followed by alphanumerics, dots, underscores, dashes and percent signs.
 var APTrustFileNamePattern = regexp.MustCompile("^([A-Za-z0-9])$|^([A-Za-z0-9\\._][A-Za-z0-9\\.\\-_%]+)$")
 
-// Regex for valid POSIX filenames.
+// PosixFileNamePattern matches valid POSIX filenames.
 var PosixFileNamePattern = regexp.MustCompile("^[A-Za-z0-9\\._\\-]+$")
+
+// Permissive matches anything that does not contain ASCII bells, form-feeds,
+// tabs, newlines, carriage returns or vertical tabs.
+var PermissivePattern = regexp.MustCompile("[^\\a\\f\\t\\n\\r\\v]+")
 
 const APTrustSystemUser = "system@aptrust.org"
 
