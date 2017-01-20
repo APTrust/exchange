@@ -188,7 +188,19 @@ func (vbag *VirtualBag) calculateChecksums(reader io.Reader, gf *GenericFile) er
 
 func (vbag *VirtualBag) setMimeType(reader io.Reader, gf *GenericFile) {
 	// on err, defaults to application/binary
-	buf := make([]byte, 128)
+	bufLen := 128
+	if gf.Size < int64(bufLen) {
+		bufLen = int(gf.Size - 1)
+		if bufLen < 1 {
+			// We actually do permit zero-length files, and we can
+			// save them in S3. These files can be necessary in
+			// certain cases, such as __init__.py files for Python,
+			// PHP templates whose presence is required, ".keep" files, etc.
+			gf.FileFormat = "text/empty"
+			return
+		}
+	}
+	buf := make([]byte, bufLen)
 	_, err := reader.Read(buf)
 	if err != nil {
 		vbag.summary.AddError(err.Error())
