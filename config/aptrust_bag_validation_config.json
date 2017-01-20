@@ -12,7 +12,7 @@
         "aptrust-info.txt": { "Presence": "required", "ParseAsTagFile": true }
     },
     "FileNamePattern_Comment": "Use APTRUST, POSIX, or PERMISSIVE for pre-defined patterns, or write your own custom regex.",
-    "FileNamePattern": "APTRUST",
+    "FileNamePattern": "PERMISSIVE",
     "FixityAlgorithms": ["md5", "sha256"],
     "TagSpecs": {
         "Title": {"FilePath": "aptrust-info.txt", "Presence": "required", "EmptyOK": false },
