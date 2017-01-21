@@ -329,6 +329,7 @@ func (fetcher *APTFetcher) downloadFile(ingestState *models.IngestState) error {
 	// once on transient network errors (e.g. "Connection reset by peer")
 	// So we give this several tries.
 	for i := 0; i < 10; i++ {
+		downloader.ErrorMessage = ""
 		downloader.Fetch()
 		if downloader.ErrorMessage == "" {
 			fetcher.Context.MessageLog.Info("Fetched %s/%s after %d attempts",
