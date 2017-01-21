@@ -329,7 +329,7 @@ func (fetcher *APTFetcher) downloadFile(ingestState *models.IngestState) error {
 	// once on transient network errors (e.g. "Connection reset by peer")
 	// So we give this several tries.
 	for i := 0; i < 10; i++ {
-		downloader.ErrorMessage = ""
+		downloader.ErrorMessage = "" // clear before each attempt
 		downloader.Fetch()
 		if downloader.ErrorMessage == "" {
 			fetcher.Context.MessageLog.Info("Fetched %s/%s after %d attempts",
@@ -337,6 +337,16 @@ func (fetcher *APTFetcher) downloadFile(ingestState *models.IngestState) error {
 				ingestState.IngestManifest.S3Key,
 				i+1)
 			break
+		} else {
+			retryMessage := "will retry"
+			if i >= 9 {
+				retryMessage = "will not retry - too many failed attempts"
+			}
+			fetcher.Context.MessageLog.Warning("Error fetching %s/%s: %s - %s",
+				ingestState.IngestManifest.S3Bucket,
+				ingestState.IngestManifest.S3Key,
+				downloader.ErrorMessage,
+				retryMessage)
 		}
 	}
 
