@@ -18,6 +18,7 @@ import (
 // 15 seemed to be the magic number in the first generation of the software.
 // On large uploads, network errors are common.
 const MAX_UPLOAD_ATTEMPTS = 15
+const FIFTY_MEGABYTES = int64(52428800)
 
 // Stores GenericFiles in long-term storage (S3 and Glacier).
 type APTStorer struct {
@@ -104,8 +105,12 @@ func (storer *APTStorer) store() {
 		ingestState.IngestManifest.StoreResult.Attempted = true
 		ingestState.IngestManifest.StoreResult.AttemptNumber += 1
 
-		for _, gf := range ingestState.IngestManifest.Object.GenericFiles {
+		for i, gf := range ingestState.IngestManifest.Object.GenericFiles {
 			storer.saveFile(ingestState, gf)
+			// Ping NSQ every now and then, so our message doesn't time out.
+			if gf.Size > FIFTY_MEGABYTES || i%20 == 0 {
+				ingestState.TouchNSQ()
+			}
 		}
 		storer.CleanupChannel <- ingestState
 	}
@@ -132,7 +137,8 @@ func (storer *APTStorer) cleanup() {
 }
 
 // -------------------------------------------------------------------------
-// Step 3 of 3: Record IntellectualObject and GenericFile data in Pharos
+// Step 3 of 3: Record WorkItem and WorkItemState in Pharos, and push
+//              to the apt_record_topic queue if all went well.
 //
 // -------------------------------------------------------------------------
 func (storer *APTStorer) record() {
