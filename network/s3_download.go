@@ -94,6 +94,9 @@ func (client *S3Download) Fetch() {
 	var err error = nil
 	for i := 0; i < 5; i++ {
 		err = client.tryDownload(service, params)
+		if err == nil {
+			break
+		}
 	}
 	if err != nil {
 		client.ErrorMessage = err.Error()
