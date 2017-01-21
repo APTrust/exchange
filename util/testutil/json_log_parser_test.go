@@ -102,3 +102,39 @@ func TestFindRestoreStateInLog(t *testing.T) {
 	assert.NotNil(t, err)
 	assert.Nil(t, restoreState)
 }
+
+func TestExtractJson(t *testing.T) {
+	// APTrust Ingest - tests apt_fetch.json, but apt_store.json and
+	// apt_record.json record the same JSON structure. We don't have
+	// an IntellectualObject.Identifier at this point in processing,
+	// so we have to use S3 bucket/key.
+	pathToIngestLog, _ := fileutil.RelativeToAbsPath(
+		filepath.Join("testdata", "integration_results", "apt_fetch.json"))
+	jsonString, err := testutil.ExtractJson(pathToIngestLog,
+		"aptrust.receiving.test.test.edu/ncsu.1840.16-10.tar")
+	assert.Nil(t, err)
+	assert.Equal(t, 2502, len(jsonString))
+
+	// APTrust Restore - finds by IntellectualObject.Identifier
+	pathToRestoreLog, _ := fileutil.RelativeToAbsPath(
+		filepath.Join("testdata", "integration_results", "apt_restore.json"))
+	jsonString, err = testutil.ExtractJson(pathToRestoreLog, "test.edu/ncsu.1840.16-1004")
+	assert.Nil(t, err)
+	assert.Equal(t, 1162, len(jsonString))
+
+	// DPN Ingest - Finds by tar file name
+	pathToDPNIngestLog, _ := fileutil.RelativeToAbsPath(
+		filepath.Join("testdata", "integration_results", "dpn_package.json"))
+	jsonString, err = testutil.ExtractJson(pathToDPNIngestLog, "ncsu.1840.16-10.tar")
+	assert.Nil(t, err)
+	assert.Equal(t, 2463, len(jsonString))
+
+	// DPN Replication - Finds by DPN Replication.Identifier
+	pathToReplicationLog, _ := fileutil.RelativeToAbsPath(
+		filepath.Join("testdata", "integration_results", "dpn_store.json"))
+	jsonString, err = testutil.ExtractJson(pathToReplicationLog,
+		"40000000-0000-4000-a000-000000000013")
+	assert.Nil(t, err)
+	assert.Equal(t, 2308, len(jsonString))
+
+}

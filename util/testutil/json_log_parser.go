@@ -84,6 +84,43 @@ func FindRestoreStateInLog(pathToLogFile, objIdentifier string) (restoreState *a
 	return restoreState, err
 }
 
+// ExtractJson extracts the last JSON record for the specified
+// bag from the specified JSON log file. JSON records may appear more
+// than once in a JSON log, if the system attempted to process the item
+// multiple times. The last JSON record represents the item in its most
+// current state.
+//
+// Param pathToLogFile should be an absolute path to a JSON log file,
+// such as /mnt/efs/apt/logs/apt_recorder.json.
+//
+// Param identifier is the identifier that can locate the record. This
+// varies according to the log you're searching. Log files and their
+// corresponding identifiers are as follows:
+//
+// apt_restore.json -> IntellectualObject.Identifier
+// e.g. virginia.edu/bag_o_goodies
+//
+// apt_fetch.json, apt_store.json, apt_record.json -> S3 bucket and key
+// e.g. aptrust.receiving.virginia.edu/bag_o_goodies.tar
+//
+// dpn_ingest.json -> bag name, with .tar extension, without institution prefix
+// e.g. bag_o_goodies.tar
+//
+// dpn_replicate.json -> ReplicationId, which is a uuid
+// e.g. 45498989-3465-416d-9b49-767f1db22cd6
+func ExtractJson(pathToLogFile, identifier string) (string, error) {
+	file, err := os.Open(pathToLogFile)
+	if err != nil {
+		return "", err
+	}
+	defer file.Close()
+	jsonString := findJsonString(file, identifier)
+	if jsonString == "" {
+		return "", fmt.Errorf("Identifier '%s' not found in %s", identifier, pathToLogFile)
+	}
+	return jsonString, nil
+}
+
 // findJsonString returns the string of JSON found between the beginning
 // and end markers for the specified bag in the file reader.
 // If there is more than one JSON record for the specified marker,
