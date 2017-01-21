@@ -63,6 +63,16 @@ func GetIngestState(message *nsq.Message, _context *context.Context, initIfEmpty
 			workItem.Id, workItem.Bucket, workItem.Name)
 		return nil, err
 	}
+
+	// Save memory. We don't need this after loading the
+	// IngestManifest from the WorkItemState. For bags with
+	// thousands of files, the state JSON can be many MB.
+	// We reference the IngestManifest while running, and we
+	// keep it up to date. When we occasionally send the state
+	// data back to Pharos, RecordWorkItemState regenerates
+	// the JSON from the current, up-to-date IngestManifest.
+	workItemState.State = ""
+
 	ingestState := &models.IngestState{
 		NSQMessage:     message,
 		WorkItem:       workItem,
@@ -248,6 +258,9 @@ func RecordWorkItemState(ingestState *models.IngestState, _context *context.Cont
 			ingestState.WorkItemState = resp.WorkItemState()
 		}
 	}
+	// Get rid of this, to conserve memory. We will regenerate it
+	// from IngestState each time we post state back to Pharos.
+	ingestState.WorkItemState.State = ""
 }
 
 // Loads the bag validation config file specified in the general config
