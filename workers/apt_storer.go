@@ -107,6 +107,7 @@ func (storer *APTStorer) store() {
 
 		for i, gf := range ingestState.IngestManifest.Object.GenericFiles {
 			// TODO: Multiple concurrent uploads.
+			// Use goroutines with WaitGroup.
 			storer.saveFile(ingestState, gf)
 			// Ping NSQ every now and then, so our message doesn't time out.
 			if gf.Size > FIFTY_MEGABYTES || i%20 == 0 {
@@ -224,7 +225,6 @@ func (storer *APTStorer) saveFile(ingestState *models.IngestState, gf *models.Ge
 				"the currently stored version of the file.",
 				gf.Identifier, uuid)
 			storer.Context.MessageLog.Info(message)
-			// TODO: Test this in integration post test.
 			gf.IngestUUID = uuid
 		}
 
