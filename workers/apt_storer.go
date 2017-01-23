@@ -106,6 +106,7 @@ func (storer *APTStorer) store() {
 		ingestState.IngestManifest.StoreResult.AttemptNumber += 1
 
 		for i, gf := range ingestState.IngestManifest.Object.GenericFiles {
+			// TODO: Multiple concurrent uploads.
 			storer.saveFile(ingestState, gf)
 			// Ping NSQ every now and then, so our message doesn't time out.
 			if gf.Size > FIFTY_MEGABYTES || i%20 == 0 {
@@ -227,7 +228,7 @@ func (storer *APTStorer) saveFile(ingestState *models.IngestState, gf *models.Ge
 			gf.IngestUUID = uuid
 		}
 
-		if existingSha256.Digest != gf.IngestSha256 {
+		if existingSha256.Digest == gf.IngestSha256 {
 			storer.Context.MessageLog.Info(
 				"GenericFile %s has same sha256. Does not need save.", gf.Identifier)
 			gf.IngestNeedsSave = false
