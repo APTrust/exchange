@@ -22,7 +22,7 @@ func main() {
 	}
 	validator, err := validation.NewBagValidator(pathToBag, bagValidationConfig)
 	if err != nil {
-		fmt.Fprintln(os.Stderr, "Error creating BagValidator: %s", err.Error())
+		fmt.Fprintln(os.Stderr, "Error creating BagValidator:", err.Error())
 		os.Exit(11)
 	}
 	exitCode := 0
