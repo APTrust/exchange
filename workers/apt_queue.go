@@ -84,6 +84,7 @@ func (aptQueue *APTQueue) addToNSQ(workItem *models.WorkItem) bool {
 
 func (aptQueue *APTQueue) markAsQueued(workItem *models.WorkItem) *models.WorkItem {
 	utcNow := time.Now().UTC()
+	workItem.Date = utcNow
 	workItem.QueuedAt = &utcNow
 	resp := aptQueue.Context.PharosClient.WorkItemSave(workItem)
 	if resp.Error != nil {

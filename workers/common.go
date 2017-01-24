@@ -290,6 +290,7 @@ func LoadAPTrustBagValidationConfig(_context *context.Context) *validation.BagVa
 func MarkWorkItemFailed(ingestState *models.IngestState, _context *context.Context) error {
 	_context.MessageLog.Info("Telling Pharos processing failed for %s/%s",
 		ingestState.WorkItem.Bucket, ingestState.WorkItem.Name)
+	ingestState.WorkItem.Date = time.Now().UTC()
 	ingestState.WorkItem.Node = ""
 	ingestState.WorkItem.Pid = 0
 	ingestState.WorkItem.StageStartedAt = nil
@@ -312,6 +313,7 @@ func MarkWorkItemFailed(ingestState *models.IngestState, _context *context.Conte
 func MarkWorkItemRequeued(ingestState *models.IngestState, _context *context.Context) error {
 	_context.MessageLog.Info("Telling Pharos we are requeueing %s/%s",
 		ingestState.WorkItem.Bucket, ingestState.WorkItem.Name)
+	ingestState.WorkItem.Date = time.Now().UTC()
 	ingestState.WorkItem.Node = ""
 	ingestState.WorkItem.Pid = 0
 	ingestState.WorkItem.StageStartedAt = nil
@@ -335,6 +337,7 @@ func MarkWorkItemStarted(ingestState *models.IngestState, _context *context.Cont
 	_context.MessageLog.Info("Telling Pharos we're starting %s for %s/%s",
 		stage, ingestState.WorkItem.Bucket, ingestState.WorkItem.Name)
 	utcNow := time.Now().UTC()
+	ingestState.WorkItem.Date = utcNow
 	ingestState.WorkItem.SetNodeAndPid()
 	ingestState.WorkItem.Stage = stage
 	ingestState.WorkItem.StageStartedAt = &utcNow
@@ -354,6 +357,7 @@ func MarkWorkItemStarted(ingestState *models.IngestState, _context *context.Cont
 func MarkWorkItemSucceeded(ingestState *models.IngestState, _context *context.Context, nextStage string) error {
 	_context.MessageLog.Info("Telling Pharos processing can proceed for %s/%s",
 		ingestState.WorkItem.Bucket, ingestState.WorkItem.Name)
+	ingestState.WorkItem.Date = time.Now().UTC()
 	ingestState.WorkItem.Node = ""
 	ingestState.WorkItem.Pid = 0
 	ingestState.WorkItem.Retry = true

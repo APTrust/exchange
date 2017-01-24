@@ -264,6 +264,7 @@ func (restorer *APTRestorer) finishWithError(restoreState *models.RestoreState) 
 		restoreState.WorkItem.Status = constants.StatusPending
 	}
 
+	restoreState.WorkItem.Date = time.Now().UTC()
 	restoreState.WorkItem.Note = note
 	restoreState.WorkItem.Node = ""
 	restoreState.WorkItem.Pid = 0
@@ -300,6 +301,7 @@ func (restorer *APTRestorer) finishWithSuccess(restoreState *models.RestoreState
 		restoreState.RestoredToUrl)
 	restorer.Context.MessageLog.Info(message)
 
+	restoreState.WorkItem.Date = time.Now().UTC()
 	restoreState.WorkItem.Note = message
 	restoreState.WorkItem.Stage = constants.StageResolve
 	restoreState.WorkItem.StageStartedAt = nil
@@ -444,6 +446,7 @@ func (restorer *APTRestorer) buildState(message *nsq.Message) (*models.RestoreSt
 // markWorkItemStarted tells Pharos that we're starting work on this.
 func (restorer *APTRestorer) markWorkItemStarted(restoreState *models.RestoreState) {
 	now := time.Now().UTC()
+	restoreState.WorkItem.Date = now
 	restoreState.WorkItem.Stage = constants.StagePackage
 	restoreState.WorkItem.Status = constants.StatusStarted
 	restoreState.WorkItem.Node, _ = os.Hostname()

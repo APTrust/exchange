@@ -6,6 +6,7 @@ import (
 	"github.com/APTrust/exchange/models"
 	"github.com/APTrust/exchange/network"
 	"github.com/nsqio/go-nsq"
+	"time"
 )
 
 // APTFixityChecker performs ongoing fixity checks on files stored in S3.
@@ -72,6 +73,7 @@ func (checker *APTFixityChecker) checkFixity() {
 		fixityResult.FixityCheckSummary.AttemptNumber += 1
 
 		// Tell Pharos we're on it
+		fixityResult.WorkItem.Date = time.Now().UTC()
 		fixityResult.WorkItem.Stage = constants.StageFetch
 		fixityResult.WorkItem.Status = constants.StatusStarted
 		fixityResult.WorkItem.Note = "Retrieving file for fixity check"
