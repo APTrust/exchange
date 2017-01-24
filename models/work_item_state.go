@@ -68,7 +68,7 @@ func (state *WorkItemState) IngestManifest() (*IngestManifest, error) {
 		return nil, fmt.Errorf("Cannot convert state to IngestManifest because action is '%s' "+
 			"and must be '%s'.", state.Action, constants.ActionIngest)
 	}
-	ingestManifest := &IngestManifest{}
+	ingestManifest := NewIngestManifest()
 	err := json.Unmarshal([]byte(state.State), ingestManifest)
 	return ingestManifest, err
 }
