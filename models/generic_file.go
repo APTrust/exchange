@@ -491,7 +491,7 @@ func (gf *GenericFile) buildS3URLAssignmentEvent() error {
 	// The URL of this item in S3 (primary long-term storage)
 	// No need to build URL identifier assignment if we're
 	// overwriting an existing URL with a new version of a file.
-	if !hasS3URLAssignment && !gf.IngestPreviousVersionExists {
+	if !hasS3URLAssignment && gf.IngestNeedsSave {
 		event, err := NewEventGenericFileIdentifierAssignment(
 			gf.IngestStoredAt, constants.IdTypeStorageURL,
 			gf.IngestStorageURL)
