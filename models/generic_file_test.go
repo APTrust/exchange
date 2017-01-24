@@ -266,6 +266,33 @@ func TestBuildIngestEvents(t *testing.T) {
 	assert.Equal(t, 6, len(gf.PremisEvents))
 }
 
+func TestBuildIngestEvents_PreviouslyIngested(t *testing.T) {
+	gf := testutil.MakeGenericFile(0, 0, "test.edu/test_bag/file.txt")
+	gf.IngestPreviousVersionExists = true
+	assert.Equal(t, 0, len(gf.PremisEvents))
+	err := gf.BuildIngestEvents()
+	assert.Nil(t, err)
+	assert.Equal(t, 5, len(gf.PremisEvents))
+	assert.Equal(t, 1, len(gf.FindEventsByType(constants.EventFixityCheck)))
+	assert.Equal(t, 1, len(gf.FindEventsByType(constants.EventDigestCalculation)))
+	assert.Equal(t, 1, len(gf.FindEventsByType(constants.EventIdentifierAssignment)))
+	assert.Equal(t, 1, len(gf.FindEventsByType(constants.EventReplication)))
+	assert.Equal(t, 1, len(gf.FindEventsByType(constants.EventIngestion)))
+
+	for _, event := range gf.PremisEvents {
+		assert.Equal(t, gf.IntellectualObjectId, event.IntellectualObjectId)
+		assert.Equal(t, gf.IntellectualObjectIdentifier, event.IntellectualObjectIdentifier)
+		assert.Equal(t, gf.Id, event.GenericFileId)
+		assert.Equal(t, gf.Identifier, event.GenericFileIdentifier)
+	}
+
+	// Calling this function again should not generate new events
+	// if all the events are there.
+	err = gf.BuildIngestEvents()
+	assert.Nil(t, err)
+	assert.Equal(t, 5, len(gf.PremisEvents))
+}
+
 func TestBuildIngestChecksums(t *testing.T) {
 	gf := testutil.MakeGenericFile(0, 0, "test.edu/test_bag/file.txt")
 	assert.Equal(t, 0, len(gf.Checksums))

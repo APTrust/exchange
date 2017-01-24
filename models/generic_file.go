@@ -456,7 +456,11 @@ func (gf *GenericFile) buildFileIdentifierAssignmentEvent() error {
 		}
 	}
 	// Identifier Assignment (file identifier: school.edu/bag_name)
-	if !hasIdentifierAssignment {
+	// We have to generate for all new generic files, but not when
+	// we are overwriting a previously existing generic file. In
+	// that case, the identifier was generated when the file was
+	// initially ingested.
+	if !hasIdentifierAssignment && !gf.IngestPreviousVersionExists {
 		event, err := NewEventGenericFileIdentifierAssignment(
 			gf.IngestUUIDGeneratedAt, constants.IdTypeBagAndPath,
 			gf.Identifier)
