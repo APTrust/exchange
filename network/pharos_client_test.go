@@ -114,6 +114,8 @@ func TestIntellectualObjectGet(t *testing.T) {
 		t.Errorf("IntellectualObject should not be nil")
 	}
 	assert.NotEqual(t, "", obj.Identifier)
+	assert.NotEmpty(t, obj.DPNUUID)
+	assert.NotEmpty(t, obj.ETag)
 
 	// Check that child objects were parsed correctly
 	assert.Equal(t, 2, len(obj.GenericFiles))
@@ -169,6 +171,8 @@ func TestIntellectualObjectList(t *testing.T) {
 	}
 	for _, obj := range list {
 		assert.NotEqual(t, "", obj.Identifier)
+		assert.NotEmpty(t, obj.DPNUUID)
+		assert.NotEmpty(t, obj.ETag)
 	}
 
 	// Make sure params are added to URL
@@ -209,6 +213,8 @@ func TestIntellectualObjectSave(t *testing.T) {
 		t.Errorf("IntellectualObject should not be nil")
 	}
 	assert.NotEqual(t, "", obj.Identifier)
+	assert.NotEmpty(t, obj.DPNUUID)
+	assert.NotEmpty(t, obj.ETag)
 
 	// Make sure the client returns the SAVED object,
 	// not the unsaved one we sent.

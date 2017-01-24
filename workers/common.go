@@ -196,6 +196,7 @@ func SetBasicObjectInfo(ingestState *models.IngestState, _context *context.Conte
 	obj.IngestTarFilePath = filepath.Join(
 		_context.Config.TarDirectory,
 		instIdentifier, ingestState.IngestManifest.S3Key)
+	obj.ETag = ingestState.WorkItem.ETag
 
 	// If this IntellectualObject was created by our validator and VirtualBag,
 	// the identifier will be the bag name (minus the .tar extension).

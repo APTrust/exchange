@@ -38,6 +38,7 @@ func TestSerializeObjectForPharos(t *testing.T) {
 		t.Errorf("Error loading test data file '%s': %v", filename, err)
 	}
 	intelObj.Access = "Institution" // Make sure this is lower-cased below
+	intelObj.ETag = "12345678"
 	data, err := intelObj.SerializeForPharos()
 	if err != nil {
 		t.Errorf("Error serializing for Pharos: %v", err)
@@ -60,6 +61,7 @@ func TestSerializeObjectForPharos(t *testing.T) {
 	assert.Equal(t, "A collection from Cincinnati", pharosObj["description"])
 	assert.Equal(t, "Photo Collection", pharosObj["alt_identifier"])
 	assert.Equal(t, "institution", pharosObj["access"])
+	assert.Equal(t, "12345678", pharosObj["etag"])
 }
 
 func TestFindGenericFile(t *testing.T) {

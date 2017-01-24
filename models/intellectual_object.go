@@ -64,6 +64,10 @@ type IntellectualObject struct {
 	// This field will be empty if the bag has not been pushed to DPN.
 	DPNUUID string `json:"dpn_uuid"`
 
+	// ETag is the AWS S3 etag from the depositor's receiving bucket
+	// for the bag that became this IntellectualObject.
+	ETag string `json:"etag"`
+
 	// GenericFiles is a list of the files that make up this bag.
 	GenericFiles []*GenericFile `json:"generic_files"`
 
