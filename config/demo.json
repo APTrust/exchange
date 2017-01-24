@@ -17,7 +17,7 @@
 	"BagItVersion": "0.97",
 	"BagItEncoding": "UTF-8",
 
-	"PharosURL": "http://demo.aptrust.org",
+	"PharosURL": "https://demo.aptrust.org",
 	"PharosAPIVersion": "v2",
 
 	"NsqdHttpAddress": "http://demo-services.aptrust.org:4151",
