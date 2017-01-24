@@ -77,6 +77,14 @@ func (fetcher *APTFetcher) HandleMessage(message *nsq.Message) error {
 		return nil
 	}
 
+	// In case we're loading a previously failed fetch attempt
+	ingestState.IngestManifest.FetchResult.ClearErrors()
+	ingestState.IngestManifest.UntarResult.ClearErrors()
+	ingestState.IngestManifest.ValidateResult.ClearErrors()
+	ingestState.IngestManifest.StoreResult.ClearErrors()
+	ingestState.IngestManifest.RecordResult.ClearErrors()
+	ingestState.IngestManifest.CleanupResult.ClearErrors()
+
 	// Save the state of this item in Pharos.
 	RecordWorkItemState(ingestState, fetcher.Context, ingestState.IngestManifest.FetchResult)
 
