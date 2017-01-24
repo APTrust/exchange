@@ -161,7 +161,7 @@ func NewEventObjectRights(accessSetting string) (*PremisEvent, error) {
 }
 
 // We ingested a generic file into primary long-term storage.
-func NewEventGenericFileIngest(storedAt time.Time, md5Digest string) (*PremisEvent, error) {
+func NewEventGenericFileIngest(storedAt time.Time, md5Digest, _uuid string) (*PremisEvent, error) {
 	if storedAt.IsZero() {
 		return nil, fmt.Errorf("Param storedAt cannot be empty.")
 	}
@@ -169,12 +169,16 @@ func NewEventGenericFileIngest(storedAt time.Time, md5Digest string) (*PremisEve
 		return nil, fmt.Errorf("Param md5Digest must have 32 characters. '%s' doesn't.",
 			md5Digest)
 	}
+	if !util.LooksLikeUUID(_uuid) {
+		return nil, fmt.Errorf("Param _uuid with value '%s' doesn't look like a uuid.",
+			_uuid)
+	}
 	eventId := uuid.NewV4()
 	return &PremisEvent{
 		Identifier:         eventId.String(),
 		EventType:          constants.EventIngestion,
 		DateTime:           storedAt,
-		Detail:             "Completed copy to S3",
+		Detail:             fmt.Sprintf("Completed copy to S3 (%s)", _uuid),
 		Outcome:            string(constants.StatusSuccess),
 		OutcomeDetail:      fmt.Sprintf("md5:%s", md5Digest),
 		Object:             "exchange + goamz S3 client",

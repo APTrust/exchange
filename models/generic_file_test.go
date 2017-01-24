@@ -272,10 +272,10 @@ func TestBuildIngestEvents_PreviouslyIngested(t *testing.T) {
 	assert.Equal(t, 0, len(gf.PremisEvents))
 	err := gf.BuildIngestEvents()
 	assert.Nil(t, err)
-	assert.Equal(t, 5, len(gf.PremisEvents))
+	assert.Equal(t, 4, len(gf.PremisEvents))
 	assert.Equal(t, 1, len(gf.FindEventsByType(constants.EventFixityCheck)))
 	assert.Equal(t, 1, len(gf.FindEventsByType(constants.EventDigestCalculation)))
-	assert.Equal(t, 1, len(gf.FindEventsByType(constants.EventIdentifierAssignment)))
+	assert.Equal(t, 0, len(gf.FindEventsByType(constants.EventIdentifierAssignment)))
 	assert.Equal(t, 1, len(gf.FindEventsByType(constants.EventReplication)))
 	assert.Equal(t, 1, len(gf.FindEventsByType(constants.EventIngestion)))
 
@@ -290,7 +290,7 @@ func TestBuildIngestEvents_PreviouslyIngested(t *testing.T) {
 	// if all the events are there.
 	err = gf.BuildIngestEvents()
 	assert.Nil(t, err)
-	assert.Equal(t, 5, len(gf.PremisEvents))
+	assert.Equal(t, 4, len(gf.PremisEvents))
 }
 
 func TestBuildIngestChecksums(t *testing.T) {

@@ -119,18 +119,25 @@ func TestNewEventObjectRights(t *testing.T) {
 
 func TestNewEventGenericFileIngest(t *testing.T) {
 	// Test with required params missing
-	_, err := models.NewEventGenericFileIngest(time.Time{}, digest)
+	_, err := models.NewEventGenericFileIngest(time.Time{}, digest, "")
 	assert.NotNil(t, err)
 	if err != nil {
-		assert.True(t, strings.HasPrefix(err.Error(), "Param"))
+		assert.True(t, strings.HasPrefix(err.Error(), "Param storedAt"))
 	}
-	_, err = models.NewEventGenericFileIngest(testutil.TEST_TIMESTAMP, "")
+	_, err = models.NewEventGenericFileIngest(testutil.TEST_TIMESTAMP, "", "")
 	assert.NotNil(t, err)
 	if err != nil {
-		assert.True(t, strings.HasPrefix(err.Error(), "Param"))
+		assert.True(t, strings.HasPrefix(err.Error(), "Param md5Digest"))
+	}
+	_, err = models.NewEventGenericFileIngest(testutil.TEST_TIMESTAMP, digest, "")
+	assert.NotNil(t, err)
+	if err != nil {
+		assert.True(t, strings.HasPrefix(err.Error(), "Param _uuid"))
 	}
 
-	event, err := models.NewEventGenericFileIngest(testutil.TEST_TIMESTAMP, digest)
+	_uuid := "c5c34a8c-4c70-4140-8442-594f4fcaf4b9"
+
+	event, err := models.NewEventGenericFileIngest(testutil.TEST_TIMESTAMP, digest, _uuid)
 	if err != nil {
 		t.Errorf("Error creating PremisEvent: %v", err)
 		return
@@ -138,7 +145,7 @@ func TestNewEventGenericFileIngest(t *testing.T) {
 	assert.Len(t, event.Identifier, 36)
 	assert.Equal(t, "ingestion", event.EventType)
 	assert.Equal(t, testutil.TEST_TIMESTAMP, event.DateTime)
-	assert.Equal(t, "Completed copy to S3", event.Detail)
+	assert.Equal(t, "Completed copy to S3 (c5c34a8c-4c70-4140-8442-594f4fcaf4b9)", event.Detail)
 	assert.Equal(t, "Success", event.Outcome)
 	assert.Equal(t, md5_digest, event.OutcomeDetail)
 	assert.Equal(t, "exchange + goamz S3 client", event.Object)
