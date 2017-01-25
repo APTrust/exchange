@@ -182,21 +182,22 @@ func (storer *APTStorer) record() {
 }
 
 func (storer *APTStorer) saveFile(ingestState *models.IngestState, gf *models.GenericFile) {
-	existingSha256, err := storer.getExistingSha256(gf.Identifier)
-	if err != nil {
-		storer.Context.MessageLog.Error(err.Error())
-		ingestState.IngestManifest.StoreResult.AddError(err.Error())
-		return
-	}
-	// Set this, for the record.
-	if existingSha256 != nil {
-		gf.IngestPreviousVersionExists = true
-		gf.Id = existingSha256.GenericFileId
-
-		if !util.HasSavableName(gf.OriginalPath()) {
-			// We don't need to save bagit.txt, or certain manifests.
-			gf.IngestNeedsSave = false
-		} else {
+	if !util.HasSavableName(gf.OriginalPath()) {
+		// We don't need to save bagit.txt, or certain manifests.
+		gf.IngestNeedsSave = false
+	} else {
+		existingSha256, err := storer.getExistingSha256(gf.Identifier)
+		if err != nil {
+			storer.Context.MessageLog.Error(err.Error())
+			ingestState.IngestManifest.StoreResult.AddError(err.Error())
+			return
+		}
+		// Set this, for the record.
+		if existingSha256 != nil {
+			gf.IngestPreviousVersionExists = true
+			gf.Id = existingSha256.GenericFileId
+			// We don't need to save files that were ingested
+			// previously and have not changed.
 			storer.changedSincePreviousVersion(ingestState, gf, existingSha256)
 		}
 	}
@@ -209,6 +210,12 @@ func (storer *APTStorer) saveFile(ingestState *models.IngestState, gf *models.Ge
 		}
 		if gf.IngestReplicatedAt.IsZero() || gf.IngestReplicationURL == "" {
 			storer.copyToLongTermStorage(ingestState, gf, "glacier")
+		}
+	} else {
+		if !util.HasSavableName(gf.OriginalPath()) {
+			storer.Context.MessageLog.Info("Skipping %s: doesn't have savable name", gf.Identifier)
+		} else {
+			storer.Context.MessageLog.Info("Skipping %s: unchanged since previous save", gf.Identifier)
 		}
 	}
 }

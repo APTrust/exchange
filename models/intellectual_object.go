@@ -388,9 +388,11 @@ func (obj *IntellectualObject) BuildIngestEvents() error {
 	}
 
 	for _, gf := range obj.GenericFiles {
-		err = gf.BuildIngestEvents()
-		if err != nil {
-			return err
+		if gf.IngestNeedsSave {
+			err = gf.BuildIngestEvents()
+			if err != nil {
+				return err
+			}
 		}
 	}
 

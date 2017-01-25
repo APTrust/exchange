@@ -2,6 +2,7 @@ package integration_test
 
 import (
 	"github.com/APTrust/exchange/models"
+	"github.com/APTrust/exchange/util"
 	"github.com/APTrust/exchange/util/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -65,6 +66,10 @@ func storeTestCommon(t *testing.T, bagName string, ingestManifest *models.Ingest
 
 	// Make sure the GenericFiles include info about where we put them.
 	for _, gf := range ingestManifest.Object.GenericFiles {
+		// Test only files that we're SUPPOSED to store.
+		if !util.HasSavableName(gf.OriginalPath()) {
+			continue
+		}
 		assert.True(t, strings.HasPrefix(gf.URI, "https://s3.amazonaws.com/"),
 			"URI missing or invalid for %s", gf.Identifier)
 		assert.True(t, strings.HasSuffix(gf.URI, gf.IngestUUID),
