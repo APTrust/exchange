@@ -326,11 +326,19 @@ func (recorder *APTRecorder) savePremisEventsForFile(ingestState *models.IngestS
 	// Save new ingest event, fixity check and fixity generation.
 	// Do not save new identifier assignment, because there isn't one.
 	for _, event := range gf.PremisEvents {
-		resp := recorder.Context.PharosClient.PremisEventSave(event)
-		if resp.Error != nil {
-			ingestState.IngestManifest.RecordResult.AddError(
-				"While updating '%s', error adding PremisEvent '%s': %v",
-				gf.Identifier, event.EventType, resp.Error)
+		resp := recorder.Context.PharosClient.PremisEventGet(event.Identifier)
+		if resp.PremisEvent() == nil {
+			recorder.Context.MessageLog.Info("Saving premis event %s for updated file %s to Pharos",
+				event.Identifier, gf.Identifier)
+			resp = recorder.Context.PharosClient.PremisEventSave(event)
+			if resp.Error != nil {
+				ingestState.IngestManifest.RecordResult.AddError(
+					"While updating '%s', error adding PremisEvent '%s': %v",
+					gf.Identifier, event.EventType, resp.Error)
+			}
+		} else {
+			recorder.Context.MessageLog.Info("Premis event %s is already in Pharos.",
+				event.Identifier)
 		}
 	}
 }
