@@ -355,8 +355,15 @@ func MarkWorkItemStarted(ingestState *models.IngestState, _context *context.Cont
 
 // MarkWorkItemSucceeded tells Pharos that this item was processed successfully.
 func MarkWorkItemSucceeded(ingestState *models.IngestState, _context *context.Context, nextStage string) error {
-	_context.MessageLog.Info("Telling Pharos processing can proceed for %s/%s",
-		ingestState.WorkItem.Bucket, ingestState.WorkItem.Name)
+	if nextStage == constants.StageCleanup {
+		_context.MessageLog.Info("Ingest complete for %s/%s",
+			ingestState.WorkItem.Bucket, ingestState.WorkItem.Name)
+		ingestState.WorkItem.Note = fmt.Sprintf("Item was successfully ingested")
+	} else {
+		_context.MessageLog.Info("Telling Pharos processing can proceed for %s/%s",
+			ingestState.WorkItem.Bucket, ingestState.WorkItem.Name)
+		ingestState.WorkItem.Note = fmt.Sprintf("Item is ready for %s", nextStage)
+	}
 	ingestState.WorkItem.Date = time.Now().UTC()
 	ingestState.WorkItem.Node = ""
 	ingestState.WorkItem.Pid = 0
@@ -369,7 +376,6 @@ func MarkWorkItemSucceeded(ingestState *models.IngestState, _context *context.Co
 	} else {
 		ingestState.WorkItem.Status = constants.StatusPending
 	}
-	ingestState.WorkItem.Note = fmt.Sprintf("Item is ready for %s", nextStage)
 	resp := _context.PharosClient.WorkItemSave(ingestState.WorkItem)
 	if resp.Error != nil {
 		_context.MessageLog.Error("Could not mark WorkItem ready for %s for %s/%s: %v",
