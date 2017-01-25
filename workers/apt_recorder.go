@@ -314,36 +314,8 @@ func (recorder *APTRecorder) updateGenericFiles(ingestState *models.IngestState,
 		}
 		// Shouldn't need to call this. Should already have Id?
 		gf.PropagateIdsToChildren()
-		// ----------------------------------------------------
-		// recorder.savePremisEventsForFile(ingestState, gf)
-		// recorder.saveChecksums(ingestState, gf)
-		// ----------------------------------------------------
 	}
 }
-
-// func (recorder *APTRecorder) savePremisEventsForFile(ingestState *models.IngestState, gf *models.GenericFile) {
-// 	// Call this only for files that need update.
-// 	// The batch create call creates all of the PremisEvents
-// 	// and checksums as well.
-// 	// Save new ingest event, fixity check and fixity generation.
-// 	// Do not save new identifier assignment, because there isn't one.
-// 	for _, event := range gf.PremisEvents {
-// 		resp := recorder.Context.PharosClient.PremisEventGet(event.Identifier)
-// 		if resp.PremisEvent() == nil {
-// 			recorder.Context.MessageLog.Info("Saving premis event %s for updated file %s to Pharos",
-// 				event.Identifier, gf.Identifier)
-// 			resp = recorder.Context.PharosClient.PremisEventSave(event)
-// 			if resp.Error != nil {
-// 				ingestState.IngestManifest.RecordResult.AddError(
-// 					"While updating '%s', error adding PremisEvent '%s': %v",
-// 					gf.Identifier, event.EventType, resp.Error)
-// 			}
-// 		} else {
-// 			recorder.Context.MessageLog.Info("Premis event %s is already in Pharos.",
-// 				event.Identifier)
-// 		}
-// 	}
-// }
 
 func (recorder *APTRecorder) savePremisEventsForObject(ingestState *models.IngestState) {
 	obj := ingestState.IngestManifest.Object
@@ -358,26 +330,6 @@ func (recorder *APTRecorder) savePremisEventsForObject(ingestState *models.Inges
 		}
 	}
 }
-
-// func (recorder *APTRecorder) saveChecksums(ingestState *models.IngestState, gf *models.GenericFile) {
-// 	// Call this only for files that need update.
-// 	// The only cheksums we should have for this object are the
-// 	// ones we created during this ingest - not the ones that
-// 	// already exist in Pharos. Note that apt_storer.saveFile()
-// 	// determines whether this file already exists in Pharos, and
-// 	// if so, whether its checksum has changed. If we're updating
-// 	// the file here, both of those conditions must be true, and
-// 	// we're now saving new checksums for the new version of the
-// 	// file.
-// 	for _, cs := range gf.Checksums {
-// 		resp := recorder.Context.PharosClient.ChecksumSave(cs, gf.Identifier)
-// 		if resp.Error != nil {
-// 			ingestState.IngestManifest.RecordResult.AddError(
-// 				"While updating '%s', error adding '%s' checksum: %v",
-// 				gf.Identifier, cs.Algorithm, resp.Error)
-// 		}
-// 	}
-// }
 
 func (recorder *APTRecorder) deleteBagFromReceivingBucket(ingestState *models.IngestState) {
 	ingestState.IngestManifest.CleanupResult.Start()
@@ -404,7 +356,7 @@ func (recorder *APTRecorder) deleteBagFromReceivingBucket(ingestState *models.In
 		recorder.Context.MessageLog.Warning(message)
 		ingestState.IngestManifest.CleanupResult.AddError(message)
 	} else {
-		message := fmt.Sprintf("Deled S3 item %s/%s",
+		message := fmt.Sprintf("Deleted S3 item %s/%s",
 			ingestState.IngestManifest.S3Bucket, ingestState.IngestManifest.S3Key)
 		recorder.Context.MessageLog.Info(message)
 		ingestState.IngestManifest.Object.IngestDeletedFromReceivingAt = time.Now().UTC()
