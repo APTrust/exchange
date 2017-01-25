@@ -153,10 +153,12 @@ func (recorder *APTRecorder) buildEventsAndChecksums(ingestState *models.IngestS
 	err := obj.BuildIngestEvents()
 	if err != nil {
 		ingestState.IngestManifest.RecordResult.AddError(err.Error())
+		ingestState.IngestManifest.RecordResult.ErrorIsFatal = true
 	}
 	err = obj.BuildIngestChecksums()
 	if err != nil {
 		ingestState.IngestManifest.RecordResult.AddError(err.Error())
+		ingestState.IngestManifest.RecordResult.ErrorIsFatal = true
 	}
 }
 
