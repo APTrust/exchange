@@ -193,7 +193,20 @@ func (recorder *APTRecorder) saveAllPharosData(ingestState *models.IngestState) 
 
 func (recorder *APTRecorder) saveIntellectualObject(ingestState *models.IngestState) {
 	obj := ingestState.IngestManifest.Object
-	resp := recorder.Context.PharosClient.IntellectualObjectSave(obj)
+
+	// If we're ingesting a new version of a previously ingested bag,
+	// we'll want to update the old record. Otherwise, we'll create a
+	// new one. 99.99% of the time, Pharos will return a 404 here, because
+	// it's a new ingest.
+	resp := recorder.Context.PharosClient.IntellectualObjectGet(obj.Identifier, false, false)
+	existingObject := resp.IntellectualObject()
+	if existingObject != nil {
+		// PharosClient will know to update, rather than create,
+		// when it sees the Object's non-zero id.
+		obj.Id = existingObject.Id
+	}
+
+	resp = recorder.Context.PharosClient.IntellectualObjectSave(obj)
 	if resp.Error != nil {
 		ingestState.IngestManifest.RecordResult.AddError(resp.Error.Error())
 		return
