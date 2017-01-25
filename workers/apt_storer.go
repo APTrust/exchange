@@ -193,47 +193,14 @@ func (storer *APTStorer) saveFile(ingestState *models.IngestState, gf *models.Ge
 		gf.IngestPreviousVersionExists = true
 		gf.Id = existingSha256.GenericFileId
 
-		uuid, err := storer.getUuidOfExistingFile(gf.Identifier)
-		if err != nil {
-			message := fmt.Sprintf("Cannot find existing UUID for %s: %v", gf.Identifier, err.Error())
-			ingestState.IngestManifest.StoreResult.AddError(message)
-			storer.Context.MessageLog.Error(message)
-			// Probably not fatal, but treat it as such for now,
-			// because we don't want leave orphan objects in S3,
-			// or have the GenericFile.URL not match the actual
-			// storage URL. This should only happen if a depositor
-			// deletes the existing version of a GenericFile while
-			// we are processing this ingest. The window for that
-			// to happen is usually between a few seconds and a few
-			// hours.
-			ingestState.IngestManifest.StoreResult.ErrorIsFatal = true
-			return
-		}
-		if uuid == "" {
-			message := fmt.Sprintf("Cannot find existing UUID for %s.", gf.Identifier)
-			ingestState.IngestManifest.StoreResult.AddError(message)
-			storer.Context.MessageLog.Error(message)
-			// Probably not fatal, but treat it as such for now.
-			// Same note as in previous if statement above.
-			ingestState.IngestManifest.StoreResult.ErrorIsFatal = true
-			return
-		} else {
-			// OK. Set the GenericFile's UUID to match the existing file's
-			// UUID, so that we overwrite the existing file, and so the
-			// GenericFile record in Pharos still has the correct URL.
-			message := fmt.Sprintf("Resetting UUID for '%s' to '%s' so we can overwrite "+
-				"the currently stored version of the file.",
-				gf.Identifier, uuid)
-			storer.Context.MessageLog.Info(message)
-			gf.IngestUUID = uuid
-		}
-
-		if existingSha256.Digest == gf.IngestSha256 {
-			storer.Context.MessageLog.Info(
-				"GenericFile %s has same sha256. Does not need save.", gf.Identifier)
+		if !util.HasSavableName(gf.OriginalPath()) {
+			// We don't need to save bagit.txt, or certain manifests.
 			gf.IngestNeedsSave = false
+		} else {
+			storer.changedSincePreviousVersion(ingestState, gf, existingSha256)
 		}
 	}
+
 	// Now copy to storage only if the file has changed.
 	if gf.IngestNeedsSave {
 		storer.Context.MessageLog.Info("File %s needs save", gf.Identifier)
@@ -243,6 +210,53 @@ func (storer *APTStorer) saveFile(ingestState *models.IngestState, gf *models.Ge
 		if gf.IngestReplicatedAt.IsZero() || gf.IngestReplicationURL == "" {
 			storer.copyToLongTermStorage(ingestState, gf, "glacier")
 		}
+	}
+}
+
+// changedSincePreviousVersion asks Pharos if a version of this file already
+// exists from a prior ingest. If it does, and the checksum of the new
+// version matches the checksum of the prior version, we don't need to
+// re-save this file.
+func (storer *APTStorer) changedSincePreviousVersion(ingestState *models.IngestState, gf *models.GenericFile, existingSha256 *models.Checksum) {
+	uuid, err := storer.getUuidOfExistingFile(gf.Identifier)
+	if err != nil {
+		message := fmt.Sprintf("Cannot find existing UUID for %s: %v", gf.Identifier, err.Error())
+		ingestState.IngestManifest.StoreResult.AddError(message)
+		storer.Context.MessageLog.Error(message)
+		// Probably not fatal, but treat it as such for now,
+		// because we don't want leave orphan objects in S3,
+		// or have the GenericFile.URL not match the actual
+		// storage URL. This should only happen if a depositor
+		// deletes the existing version of a GenericFile while
+		// we are processing this ingest. The window for that
+		// to happen is usually between a few seconds and a few
+		// hours.
+		ingestState.IngestManifest.StoreResult.ErrorIsFatal = true
+		return
+	}
+	if uuid == "" {
+		message := fmt.Sprintf("Cannot find existing UUID for %s.", gf.Identifier)
+		ingestState.IngestManifest.StoreResult.AddError(message)
+		storer.Context.MessageLog.Error(message)
+		// Probably not fatal, but treat it as such for now.
+		// Same note as in previous if statement above.
+		ingestState.IngestManifest.StoreResult.ErrorIsFatal = true
+		return
+	} else {
+		// OK. Set the GenericFile's UUID to match the existing file's
+		// UUID, so that we overwrite the existing file, and so the
+		// GenericFile record in Pharos still has the correct URL.
+		message := fmt.Sprintf("Resetting UUID for '%s' to '%s' so we can overwrite "+
+			"the currently stored version of the file.",
+			gf.Identifier, uuid)
+		storer.Context.MessageLog.Info(message)
+		gf.IngestUUID = uuid
+	}
+
+	if existingSha256.Digest == gf.IngestSha256 {
+		storer.Context.MessageLog.Info(
+			"GenericFile %s has same sha256. Does not need save.", gf.Identifier)
+		gf.IngestNeedsSave = false
 	}
 }
 
