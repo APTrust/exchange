@@ -274,3 +274,20 @@ func TestObjPropagateIdsToChildren(t *testing.T) {
 		}
 	}
 }
+
+func TestObjGetStorageSummary(t *testing.T) {
+	// Make intel obj with 5 GenericFiles
+	obj := testutil.MakeIntellectualObject(5, 0, 0, 0)
+	for i := 0; i < 5; i++ {
+		summary, err := obj.GetStorageSummary(i)
+		assert.Nil(t, err)
+		require.NotNil(t, summary)
+		require.NotNil(t, summary.GenericFile)
+		assert.Equal(t, summary.GenericFile.Identifier, obj.GenericFiles[i].Identifier)
+	}
+	// Make sure out of range indexes give error, not panic
+	_, err := obj.GetStorageSummary(-1)
+	assert.NotNil(t, err)
+	_, err = obj.GetStorageSummary(12)
+	assert.NotNil(t, err)
+}
