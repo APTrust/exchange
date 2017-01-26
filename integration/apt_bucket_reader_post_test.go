@@ -119,6 +119,13 @@ func testErrors(t *testing.T, expected *stats.APTBucketReaderStats, actual *stat
 	assert.Equal(t, 0, len(actual.Errors))
 }
 
+// We should have the following warnings, based on the subdirectories
+// we created in aptrust.receiving.test.test.edu. This test will fail
+// if someone deletes those subdirectories.
+//
+// "Ignoring TestSubDir/ (subdirectory)",
+// "Ignoring TestSubDir/SubSubDir/ (subdirectory)",
+// "Ignoring TestSubDir/SubSubDir/example.edu.tagsample_good.tar (subdirectory)"
 func testWarnings(t *testing.T, expected *stats.APTBucketReaderStats, actual *stats.APTBucketReaderStats) {
-	assert.Equal(t, 0, len(actual.Warnings))
+	assert.Equal(t, 3, len(actual.Warnings))
 }

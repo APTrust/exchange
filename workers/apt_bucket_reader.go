@@ -171,6 +171,18 @@ func (reader *APTBucketReader) processBucket(bucketName string) {
 			break
 		}
 		for _, s3Object := range s3ObjList.Response.Contents {
+			// Skip items in nested directories. Unfortunately, the prefix
+			// filter for s3.ListObjectsInput does not allow you to specify
+			// patterns or things you want to exclude.
+			if strings.Contains(*s3Object.Key, "/") {
+				msg := fmt.Sprintf("Ignoring %s (subdirectory)", *s3Object.Key)
+				reader.Context.MessageLog.Info(msg)
+				if reader.stats != nil {
+					reader.stats.AddWarning(msg)
+				}
+				continue
+			}
+			// Ok, it's not in a nested directory, so let's process it.
 			reader.stats.AddS3Item(fmt.Sprintf("%s/%s", bucketName, *s3Object.Key))
 			reader.processS3Object(s3Object, bucketName)
 		}
