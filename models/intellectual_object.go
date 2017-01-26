@@ -2,6 +2,7 @@ package models
 
 import (
 	"encoding/json"
+	"fmt"
 	"github.com/APTrust/exchange/constants"
 	"strings"
 	"time"
@@ -492,4 +493,16 @@ func (obj *IntellectualObject) PropagateIdsToChildren() {
 		gf.IntellectualObjectIdentifier = obj.Identifier
 		gf.PropagateIdsToChildren()
 	}
+}
+
+// GetStorageSummary returns a StorageSummary object for the GenericFile
+// at the specified index. This will return an error if the index is out
+// of range.
+func (obj *IntellectualObject) GetStorageSummary(fileIndex int) (*StorageSummary, error) {
+	if fileIndex < 0 || fileIndex > (len(obj.GenericFiles)-1) {
+		return nil, fmt.Errorf("GetStorageSummary: Index %d out of range", fileIndex)
+	}
+	summary, err := NewStorageSummary(obj.GenericFiles[fileIndex],
+		obj.IngestTarFilePath, obj.IngestUntarredPath)
+	return summary, err
 }
