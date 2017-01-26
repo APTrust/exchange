@@ -12,6 +12,7 @@ import (
 	"io"
 	"net/url"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -105,15 +106,58 @@ func (storer *APTStorer) store() {
 		ingestState.IngestManifest.StoreResult.Attempted = true
 		ingestState.IngestManifest.StoreResult.AttemptNumber += 1
 
-		for i, gf := range ingestState.IngestManifest.Object.GenericFiles {
-			// TODO: Multiple concurrent uploads.
-			// Use goroutines with WaitGroup.
-			storer.saveFile(ingestState, gf)
-			// Ping NSQ every now and then, so our message doesn't time out.
-			if gf.Size > FIFTY_MEGABYTES || i%20 == 0 {
-				ingestState.TouchNSQ()
+		start := 0
+		limit := storer.Context.Config.StoreWorker.NetworkConnections
+		obj := ingestState.IngestManifest.Object
+
+		for {
+			// Get a batch of files to save...
+			storageSummaries, hasMoreFiles, err := storer.getStorageSummaryBatch(obj, start, limit)
+			if err != nil {
+				ingestState.IngestManifest.StoreResult.AddError(err.Error())
+				ingestState.IngestManifest.StoreResult.ErrorIsFatal = true
+				break
+			}
+			fileCount := len(storageSummaries)
+
+			// Save them concurrently...
+			storer.Context.MessageLog.Info("Saving batch of %d files for %s", fileCount, obj.Identifier)
+			wg := sync.WaitGroup{}
+			wg.Add(fileCount)
+			for i := 0; i < fileCount; i++ {
+				go func(storageSummary *models.StorageSummary) {
+					defer wg.Done()
+					storer.saveFile(storageSummary)
+				}(storageSummaries[i])
+			}
+			wg.Wait()
+			storer.Context.MessageLog.Info("Finished batch of %d files for %s", fileCount, obj.Identifier)
+
+			// Tell NSQ we're still on this. Very large files take a long time
+			// to copy, and if NSQ doesn't hear from us, it'll assume we timed out.
+			ingestState.TouchNSQ()
+
+			// SaveFile and the functions it calls have a pointer to our
+			// GenericFile, so it updates that record directly. However,
+			// we have to manually copy over any errors that may have
+			// occurred.
+			for _, storageSummary := range storageSummaries {
+				for _, errMsg := range storageSummary.StoreResult.Errors {
+					ingestState.IngestManifest.StoreResult.AddError(errMsg)
+				}
+				if storageSummary.StoreResult.ErrorIsFatal {
+					ingestState.IngestManifest.StoreResult.ErrorIsFatal = true
+					break
+				}
+			}
+
+			// Update for the next batch, or stop if there are no more files.
+			start += len(storageSummaries)
+			if hasMoreFiles == false {
+				break
 			}
 		}
+
 		storer.CleanupChannel <- ingestState
 	}
 }
@@ -181,7 +225,28 @@ func (storer *APTStorer) record() {
 	}
 }
 
-func (storer *APTStorer) saveFile(ingestState *models.IngestState, gf *models.GenericFile) {
+// getStorageSummaryBatch returns a batch of storage summary objects
+// and boolean indicating whether the object has more files to get.
+func (storer *APTStorer) getStorageSummaryBatch(obj *models.IntellectualObject, start, limit int) (storageSummaries []*models.StorageSummary, hasMoreFiles bool, err error) {
+	end := start + limit
+	if end > len(obj.GenericFiles) {
+		end = len(obj.GenericFiles)
+	}
+	fileCount := end - start
+	storageSummaries = make([]*models.StorageSummary, fileCount)
+	for i := 0; i < fileCount; i++ {
+		summary, err := obj.GetStorageSummary(start + i)
+		if err != nil {
+			return nil, false, err
+		}
+		storageSummaries[i] = summary
+	}
+	hasMoreFiles = end < len(obj.GenericFiles)
+	return storageSummaries, hasMoreFiles, nil
+}
+
+func (storer *APTStorer) saveFile(storageSummary *models.StorageSummary) {
+	gf := storageSummary.GenericFile
 	if !util.HasSavableName(gf.OriginalPath()) {
 		// We don't need to save bagit.txt, or certain manifests.
 		gf.IngestNeedsSave = false
@@ -189,7 +254,7 @@ func (storer *APTStorer) saveFile(ingestState *models.IngestState, gf *models.Ge
 		existingSha256, err := storer.getExistingSha256(gf.Identifier)
 		if err != nil {
 			storer.Context.MessageLog.Error(err.Error())
-			ingestState.IngestManifest.StoreResult.AddError(err.Error())
+			storageSummary.StoreResult.AddError(err.Error())
 			return
 		}
 		// Set this, for the record.
@@ -198,7 +263,7 @@ func (storer *APTStorer) saveFile(ingestState *models.IngestState, gf *models.Ge
 			gf.Id = existingSha256.GenericFileId
 			// We don't need to save files that were ingested
 			// previously and have not changed.
-			storer.changedSincePreviousVersion(ingestState, gf, existingSha256)
+			storer.changedSincePreviousVersion(storageSummary, existingSha256)
 		}
 	}
 
@@ -206,10 +271,10 @@ func (storer *APTStorer) saveFile(ingestState *models.IngestState, gf *models.Ge
 	if gf.IngestNeedsSave {
 		storer.Context.MessageLog.Info("File %s needs save", gf.Identifier)
 		if gf.IngestStoredAt.IsZero() || gf.IngestStorageURL == "" {
-			storer.copyToLongTermStorage(ingestState, gf, "s3")
+			storer.copyToLongTermStorage(storageSummary, "s3")
 		}
 		if gf.IngestReplicatedAt.IsZero() || gf.IngestReplicationURL == "" {
-			storer.copyToLongTermStorage(ingestState, gf, "glacier")
+			storer.copyToLongTermStorage(storageSummary, "glacier")
 		}
 	} else {
 		if !util.HasSavableName(gf.OriginalPath()) {
@@ -224,11 +289,12 @@ func (storer *APTStorer) saveFile(ingestState *models.IngestState, gf *models.Ge
 // exists from a prior ingest. If it does, and the checksum of the new
 // version matches the checksum of the prior version, we don't need to
 // re-save this file.
-func (storer *APTStorer) changedSincePreviousVersion(ingestState *models.IngestState, gf *models.GenericFile, existingSha256 *models.Checksum) {
+func (storer *APTStorer) changedSincePreviousVersion(storageSummary *models.StorageSummary, existingSha256 *models.Checksum) {
+	gf := storageSummary.GenericFile
 	uuid, err := storer.getUuidOfExistingFile(gf.Identifier)
 	if err != nil {
 		message := fmt.Sprintf("Cannot find existing UUID for %s: %v", gf.Identifier, err.Error())
-		ingestState.IngestManifest.StoreResult.AddError(message)
+		storageSummary.StoreResult.AddError(message)
 		storer.Context.MessageLog.Error(message)
 		// Probably not fatal, but treat it as such for now,
 		// because we don't want leave orphan objects in S3,
@@ -238,16 +304,16 @@ func (storer *APTStorer) changedSincePreviousVersion(ingestState *models.IngestS
 		// we are processing this ingest. The window for that
 		// to happen is usually between a few seconds and a few
 		// hours.
-		ingestState.IngestManifest.StoreResult.ErrorIsFatal = true
+		storageSummary.StoreResult.ErrorIsFatal = true
 		return
 	}
 	if uuid == "" {
 		message := fmt.Sprintf("Cannot find existing UUID for %s.", gf.Identifier)
-		ingestState.IngestManifest.StoreResult.AddError(message)
+		storageSummary.StoreResult.AddError(message)
 		storer.Context.MessageLog.Error(message)
 		// Probably not fatal, but treat it as such for now.
 		// Same note as in previous if statement above.
-		ingestState.IngestManifest.StoreResult.ErrorIsFatal = true
+		storageSummary.StoreResult.ErrorIsFatal = true
 		return
 	} else {
 		// OK. Set the GenericFile's UUID to match the existing file's
@@ -315,25 +381,26 @@ func (storer *APTStorer) getUuidOfExistingFile(gfIdentifier string) (string, err
 }
 
 // Copy the GenericFile to long-term storage in S3 or Glacier
-func (storer *APTStorer) copyToLongTermStorage(ingestState *models.IngestState, gf *models.GenericFile, sendWhere string) {
-	if !storer.uuidPresent(ingestState, gf) {
+func (storer *APTStorer) copyToLongTermStorage(storageSummary *models.StorageSummary, sendWhere string) {
+	gf := storageSummary.GenericFile
+	if !storer.uuidPresent(storageSummary) {
 		msg := fmt.Sprintf("Cannot copy GenericFile %s to long-term storage because UUID is missing",
 			gf.Identifier)
-		ingestState.IngestManifest.StoreResult.AddError(msg)
+		storageSummary.StoreResult.AddError(msg)
 		storer.Context.MessageLog.Error(msg)
 		return
 	}
 	storer.Context.MessageLog.Info("Sending %s to %s", gf.Identifier, sendWhere)
 	for attemptNumber := 1; attemptNumber <= MAX_UPLOAD_ATTEMPTS; attemptNumber++ {
-		uploader := storer.initUploader(ingestState, gf, sendWhere)
+		uploader := storer.initUploader(storageSummary, sendWhere)
 		if uploader == nil {
 			msg := "S3 uploader is nil. Cannot proceed."
-			ingestState.IngestManifest.StoreResult.AddError(msg)
+			storageSummary.StoreResult.AddError(msg)
 			storer.Context.MessageLog.Error(msg)
 			return // We have some config problem here. Stop trying.
 		}
-		if storer.assertRequiredMetadata(ingestState, uploader) {
-			tarFileIterator, readCloser := storer.getReadCloser(ingestState, gf)
+		if storer.assertRequiredMetadata(storageSummary, uploader) {
+			tarFileIterator, readCloser := storer.getReadCloser(storageSummary)
 			if readCloser != nil && tarFileIterator != nil {
 				defer readCloser.Close()
 				defer tarFileIterator.Close()
@@ -347,7 +414,7 @@ func (storer *APTStorer) copyToLongTermStorage(ingestState *models.IngestState, 
 					storer.Context.MessageLog.Error("Upload error for %s: %s",
 						gf.Identifier, uploader.ErrorMessage)
 					if attemptNumber == MAX_UPLOAD_ATTEMPTS {
-						ingestState.IngestManifest.StoreResult.AddError(uploader.ErrorMessage)
+						storageSummary.StoreResult.AddError(uploader.ErrorMessage)
 					}
 				}
 			} else {
@@ -358,12 +425,13 @@ func (storer *APTStorer) copyToLongTermStorage(ingestState *models.IngestState, 
 }
 
 // Returns true if the GenericFile IngestUUID is present and looks good.
-func (storer *APTStorer) uuidPresent(ingestState *models.IngestState, gf *models.GenericFile) bool {
+func (storer *APTStorer) uuidPresent(storageSummary *models.StorageSummary) bool {
+	gf := storageSummary.GenericFile
 	if !util.LooksLikeUUID(gf.IngestUUID) {
-		ingestState.IngestManifest.StoreResult.AddError("Cannot save %s to S3/Glacier because "+
+		storageSummary.StoreResult.AddError("Cannot save %s to S3/Glacier because "+
 			"GenericFile.IngestUUID (%s) is missing or invalid",
 			gf.Identifier, gf.IngestUUID)
-		ingestState.IngestManifest.StoreResult.ErrorIsFatal = true
+		storageSummary.StoreResult.ErrorIsFatal = true
 		return false
 	}
 	return true
@@ -371,7 +439,8 @@ func (storer *APTStorer) uuidPresent(ingestState *models.IngestState, gf *models
 
 // Initializes the uploader object with connection data and metadata
 // for this specific GenericFile.
-func (storer *APTStorer) initUploader(ingestState *models.IngestState, gf *models.GenericFile, sendWhere string) *network.S3Upload {
+func (storer *APTStorer) initUploader(storageSummary *models.StorageSummary, sendWhere string) *network.S3Upload {
+	gf := storageSummary.GenericFile
 	var region string
 	var bucket string
 	if sendWhere == "s3" {
@@ -381,9 +450,9 @@ func (storer *APTStorer) initUploader(ingestState *models.IngestState, gf *model
 		region = storer.Context.Config.APTrustGlacierRegion
 		bucket = storer.Context.Config.ReplicationBucket
 	} else {
-		ingestState.IngestManifest.StoreResult.AddError("Cannot save %s to %s because "+
+		storageSummary.StoreResult.AddError("Cannot save %s to %s because "+
 			"storer doesn't know where %s is", gf.Identifier, sendWhere)
-		ingestState.IngestManifest.StoreResult.ErrorIsFatal = true
+		storageSummary.StoreResult.ErrorIsFatal = true
 		return nil
 	}
 	uploader := network.NewS3Upload(
@@ -392,8 +461,13 @@ func (storer *APTStorer) initUploader(ingestState *models.IngestState, gf *model
 		gf.IngestUUID,
 		gf.FileFormat,
 	)
-	uploader.AddMetadata("institution", ingestState.IngestManifest.Object.Institution)
-	uploader.AddMetadata("bag", ingestState.IngestManifest.Object.Identifier)
+	instIdentifier, err := gf.InstitutionIdentifier()
+	if err != nil {
+		storageSummary.StoreResult.AddError("Error setting institution in S3 metadata: %v. "+
+			"Storing without institution tag.", err)
+	}
+	uploader.AddMetadata("institution", instIdentifier)
+	uploader.AddMetadata("bag", gf.IntellectualObjectIdentifier)
 	uploader.AddMetadata("bagpath", gf.OriginalPath())
 	uploader.AddMetadata("md5", gf.IngestMd5)
 	uploader.AddMetadata("sha256", gf.IngestSha256)
@@ -402,23 +476,24 @@ func (storer *APTStorer) initUploader(ingestState *models.IngestState, gf *model
 
 // Returns a reader that can read the file from within the tar archive.
 // The S3 uploader uses this reader to stream data to S3 and Glacier.
-func (storer *APTStorer) getReadCloser(ingestState *models.IngestState, gf *models.GenericFile) (*fileutil.TarFileIterator, io.ReadCloser) {
-	tarFilePath := ingestState.IngestManifest.Object.IngestTarFilePath
-	tfi, err := fileutil.NewTarFileIterator(tarFilePath)
+func (storer *APTStorer) getReadCloser(storageSummary *models.StorageSummary) (*fileutil.TarFileIterator, io.ReadCloser) {
+	gf := storageSummary.GenericFile
+	tarFilePath := storageSummary.TarFilePath
+	tfi, err := fileutil.NewTarFileIterator(storageSummary.TarFilePath)
 	if err != nil {
 		msg := fmt.Sprintf("Can't get TarFileIterator for %s: %v", tarFilePath, err)
-		ingestState.IngestManifest.StoreResult.AddError(msg)
+		storageSummary.StoreResult.AddError(msg)
 		return nil, nil
 	}
 	origPathWithBagName, err := gf.OriginalPathWithBagName()
 	if err != nil {
-		ingestState.IngestManifest.StoreResult.AddError(err.Error())
+		storageSummary.StoreResult.AddError(err.Error())
 		return nil, nil
 	}
 	readCloser, err := tfi.Find(origPathWithBagName)
 	if err != nil {
 		msg := fmt.Sprintf("Can't get reader for %s: %v", gf.Identifier, err)
-		ingestState.IngestManifest.StoreResult.AddError(msg)
+		storageSummary.StoreResult.AddError(msg)
 		if readCloser != nil {
 			readCloser.Close()
 		}
@@ -428,15 +503,15 @@ func (storer *APTStorer) getReadCloser(ingestState *models.IngestState, gf *mode
 }
 
 // Make sure we send data to S3/Glacier with all of the required metadata.
-func (storer *APTStorer) assertRequiredMetadata(ingestState *models.IngestState, s3Upload *network.S3Upload) bool {
+func (storer *APTStorer) assertRequiredMetadata(storageSummary *models.StorageSummary, s3Upload *network.S3Upload) bool {
 	allKeysPresent := true
 	keys := []string{"institution", "bag", "bagpath", "md5", "sha256"}
 	for _, key := range keys {
 		value := s3Upload.UploadInput.Metadata[key]
 		if value == nil || *value == "" {
-			ingestState.IngestManifest.StoreResult.AddError("S3Upload is missing required "+
+			storageSummary.StoreResult.AddError("S3Upload is missing required "+
 				"metadata key %s", key)
-			ingestState.IngestManifest.StoreResult.ErrorIsFatal = true
+			storageSummary.StoreResult.ErrorIsFatal = true
 			allKeysPresent = false
 		}
 	}
