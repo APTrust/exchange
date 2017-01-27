@@ -11,7 +11,7 @@ import (
 )
 
 func main() {
-	pathToConfigFile, pathToStatsFile := parseCommandLine()
+	pathToConfigFile, pathToStatsFile, dryRun := parseCommandLine()
 	config, err := models.LoadConfigFile(pathToConfigFile)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, err.Error())
@@ -19,7 +19,7 @@ func main() {
 	}
 	_context := context.NewContext(config)
 	enableStats := pathToStatsFile != ""
-	aptQueue := workers.NewAPTQueue(_context, enableStats)
+	aptQueue := workers.NewAPTQueue(_context, enableStats, dryRun)
 	aptQueue.Run()
 	if enableStats {
 		aptQueue.GetStats().DumpToFile(pathToStatsFile)
@@ -29,11 +29,12 @@ func main() {
 }
 
 // See if you can figure out from the function name what this does.
-func parseCommandLine() (configFile string, statsFile string) {
+func parseCommandLine() (configFile string, statsFile string, dryRun bool) {
 	var pathToConfigFile string
 	var pathToStatsFile string
 	flag.StringVar(&pathToConfigFile, "config", "", "Path to APTrust config file")
 	flag.StringVar(&pathToStatsFile, "stats", "", "Path to file where we should dump JSON stats")
+	flag.BoolVar(&dryRun, "dryrun", false, "If true, do a dry run, logging what would be queued without actually sending anything to NSQ")
 	flag.Parse()
 	if pathToConfigFile == "" {
 		printUsage()
@@ -44,7 +45,7 @@ func parseCommandLine() (configFile string, statsFile string) {
 		fmt.Fprintf(os.Stderr, err.Error())
 		os.Exit(1)
 	}
-	return pathToConfigFile, pathToStatsFile
+	return pathToConfigFile, pathToStatsFile, dryRun
 }
 
 // Tell the user about the program.
@@ -57,13 +58,18 @@ entry in the config file. For example, the topic for fixity checking
 would be in config/<environment>.json, in the NsqTopic property of the
 FixityWorker section.
 
-Usage: apt_queue -config=<path to APTrust config file> -stats=<path_to_stats_file>
+Usage: apt_queue -config=<path to APTrust config file> -stats=<path_to_stats_file> -dryrun=<true>
 
 Param -config is required.
+
 Param -stats tells us where to dump the stats file. This is mainly for testing
 and diagnostics. Do not use -stats in production, because it will use a lot of
 memory when there is a lot of data in the receiving buckets and/or in the
 WorkItems list.
+
+If optional param dryrun is true, apt_queue will print messages to the log
+describing everything it would queue, and which queue each item would go
+into, but it will not actually queue anything.
 `
 	fmt.Println(message)
 }

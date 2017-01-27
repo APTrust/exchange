@@ -17,16 +17,23 @@ type APTQueue struct {
 	Context      *context.Context
 	NSQClient    *network.NSQClient
 	stats        *stats.APTQueueStats
+	dryRun       bool
 	statsEnabled bool
 }
 
-func NewAPTQueue(_context *context.Context, enableStats bool) *APTQueue {
+// NewAPTQueue creates a new queue worker to push WorkItems from
+// Pharos into NSQ, and marked them as queued. It param enableStats
+// is true, it will dump stats about what was queued to a JSON file.
+// If param dryRun is true, it will log all the items it would have
+// queued, without actually pushing anything to NSQ.
+func NewAPTQueue(_context *context.Context, enableStats, dryRun bool) *APTQueue {
 	_context.MessageLog.Info("NSQ address: %s", _context.Config.NsqdHttpAddress)
 	nsqClient := network.NewNSQClient(_context.Config.NsqdHttpAddress)
 	aptQueue := &APTQueue{
 		Context:      _context,
 		NSQClient:    nsqClient,
 		statsEnabled: enableStats,
+		dryRun:       dryRun,
 	}
 	if enableStats {
 		aptQueue.stats = stats.NewAPTQueueStats()
@@ -64,20 +71,34 @@ func (aptQueue *APTQueue) Run() {
 }
 
 func (aptQueue *APTQueue) addToNSQ(workItem *models.WorkItem) bool {
+	identifier := workItem.ObjectIdentifier
+	if workItem.GenericFileIdentifier != "" {
+		identifier = workItem.GenericFileIdentifier
+	}
 	topic := aptQueue.getNSQTopic(workItem)
 	if topic == UNKNOWN_TOPIC {
-		aptQueue.recordError("Unknown topic for WorkItem %d: %s/%s",
-			workItem.Id, workItem.Action, workItem.Stage)
+		aptQueue.recordError(
+			"Unknown topic for WorkItem %d - %s (%s/%s/%s)",
+			workItem.Id, identifier, workItem.Action,
+			workItem.Stage, workItem.Status)
+		return false
+	}
+	if aptQueue.dryRun {
+		aptQueue.Context.MessageLog.Info(
+			"[DRY RUN ] Would add WorkItem id %d - %s (%s/%s/%s) - to %s",
+			workItem.Id, identifier, workItem.Action,
+			workItem.Stage, workItem.Status, topic)
 		return false
 	}
 	err := aptQueue.NSQClient.Enqueue(topic, workItem.Id)
 	if err != nil {
-		aptQueue.recordError("Error sending WorkItem %d to NSQ topic %s: %v",
-			workItem.Id, topic, err)
+		aptQueue.recordError("Error sending WorkItem %d %s (%s/%s/%s) - to %s: %v",
+			workItem.Id, identifier, workItem.Action,
+			workItem.Stage, workItem.Status, topic, err)
 		return false
 	}
-	aptQueue.Context.MessageLog.Info("Added WorkItem id %d (%s/%s/%s) to NSQ topic %s",
-		workItem.Id, workItem.Action, workItem.Stage, workItem.Status, topic)
+	aptQueue.Context.MessageLog.Info("Added WorkItem id %d - %s (%s/%s/%s) - to %s",
+		workItem.Id, identifier, workItem.Action, workItem.Stage, workItem.Status, topic)
 	if aptQueue.stats != nil {
 		aptQueue.stats.AddWorkItem(topic, workItem)
 	}
