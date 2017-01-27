@@ -63,6 +63,12 @@ func GetIngestState(message *nsq.Message, _context *context.Context, initIfEmpty
 			workItem.Id, workItem.Bucket, workItem.Name)
 		return nil, err
 	}
+	// Special case for handling WorkItems imported from Fluctus.
+	if ingestManifest != nil && ingestManifest.FetchResult == nil {
+		_context.MessageLog.Info("Created new IngestManifest for old Fluctus item WorkItem %d (%s/%s)",
+			workItem.Id, workItem.Bucket, workItem.Name)
+		ingestManifest = models.NewIngestManifest()
+	}
 
 	// Save memory. We don't need this after loading the
 	// IngestManifest from the WorkItemState. For bags with
