@@ -48,6 +48,7 @@ func (aptQueue *APTQueue) Run() {
 	params.Set("queued", "false")
 	params.Set("status", constants.StatusPending)
 	params.Set("retry", "true")
+	params.Set("node_empty", "true")
 	params.Set("page", "1")
 	params.Set("per_page", "100")
 	for {
@@ -71,7 +72,10 @@ func (aptQueue *APTQueue) Run() {
 }
 
 func (aptQueue *APTQueue) addToNSQ(workItem *models.WorkItem) bool {
-	identifier := workItem.ObjectIdentifier
+	identifier := workItem.Name
+	if workItem.ObjectIdentifier != "" {
+		identifier = workItem.ObjectIdentifier
+	}
 	if workItem.GenericFileIdentifier != "" {
 		identifier = workItem.GenericFileIdentifier
 	}
