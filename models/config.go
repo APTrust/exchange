@@ -247,6 +247,21 @@ type Config struct {
 	// with lots of free disk space.
 	TarDirectory string
 
+	// UseVolumeService describes whether to use volume_service or
+	// to try to reserve disk space before downloading and processing
+	// bags. You'll want to use this service on systems with a fixed
+	// amount of disk space, so that APTrust and DPN services don't
+	// try to download bags that won't fit in the remaining disk space.
+	// When this is on, and the volume_service is running, APTrust and
+	// DPN services will simply reque items that require more disk space
+	// than is currently available. UseVolumeService should be false
+	// (off) when using Amazon's EFS volumes because querying EFS volumes
+	// for available space often returns an error, and that causes items
+	// to be requeued when they should be processed, and EFS volumes
+	// are virtually guaranteed to have more space than we need to process
+	// bags.
+	UseVolumeService bool
+
 	// The port number, on localhost, where the HTTP
 	// VolumeService should run. This is always on
 	// 127.0.0.1, because it has to access the same

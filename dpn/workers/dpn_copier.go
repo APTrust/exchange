@@ -80,7 +80,8 @@ func (copier *DPNCopier) HandleMessage(message *nsq.Message) error {
 		return nil
 	}
 
-	if !ReserveSpaceOnVolume(copier.Context, manifest) {
+	// TODO: Where is the corresponding Release for this Reserve?
+	if copier.Context.Config.UseVolumeService && !ReserveSpaceOnVolume(copier.Context, manifest) {
 		manifest.CopySummary.AddError("Cannot reserve disk space to process this bag.")
 		manifest.CopySummary.Finish()
 		message.Requeue(10 * time.Minute)

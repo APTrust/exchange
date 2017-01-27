@@ -430,9 +430,11 @@ func DeleteBagFromStaging(ingestState *models.IngestState, _context *context.Con
 		if err != nil {
 			_context.MessageLog.Warning(err.Error())
 		}
-		err = _context.VolumeClient.Release(tarFile)
-		if err != nil {
-			_context.MessageLog.Warning(err.Error())
+		if _context.Config.UseVolumeService {
+			err = _context.VolumeClient.Release(tarFile)
+			if err != nil {
+				_context.MessageLog.Warning(err.Error())
+			}
 		}
 	} else {
 		_context.MessageLog.Info("Skipping deletion of %s: file does not exist", tarFile)
@@ -446,9 +448,11 @@ func DeleteBagFromStaging(ingestState *models.IngestState, _context *context.Con
 		if err != nil {
 			_context.MessageLog.Warning(err.Error())
 		}
-		err = _context.VolumeClient.Release(untarredBagPath)
-		if err != nil {
-			_context.MessageLog.Warning(err.Error())
+		if _context.Config.UseVolumeService {
+			err = _context.VolumeClient.Release(untarredBagPath)
+			if err != nil {
+				_context.MessageLog.Warning(err.Error())
+			}
 		}
 	} else {
 		_context.MessageLog.Info("Skipping deletion of untarred bag dir at %s: "+

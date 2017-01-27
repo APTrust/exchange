@@ -9,6 +9,7 @@
 	"SkipAlreadyProcessed": true,
 	"DeleteOnSuccess": true,
 	"LogToStderr": false,
+    "UseVolumeService": false,
 	"VolumeServicePort": 8898,
 	"LogLevel": 4,
 	"BucketReaderCacheHours": 24,

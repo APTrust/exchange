@@ -113,7 +113,7 @@ func (fetcher *APTFetcher) HandleMessage(message *nsq.Message) error {
 
 		// Reserve disk space to download this item, or requeue it
 		// if we can't get the disk space.
-		if !fetcher.reserveSpaceForDownload(ingestState) {
+		if fetcher.Context.Config.UseVolumeService && !fetcher.reserveSpaceForDownload(ingestState) {
 			err = MarkWorkItemRequeued(ingestState, fetcher.Context)
 			if err != nil {
 				fetcher.Context.MessageLog.Error(
