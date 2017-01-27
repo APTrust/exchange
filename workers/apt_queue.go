@@ -39,6 +39,8 @@ func NewAPTQueue(_context *context.Context, enableStats bool) *APTQueue {
 func (aptQueue *APTQueue) Run() {
 	params := url.Values{}
 	params.Set("queued", "false")
+	params.Set("status", constants.StatusPending)
+	params.Set("retry", "true")
 	params.Set("page", "1")
 	params.Set("per_page", "100")
 	for {
