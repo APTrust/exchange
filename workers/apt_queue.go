@@ -16,22 +16,26 @@ const UNKNOWN_TOPIC = "unknown_topic"
 type APTQueue struct {
 	Context      *context.Context
 	NSQClient    *network.NSQClient
+	topic        string
 	stats        *stats.APTQueueStats
 	dryRun       bool
 	statsEnabled bool
 }
 
 // NewAPTQueue creates a new queue worker to push WorkItems from
-// Pharos into NSQ, and marked them as queued. It param enableStats
+// Pharos into NSQ, and marked them as queued. If param topic is
+// specified, this will queue items destined for the specified topic;
+// otherwise, it will queue items for all topics. If param enableStats
 // is true, it will dump stats about what was queued to a JSON file.
 // If param dryRun is true, it will log all the items it would have
 // queued, without actually pushing anything to NSQ.
-func NewAPTQueue(_context *context.Context, enableStats, dryRun bool) *APTQueue {
+func NewAPTQueue(_context *context.Context, topic string, enableStats, dryRun bool) *APTQueue {
 	_context.MessageLog.Info("NSQ address: %s", _context.Config.NsqdHttpAddress)
 	nsqClient := network.NewNSQClient(_context.Config.NsqdHttpAddress)
 	aptQueue := &APTQueue{
 		Context:      _context,
 		NSQClient:    nsqClient,
+		topic:        topic,
 		statsEnabled: enableStats,
 		dryRun:       dryRun,
 	}
@@ -44,6 +48,7 @@ func NewAPTQueue(_context *context.Context, enableStats, dryRun bool) *APTQueue 
 // Run retrieves all unqueued work items from Pharos and pushes
 // them into the appropriate NSQ topic.
 func (aptQueue *APTQueue) Run() {
+	aptQueue.printLogHeader()
 	params := url.Values{}
 	params.Set("queued", "false")
 	params.Set("status", constants.StatusPending)
@@ -80,6 +85,13 @@ func (aptQueue *APTQueue) addToNSQ(workItem *models.WorkItem) bool {
 		identifier = workItem.GenericFileIdentifier
 	}
 	topic := aptQueue.getNSQTopic(workItem)
+	if aptQueue.topic != "" && topic != aptQueue.topic {
+		aptQueue.Context.MessageLog.Info(
+			"Skipping WorkItem id %d - %s (%s/%s/%s) because topic would be %s",
+			workItem.Id, identifier, workItem.Action,
+			workItem.Stage, workItem.Status, topic)
+		return false
+	}
 	if topic == UNKNOWN_TOPIC {
 		aptQueue.recordError(
 			"Unknown topic for WorkItem %d - %s (%s/%s/%s)",
@@ -89,7 +101,7 @@ func (aptQueue *APTQueue) addToNSQ(workItem *models.WorkItem) bool {
 	}
 	if aptQueue.dryRun {
 		aptQueue.Context.MessageLog.Info(
-			"[DRY RUN ] Would add WorkItem id %d - %s (%s/%s/%s) - to %s",
+			"[DRY RUN] Would add WorkItem id %d - %s (%s/%s/%s) - to %s",
 			workItem.Id, identifier, workItem.Action,
 			workItem.Stage, workItem.Status, topic)
 		return false
@@ -176,4 +188,15 @@ func (aptQueue *APTQueue) getNSQTopic(workItem *models.WorkItem) string {
 
 func (aptQueue *APTQueue) GetStats() *stats.APTQueueStats {
 	return aptQueue.stats
+}
+
+func (aptQueue *APTQueue) printLogHeader() {
+	topic := aptQueue.topic
+	if aptQueue.topic == "" {
+		topic = "ALL"
+	}
+	aptQueue.Context.MessageLog.Info("apt_queue started with the following params:")
+	aptQueue.Context.MessageLog.Info("Topic = %s", topic)
+	aptQueue.Context.MessageLog.Info("Enable Stats = %t", aptQueue.statsEnabled)
+	aptQueue.Context.MessageLog.Info("Dry Run = %t", aptQueue.dryRun)
 }

@@ -11,7 +11,7 @@ import (
 )
 
 func main() {
-	pathToConfigFile, pathToStatsFile, dryRun := parseCommandLine()
+	pathToConfigFile, pathToStatsFile, topic, dryRun := parseCommandLine()
 	config, err := models.LoadConfigFile(pathToConfigFile)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, err.Error())
@@ -19,7 +19,7 @@ func main() {
 	}
 	_context := context.NewContext(config)
 	enableStats := pathToStatsFile != ""
-	aptQueue := workers.NewAPTQueue(_context, enableStats, dryRun)
+	aptQueue := workers.NewAPTQueue(_context, topic, enableStats, dryRun)
 	aptQueue.Run()
 	if enableStats {
 		aptQueue.GetStats().DumpToFile(pathToStatsFile)
@@ -29,11 +29,13 @@ func main() {
 }
 
 // See if you can figure out from the function name what this does.
-func parseCommandLine() (configFile string, statsFile string, dryRun bool) {
+func parseCommandLine() (configFile string, statsFile string, topic string, dryRun bool) {
 	var pathToConfigFile string
 	var pathToStatsFile string
+	var topicName string
 	flag.StringVar(&pathToConfigFile, "config", "", "Path to APTrust config file")
 	flag.StringVar(&pathToStatsFile, "stats", "", "Path to file where we should dump JSON stats")
+	flag.StringVar(&topicName, "topic", "", "Queue only those items bound for this topic")
 	flag.BoolVar(&dryRun, "dryrun", false, "If true, do a dry run, logging what would be queued without actually sending anything to NSQ")
 	flag.Parse()
 	if pathToConfigFile == "" {
@@ -45,7 +47,7 @@ func parseCommandLine() (configFile string, statsFile string, dryRun bool) {
 		fmt.Fprintf(os.Stderr, err.Error())
 		os.Exit(1)
 	}
-	return pathToConfigFile, pathToStatsFile, dryRun
+	return pathToConfigFile, pathToStatsFile, topicName, dryRun
 }
 
 // Tell the user about the program.
@@ -58,9 +60,15 @@ entry in the config file. For example, the topic for fixity checking
 would be in config/<environment>.json, in the NsqTopic property of the
 FixityWorker section.
 
-Usage: apt_queue -config=<path to APTrust config file> -stats=<path_to_stats_file> -dryrun=<true>
+Usage: apt_queue -config=<path to APTrust config file> -topic=<topic_name> -stats=<path_to_stats_file> -dryrun=<true>
 
 Param -config is required.
+
+Param -topic is optional. If specified, this will queue only those items
+bound for that topic. If unspecified, this will queue all items that need
+to be queued. Queue names are specified in the config files and include
+apt_fetch_topic, apt_store_topic, apt_record_topic, apt_restore_topic,
+apt_file_delete_topic, apt_fixity_topic, and dpn_package_topic.
 
 Param -stats tells us where to dump the stats file. This is mainly for testing
 and diagnostics. Do not use -stats in production, because it will use a lot of
