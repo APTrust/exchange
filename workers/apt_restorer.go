@@ -258,6 +258,7 @@ func (restorer *APTRestorer) finishWithError(restoreState *models.RestoreState) 
 		restoreState.RecordSummary.Start()
 		restorer.deleteBagDir(restoreState)
 		mostRecentSummary.Retry = false
+		restoreState.WorkItem.Retry = false
 		restoreState.WorkItem.Status = constants.StatusFailed
 	} else {
 		// Set this back to pending, and we'll try again.
@@ -681,6 +682,21 @@ func (restorer *APTRestorer) writeManifest(algorithm string, restoreState *model
 }
 
 func (restorer *APTRestorer) fetchAllFiles(restoreState *models.RestoreState) {
+	activeFileCount := 0
+	for _, gf := range restoreState.IntellectualObject.GenericFiles {
+		if gf.State == "A" {
+			activeFileCount++
+		}
+	}
+	if activeFileCount == 0 {
+		restoreState.PackageSummary.AddError(
+			"Bag %s has zero active files (%d were deleted sometime after ingest).",
+			restoreState.IntellectualObject.Identifier,
+			len(restoreState.IntellectualObject.GenericFiles))
+		restoreState.PackageSummary.ErrorIsFatal = true
+		return
+	}
+
 	// Create the local bag directory.
 	if err := os.MkdirAll(restoreState.LocalBagDir, 0755); err != nil {
 		restoreState.PackageSummary.AddError("Cannot create local bag path %s: %v",
@@ -698,9 +714,8 @@ func (restorer *APTRestorer) fetchAllFiles(restoreState *models.RestoreState) {
 		true) // calculate sha256 for manifest and fixity verification
 
 	// Fetch all of the files from S3 to our local bag dir.
-	restorer.Context.MessageLog.Info("Starting fetch. Object %s has %d saved files",
-		restoreState.IntellectualObject.Identifier,
-		len(restoreState.IntellectualObject.GenericFiles))
+	restorer.Context.MessageLog.Info("Starting fetch. Object %s has %d saved (active) files",
+		restoreState.IntellectualObject.Identifier, activeFileCount)
 	downloaded := 0
 	alreadyOnDisk := 0
 	for _, gf := range restoreState.IntellectualObject.GenericFiles {
@@ -779,15 +794,14 @@ func (restorer *APTRestorer) fetchAllFiles(restoreState *models.RestoreState) {
 	}
 
 	// Final status report for logging and troubleshooting.
-	totalFileCount := len(restoreState.IntellectualObject.GenericFiles)
 	totalFilesPresent := downloaded + alreadyOnDisk
-	if totalFilesPresent == totalFileCount {
+	if totalFilesPresent == activeFileCount {
 		restorer.Context.MessageLog.Info("Found all %d files for %s (%d downloaded, %d already on disk)",
-			totalFileCount, restoreState.IntellectualObject.Identifier,
+			activeFileCount, restoreState.IntellectualObject.Identifier,
 			downloaded, alreadyOnDisk)
 	} else {
 		msg := fmt.Sprintf("Found only %d of %d files for %s (%d downloaded, %d already on disk)",
-			totalFilesPresent, totalFileCount,
+			totalFilesPresent, activeFileCount,
 			restoreState.IntellectualObject.Identifier,
 			downloaded, alreadyOnDisk)
 		restoreState.PackageSummary.AddError(msg)
