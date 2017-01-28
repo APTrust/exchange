@@ -136,6 +136,7 @@ func (restorer *APTRestorer) buildBag() {
 		restorer.fetchAllFiles(restoreState)
 		if restoreState.PackageSummary.HasErrors() {
 			restorer.PostProcessChannel <- restoreState
+			continue
 		}
 		restoreState.TouchNSQ()
 
@@ -147,6 +148,7 @@ func (restorer *APTRestorer) buildBag() {
 		restorer.writeManifest(constants.AlgSha256, restoreState)
 		if restoreState.PackageSummary.HasErrors() {
 			restorer.PostProcessChannel <- restoreState
+			continue
 		}
 		restoreState.TouchNSQ()
 
@@ -154,6 +156,7 @@ func (restorer *APTRestorer) buildBag() {
 		restorer.tarBag(restoreState)
 		if restoreState.PackageSummary.HasErrors() {
 			restorer.PostProcessChannel <- restoreState
+			continue
 		}
 		restoreState.TouchNSQ()
 
@@ -324,9 +327,9 @@ func (restorer *APTRestorer) deleteTarFile(restoreState *models.RestoreState) {
 	if fileutil.FileExists(restoreState.LocalTarFile) &&
 		fileutil.LooksSafeToDelete(restoreState.LocalTarFile, 12, 3) {
 		err := os.Remove(restoreState.LocalTarFile)
-		if err != nil {
+		if err != nil && !os.IsNotExist(err) {
 			message := fmt.Sprintf("Failed to delete %s", restoreState.LocalTarFile)
-			restoreState.MostRecentSummary().AddError(message)
+			//restoreState.MostRecentSummary().AddError(message)
 			restorer.Context.MessageLog.Error(message)
 		} else {
 			restoreState.TarFileDeletedAt = time.Now().UTC()
@@ -338,9 +341,9 @@ func (restorer *APTRestorer) deleteBagDir(restoreState *models.RestoreState) {
 	if fileutil.FileExists(restoreState.LocalBagDir) &&
 		fileutil.LooksSafeToDelete(restoreState.LocalBagDir, 12, 3) {
 		err := os.RemoveAll(restoreState.LocalBagDir)
-		if err != nil {
+		if err != nil && !os.IsNotExist(err) {
 			message := fmt.Sprintf("Failed to delete %s", restoreState.LocalBagDir)
-			restoreState.MostRecentSummary().AddError(message)
+			//restoreState.MostRecentSummary().AddError(message)
 			restorer.Context.MessageLog.Error(message)
 		} else {
 			restoreState.BagDirDeletedAt = time.Now().UTC()
@@ -692,7 +695,7 @@ func (restorer *APTRestorer) fetchAllFiles(restoreState *models.RestoreState) {
 		restoreState.PackageSummary.AddError(
 			"Bag %s has zero active files (%d were deleted sometime after ingest).",
 			restoreState.IntellectualObject.Identifier,
-			len(restoreState.IntellectualObject.GenericFiles))
+			activeFileCount-len(restoreState.IntellectualObject.GenericFiles))
 		restoreState.PackageSummary.ErrorIsFatal = true
 		return
 	}
