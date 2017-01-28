@@ -102,21 +102,24 @@ func (restorer *APTRestorer) HandleMessage(message *nsq.Message) error {
 	// to contact Pharos or S3. Figure out how far we got on the last
 	// attempt to process, and resume there. Clear errors from prior
 	// processing before resuming.
-	if restoreState.CopySummary.Finished() {
+	if restoreState.CopySummary.Finished() && !restoreState.CopySummary.HasErrors() {
 		restorer.logWhereThisIsGoing(restoreState, "PostProcessChannel")
 		restoreState.RecordSummary.ClearErrors()
 		restorer.PostProcessChannel <- restoreState
-	} else if restoreState.ValidateSummary.Finished() {
+	} else if restoreState.ValidateSummary.Finished() && !restoreState.ValidateSummary.HasErrors() &&
+		fileutil.FileExists(restoreState.LocalTarFile) {
 		restorer.logWhereThisIsGoing(restoreState, "CopyChannel")
 		restoreState.CopySummary.ClearErrors()
 		restorer.CopyChannel <- restoreState
-	} else if restoreState.PackageSummary.Finished() {
+	} else if restoreState.PackageSummary.Finished() && !restoreState.PackageSummary.HasErrors() &&
+		fileutil.FileExists(restoreState.LocalBagDir) {
 		restorer.logWhereThisIsGoing(restoreState, "ValidateChannel")
 		restoreState.ValidateSummary.ClearErrors()
 		restorer.ValidateChannel <- restoreState
 	} else {
 		restorer.logWhereThisIsGoing(restoreState, "PackageChannel")
 		restoreState.PackageSummary.ClearErrors()
+		restoreState.CancelReason = ""
 		restorer.PackageChannel <- restoreState
 	}
 
@@ -234,7 +237,7 @@ func (restorer *APTRestorer) finishWithError(restoreState *models.RestoreState) 
 	mostRecentSummary := restoreState.MostRecentSummary()
 	note := fmt.Sprintf("Bag could not be restored: %s", mostRecentSummary.AllErrorsAsString())
 	maxAttempts := restorer.Context.Config.RestoreWorker.MaxAttempts
-	if mostRecentSummary.AttemptNumber > maxAttempts {
+	if mostRecentSummary.AttemptNumber > maxAttempts && restoreState.CancelReason == "" {
 		note = fmt.Sprintf("Too many failed restore attempts (%d). "+
 			"Errors: %s",
 			maxAttempts,
@@ -285,10 +288,13 @@ func (restorer *APTRestorer) finishWithError(restoreState *models.RestoreState) 
 	restorer.saveWorkItem(restoreState)
 	restorer.saveWorkItemState(restoreState)
 
-	restorer.Context.MessageLog.Error("Failed to restore %s: %s",
-		restoreState.WorkItem.ObjectIdentifier,
-		mostRecentSummary.AllErrorsAsString())
-
+	if restoreState.CancelReason != "" {
+		restorer.Context.MessageLog.Warning(restoreState.CancelReason)
+	} else {
+		restorer.Context.MessageLog.Error("Failed to restore %s: %s",
+			restoreState.WorkItem.ObjectIdentifier,
+			mostRecentSummary.AllErrorsAsString())
+	}
 	if mostRecentSummary.ErrorIsFatal {
 		restorer.Context.MessageLog.Error("Error for %s is fatal",
 			restoreState.WorkItem.ObjectIdentifier)
