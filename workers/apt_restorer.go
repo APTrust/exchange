@@ -255,14 +255,19 @@ func (restorer *APTRestorer) finishWithError(restoreState *models.RestoreState) 
 	// Fatal errors can be due to 1) exceeding max processing attempts,
 	// 2) inability to fetch all of the bag's files, 3) inability to
 	// create a valid bag.
-	if restoreState.HasFatalErrors() {
+	if restoreState.HasFatalErrors() || restoreState.CancelReason != "" {
 		restoreState.RecordSummary.Attempted = true
 		restoreState.RecordSummary.AttemptNumber += 1
 		restoreState.RecordSummary.Start()
 		restorer.deleteBagDir(restoreState)
 		mostRecentSummary.Retry = false
 		restoreState.WorkItem.Retry = false
-		restoreState.WorkItem.Status = constants.StatusFailed
+		if restoreState.CancelReason != "" {
+			restoreState.WorkItem.Status = constants.StatusCancelled
+			note = restoreState.CancelReason
+		} else {
+			restoreState.WorkItem.Status = constants.StatusFailed
+		}
 	} else {
 		// Set this back to pending, and we'll try again.
 		restoreState.WorkItem.Status = constants.StatusPending
@@ -692,10 +697,13 @@ func (restorer *APTRestorer) fetchAllFiles(restoreState *models.RestoreState) {
 		}
 	}
 	if activeFileCount == 0 {
-		restoreState.PackageSummary.AddError(
-			"Bag %s has zero active files (%d were deleted sometime after ingest).",
+		restoreState.CancelReason = fmt.Sprintf(
+			"System cancelled restoration because bag %s  "+
+				"has zero active files. %d files were deleted after ingest. "+
+				"Check the PREMIS events with event_type 'deletion' for "+
+				"this bag.",
 			restoreState.IntellectualObject.Identifier,
-			activeFileCount-len(restoreState.IntellectualObject.GenericFiles))
+			len(restoreState.IntellectualObject.GenericFiles))
 		restoreState.PackageSummary.ErrorIsFatal = true
 		return
 	}

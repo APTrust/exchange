@@ -60,6 +60,8 @@ type RestoreState struct {
 	// after itself. If LocalTarFile is an empty string, there was
 	// nothing to delete.
 	TarFileDeletedAt time.Time
+	// If this restoration was cancelled, the reason goes here.
+	CancelReason string
 }
 
 // NewRestoreState creates a new RestoreState object with empty
