@@ -265,6 +265,33 @@ func (client *PharosClient) IntellectualObjectRequestRestore(identifier string) 
 	return resp
 }
 
+// IntellectualObjectRequestDelete creates a delete request in Pharos for
+// the object with the specified identifier. This is used in integration
+// testing to create a set of file deletion requests. This call returns no
+// data.
+func (client *PharosClient) IntellectualObjectRequestDelete(identifier string) *PharosResponse {
+	// Set up the response object, but note that this call returns
+	// no data.
+	resp := NewPharosResponse(PharosIntellectualObject)
+	resp.objects = make([]*models.IntellectualObject, 0)
+
+	// Build the url and the request object
+	relativeUrl := fmt.Sprintf("/api/%s/objects/%s/delete", client.apiVersion, escapeSlashes(identifier))
+	absoluteUrl := client.BuildUrl(relativeUrl)
+
+	// Run the request.
+	client.DoRequest(resp, "DELETE", absoluteUrl, nil)
+	if resp.Error != nil {
+		return resp
+	}
+	if resp.Response.StatusCode != 200 && resp.Response.StatusCode != 204 {
+		bytes, _ := resp.RawResponseData()
+		resp.Error = fmt.Errorf("Pharos returned response code %d. Response: %s",
+			resp.Response.StatusCode, string(bytes))
+	}
+	return resp
+}
+
 // GenericFileGet returns the GenericFile having the specified identifier.
 // The identifier should be in the format
 // "institution.edu/object_name/path/to/file.ext"
@@ -533,7 +560,7 @@ func (client *PharosClient) PremisEventGet(identifier string) *PharosResponse {
 // PremisEventList returns a list of PREMIS events matching the specified
 // criteria. Parameters include:
 //
-// * intellectual_object_identifier - (string) Return events associated with
+// * object_identifier - (string) Return events associated with
 //   the specified intellectual object (but not its generic files).
 // * generic_file_identifier - (string) Return events associated with the
 //   specified generic file.

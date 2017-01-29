@@ -184,7 +184,7 @@ class IntegrationTest
 	  @service.app_start(@context.apps['apt_store'])
 	  sleep 20  # let nsq record topic fill before client connects
 	  @service.app_start(@context.apps['apt_record'])
-	  sleep 40  # allow fetch/store/record time to finish
+	  sleep 50  # allow fetch/store/record time to finish
 	  @service.stop_everything unless more_tests_follow
 	  sleep 5
 
@@ -218,13 +218,15 @@ class IntegrationTest
 	  end
 
 	  # Mark some IntellectualObjects for restoration in Pharos,
-	  # so that apt_restore will have something to work on.
+	  # so that apt_restore and apt_file_delete will have something to work on.
+      # Marking an item for deletion causes Pharos to initiate a
+      # multi-step DB transaction. It should finish in 1/2 second or less,
+      # but give it 5 seconds to be save. Without any sleep, we'll often
+      # get a 'database is locked' exception in the Pharos logs, and then
+      # subsequent test operations fail.
 	  @results['apt_mark_for_restore'] = run('apt_mark_for_restore_test.go')
-
-	  # ----------------------------------------
-	  # TODO: Add code to mark items for delete.
-	  # @results['apt_mark_for_delete'] = run('apt_mark_for_delete_test.go')
-	  # ----------------------------------------
+	  @results['apt_mark_for_delete'] = run('apt_mark_for_delete_test.go')
+      sleep 5
 
 	  # apt_queue is not a service. It runs to completion, then exits.
 	  # For integration tests, it should take just a second or two.
@@ -238,10 +240,11 @@ class IntegrationTest
   end
 
   # apt_restore runs the APTrust bag restoration service to restore
-  # a number of bags.
+  # a number of bags. It also runs file deletions.
   def apt_restore(more_tests_follow)
 	run_suite(more_tests_follow) do
 	  @build.build(@context.apps['apt_restore'])
+	  @build.build(@context.apps['apt_file_delete'])
 
 	  # Run the prerequisite process (with tests)
 	  # Note that the prereq starts most of the required services,
@@ -255,10 +258,12 @@ class IntegrationTest
 
 	  # Start services required for this specific set of tests.
 	  @service.app_start(@context.apps['apt_restore'])
+	  @service.app_start(@context.apps['apt_file_delete'])
 	  sleep 45
 
 	  # Run the post tests.
 	  @results['apt_restore_test'] = run('apt_restore_post_test.go')
+	  @results['apt_restore_test'] = run('apt_delete_post_test.go')
 	end
   end
 

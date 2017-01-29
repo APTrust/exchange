@@ -198,6 +198,8 @@ func (deleter *APTFileDeleter) finishWithError(deleteState *models.DeleteState) 
 	deleteState.WorkItem.Node = ""
 	deleteState.WorkItem.Pid = 0
 	deleteState.WorkItem.StageStartedAt = nil
+	deleteState.WorkItem.Status = constants.StatusPending
+	deleteState.WorkItem.Stage = constants.StageRequested
 
 	deleter.saveWorkItem(deleteState)
 
@@ -215,12 +217,22 @@ func (deleter *APTFileDeleter) finishWithError(deleteState *models.DeleteState) 
 }
 
 func (deleter *APTFileDeleter) finishWithSuccess(deleteState *models.DeleteState) {
+	fileUUID, err := deleteState.GenericFile.PreservationStorageFileName()
+	if err != nil {
+		deleteState.DeleteSummary.AddError(err.Error())
+		return
+	}
 	deleteState.WorkItem.Date = time.Now().UTC()
-	deleteState.WorkItem.Note = fmt.Sprintf("File deleted at %s by request of %s",
+	deleteState.WorkItem.Note = fmt.Sprintf(
+		"File %s (%s) deleted at %s by request of %s",
+		deleteState.GenericFile.Identifier,
+		fileUUID,
 		deleteState.DeletedFromSecondaryAt.Format(time.RFC3339),
 		deleteState.WorkItem.User)
 	deleteState.WorkItem.Node = ""
 	deleteState.WorkItem.Pid = 0
+	deleteState.WorkItem.Status = constants.StatusSuccess
+	deleteState.WorkItem.Stage = constants.StageResolve
 	deleter.saveWorkItem(deleteState)
 	deleteState.NSQMessage.Finish()
 }
@@ -234,6 +246,10 @@ func (deleter *APTFileDeleter) recordFileDeletionEvent(deleteState *models.Delet
 	requestedBy := deleteState.WorkItem.User
 	timestamp := deleteState.DeletedFromSecondaryAt
 	event := models.NewEventFileDeletion(fileUUID, requestedBy, timestamp)
+	event.IntellectualObjectId = deleteState.GenericFile.IntellectualObjectId
+	event.IntellectualObjectIdentifier = deleteState.GenericFile.IntellectualObjectIdentifier
+	event.GenericFileId = deleteState.GenericFile.Id
+	event.GenericFileIdentifier = deleteState.GenericFile.Identifier
 	resp := deleter.Context.PharosClient.PremisEventSave(event)
 	if resp.Error != nil {
 		msg := fmt.Sprintf("Error saving deletion event for file '%s' (%s): %v",
