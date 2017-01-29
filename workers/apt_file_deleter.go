@@ -143,9 +143,9 @@ func (deleter *APTFileDeleter) deleteFromStorage(deleteState *models.DeleteState
 			fromWhere, client.ErrorMessage)
 		deleteState.DeleteSummary.AddError(msg)
 	} else {
-		if fromWhere == "S3" {
+		if fromWhere == "s3" {
 			deleteState.DeletedFromPrimaryAt = time.Now().UTC()
-		} else {
+		} else if fromWhere == "glacier" {
 			deleteState.DeletedFromSecondaryAt = time.Now().UTC()
 		}
 		deleter.Context.MessageLog.Info("Deleted %s (key %s) from %s",
