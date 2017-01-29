@@ -40,6 +40,7 @@ class Context
       'apt_store' => App.new('apt_store', 'service'),
       'apt_record' => App.new('apt_record', 'service'),
       'apt_restore' => App.new('apt_restore', 'service'),
+      'apt_file_delete' => App.new('apt_file_delete', 'service'),
       'apt_validate' => App.new('apt_validate', 'application'),
       'apt_volume_service' => App.new('apt_volume_service', 'service'),
       'dpn_copy' => App.new('dpn_copy', 'service'),

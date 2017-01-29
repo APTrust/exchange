@@ -215,16 +215,12 @@ func (deleter *APTFileDeleter) finishWithError(deleteState *models.DeleteState) 
 }
 
 func (deleter *APTFileDeleter) finishWithSuccess(deleteState *models.DeleteState) {
-	// update work item
-	// create premis event
-	// finish nsq
 	deleteState.WorkItem.Date = time.Now().UTC()
 	deleteState.WorkItem.Note = fmt.Sprintf("File deleted at %s by request of %s",
 		deleteState.DeletedFromSecondaryAt.Format(time.RFC3339),
 		deleteState.WorkItem.User)
 	deleteState.WorkItem.Node = ""
 	deleteState.WorkItem.Pid = 0
-
 	deleter.saveWorkItem(deleteState)
 	deleteState.NSQMessage.Finish()
 }
