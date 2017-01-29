@@ -561,8 +561,8 @@ func (restorer *APTRestorer) writeBagitFile(restoreState *models.RestoreState) {
 			bagitPath, err)
 		return
 	}
-	fmt.Fprintf(bagitFile, "BagIt-Version: %s", restorer.Context.Config.BagItVersion)
-	fmt.Fprintf(bagitFile, "Tag-File-Character-Encoding: %s", restorer.Context.Config.BagItEncoding)
+	fmt.Fprintln(bagitFile, "BagIt-Version: %s", restorer.Context.Config.BagItVersion)
+	fmt.Fprintln(bagitFile, "Tag-File-Character-Encoding: %s", restorer.Context.Config.BagItEncoding)
 	bagitFile.Close()
 	restorer.addFile(restoreState, bagitPath, "bagit.txt")
 }
@@ -587,9 +587,9 @@ func (restorer *APTRestorer) writeAPTrustInfoFile(restoreState *models.RestoreSt
 			aptInfoPath, err)
 		return
 	}
-	fmt.Fprintf(aptInfoFile, "Title: %s", restoreState.IntellectualObject.Title)
-	fmt.Fprintf(aptInfoFile, "Access: %s", strings.Title(restoreState.IntellectualObject.Access))
-	fmt.Fprintf(aptInfoFile, "Description: %s", restoreState.IntellectualObject.Description)
+	fmt.Fprintln(aptInfoFile, "Title: %s", restoreState.IntellectualObject.Title)
+	fmt.Fprintln(aptInfoFile, "Access: %s", strings.Title(restoreState.IntellectualObject.Access))
+	fmt.Fprintln(aptInfoFile, "Description: %s", restoreState.IntellectualObject.Description)
 	aptInfoFile.Close()
 	restorer.addFile(restoreState, aptInfoPath, "aptrust-info.txt")
 }
@@ -620,12 +620,12 @@ func (restorer *APTRestorer) writeBagInfoFile(restoreState *models.RestoreState)
 	// away from size limits, and we're going to restore bags all in one piece.
 	// So Bag-Count will be "1 of 1".
 
-	fmt.Fprintf(bagInfoFile, "Source-Organization: %s", restoreState.IntellectualObject.Institution)
-	fmt.Fprintf(bagInfoFile, "Bagging-Date: %s", time.Now().UTC().Format(time.RFC3339))
-	fmt.Fprintf(bagInfoFile, "Bag-Count: %s", "1 of 1")
-	fmt.Fprintf(bagInfoFile, "Bag-Group-Identifier: %s", "")
-	fmt.Fprintf(bagInfoFile, "Internal-Sender-Description: %s", restoreState.IntellectualObject.Description)
-	fmt.Fprintf(bagInfoFile, "Internal-Sender-Identifier: %s", restoreState.IntellectualObject.AltIdentifier)
+	fmt.Fprintln(bagInfoFile, "Source-Organization: %s", restoreState.IntellectualObject.Institution)
+	fmt.Fprintln(bagInfoFile, "Bagging-Date: %s", time.Now().UTC().Format(time.RFC3339))
+	fmt.Fprintln(bagInfoFile, "Bag-Count: %s", "1 of 1")
+	fmt.Fprintln(bagInfoFile, "Bag-Group-Identifier: %s", "")
+	fmt.Fprintln(bagInfoFile, "Internal-Sender-Description: %s", restoreState.IntellectualObject.Description)
+	fmt.Fprintln(bagInfoFile, "Internal-Sender-Identifier: %s", restoreState.IntellectualObject.AltIdentifier)
 	bagInfoFile.Close()
 	restorer.addFile(restoreState, bagInfoPath, "bag-info.txt")
 }
