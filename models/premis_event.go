@@ -319,6 +319,24 @@ func NewEventGenericFileReplication(replicatedAt time.Time, replicationUrl strin
 	}, nil
 }
 
+// NewEventFileDeletion creates a new file deletion event.
+func NewEventFileDeletion(fileUUID, requestedBy string, timestamp time.Time) *PremisEvent {
+	eventId := uuid.NewV4()
+	outcomeInfo := fmt.Sprintf("File %s deleted from S3 and Glacier", fileUUID)
+	outcomeDetail := fmt.Sprintf("File deleted at the request of %s", requestedBy)
+	return &PremisEvent{
+		Identifier:         eventId.String(),
+		EventType:          constants.EventDeletion,
+		DateTime:           timestamp,
+		Detail:             "File deleted from long-term storage.",
+		Outcome:            string(constants.StatusSuccess),
+		OutcomeDetail:      outcomeDetail,
+		Object:             "APTrust Exchange apt_delete service",
+		Agent:              "https://github.com/APTrust/exchange",
+		OutcomeInformation: outcomeInfo,
+	}
+}
+
 // Sets the Id, CreatedAt and UpdatedAt properties of this event to
 // match those os savedEvent. We call this after saving a record to
 // Pharos, which sets all of those properties. Generally, savedEvent

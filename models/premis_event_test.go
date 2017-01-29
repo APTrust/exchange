@@ -4,6 +4,7 @@ import (
 	"github.com/APTrust/exchange/constants"
 	"github.com/APTrust/exchange/models"
 	"github.com/APTrust/exchange/util/testutil"
+	"github.com/satori/go.uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"strings"
@@ -331,6 +332,21 @@ func TestNewEventGenericFileReplication(t *testing.T) {
 	assert.Equal(t, "Go uuid library + goamz S3 library", event.Object)
 	assert.Equal(t, "http://github.com/satori/go.uuid", event.Agent)
 	assert.Equal(t, "Replicated to secondary storage", event.OutcomeInformation)
+}
+
+func TestNewEventFileDeletion(t *testing.T) {
+	fileUUID := uuid.NewV4().String()
+	utcNow := time.Now().UTC()
+	event := models.NewEventFileDeletion(fileUUID, "user@example.com", utcNow)
+	assert.Len(t, event.Identifier, 36)
+	assert.Equal(t, "deletion", event.EventType)
+	assert.Equal(t, utcNow, event.DateTime)
+	assert.Equal(t, "File deleted from long-term storage.", event.Detail)
+	assert.Equal(t, "Success", event.Outcome)
+	assert.Equal(t, "File deleted at the request of user@example.com", event.OutcomeDetail)
+	assert.Equal(t, "APTrust Exchange apt_delete service", event.Object)
+	assert.Equal(t, "https://github.com/APTrust/exchange", event.Agent)
+	assert.True(t, strings.HasSuffix(event.OutcomeInformation, "deleted from S3 and Glacier"))
 }
 
 func TestPremisEventMergeAttributes(t *testing.T) {
