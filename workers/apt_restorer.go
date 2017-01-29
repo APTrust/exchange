@@ -112,7 +112,7 @@ func (restorer *APTRestorer) HandleMessage(message *nsq.Message) error {
 		restoreState.CopySummary.ClearErrors()
 		restorer.CopyChannel <- restoreState
 	} else if restoreState.PackageSummary.Finished() && !restoreState.PackageSummary.HasErrors() &&
-		fileutil.FileExists(restoreState.LocalBagDir) {
+		fileutil.FileExists(restoreState.LocalTarFile) {
 		restorer.logWhereThisIsGoing(restoreState, "ValidateChannel")
 		restoreState.ValidateSummary.ClearErrors()
 		restorer.ValidateChannel <- restoreState
@@ -704,12 +704,9 @@ func (restorer *APTRestorer) fetchAllFiles(restoreState *models.RestoreState) {
 	}
 	if activeFileCount == 0 {
 		restoreState.CancelReason = fmt.Sprintf(
-			"System cancelled restoration because bag %s  "+
-				"has zero active files. %d files were deleted after ingest. "+
-				"Check the PREMIS events with event_type 'deletion' for "+
-				"this bag.",
-			restoreState.IntellectualObject.Identifier,
-			len(restoreState.IntellectualObject.GenericFiles))
+			"System cancelled restoration because bag %s has zero active files. "+
+				"Check the PREMIS events with event_type 'deletion' for this bag.",
+			restoreState.IntellectualObject.Identifier)
 		restoreState.PackageSummary.ErrorIsFatal = true
 		return
 	}
@@ -773,7 +770,7 @@ func (restorer *APTRestorer) fetchAllFiles(restoreState *models.RestoreState) {
 		// very large files, we want to avoid re-downloading them.
 		fileStat, err := os.Stat(downloader.LocalPath)
 		if err == nil && fileStat.Size() == gf.Size {
-			restorer.Context.MessageLog.Info("File %s is already on disk with size %s, "+
+			restorer.Context.MessageLog.Info("File %s is already on disk with size %d, "+
 				"so we won't download it again. Will verify checksum in validation step.",
 				downloader.LocalPath, fileStat.Size())
 			alreadyOnDisk += 1
