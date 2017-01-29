@@ -65,8 +65,29 @@ func (deleter *APTFileDeleter) delete() {
 		deleteState.DeleteSummary.Attempted = true
 		deleteState.DeleteSummary.AttemptNumber += 1
 		deleteState.DeleteSummary.Start()
-		deleter.deleteFromStorage(deleteState, "s3")
-		deleter.deleteFromStorage(deleteState, "glacier")
+
+		fileUUID, err := deleteState.GenericFile.PreservationStorageFileName()
+		if err != nil {
+			deleteState.DeleteSummary.AddError(err.Error())
+		} else {
+			// In some cases, we may have deleted the file on a
+			// previous run, then failed to record the deletion
+			// event.
+			if deleteState.DeletedFromPrimaryAt.IsZero() {
+				deleter.deleteFromStorage(deleteState, "s3")
+			} else {
+				deleter.Context.MessageLog.Info("File %s (%s) was previously "+
+					"deleted from primary storage",
+					deleteState.GenericFile.Identifier, fileUUID)
+			}
+			if deleteState.DeletedFromSecondaryAt.IsZero() {
+				deleter.deleteFromStorage(deleteState, "glacier")
+			} else {
+				deleter.Context.MessageLog.Info("File %s (%s) was previously "+
+					"deleted from secondary storage",
+					deleteState.GenericFile.Identifier, fileUUID)
+			}
+		}
 		deleteState.DeleteSummary.Finish()
 		deleter.PostProcessChannel <- deleteState
 	}
@@ -74,6 +95,9 @@ func (deleter *APTFileDeleter) delete() {
 
 func (deleter *APTFileDeleter) postProcess() {
 	for deleteState := range deleter.PostProcessChannel {
+		if !deleteState.DeleteSummary.HasErrors() {
+			deleter.recordFileDeletionEvent(deleteState)
+		}
 		if deleteState.DeleteSummary.HasErrors() {
 			deleter.finishWithError(deleteState)
 		} else {
@@ -203,6 +227,31 @@ func (deleter *APTFileDeleter) finishWithSuccess(deleteState *models.DeleteState
 
 	deleter.saveWorkItem(deleteState)
 	deleteState.NSQMessage.Finish()
+}
+
+func (deleter *APTFileDeleter) recordFileDeletionEvent(deleteState *models.DeleteState) {
+	fileUUID, err := deleteState.GenericFile.PreservationStorageFileName()
+	if err != nil {
+		deleteState.DeleteSummary.AddError(err.Error())
+		return
+	}
+	requestedBy := deleteState.WorkItem.User
+	timestamp := deleteState.DeletedFromSecondaryAt
+	event := models.NewEventFileDeletion(fileUUID, requestedBy, timestamp)
+	resp := deleter.Context.PharosClient.PremisEventSave(event)
+	if resp.Error != nil {
+		msg := fmt.Sprintf("Error saving deletion event for file '%s' (%s): %v",
+			deleteState.GenericFile.Identifier, fileUUID, resp.Error)
+		bytes, _ := resp.RawResponseData()
+		if bytes != nil {
+			msg += fmt.Sprintf(" - Pharos response: %s", string(bytes))
+		}
+		deleteState.DeleteSummary.AddError(msg)
+		return
+	} else {
+		deleter.Context.MessageLog.Info("Saved deletion event %s for file %s",
+			event.Identifier, deleteState.GenericFile.Identifier)
+	}
 }
 
 func (deleter *APTFileDeleter) saveWorkItem(deleteState *models.DeleteState) {
