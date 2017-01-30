@@ -12,6 +12,7 @@ import (
 	"github.com/satori/go.uuid"
 	"hash"
 	"io"
+	"os"
 	"path"
 	"regexp"
 	"strings"
@@ -251,9 +252,15 @@ func (vbag *VirtualBag) parseManifestsTagFilesAndMimeTypes() {
 
 // Parse the checksums in a manifest.
 func (vbag *VirtualBag) parseManifest(reader io.Reader, relFilePath string) {
-	alg := constants.AlgMd5
+	alg := ""
 	if strings.Contains(relFilePath, constants.AlgSha256) {
 		alg = constants.AlgSha256
+	} else if strings.Contains(relFilePath, constants.AlgMd5) {
+		alg = constants.AlgMd5
+	} else {
+		fmt.Fprintln(os.Stderr, "Not verifying checksums in", relFilePath,
+			"- unsupported algorithm. Will still verify any md5 or sha256 checksums.")
+		return
 	}
 	re := regexp.MustCompile(`^(\S*)\s*(.*)`)
 	scanner := bufio.NewScanner(reader)
