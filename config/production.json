@@ -3,7 +3,7 @@
 	"RestoreDirectory": "/mnt/efs/apt/restore",
 	"LogDirectory": "/mnt/efs/apt/logs",
 	"ReplicationDirectory": "/mnt/efs/apt/replication",
-	"MaxFileSize": 0,
+	"MaxFileSize": 5497558138880,
 	"SkipAlreadyProcessed": true,
 	"DeleteOnSuccess": true,
 	"LogToStderr": false,
@@ -40,7 +40,7 @@
 		"HeartbeatInterval": "10s",
 		"ReadTimeout": "60s",
 		"WriteTimeout": "10s",
-		"MessageTimeout": "180m"
+		"MessageTimeout": "720m"
 	},
 
 	"StoreWorker": {
@@ -53,7 +53,7 @@
 		"HeartbeatInterval": "10s",
 		"ReadTimeout": "60s",
 		"WriteTimeout": "10s",
-		"MessageTimeout": "180m"
+		"MessageTimeout": "720m"
 	},
 
 	"RecordWorker": {
@@ -66,7 +66,7 @@
 		"HeartbeatInterval": "10s",
 		"ReadTimeout": "60s",
 		"WriteTimeout": "10s",
-		"MessageTimeout": "180m"
+		"MessageTimeout": "360m"
 	},
 
 	"ReplicationWorker": {
