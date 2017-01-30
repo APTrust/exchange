@@ -355,6 +355,10 @@ func (fetcher *APTFetcher) downloadFile(ingestState *models.IngestState) error {
 				ingestState.IngestManifest.S3Key,
 				downloader.ErrorMessage,
 				retryMessage)
+			if strings.Contains(downloader.ErrorMessage, "NoSuchKey") {
+				ingestState.IngestManifest.FetchResult.ErrorIsFatal = true
+				break
+			}
 		}
 	}
 
