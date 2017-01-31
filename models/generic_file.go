@@ -84,6 +84,10 @@ type GenericFile struct {
 	// PremisEvents is a list of PREMIS events for this file.
 	PremisEvents []*PremisEvent `json:"premis_events"`
 
+	// LastFixityCheck is the date and time we last verified
+	// the fixity digest for this file.
+	LastFixityCheck time.Time `json:"last_fixity_check"`
+
 	// State will be "A" for active files, "D" for deleted files.
 	State string `json:"state"`
 
@@ -406,8 +410,12 @@ func (gf *GenericFile) BuildIngestEvents() error {
 func (gf *GenericFile) buildIngestFixityCheck() error {
 	events := gf.FindEventsByType(constants.EventFixityCheck)
 	if len(events) == 0 {
-		fixityMatched := !gf.IngestMd5VerifiedAt.IsZero()
-		event, err := NewEventGenericFileFixityCheck(gf.IngestMd5VerifiedAt,
+		timestamp := gf.IngestSha256VerifiedAt
+		if timestamp.IsZero() {
+			timestamp = gf.IngestMd5VerifiedAt
+		}
+		fixityMatched := !timestamp.IsZero()
+		event, err := NewEventGenericFileFixityCheck(timestamp,
 			constants.AlgMd5, gf.IngestMd5, fixityMatched)
 		if err != nil {
 			return fmt.Errorf("Error building fixity check event for %s: %v",
@@ -418,6 +426,7 @@ func (gf *GenericFile) buildIngestFixityCheck() error {
 		event.GenericFileId = gf.Id
 		event.GenericFileIdentifier = gf.Identifier
 		gf.PremisEvents = append(gf.PremisEvents, event)
+		gf.LastFixityCheck = timestamp
 	}
 	return nil
 }
