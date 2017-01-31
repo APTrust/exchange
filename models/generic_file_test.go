@@ -259,6 +259,8 @@ func TestBuildIngestEvents(t *testing.T) {
 		assert.Equal(t, gf.Identifier, event.GenericFileIdentifier)
 	}
 
+	assert.False(t, gf.LastFixityCheck.IsZero())
+
 	// Calling this function again should not generate new events
 	// if all the events are there.
 	err = gf.BuildIngestEvents()
