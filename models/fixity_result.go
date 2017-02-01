@@ -13,10 +13,6 @@ type FixityResult struct {
 	// request. Not serialized because it will change each time we
 	// try to process a request.
 	NSQMessage *nsq.Message `json:"-"`
-	// WorkItem is the Pharos WorkItem we're processing.
-	// Not serialized because the Pharos WorkItem record will be
-	// more up-to-date and authoritative.
-	WorkItem *WorkItem `json:"-"`
 	// GenericFile is the generic file whose fixity we're going to check.
 	// This file is sitting somewhere on S3.
 	GenericFile *GenericFile
@@ -25,24 +21,17 @@ type FixityResult struct {
 	// Sha256 contains sha256 digest we calculated after downloading
 	// the file. This will be empty initially.
 	Sha256 string
-	// FixityCheckSumary contains information about the result of the
-	// fixity check.
-	FixityCheckSummary *WorkSummary
-	// RecordSummary contains information about the result of the
-	// attempt to record the fixity check PREMIS event in Pharos.
-	RecordSummary *WorkSummary
+	// Error records the error (if any) that occured while trying to
+	// check fixity.
+	Error error
 }
 
 // NewFixityResult returns a new empty FixityResult object for the specified
 // GenericFile.
-//
-// TODO: Change constructor to use nsq.Message?
 func NewFixityResult(message *nsq.Message) *FixityResult {
 	return &FixityResult{
-		NSQMessage:         message,
-		S3FileExists:       false,
-		FixityCheckSummary: NewWorkSummary(),
-		RecordSummary:      NewWorkSummary(),
+		NSQMessage:   message,
+		S3FileExists: false,
 	}
 }
 
