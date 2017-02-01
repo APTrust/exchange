@@ -24,6 +24,9 @@ type FixityResult struct {
 	// Error records the error (if any) that occured while trying to
 	// check fixity.
 	Error error
+	// ErrorIsFatal indicates whether the error will prevent us from
+	// ever checking fixity on this item.
+	ErrorIsFatal bool
 }
 
 // NewFixityResult returns a new empty FixityResult object for the specified
@@ -32,6 +35,7 @@ func NewFixityResult(message *nsq.Message) *FixityResult {
 	return &FixityResult{
 		NSQMessage:   message,
 		S3FileExists: false,
+		ErrorIsFatal: false,
 	}
 }
 

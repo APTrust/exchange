@@ -8,7 +8,7 @@ import (
 	"github.com/APTrust/exchange/network"
 	"github.com/nsqio/go-nsq"
 	"strings"
-	//	"time"
+	"time"
 )
 
 // APTFixityChecker performs ongoing fixity checks on files stored in S3.
@@ -36,10 +36,10 @@ func NewAPTFixityChecker(_context *context.Context) *APTFixityChecker {
 }
 
 func (checker *APTFixityChecker) HandleMessage(message *nsq.Message) error {
-	fixityResult, err := checker.buildFixityResult(message)
-	if err != nil {
-		checker.Context.MessageLog.Error(err.Error())
-		return err
+	fixityResult := checker.buildFixityResult(message)
+	if fixityResult.Error != nil {
+		checker.Context.MessageLog.Error(fixityResult.Error.Error())
+		return fixityResult.Error
 	}
 	// Check syncmap to see if this item is already in process.
 
@@ -55,8 +55,8 @@ func (checker *APTFixityChecker) HandleMessage(message *nsq.Message) error {
 func (checker *APTFixityChecker) checkFixity() {
 	for fixityResult := range checker.FixityChannel {
 		// Here's where we do the actual digest calculation.
-		err := checker.getFixityValueOfS3File(fixityResult)
-		if err != nil {
+		checker.getFixityValueOfS3File(fixityResult)
+		if fixityResult.Error != nil {
 			checker.PostProcessChannel <- fixityResult
 		} else {
 			checker.RecordChannel <- fixityResult
@@ -68,16 +68,54 @@ func (checker *APTFixityChecker) record() {
 	for fixityResult := range checker.RecordChannel {
 		// Create PREMIS event saying whether fixity event
 		// succeeded or failed.
+		event, err := models.NewEventGenericFileFixityCheck(
+			time.Now().UTC(),
+			constants.AlgSha256,
+			fixityResult.Sha256,
+			fixityResult.Sha256 == fixityResult.PharosSha256())
+		if err != nil {
+			fixityResult.Error = fmt.Errorf("Could not create Premis Event for %s: %v",
+				fixityResult.GenericFile.Identifier, err)
+		} else {
+			resp := checker.Context.PharosClient.PremisEventSave(event)
+			if resp.Error != nil {
+				fixityResult.Error = fmt.Errorf("After completing fixity check for %s, "+
+					"could not save PremisEvent to Pharos: %v. Event data: %v",
+					fixityResult.GenericFile.Identifier, resp.Error, event)
+			} else {
+				checker.Context.MessageLog.Info("Completing fixity check for %s, "+
+					"and saved PremisEvent %s to Pharos",
+					fixityResult.GenericFile.Identifier, event.Identifier)
+			}
+		}
 		checker.PostProcessChannel <- fixityResult
 	}
 }
 
 func (checker *APTFixityChecker) postProcess() {
-	// for fixityResult := range checker.PostProcessChannel {
-	// Update WorkItem
-	// No need to save WorkItemState
-	// Finish or requeue NSQ
-	// }
+	for fixityResult := range checker.PostProcessChannel {
+		// Finish or requeue NSQ
+		if fixityResult.Error != nil {
+			if fixityResult.ErrorIsFatal {
+				checker.Context.MessageLog.Error("%s (FATAL)", fixityResult.Error.Error())
+				fixityResult.NSQMessage.Finish()
+			} else {
+				checker.Context.MessageLog.Error("%s (transient)", fixityResult.Error.Error())
+				fixityResult.NSQMessage.Requeue(1 * time.Minute)
+			}
+		} else {
+			if fixityResult.PharosSha256() == fixityResult.Sha256 {
+				checker.Context.MessageLog.Info("Fixity check complete for %s. Fixity %s matches.",
+					fixityResult.GenericFile.Identifier, fixityResult.Sha256)
+			} else {
+				checker.Context.MessageLog.Warning("Fixity check complete for %s. S3 fixity %s "+
+					"DOES NOT MATCH PHAROS FIXITY %s",
+					fixityResult.GenericFile.Identifier, fixityResult.Sha256,
+					fixityResult.PharosSha256())
+			}
+			fixityResult.NSQMessage.Finish()
+		}
+	}
 }
 
 // getFixityValueOfS3File calculates the sha256 digest of an S3 file.
@@ -85,11 +123,14 @@ func (checker *APTFixityChecker) postProcess() {
 // we don't need to have the file on disk. We can calculate the
 // digest from the stream. We get the file from S3/Virginia, not
 // Glacier/Oregon! When this is done, the fixity value will be in
-// fixityResult.Sha256. Returns error if fixity check could not be completed.
-func (checker *APTFixityChecker) getFixityValueOfS3File(fixityResult *models.FixityResult) error {
+// fixityResult.Sha256.
+func (checker *APTFixityChecker) getFixityValueOfS3File(fixityResult *models.FixityResult) {
 	bucket, key, err := fixityResult.BucketAndKey()
 	if err != nil {
-		return err
+		fixityResult.Error = fmt.Errorf("Can't get S3 bucket and key names for %s: %v",
+			fixityResult.GenericFile.Identifier, err)
+		fixityResult.ErrorIsFatal = true
+		return
 	}
 	downloader := network.NewS3Download(
 		constants.AWSVirginia,
@@ -100,28 +141,35 @@ func (checker *APTFixityChecker) getFixityValueOfS3File(fixityResult *models.Fix
 		true)        // do calculate sha256 digest
 	downloader.Fetch()
 	if downloader.ErrorMessage != "" {
-		return fmt.Errorf("Error fetching file %s (%s/%s) from S3: %s",
+		fixityResult.Error = fmt.Errorf("Error fetching file %s (%s/%s) from S3: %s",
 			fixityResult.GenericFile.Identifier, bucket, key,
 			downloader.ErrorMessage)
+		if strings.Contains(downloader.ErrorMessage, "NoSuchKey") {
+			fixityResult.ErrorIsFatal = true
+		}
+		return
 	}
 	fixityResult.S3FileExists = true
 	fixityResult.Sha256 = downloader.Sha256Digest
-	return nil
+	return
 }
 
-func (checker *APTFixityChecker) buildFixityResult(message *nsq.Message) (*models.FixityResult, error) {
-	var err error
+func (checker *APTFixityChecker) buildFixityResult(message *nsq.Message) *models.FixityResult {
 	fixityResult := models.NewFixityResult(message)
 	gfIdentifier := strings.TrimSpace(string(message.Body))
 	// Get GenericFile with checksums (param includeRelations = true)
 	resp := checker.Context.PharosClient.GenericFileGet(gfIdentifier, true)
 	if resp.Error != nil {
-		err = fmt.Errorf("Can't get generic file %s from Pharos: %v", resp.Error.Error())
-		return fixityResult, err
+		fixityResult.Error = fmt.Errorf("Can't get generic file %s from Pharos: %v", resp.Error.Error())
+		if resp.Response.StatusCode == 404 {
+			fixityResult.ErrorIsFatal = true
+		}
+		return fixityResult
 	}
 	fixityResult.GenericFile = resp.GenericFile()
 	if fixityResult.GenericFile.URI == "" {
-		err = fmt.Errorf("GenericFile %s has no S3 URI.", fixityResult.GenericFile.Identifier)
+		fixityResult.Error = fmt.Errorf("GenericFile %s has no S3 URI.", fixityResult.GenericFile.Identifier)
+		fixityResult.ErrorIsFatal = true
 	}
-	return fixityResult, err
+	return fixityResult
 }
