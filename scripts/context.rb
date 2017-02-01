@@ -42,6 +42,7 @@ class Context
       'apt_restore' => App.new('apt_restore', 'service'),
       'apt_file_delete' => App.new('apt_file_delete', 'service'),
       'apt_validate' => App.new('apt_validate', 'application'),
+      'apt_fixity_check' => App.new('apt_fixity_check', 'service'),
       'apt_volume_service' => App.new('apt_volume_service', 'service'),
       'dpn_copy' => App.new('dpn_copy', 'service'),
       'dpn_queue' => App.new('dpn_queue', 'application'),

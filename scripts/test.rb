@@ -36,14 +36,14 @@ def tests
   {
     'apt_bucket_reader' => 'Test the APTrust bucket reader',
     'apt_queue' => 'Test queueing of WorkItems',
-    'apt_ingest' => 'Test the APTrust ingest process.',
-    'apt_restore' => 'Test the APTrust restore process',
-    'apt_delete' => 'Test APTrust file deletion',
+    'apt_ingest' => 'Test the APTrust ingest process (runs apt_queue)',
+    'apt_restore' => 'Test the APTrust restore and delete processes (runs apt_ingest)',
+    'apt_fixity' => 'Test the APTrust fixity checking process (runs apt_restore)',
     'dpn_rest_client' => 'Test the DPN REST client against a local cluster',
     'dpn_sync' => 'Test DPN sync against a local cluster',
     'dpn_replicate' => 'Test DPN replication',
-    'dpn_ingest' => 'Test DPN ingest',
-    'units' => 'Run all unit tests. Starts no external services.',
+    'dpn_ingest' => 'Test DPN ingest (runs apt_ingest)',
+    'units' => 'Run all unit tests. Starts no external services, but does talk to S3.',
   }
 end
 

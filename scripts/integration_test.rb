@@ -270,9 +270,35 @@ class IntegrationTest
   # apt_delete runs the APTrust file deletion service to delete a
   # number of GenericFiles from the archive.
   def apt_delete(more_tests_follow)
-	puts 'apt_delete is not yet implemented'
+	puts 'Run apt_restore instead. That includes apt_delete tests.'
 	return true
   end
+
+  # apt_fixity runs the fixity checking service.
+  def apt_fixity(more_tests_follow)
+	run_suite(more_tests_follow) do
+	  @build.build(@context.apps['apt_fixity_check'])
+
+	  # Run the prerequisite process (with tests)
+	  # Note that the prereq starts most of the required services,
+	  # and apt_queue marks items for restore and pushes them into
+	  # NSQ.
+	  apt_restore_ok = apt_restore(true)
+	  if !apt_restore_ok
+		puts "Skipping apt_fixity test because of prior failures."
+		return false
+	  end
+
+	  # Start services required for this specific set of tests.
+	  @service.app_start(@context.apps['apt_fixity_check'])
+	  sleep 45
+
+      # TODO: Write the post tests!
+	  # Run the post tests.
+	  # @results['apt_fixity_test'] = run('apt_fixity_check_post_test.go')
+	end
+  end
+
 
   # dpn_rest_client tests the DPN REST client against a
   # locally-running DPN cluster. Returns true if all tests passed,
