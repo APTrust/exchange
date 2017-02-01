@@ -17,11 +17,13 @@ type APTFixityChecker struct {
 	FixityChannel      chan *models.FixityResult
 	RecordChannel      chan *models.FixityResult
 	PostProcessChannel chan *models.FixityResult
+	ItemsInProcess     *models.SynchronizedMap
 }
 
 func NewAPTFixityChecker(_context *context.Context) *APTFixityChecker {
 	checker := &APTFixityChecker{
-		Context: _context,
+		Context:        _context,
+		ItemsInProcess: models.NewSynchronizedMap(),
 	}
 	workerBufferSize := _context.Config.FixityWorker.Workers * 10
 	checker.FixityChannel = make(chan *models.FixityResult, workerBufferSize)
@@ -38,10 +40,23 @@ func NewAPTFixityChecker(_context *context.Context) *APTFixityChecker {
 func (checker *APTFixityChecker) HandleMessage(message *nsq.Message) error {
 	fixityResult := checker.buildFixityResult(message)
 	if fixityResult.Error != nil {
-		checker.Context.MessageLog.Error(fixityResult.Error.Error())
-		return fixityResult.Error
+		checker.Context.MessageLog.Error("Cannot process %s: %v",
+			string(message.Body), fixityResult.Error.Error())
+		message.Finish()
+		return nil // Should we return an error to NSQ?
 	}
 	// Check syncmap to see if this item is already in process.
+	startedAt := checker.ItemsInProcess.Get(fixityResult.GenericFile.Identifier)
+	if startedAt != "" {
+		checker.Context.MessageLog.Info("Skipping %s: already in process as of %s.",
+			fixityResult.GenericFile.Identifier, startedAt)
+		message.Finish()
+		return nil
+	}
+
+	// Note that we're working on this.
+	checker.ItemsInProcess.Add(fixityResult.GenericFile.Identifier, time.Now().UTC().Format(time.RFC3339))
+	checker.Context.MessageLog.Info("Added %s to items in process", fixityResult.GenericFile.Identifier)
 
 	// We'll ping NSQ manually when we need to.
 	message.DisableAutoResponse()
@@ -115,6 +130,8 @@ func (checker *APTFixityChecker) postProcess() {
 			}
 			fixityResult.NSQMessage.Finish()
 		}
+		checker.ItemsInProcess.Delete(fixityResult.GenericFile.Identifier)
+		checker.Context.MessageLog.Info("Removed %s from items in process", fixityResult.GenericFile.Identifier)
 	}
 }
 
