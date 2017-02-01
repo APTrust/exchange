@@ -13,11 +13,21 @@ import (
 
 // APTFixityChecker performs ongoing fixity checks on files stored in S3.
 type APTFixityChecker struct {
-	Context            *context.Context
-	FixityChannel      chan *models.FixityResult
-	RecordChannel      chan *models.FixityResult
+	// Context contains contextual info, such as a reference to the logger,
+	// a Pharos client, basic configuration data and other things the fixity
+	// checker needs to do its work.
+	Context *context.Context
+	// FixityChannel is where we calculate Sha256 digests of files stored in S3.
+	FixityChannel chan *models.FixityResult
+	// RecordChannel is where record PremisEvents in Pharos.
+	RecordChannel chan *models.FixityResult
+	// PostProcessChannel is where we dispose of NSQ messages and log outcomes.
 	PostProcessChannel chan *models.FixityResult
-	ItemsInProcess     *models.SynchronizedMap
+	// ItemsInProcess contains a map of items we're currently processing.
+	// When there's a backlog, it's common for items to be queued more than
+	// once for fixity checking. We don't want to perform the fixity check
+	// if it's already underway.
+	ItemsInProcess *models.SynchronizedMap
 }
 
 func NewAPTFixityChecker(_context *context.Context) *APTFixityChecker {
@@ -37,6 +47,10 @@ func NewAPTFixityChecker(_context *context.Context) *APTFixityChecker {
 	return checker
 }
 
+// HandleMessage handles a new message from NSQ. Unlike most other NSQ messages,
+// where the message.Body is a WorkItem.Id (int as string), messages in the
+// apt_fixity queue contain a GenericFile.Identifier. So the entire message body
+// will be something like "georgetown.edu/georgetown.edu.10822_707412".
 func (checker *APTFixityChecker) HandleMessage(message *nsq.Message) error {
 	fixityResult := checker.buildFixityResult(message)
 	if fixityResult.Error != nil {
@@ -45,6 +59,16 @@ func (checker *APTFixityChecker) HandleMessage(message *nsq.Message) error {
 		message.Finish()
 		return nil // Should we return an error to NSQ?
 	}
+
+	// Item may have been queued multiple times and then checked a few hours ago.
+	if !checker.stillNeedsFixityCheck(fixityResult.GenericFile) {
+		checker.Context.MessageLog.Info("Skipping %s because it had a fixity check at %s.",
+			fixityResult.GenericFile.Identifier,
+			fixityResult.GenericFile.LastFixityCheck.Format(time.RFC3339))
+		message.Finish()
+		return nil
+	}
+
 	// Check syncmap to see if this item is already in process.
 	startedAt := checker.ItemsInProcess.Get(fixityResult.GenericFile.Identifier)
 	if startedAt != "" {
@@ -58,8 +82,6 @@ func (checker *APTFixityChecker) HandleMessage(message *nsq.Message) error {
 	checker.ItemsInProcess.Add(fixityResult.GenericFile.Identifier, time.Now().UTC().Format(time.RFC3339))
 	checker.Context.MessageLog.Info("Added %s to items in process", fixityResult.GenericFile.Identifier)
 
-	// We'll ping NSQ manually when we need to.
-	message.DisableAutoResponse()
 	checker.Context.MessageLog.Info("Putting %s into fixity channel",
 		fixityResult.GenericFile.Identifier)
 
@@ -67,6 +89,8 @@ func (checker *APTFixityChecker) HandleMessage(message *nsq.Message) error {
 	return nil
 }
 
+// checkFixity calls the downloader to calculate the sha256 digest of the
+// file in S3.
 func (checker *APTFixityChecker) checkFixity() {
 	for fixityResult := range checker.FixityChannel {
 		// Here's where we do the actual digest calculation.
@@ -79,6 +103,8 @@ func (checker *APTFixityChecker) checkFixity() {
 	}
 }
 
+// record records a PremisEvent in Pharos saying when this fixity check
+// was performed and whether it succeeded.
 func (checker *APTFixityChecker) record() {
 	for fixityResult := range checker.RecordChannel {
 		// Create PREMIS event saying whether fixity event
@@ -107,6 +133,8 @@ func (checker *APTFixityChecker) record() {
 	}
 }
 
+// postProcess does some logging and tells NSQ to either finish
+// the message or requeue it.
 func (checker *APTFixityChecker) postProcess() {
 	for fixityResult := range checker.PostProcessChannel {
 		// Finish or requeue NSQ
@@ -171,6 +199,8 @@ func (checker *APTFixityChecker) getFixityValueOfS3File(fixityResult *models.Fix
 	return
 }
 
+// buildFixityResult builds the manifest that we'll need to record
+// the fixity check process and its outcome.
 func (checker *APTFixityChecker) buildFixityResult(message *nsq.Message) *models.FixityResult {
 	fixityResult := models.NewFixityResult(message)
 	gfIdentifier := strings.TrimSpace(string(message.Body))
@@ -189,4 +219,22 @@ func (checker *APTFixityChecker) buildFixityResult(message *nsq.Message) *models
 		fixityResult.ErrorIsFatal = true
 	}
 	return fixityResult
+}
+
+// stillNeedsFixityCheck returns true if the GenericFile still needs a fixity check.
+// When we have a backlog of items to check, we may run into the following scenario:
+//
+// - apt_queue finds a GenericFile that hasn't been checked in 90 days,
+//   so it adds it to the NSQ fixity check topic
+// - there are already 10,000 items in that topic
+// - apt_queue runs again an hour later and adds the same file to the queue
+// - the fixity checker finally gets around to checking that file
+// - hours later, the fixity checker encounters that file once again in the queue
+//
+// In this common case, the fixity checker should just mark the item as finished
+// and move on if it sees that the item has been checked recently.
+func (checker *APTFixityChecker) stillNeedsFixityCheck(gf *models.GenericFile) bool {
+	hoursSinceLastFixityCheck := time.Since(gf.LastFixityCheck).Hours()
+	maxHoursAllowed := float64(checker.Context.Config.MaxDaysSinceFixityCheck * 24)
+	return hoursSinceLastFixityCheck >= maxHoursAllowed
 }
