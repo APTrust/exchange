@@ -149,7 +149,7 @@ func TestGenericFile(t *testing.T) {
 		t.Error(err)
 		return
 	}
-	resp := client.GenericFileGet("college.edu/object/file.xml")
+	resp := client.GenericFileGet("college.edu/object/file.xml", false)
 	assert.NotNil(t, resp.GenericFile())
 }
 

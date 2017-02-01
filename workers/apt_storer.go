@@ -363,7 +363,7 @@ func (storer *APTStorer) getExistingSha256(gfIdentifier string) (*models.Checksu
 func (storer *APTStorer) getUuidOfExistingFile(gfIdentifier string) (string, error) {
 	storer.Context.MessageLog.Info("Checking Pharos for existing UUID for GenericFile %s",
 		gfIdentifier)
-	resp := storer.Context.PharosClient.GenericFileGet(gfIdentifier)
+	resp := storer.Context.PharosClient.GenericFileGet(gfIdentifier, false)
 	if resp.Error != nil {
 		return "", resp.Error
 	}

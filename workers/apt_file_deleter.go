@@ -164,7 +164,7 @@ func (deleter *APTFileDeleter) buildState(message *nsq.Message) (*models.DeleteS
 		return nil, fmt.Errorf("WorkItem %d is missing generic file identifier",
 			workItem.Id)
 	}
-	resp := deleter.Context.PharosClient.GenericFileGet(workItem.GenericFileIdentifier)
+	resp := deleter.Context.PharosClient.GenericFileGet(workItem.GenericFileIdentifier, false)
 	if resp.Error != nil {
 		return nil, fmt.Errorf("Error getting generic file '%s': %v",
 			workItem.GenericFileIdentifier, resp.Error)

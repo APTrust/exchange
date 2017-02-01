@@ -167,10 +167,8 @@ func (checker *APTFixityChecker) buildFixityResult(message *nsq.Message) *models
 			workItem.Id, workItem.ObjectIdentifier)
 		return fixityResult
 	}
-	// ---------------------------------------------------------------------
-	// TODO: Get generic file *** WITH CHECKSUMS ***
-	// ---------------------------------------------------------------------
-	resp := checker.Context.PharosClient.GenericFileGet(workItem.GenericFileIdentifier)
+	// Get GenericFile with checksums (param includeRelations = true)
+	resp := checker.Context.PharosClient.GenericFileGet(workItem.GenericFileIdentifier, true)
 	if resp.Error != nil {
 		fixityResult.FixityCheckSummary.AddError("Can't get generic file %s from Pharos: %v",
 			resp.Error.Error())

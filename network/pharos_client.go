@@ -295,13 +295,19 @@ func (client *PharosClient) IntellectualObjectRequestDelete(identifier string) *
 // GenericFileGet returns the GenericFile having the specified identifier.
 // The identifier should be in the format
 // "institution.edu/object_name/path/to/file.ext"
-func (client *PharosClient) GenericFileGet(identifier string) *PharosResponse {
+// If param includeRelations is true, this call will return the GenericFile
+// along with its checksums and premis events. Otherwise, you get just
+// the GenericFile.
+func (client *PharosClient) GenericFileGet(identifier string, includeRelations bool) *PharosResponse {
 	// Set up the response object
 	resp := NewPharosResponse(PharosGenericFile)
 	resp.files = make([]*models.GenericFile, 1)
 
 	// Build the url and the request object
 	relativeUrl := fmt.Sprintf("/api/%s/files/%s", client.apiVersion, escapeSlashes(identifier))
+	if includeRelations {
+		relativeUrl += "?include_relations=true"
+	}
 	absoluteUrl := client.BuildUrl(relativeUrl)
 
 	// Run the request

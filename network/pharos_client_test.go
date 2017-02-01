@@ -312,7 +312,7 @@ func TestGenericFileGet(t *testing.T) {
 		return
 	}
 
-	response := client.GenericFileGet("college.edu/object/file.xml")
+	response := client.GenericFileGet("college.edu/object/file.xml", false)
 
 	// Check the request URL and method
 	assert.Equal(t, "GET", response.Request.Method)

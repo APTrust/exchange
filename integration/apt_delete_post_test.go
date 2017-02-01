@@ -58,7 +58,7 @@ func TestDeleteResults(t *testing.T) {
 	for _, event := range events {
 		// Find the UUID for this file. That's the storage key
 		// for S3 and Glacier.
-		resp := _context.PharosClient.GenericFileGet(event.GenericFileIdentifier)
+		resp := _context.PharosClient.GenericFileGet(event.GenericFileIdentifier, false)
 		require.Nil(t, resp.Error)
 		gf := resp.GenericFile()
 		require.NotNil(t, gf)
