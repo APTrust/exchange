@@ -31,6 +31,7 @@ func TestRetoreResults(t *testing.T) {
 	// with the "config/integration.json" config options. We'll read
 	// that file. The bags we're checking are the same ones we marked
 	// for restore in integration/apt_mark_for_restore_test.go.
+	testFailed := false
 	pathToJsonLog := filepath.Join(config.LogDirectory, "apt_restore.json")
 	for _, bagName := range testutil.INTEGRATION_GOOD_BAGS[0:7] {
 		objIdentifier := strings.Replace(bagName, "aptrust.receiving.test.", "", 1)
@@ -38,12 +39,14 @@ func TestRetoreResults(t *testing.T) {
 		restoreState, err := testutil.FindRestoreStateInLog(pathToJsonLog, objIdentifier)
 		assert.Nil(t, err)
 		if err != nil {
+			testFailed = true
 			continue
 		}
 		// TODO: Test WorkItem (stage, status, etc.) in Pharos
 		// TODO: Check for file existence in S3
 		restoreTestCommon(t, objIdentifier, restoreState, config)
 	}
+	require.False(t, testFailed, "One or more tests failed")
 }
 
 func restoreTestCommon(t *testing.T, objIdentifier string, restoreState *models.RestoreState, config *models.Config) {

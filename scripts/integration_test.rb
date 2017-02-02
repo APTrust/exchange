@@ -259,7 +259,7 @@ class IntegrationTest
 	  # Start services required for this specific set of tests.
 	  @service.app_start(@context.apps['apt_restore'])
 	  @service.app_start(@context.apps['apt_file_delete'])
-	  sleep 45
+      sleep 60
 
 	  # Run the post tests.
 	  @results['apt_restore_test'] = run('apt_restore_post_test.go')
@@ -277,6 +277,7 @@ class IntegrationTest
   # apt_fixity runs the fixity checking service.
   def apt_fixity(more_tests_follow)
 	run_suite(more_tests_follow) do
+	  @build.build(@context.apps['apt_queue_fixity'])
 	  @build.build(@context.apps['apt_fixity_check'])
 
 	  # Run the prerequisite process (with tests)
