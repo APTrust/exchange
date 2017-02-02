@@ -118,6 +118,10 @@ func (checker *APTFixityChecker) record() {
 			fixityResult.Error = fmt.Errorf("Could not create Premis Event for %s: %v",
 				fixityResult.GenericFile.Identifier, err)
 		} else {
+			event.IntellectualObjectId = fixityResult.GenericFile.IntellectualObjectId
+			event.IntellectualObjectIdentifier = fixityResult.GenericFile.IntellectualObjectIdentifier
+			event.GenericFileId = fixityResult.GenericFile.Id
+			event.GenericFileIdentifier = fixityResult.GenericFile.Identifier
 			resp := checker.Context.PharosClient.PremisEventSave(event)
 			if resp.Error != nil {
 				fixityResult.Error = fmt.Errorf("After completing fixity check for %s, "+
