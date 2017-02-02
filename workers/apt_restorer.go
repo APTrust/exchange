@@ -73,7 +73,8 @@ func (restorer *APTRestorer) HandleMessage(message *nsq.Message) error {
 	restoreState, err := restorer.buildState(message)
 	if err != nil {
 		restorer.Context.MessageLog.Error(err.Error())
-		return err
+		message.Finish()
+		return nil
 	}
 
 	// If this item was queued more than once, and this process or any
@@ -95,6 +96,7 @@ func (restorer *APTRestorer) HandleMessage(message *nsq.Message) error {
 	message.DisableAutoResponse()
 
 	// Tell Pharos that we're building the bag: constants.StagePackage, constants.StatusStarted
+	restorer.Context.MessageLog.Info("Marking %s as started", restoreState.WorkItem.ObjectIdentifier)
 	restorer.markWorkItemStarted(restoreState)
 
 	// We may have partially processed this item before and then been
@@ -408,14 +410,17 @@ func (restorer *APTRestorer) uploadBag(restoreState *models.RestoreState) {
 // parts of the restore operation have been completed.
 func (restorer *APTRestorer) buildState(message *nsq.Message) (*models.RestoreState, error) {
 	restoreState := models.NewRestoreState(message)
+	restorer.Context.MessageLog.Info("Asking Pharos for WorkItem %s", string(message.Body))
 	workItem, err := GetWorkItem(message, restorer.Context)
 	if err != nil {
 		return nil, err
 	}
 	restoreState.WorkItem = workItem
+	restorer.Context.MessageLog.Info("Got WorkItem %d", workItem.Id)
 
 	// Get the saved state of this item, if there is one.
 	if workItem.WorkItemStateId != nil {
+		restorer.Context.MessageLog.Info("Asking Pharos for WorkItemState %d", *workItem.WorkItemStateId)
 		resp := restorer.Context.PharosClient.WorkItemStateGet(*workItem.WorkItemStateId)
 		if resp.Error != nil {
 			restorer.Context.MessageLog.Warning("Could not retrieve WorkItemState with id %d: %v",
@@ -435,18 +440,23 @@ func (restorer *APTRestorer) buildState(message *nsq.Message) (*models.RestoreSt
 			restoreState.LocalTarFile = savedState.LocalTarFile
 			restoreState.RestoredToUrl = savedState.RestoredToUrl
 			restoreState.CopiedToRestorationAt = savedState.CopiedToRestorationAt
+			restorer.Context.MessageLog.Info("Got WorkItemState %d", *workItem.WorkItemStateId)
 		}
 	}
 
 	// Get the intellectual object. This should not have changed
 	// during the processing of this request, because Pharos does
 	// not permit delete operations while a restore is pending.
+	restorer.Context.MessageLog.Info("Asking Pharos for IntellectualObject %s",
+		restoreState.WorkItem.ObjectIdentifier)
 	response := restorer.Context.PharosClient.IntellectualObjectGet(
 		restoreState.WorkItem.ObjectIdentifier, true, false)
 	if response.Error != nil {
 		return nil, err
 	}
 	restoreState.IntellectualObject = response.IntellectualObject()
+	restorer.Context.MessageLog.Info("Got IntellectualObject %s",
+		restoreState.WorkItem.ObjectIdentifier)
 
 	// LocalBagDir will not be set if we were unable to retrieve
 	// WorkItemState above.
@@ -455,6 +465,7 @@ func (restorer *APTRestorer) buildState(message *nsq.Message) (*models.RestoreSt
 			restorer.Context.Config.RestoreDirectory,
 			restoreState.IntellectualObject.Identifier)
 	}
+	restorer.Context.MessageLog.Info("Set local bag dir to %s", restoreState.LocalBagDir)
 	return restoreState, nil
 }
 
