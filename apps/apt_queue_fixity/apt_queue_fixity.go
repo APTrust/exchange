@@ -25,7 +25,7 @@ func parseCommandLine() (configFile string, maxFiles int) {
 	var pathToConfigFile string
 	maxFiles = 100
 	flag.StringVar(&pathToConfigFile, "config", "", "Path to APTrust config file")
-	flag.IntVar(&maxFiles, "maxFiles", 100, "Maximum number of files to queue")
+	flag.IntVar(&maxFiles, "maxfiles", 100, "Maximum number of files to queue")
 	flag.Parse()
 	if pathToConfigFile == "" {
 		printUsage()

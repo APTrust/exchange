@@ -56,7 +56,7 @@ func (aptQueue *APTQueueFixity) Run() {
 	params.Set("per_page", strconv.Itoa(perPage))
 	params.Set("page", "1")
 	for {
-		resp := aptQueue.Context.PharosClient.WorkItemList(params)
+		resp := aptQueue.Context.PharosClient.GenericFileList(params)
 		aptQueue.Context.MessageLog.Info("GET %s", resp.Request.URL)
 		if resp.Error != nil {
 			aptQueue.Context.MessageLog.Error(
