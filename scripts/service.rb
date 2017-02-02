@@ -40,7 +40,9 @@ class Service
       elsif app.name == 'dpn_queue'
         cmd += " -hours=240000"
       elsif app.name == 'apt_queue_fixity'
-        cmd += " -maxfiles=10"
+        # queue only 10 files, and choose them from bags we know
+        # we stored in prior integration tests and did not delete
+        cmd += " -maxfiles=10 -like=test.edu/ncsu"
       end
 
       if @context.verbose
