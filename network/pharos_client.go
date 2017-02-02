@@ -329,6 +329,11 @@ func (client *PharosClient) GenericFileGet(identifier string, includeRelations b
 //
 // * intellectual_object_identifier - The identifier of the object to which
 //   the files belong.
+// * not_checked_since [datetime] - Returns a list of files that have not
+//   had a fixity check since the specified datetime [yyyy-mm-dd]
+// * include_relations=true - Include the file's PremisEvents and Checksums
+//   in the response.
+// * with_ingest_state=true - Include ingest state data in the response.
 func (client *PharosClient) GenericFileList(params url.Values) *PharosResponse {
 	// Set up the response object
 	resp := NewPharosResponse(PharosGenericFile)

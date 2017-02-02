@@ -51,9 +51,14 @@ func NewNSQClient(url string) *NSQClient {
 // For example, prepare_topic, fixity_topic, etc.
 // Param workItemId is the id of the WorkItem record in Pharos we want to queue.
 func (client *NSQClient) Enqueue(topic string, workItemId int) error {
-	url := fmt.Sprintf("%s/put?topic=%s", client.URL, topic)
 	idAsString := strconv.Itoa(workItemId)
-	resp, err := http.Post(url, "text/html", bytes.NewBuffer([]byte(idAsString)))
+	return client.EnqueueString(topic, idAsString)
+}
+
+// EnqueueString posts string data to the specified NSQ topic
+func (client *NSQClient) EnqueueString(topic string, data string) error {
+	url := fmt.Sprintf("%s/put?topic=%s", client.URL, topic)
+	resp, err := http.Post(url, "text/html", bytes.NewBuffer([]byte(data)))
 	if err != nil {
 		return fmt.Errorf("Nsqd returned an error when queuing data: %v", err)
 	}
