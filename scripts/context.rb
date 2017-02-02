@@ -35,6 +35,7 @@ class Context
     @apps = {
       'apt_bucket_reader' => App.new('apt_bucket_reader', 'application'),
       'apt_queue' => App.new('apt_queue', 'application'),
+      'apt_queue_fixity' => App.new('apt_queue_fixity', 'application'),
       'apt_fetch' => App.new('apt_fetch', 'service'),
       'apt_json_extractor' => App.new('apt_json_extractor', 'application'),
       'apt_store' => App.new('apt_store', 'service'),

@@ -39,6 +39,8 @@ class Service
         cmd += " -stats=#{@context.log_dir}/apt_queue_stats.json"
       elsif app.name == 'dpn_queue'
         cmd += " -hours=240000"
+      elsif app.name == 'apt_queue_fixity'
+        cmd += " -maxfiles=10"
       end
 
       if @context.verbose

@@ -289,7 +289,9 @@ class IntegrationTest
 		return false
 	  end
 
-	  # Start services required for this specific set of tests.
+	  # Queue up some files for fixity checking. Note that service.rb
+      # sets -maxfiles=10 for apt_queue_fixity.
+	  @service.app_start(@context.apps['apt_queue_fixity'])
 	  @service.app_start(@context.apps['apt_fixity_check'])
 	  sleep 45
 
