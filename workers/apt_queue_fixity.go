@@ -11,24 +11,27 @@ import (
 )
 
 type APTQueueFixity struct {
-	Context   *context.Context
-	NSQClient *network.NSQClient
-	maxFiles  int
-	nsqTopic  string
+	Context        *context.Context
+	NSQClient      *network.NSQClient
+	maxFiles       int
+	identifierLike string
+	nsqTopic       string
 }
 
 // NewAPTQueueFixity creates a new worker to push files needing
 // a fixity check into the NSQ apt_fixity_topic. Param _context
 // is a Context object and maxFiles is the maximum number of files
-// to queue.
-func NewAPTQueueFixity(_context *context.Context, maxFiles int) *APTQueueFixity {
+// to queue. Param identifierLike is used in integration testing
+// to select files we know exist.
+func NewAPTQueueFixity(_context *context.Context, identifierLike string, maxFiles int) *APTQueueFixity {
 	_context.MessageLog.Info("NSQ address: %s", _context.Config.NsqdHttpAddress)
 	nsqClient := network.NewNSQClient(_context.Config.NsqdHttpAddress)
 	aptQueue := &APTQueueFixity{
-		Context:   _context,
-		NSQClient: nsqClient,
-		maxFiles:  maxFiles,
-		nsqTopic:  _context.Config.FixityWorker.NsqTopic,
+		Context:        _context,
+		NSQClient:      nsqClient,
+		maxFiles:       maxFiles,
+		identifierLike: identifierLike,
+		nsqTopic:       _context.Config.FixityWorker.NsqTopic,
 	}
 	return aptQueue
 }
@@ -55,6 +58,12 @@ func (aptQueue *APTQueueFixity) Run() {
 	params.Set("not_checked_since", sinceWhen.Format(time.RFC3339))
 	params.Set("per_page", strconv.Itoa(perPage))
 	params.Set("page", "1")
+	if aptQueue.identifierLike != "" {
+		params.Set("identifier_like", aptQueue.identifierLike)
+		aptQueue.Context.MessageLog.Info(
+			"Queuing only files whose identifier contains %s",
+			aptQueue.identifierLike)
+	}
 	for {
 		resp := aptQueue.Context.PharosClient.GenericFileList(params)
 		aptQueue.Context.MessageLog.Info("GET %s", resp.Request.URL)
