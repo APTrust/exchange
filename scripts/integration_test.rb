@@ -219,14 +219,14 @@ class IntegrationTest
 
 	  # Mark some IntellectualObjects for restoration in Pharos,
 	  # so that apt_restore and apt_file_delete will have something to work on.
-      # Marking an item for deletion causes Pharos to initiate a
-      # multi-step DB transaction. It should finish in 1/2 second or less,
-      # but give it 5 seconds to be save. Without any sleep, we'll often
-      # get a 'database is locked' exception in the Pharos logs, and then
-      # subsequent test operations fail.
+	  # Marking an item for deletion causes Pharos to initiate a
+	  # multi-step DB transaction. It should finish in 1/2 second or less,
+	  # but give it 5 seconds to be save. Without any sleep, we'll often
+	  # get a 'database is locked' exception in the Pharos logs, and then
+	  # subsequent test operations fail.
 	  @results['apt_mark_for_restore'] = run('apt_mark_for_restore_test.go')
 	  @results['apt_mark_for_delete'] = run('apt_mark_for_delete_test.go')
-      sleep 5
+	  sleep 5
 
 	  # apt_queue is not a service. It runs to completion, then exits.
 	  # For integration tests, it should take just a second or two.
@@ -259,7 +259,7 @@ class IntegrationTest
 	  # Start services required for this specific set of tests.
 	  @service.app_start(@context.apps['apt_restore'])
 	  @service.app_start(@context.apps['apt_file_delete'])
-      sleep 60
+	  sleep 60
 
 	  # Run the post tests.
 	  @results['apt_restore_test'] = run('apt_restore_post_test.go')
@@ -291,14 +291,13 @@ class IntegrationTest
 	  end
 
 	  # Queue up some files for fixity checking. Note that service.rb
-      # sets -maxfiles=10 for apt_queue_fixity.
+	  # sets -maxfiles=10 for apt_queue_fixity.
 	  @service.app_start(@context.apps['apt_queue_fixity'])
 	  @service.app_start(@context.apps['apt_fixity_check'])
 	  sleep 45
 
-      # TODO: Write the post tests!
-	  # Run the post tests.
-	  # @results['apt_fixity_test'] = run('apt_fixity_check_post_test.go')
+	  # Run the post test.
+	  @results['apt_fixity_test'] = run('apt_fixity_check_post_test.go')
 	end
   end
 

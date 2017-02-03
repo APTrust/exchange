@@ -573,7 +573,7 @@ func (client *PharosClient) PremisEventGet(identifier string) *PharosResponse {
 //
 // * object_identifier - (string) Return events associated with
 //   the specified intellectual object (but not its generic files).
-// * generic_file_identifier - (string) Return events associated with the
+// * file_identifier - (string) Return events associated with the
 //   specified generic file.
 // * event_type - (string) Return events of the specified type. See the
 //   event types listed in contants/constants.go
