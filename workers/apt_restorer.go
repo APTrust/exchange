@@ -202,7 +202,9 @@ func (restorer *APTRestorer) validateBag() {
 				}
 			}
 			for _, errMsg := range validationResult.ValidationSummary.Errors {
-				restoreState.ValidateSummary.AddError("Validation error: %s", errMsg)
+				if !strings.HasPrefix(errMsg, "Unable to parse tag data") {
+					restoreState.ValidateSummary.AddError("Validation error: %s", errMsg)
+				}
 			}
 		}
 		restoreState.ValidateSummary.Finish()
