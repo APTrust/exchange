@@ -267,6 +267,9 @@ func (vbag *VirtualBag) parseManifest(reader io.Reader, relFilePath string) {
 	lineNum := 1
 	for scanner.Scan() {
 		line := scanner.Text()
+		if strings.TrimSpace(line) == "" {
+			continue
+		}
 		if re.MatchString(line) {
 			data := re.FindStringSubmatch(line)
 			digest := data[1]
