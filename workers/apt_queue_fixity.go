@@ -58,7 +58,6 @@ func (aptQueue *APTQueueFixity) Run() {
 	params.Set("not_checked_since", sinceWhen.Format(time.RFC3339))
 	params.Set("per_page", strconv.Itoa(perPage))
 	params.Set("page", "1")
-	params.Set("sort", "identifier")
 	if aptQueue.identifierLike != "" {
 		params.Set("identifier_like", aptQueue.identifierLike)
 		aptQueue.Context.MessageLog.Info(

@@ -33,16 +33,18 @@ func TestFixityCheckResults(t *testing.T) {
 	_context := context.NewContext(config)
 
 	expectedFiles := []string{
-		"test.edu/ncsu.1840.16-10/data/object.properties",
-		"test.edu/ncsu.1840.16-10/data/metadata.xml",
-		"test.edu/ncsu.1840.16-10/data/ORIGINAL/1-metadata.xml",
-		"test.edu/ncsu.1840.16-10/data/ORIGINAL/1",
-		"test.edu/ncsu.1840.16-10/aptrust-info.txt",
-		"test.edu/ncsu.1840.16-10/bag-info.txt",
+		"test.edu/ncsu.1840.16-1004/data/metadata.xml",
+		"test.edu/ncsu.1840.16-1004/data/object.properties",
+		"test.edu/ncsu.1840.16-1004/data/ORIGINAL/1",
+		"test.edu/ncsu.1840.16-1004/data/ORIGINAL/1-metadata.xml",
+		"test.edu/ncsu.1840.16-1004/aptrust-info.txt",
+		"test.edu/ncsu.1840.16-1004/bag-info.txt",
 		"test.edu/ncsu.1840.16-1005/data/metadata.xml",
 		"test.edu/ncsu.1840.16-1005/data/object.properties",
-		"test.edu/ncsu.1840.16-1005/data/ORIGINAL/1-metadata.xml",
 		"test.edu/ncsu.1840.16-1005/data/ORIGINAL/1",
+		"test.edu/ncsu.1840.16-1005/data/ORIGINAL/1-metadata.xml",
+		"test.edu/ncsu.1840.16-1005/aptrust-info.txt",
+		"test.edu/ncsu.1840.16-1005/bag-info.txt",
 	}
 
 	// Each fixity check should result in a fixity check event for the file.
