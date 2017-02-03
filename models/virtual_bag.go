@@ -304,6 +304,9 @@ func (vbag *VirtualBag) parseTags(reader io.Reader, relFilePath string) {
 	var tag *Tag
 	for scanner.Scan() {
 		line := scanner.Text()
+		if strings.TrimSpace(line) == "" {
+			continue
+		}
 		if re.MatchString(line) {
 			data := re.FindStringSubmatch(line)
 			data[1] = strings.Replace(data[1], ":", "", 1)
@@ -319,7 +322,7 @@ func (vbag *VirtualBag) parseTags(reader io.Reader, relFilePath string) {
 			tag.Value = strings.Join([]string{tag.Value, value}, " ")
 			vbag.setIntelObjTagValue(tag)
 		} else {
-			vbag.summary.AddError("Unable to parse tag data from line: %s", line)
+			vbag.summary.AddError("Unable to parse tag data from line: '%s'", line)
 		}
 	}
 	if tag.Label != "" {
