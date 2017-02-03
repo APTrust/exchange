@@ -211,7 +211,7 @@ func (checker *APTFixityChecker) buildFixityResult(message *nsq.Message) *models
 	// Get GenericFile with checksums (param includeRelations = true)
 	resp := checker.Context.PharosClient.GenericFileGet(gfIdentifier, true)
 	if resp.Error != nil {
-		fixityResult.Error = fmt.Errorf("Can't get generic file %s from Pharos: %v", resp.Error.Error())
+		fixityResult.Error = fmt.Errorf("Can't get generic file '%s' from Pharos: %v", resp.Error.Error())
 		if resp.Response.StatusCode == 404 {
 			fixityResult.ErrorIsFatal = true
 		}
