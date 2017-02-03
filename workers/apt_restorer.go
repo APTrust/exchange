@@ -192,17 +192,17 @@ func (restorer *APTRestorer) validateBag() {
 			restoreState.ValidateSummary.AddError("Bag validator returned nil result!")
 		} else if validationResult.ParseSummary.HasErrors() || validationResult.ValidationSummary.HasErrors() {
 			for _, errMsg := range validationResult.ParseSummary.Errors {
-				restoreState.ValidateSummary.AddError("Validator parse error: %s", errMsg)
-			}
-			for _, errMsg := range validationResult.ValidationSummary.Errors {
 				// We did not validate tag file contents in APTrust 1.0, so
 				// some older bags have tag files with invalid tag names
 				// (usually tag names that contain spaces). We don't want restoration
 				// to fail just because our parser can't read the tags. Give the
 				// depositor their bag!
 				if !strings.HasPrefix(errMsg, "Unable to parse tag data") {
-					restoreState.ValidateSummary.AddError("Validation error: %s", errMsg)
+					restoreState.ValidateSummary.AddError("Validator parse error: %s", errMsg)
 				}
+			}
+			for _, errMsg := range validationResult.ValidationSummary.Errors {
+				restoreState.ValidateSummary.AddError("Validation error: %s", errMsg)
 			}
 		}
 		restoreState.ValidateSummary.Finish()
