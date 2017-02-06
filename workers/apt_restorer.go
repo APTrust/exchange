@@ -149,8 +149,10 @@ func (restorer *APTRestorer) buildBag() {
 		restorer.writeAPTrustInfoFile(restoreState)
 		restorer.writeBagitFile(restoreState)
 		restorer.writeBagInfoFile(restoreState)
-		restorer.writeManifest(constants.AlgMd5, restoreState)
-		restorer.writeManifest(constants.AlgSha256, restoreState)
+		restorer.writeManifest(constants.PAYLOAD_MANIFEST, constants.AlgMd5, restoreState)
+		restorer.writeManifest(constants.PAYLOAD_MANIFEST, constants.AlgSha256, restoreState)
+		restorer.writeManifest(constants.TAG_MANIFEST, constants.AlgMd5, restoreState)
+		restorer.writeManifest(constants.TAG_MANIFEST, constants.AlgSha256, restoreState)
 		if restoreState.PackageSummary.HasErrors() {
 			restorer.PostProcessChannel <- restoreState
 			continue
@@ -687,11 +689,11 @@ func (restorer *APTRestorer) addFile(restoreState *models.RestoreState, absPath,
 
 // writeManifest writes the manifest-md5.txt file or the manifest-sha256.txt file
 // for this bag.
-func (restorer *APTRestorer) writeManifest(algorithm string, restoreState *models.RestoreState) {
+func (restorer *APTRestorer) writeManifest(manifestType, algorithm string, restoreState *models.RestoreState) {
 	if algorithm != constants.AlgMd5 && algorithm != constants.AlgSha256 {
 		restorer.Context.MessageLog.Fatal("writeManifest: Unsupported algorithm: %s", algorithm)
 	}
-	manifestPath := filepath.Join(restoreState.LocalBagDir, fmt.Sprintf("manifest-%s.txt", algorithm))
+	manifestPath := restorer.getManifestPath(manifestType, algorithm, restoreState)
 	manifestFile, err := os.Create(manifestPath)
 	if err != nil {
 		restoreState.PackageSummary.AddError("Cannot create manifest file %s: %v",
@@ -700,6 +702,11 @@ func (restorer *APTRestorer) writeManifest(algorithm string, restoreState *model
 	}
 	defer manifestFile.Close()
 	for _, gf := range restoreState.IntellectualObject.GenericFiles {
+		if !restorer.fileBelongsInManifest(gf, manifestType) {
+			restorer.Context.MessageLog.Info("Skipping file '%s' for manifest type %s (%s)",
+				gf.Identifier, manifestType, algorithm)
+			continue
+		}
 		checksum := gf.GetChecksumByAlgorithm(algorithm)
 		if checksum == nil {
 			restoreState.PackageSummary.AddError("Cannot find %s checksum for file %s",
@@ -713,6 +720,28 @@ func (restorer *APTRestorer) writeManifest(algorithm string, restoreState *model
 			return
 		}
 	}
+}
+
+func (restorer *APTRestorer) fileBelongsInManifest(gf *models.GenericFile, manifestType string) bool {
+	// PT #138749039: Payload files go in payload manifest,
+	// tag files go in tag manifest.
+	isPayloadFile := strings.HasPrefix(gf.OriginalPath(), "data/")
+	isPayloadManifest := manifestType == constants.PAYLOAD_MANIFEST
+	// A more terse way to calculate the return value is:
+	//
+	//     return isPayloadFile == isPayloadManifest
+	//
+	// But I don't like writing clever code that I have
+	// to puzzle over later. Better to be clear about intentions.
+	return (isPayloadFile && isPayloadManifest) || (!isPayloadFile && !isPayloadManifest)
+}
+
+func (restorer *APTRestorer) getManifestPath(manifestType, algorithm string, restoreState *models.RestoreState) string {
+	manifestPath := filepath.Join(restoreState.LocalBagDir, fmt.Sprintf("manifest-%s.txt", algorithm))
+	if manifestType == constants.TAG_MANIFEST {
+		manifestPath = filepath.Join(restoreState.LocalBagDir, fmt.Sprintf("tagmanifest-%s.txt", algorithm))
+	}
+	return manifestPath
 }
 
 func (restorer *APTRestorer) fetchAllFiles(restoreState *models.RestoreState) {
