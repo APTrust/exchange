@@ -6,6 +6,8 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"github.com/APTrust/exchange/constants"
+	"github.com/APTrust/exchange/models"
 	"github.com/APTrust/exchange/util/fileutil"
 	"github.com/APTrust/exchange/validation"
 	"os"
@@ -44,7 +46,9 @@ func main() {
 		exitCode = 13
 	}
 	if exitCode == 0 {
+		stats := getFileStats(result.IntellectualObject)
 		fmt.Println("Bag is valid")
+		fmt.Println(stats)
 	}
 	if outputFile != "" {
 		err := dumpJson(result, outputFile)
@@ -58,6 +62,31 @@ func main() {
 		}
 	}
 	os.Exit(exitCode)
+}
+
+func getFileStats(obj *models.IntellectualObject) string {
+	payloadFiles := 0
+	payloadManifests := 0
+	tagManifests := 0
+	tagFiles := 0
+	// Not sure whether to report on this.
+	// See exchange/tarfile/reader.go.
+	// ignored := len(obj.IngestFilesIgnored)
+	for _, gf := range obj.GenericFiles {
+		switch gf.IngestFileType {
+		case constants.PAYLOAD_FILE:
+			payloadFiles++
+		case constants.PAYLOAD_MANIFEST:
+			payloadManifests++
+		case constants.TAG_MANIFEST:
+			tagManifests++
+		case constants.TAG_FILE:
+			tagFiles++
+		}
+	}
+	return fmt.Sprintf("Payload files: %d, Payload manifests: %d, "+
+		"Tag files: %d, Tag manifests: %d", payloadFiles, payloadManifests,
+		tagFiles, tagManifests)
 }
 
 func dumpJson(result *validation.ValidationResult, outputFile string) error {
