@@ -312,7 +312,15 @@ func (dpnSync *DPNSync) SyncBags(node *models.Node) {
 
 func (dpnSync *DPNSync) syncBags(bags []*models.DPNBag, result *models.SyncResult) {
 	log := dpnSync.Context.MessageLog
+	if len(bags) == 0 {
+		log.Debug("No bags to sync")
+		return
+	}
 	for _, bag := range bags {
+		if bag == nil {
+			log.Debug("Skipping nil bag")
+			continue
+		}
 		log.Debug("Processing bag %s from %s", bag.UUID, bag.AdminNode)
 		resp := dpnSync.LocalClient.DPNBagGet(bag.UUID)
 		if resp.Error != nil {
