@@ -400,7 +400,15 @@ func (dpnSync *DPNSync) SyncDigests(remoteNode *models.Node) {
 
 func (dpnSync *DPNSync) syncDigests(digests []*models.MessageDigest, result *models.SyncResult) {
 	log := dpnSync.Context.MessageLog
+	if len(digests) == 0 {
+		log.Debug("No digests in list")
+		return
+	}
 	for _, digest := range digests {
+		if digest == nil {
+			log.Debug("Skipping nil digest")
+			continue
+		}
 		resp := dpnSync.LocalClient.DigestGet(digest.Bag, digest.Algorithm)
 		if resp.Error != nil {
 			result.AddError(dpn.DPNTypeDigest, resp.Error)
