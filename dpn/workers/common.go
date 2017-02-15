@@ -580,7 +580,7 @@ func restoreIngestState(_context *context.Context, manifest *models.DPNIngestMan
 	}
 	savedManifest := &models.DPNIngestManifest{}
 	err := json.Unmarshal([]byte(savedState), &savedManifest)
-	if err == nil {
+	if err == nil && savedState != "" {
 		manifest.LocalDir = savedManifest.LocalDir
 		manifest.LocalTarFile = savedManifest.LocalTarFile
 		manifest.StorageURL = savedManifest.StorageURL
