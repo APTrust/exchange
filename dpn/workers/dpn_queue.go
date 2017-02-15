@@ -251,10 +251,11 @@ func (dpnQueue *DPNQueue) queueIngestRequests() {
 // is "DPN" and the queued_at timestamp is empty.
 func (dpnQueue *DPNQueue) ingestParams(pageNumber int) url.Values {
 	params := url.Values{}
-	params.Set("item_action", "DPN")
+	params.Set("item_action", constants.ActionDPN)
 	params.Set("queued", "false")
-	params.Set("order_by", "updated_at")
-	params.Set("page_size", "100")
+	params.Set("sort", "updated_at")
+	params.Set("per_page", "100")
+	params.Set("created_after", dpnQueue.ExamineItemsSince.Format(time.RFC3339))
 	params.Set("page", strconv.Itoa(pageNumber))
 	return params
 }
