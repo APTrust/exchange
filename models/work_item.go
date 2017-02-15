@@ -83,7 +83,8 @@ type WorkItem struct {
 	// the user who clicked the button or submitted the API request to
 	// start the process.
 	User string `json:"user"`
-	// Date ??
+	// Date is the timestamp describing when some worker process last
+	// touched this item.
 	Date time.Time `json:"date"`
 	// Note is a human-readable note about the status of this WorkItem.
 	// This note is intended for users checking on the state of their

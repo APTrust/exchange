@@ -112,6 +112,7 @@ func GetWorkItem(_context *context.Context, manifest *models.DPNIngestManifest, 
 // Param workSummary should be the WorkSummary from the manifest for the
 // current stage of processing.
 func SaveWorkItem(_context *context.Context, manifest *models.DPNIngestManifest, workSummary *apt_models.WorkSummary) {
+	manifest.WorkItem.Date = time.Now().UTC()
 	resp := _context.PharosClient.WorkItemSave(manifest.WorkItem)
 	if resp.Error != nil {
 		_context.MessageLog.Error("Error saving WorkItem for %s/%s: %v",
