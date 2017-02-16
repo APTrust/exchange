@@ -62,7 +62,7 @@ func (storer *APTStorer) HandleMessage(message *nsq.Message) error {
 	if ingestState.WorkItem.Node != "" && ingestState.WorkItem.Pid != 0 {
 		storer.Context.MessageLog.Info("Marking WorkItem %d (%s/%s) as finished "+
 			"without doing any work, because this item is currently in process by "+
-			"node %s, pid %s. WorkItem was last updated at %s.",
+			"node %s, pid %d. WorkItem was last updated at %s.",
 			ingestState.WorkItem.Id, ingestState.WorkItem.Bucket,
 			ingestState.WorkItem.Name, ingestState.WorkItem.Node,
 			ingestState.WorkItem.Pid, ingestState.WorkItem.UpdatedAt)

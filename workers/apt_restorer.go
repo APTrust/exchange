@@ -83,7 +83,7 @@ func (restorer *APTRestorer) HandleMessage(message *nsq.Message) error {
 	if restoreState.WorkItem.Node != "" && restoreState.WorkItem.Pid != 0 {
 		restorer.Context.MessageLog.Info("Marking WorkItem %d (%s/%s) as finished "+
 			"without doing any work, because this item is currently in process by "+
-			"node %s, pid %s. WorkItem was last updated at %s.",
+			"node %s, pid %d. WorkItem was last updated at %s.",
 			restoreState.WorkItem.Id, restoreState.WorkItem.Bucket,
 			restoreState.WorkItem.Name, restoreState.WorkItem.Node,
 			restoreState.WorkItem.Pid, restoreState.WorkItem.UpdatedAt)
