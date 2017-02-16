@@ -64,11 +64,16 @@ func deleteReplicatedBags(_context *context.Context, dpnClient *network.DPNRestC
 			_context.MessageLog.Info("Deleting %s: %d successful replications",
 				tarfile, len(successfulReplications))
 			removeFile(_context, tarfile)
-			for _, xfer := range successfulReplications {
-				symlink := fmt.Sprintf("%s/dpn.%s/outbound/%s.tar",
-					_context.Config.DPN.RemoteNodeHomeDirectory, xfer.ToNode, bagUUID)
-				removeFile(_context, symlink)
-			}
+			// ------------------------------------------------------------------------
+			// Skip this for now. We're linking the entire /home/dpn.*/outbound dirs
+			// to the DPN staging dir. If there are no problems with that, delete
+			// this whole block of commented code.
+			// ------------------------------------------------------------------------
+			// for _, xfer := range successfulReplications {
+			// 	symlink := fmt.Sprintf("%s/dpn.%s/outbound/%s.tar",
+			// 		_context.Config.DPN.RemoteNodeHomeDirectory, xfer.ToNode, bagUUID)
+			// 	removeFile(_context, symlink)
+			// }
 		} else {
 			_context.MessageLog.Info("Leaving %s: only %d successful replications so far",
 				tarfile, len(successfulReplications))
