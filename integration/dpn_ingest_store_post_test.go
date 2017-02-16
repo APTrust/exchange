@@ -80,20 +80,6 @@ func TestIngestStoreJsonLog(t *testing.T) {
 	}
 }
 
-// TestIngestStoreTarFilesDeleted tests whether all expected DPN bags
-// (tar files) have been deleted from the staging area.
-func TestIngestStoreTarFilesDeleted(t *testing.T) {
-	if !apt_testutil.ShouldRunIntegrationTests() {
-		t.Skip("Skipping integration test. Set ENV var RUN_EXCHANGE_INTEGRATION=true if you want to run them.")
-	}
-	_context, err := apt_testutil.GetContext("integration.json")
-	require.Nil(t, err)
-	pattern := filepath.Join(_context.Config.DPN.StagingDirectory, "test.edu", "*.tar")
-	files, err := filepath.Glob(pattern)
-	require.Nil(t, err)
-	assert.Equal(t, 0, len(files))
-}
-
 // TestIngestStoreItemsQueued checks to see if dpn_ingest_store pushed items
 // into the dpn_ingest_record NSQ topic.
 func TestIngestStoreItemsQueued(t *testing.T) {
@@ -223,6 +209,22 @@ func testIngestStoreManifest(t *testing.T, _context *context.Context, dpnIngestM
 	assert.NotEmpty(t, dpnIngestManifest.LocalDir, detail)
 	assert.NotEmpty(t, dpnIngestManifest.LocalTarFile, detail)
 	assert.True(t, strings.HasSuffix(dpnIngestManifest.LocalTarFile, ".tar"), detail)
+
+	// Make sure the ReplicationTransfer.Link looks good.
+	for _, xfer := range dpnIngestManifest.ReplicationTransfers {
+		instAndBagName := strings.Split(dpnIngestManifest.DPNBag.LocalId, "/")
+		require.True(t, len(instAndBagName) > 0)
+		institutionDomain := instAndBagName[0]
+		// Link should begin with dpn.chron@ (or dpn.hathi, dpn.tdr, etc,
+		// depending on to_node)
+		expectedPrefix := fmt.Sprintf("dpn.%s@", xfer.ToNode)
+		assert.True(t, strings.HasPrefix(xfer.Link, expectedPrefix))
+		// Link should end with umich.edu/uuid.tar, where umich.edu
+		// is the domain name of the APTrust depositor, and uuid is
+		// the uuid of the DPN bag.
+		expectedSuffix := fmt.Sprintf("%s/%s.tar", institutionDomain, dpnIngestManifest.DPNBag.UUID)
+		assert.True(t, strings.HasSuffix(xfer.Link, expectedSuffix))
+	}
 
 	// Bag has been stored in Glacier, so this should be set to
 	// "https://s3.amazonaws.com/aptrust.dpn.test/<UUID>.tar"

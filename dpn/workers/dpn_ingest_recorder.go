@@ -9,6 +9,7 @@ import (
 	apt_models "github.com/APTrust/exchange/models"
 	"github.com/nsqio/go-nsq"
 	"os"
+	"strings"
 	"time"
 )
 
@@ -206,8 +207,15 @@ func (recorder *DPNIngestRecorder) buildTransferRequests(manifest *models.DPNIng
 				"Error is %v", localNode.Namespace, localNode.APIRoot, err)
 			return
 		}
-		link := fmt.Sprintf("dpn.%s@%s:outbound/%s.tar",
-			toNode, domain, manifest.DPNBag.UUID)
+		// Link should look like dpn.chron@dpn-prod2.aptrust.org:outbound/umich.edu/UUID.tar
+		// That's a symlink to /mnt/efs/dpn/staging/umich.edu/UUID.tar
+		// because all of /home/dpn.chron/outbound is a symlink to /mnt/efs/dpn/staging
+		relPath := strings.Replace(manifest.LocalTarFile,
+			recorder.Context.Config.DPN.StagingDirectory, "", 1)
+		if strings.HasPrefix(relPath, "/") {
+			relPath = relPath[0 : len(relPath)-1]
+		}
+		link := fmt.Sprintf("dpn.%s@%s:outbound/%s", toNode, domain, relPath)
 		xfer, err := manifest.BuildReplicationTransfer(
 			recorder.Context.Config.DPN.LocalNode, toNode, link)
 		if err != nil {
@@ -226,9 +234,10 @@ func (recorder *DPNIngestRecorder) saveDPNReplicationRequests(manifest *models.D
 		recorder.buildTransferRequests(manifest)
 	}
 	for _, xfer := range manifest.ReplicationTransfers {
-		recorder.Context.MessageLog.Info("Saving ReplicationTransfer %s with ToNode %s for bag %s (%s)",
+		recorder.Context.MessageLog.Info("Saving ReplicationTransfer %s with ToNode %s "+
+			"for bag %s (%s), link %s",
 			xfer.ReplicationId, xfer.ToNode, manifest.DPNBag.UUID,
-			manifest.WorkItem.ObjectIdentifier)
+			manifest.WorkItem.ObjectIdentifier, xfer.Link)
 		resp := recorder.LocalClient.ReplicationTransferGet(xfer.ReplicationId)
 		if resp.Error != nil {
 			data, _ := resp.RawResponseData()
