@@ -53,6 +53,7 @@ class Context
       'dpn_package' => App.new('dpn_package', 'service'),
       'dpn_ingest_store' => App.new('dpn_ingest_store', 'service'),
       'dpn_ingest_record' => App.new('dpn_ingest_record', 'service'),
+      'dpn_cleanup' => App.new('dpn_cleanup', 'application'),
       'nsq_service' => App.new('nsq_service', 'special'),
     }
   end

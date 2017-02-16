@@ -442,7 +442,7 @@ class IntegrationTest
 
 	  # Start service
 	  @service.app_start(@context.apps['dpn_replication_store'])
-	  sleep 20
+	  sleep 30
 
 	  # Ensure expected post conditions
 	  @results['dpn_replication_store_test'] = run('dpn_replication_store_post_test.go')
@@ -510,6 +510,7 @@ class IntegrationTest
 	run_suite(more_tests_follow) do
 	  # Build
 	  @build.build(@context.apps['dpn_ingest_record'])
+	  @build.build(@context.apps['dpn_cleanup'])
 
 	  # Run prerequisites
 	  package_ok = dpn_ingest_store(true)
@@ -521,6 +522,14 @@ class IntegrationTest
 	  # Start service
 	  @service.app_start(@context.apps['dpn_ingest_record'])
 	  sleep 30
+
+      # Run cleanup. No need to sleep. This exits when it's done.
+      # This won't actually delete any files, because the remote
+      # nodes don't replicate our files in this test suite.
+      # However, you should see in logs/dpn_cleanup.log that it
+      # checked each file in the staging area and decided not to
+      # delete it.
+	  @service.app_start(@context.apps['dpn_cleanup'])
 
 	  # Run the post test
 	  @results['dpn_ingest_record_test'] = run('dpn_ingest_record_post_test.go')
