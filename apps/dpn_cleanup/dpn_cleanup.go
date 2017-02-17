@@ -35,10 +35,30 @@ func main() {
 	deleteReplicatedBags(_context, dpnClient)
 }
 
+// deleteReplicated bags deletes DPN bags (tar files) after they've
+// been replicated to the required number of nodes. (That's 2 nodes
+// as of February, 2017.) When we ingest bags and ask that other
+// nodes replicate them, the bags go into a subdirectory of the DPN
+// staging directory. That subdirectory has the domain name of the
+// institution that owns the bag. For example, <dpn_staging>/ncsu.edu,
+// <dpn_staging>/virginia.edu, etc.
 func deleteReplicatedBags(_context *context.Context, dpnClient *network.DPNRestClient) {
-	_context.MessageLog.Info("Deleting replicated bags in %s",
-		_context.Config.DPN.StagingDirectory)
 	files, err := ioutil.ReadDir(_context.Config.DPN.StagingDirectory)
+	if err != nil {
+		_context.MessageLog.Error(err.Error())
+		return
+	}
+	for _, f := range files {
+		if f.IsDir() {
+			pathToDir := filepath.Join(_context.Config.DPN.StagingDirectory, f.Name())
+			cleanDirectory(_context, dpnClient, pathToDir)
+		}
+	}
+}
+
+func cleanDirectory(_context *context.Context, dpnClient *network.DPNRestClient, directory string) {
+	_context.MessageLog.Info("Deleting replicated bags in %s", directory)
+	files, err := ioutil.ReadDir(directory)
 	if err != nil {
 		_context.MessageLog.Error(err.Error())
 		return
