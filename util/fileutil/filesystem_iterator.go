@@ -2,11 +2,11 @@ package fileutil
 
 import (
 	"fmt"
+	"github.com/APTrust/exchange/platform"
 	"io"
 	"os"
 	"path"
 	"strings"
-	"syscall"
 )
 
 type FileSystemIterator struct {
@@ -62,11 +62,9 @@ func (iter *FileSystemIterator) Next() (io.ReadCloser, *FileSummary, error) {
 		IsDir:         stat.IsDir(),
 		IsRegularFile: fileMode.IsRegular(),
 	}
-	systat := stat.Sys().(*syscall.Stat_t)
-	if systat != nil {
-		fs.Uid = int(systat.Uid)
-		fs.Gid = int(systat.Gid)
-	}
+	uid, gid := platform.FileOwnerAndGroup(stat)
+	fs.Uid = uid
+	fs.Gid = gid
 	file, err := os.Open(filePath)
 	if err != nil {
 		return nil, fs, fmt.Errorf("Cannot read file '%s': %v", filePath, err)

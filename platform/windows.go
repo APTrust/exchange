@@ -16,6 +16,11 @@ func GetOwnerAndGroup(finfo os.FileInfo, header *tar.Header) {
 	return
 }
 
+// A late addition. Allows us to build apt_validate on all platforms.
+func FileOwnerAndGroup(finfo os.FileInfo) (uid int, gid int) {
+	return uid, gid // will be 0,0
+}
+
 // Don't even try. This function is for use with the VolumeService,
 // which we're not going to run on Windows.
 func GetMountPointFromPath(path string) (string, error) {
