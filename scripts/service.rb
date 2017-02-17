@@ -81,21 +81,13 @@ class Service
 	end
   end
 
+  # Wipe out DPN data and re-load the schema.
   def dpn_cluster_init
 	if @dpn_cluster_pid == 0
 	  env = @context.env_hash
 	  puts "Setting up DPN cluster"
-	  cmd = "bundle exec ./script/setup_cluster.rb"
+	  cmd = "bundle exec ./script/reset_cluster.rb"
 	  log_file = "#{@context.log_dir}/dpn_cluster_setup.log"
-	  pid = Process.spawn(env,
-						  cmd,
-						  chdir: @context.dpn_server_root,
-						  out: [log_file, 'w'],
-						  err: [log_file, 'w'])
-	  Process.wait pid
-	  puts "Migrating DPN cluster"
-	  cmd = "bundle exec ./script/migrate_cluster.rb"
-	  log_file = "#{@context.log_dir}/dpn_cluster_migrate.log"
 	  pid = Process.spawn(env,
 						  cmd,
 						  chdir: @context.dpn_server_root,
@@ -108,10 +100,9 @@ class Service
   def dpn_cluster_start
 	if @dpn_cluster_pid == 0
 
-	  # NOTE: We need to run dpn_cluster_init only if we've never run
-	  # the DPN cluster before on this machine, or if there are pending
-	  # DPN migrations.
-	  dpn_cluster_init if @context.run_dpn_cluster_init
+	  # NOTE: Run dpn_cluster_init to wipe out lingering DPN
+      # data from prior integration test runs.
+	  dpn_cluster_init
 
 	  puts "Deleting old DPN cluster log files"
 	  FileUtils.rm Dir.glob("#{@context.dpn_server_root}/impersonate*")

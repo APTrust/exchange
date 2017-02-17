@@ -22,9 +22,6 @@ def parse_options(context)
     opts.on("-v", "--verbose", "Log to stderr") do |v|
       context.verbose = v
     end
-    opts.on("-i", "--init-dpn-cluster", "Initialize DPN cluster before starting it") do |i|
-      context.run_dpn_cluster_init = i
-    end
     opts.on("-h", "--help", helpdoc) do
       puts opts
       exit!

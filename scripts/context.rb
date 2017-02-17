@@ -6,7 +6,7 @@ class Context
 
   attr_reader(:dpn_server_root, :exchange_root, :pharos_root, :log_dir,
               :staging_dir, :restore_dir, :apps)
-  attr_accessor(:verbose, :run_dpn_cluster_init, :go_bin_dir)
+  attr_accessor(:verbose, :go_bin_dir)
 
   def initialize
     @dpn_server_root = ENV['DPN_SERVER_ROOT'] || abort("Set env var DPN_SERVER_ROOT")
@@ -18,14 +18,10 @@ class Context
     @nsq_data_dir = "#{ENV['HOME']}/tmp/nsq"
     @go_bin_dir = "#{ENV['HOME']}/tmp/bin"
 
-    # Make the following two items command-line options that default
-    # to false. The verbose option prints log messages to STDERR in
-    # addition to printing them to the usual logs. The option to
-    # run_dpn_cluster_init should be true only if 1) the DPN cluster
-    # has never been set up on this machine, or 2) the DPN Rails app
-    # has pending DB migrations that you haven't run yet.
+    # The following are command-line options.
+    # The verbose option prints log messages to STDERR in
+    # addition to printing them to the usual logs.
     @verbose = false
-    @run_dpn_cluster_init = false
 
     # This is the list of apps we can compile. The key is the app name,
     # and the value is the directory that contains the app's source code.
