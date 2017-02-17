@@ -141,7 +141,7 @@ Param -bag should be the path to the tar file or the directory
 containing the bag you want to validate. E.g. /home/me/my_bag
 for an untarred bag or /home/me/my_bag.tar for a tarred bag.
 
-Param -output is not optional. If specified, the validator
+Param -output is optional. If specified, the validator
 will dump a JSON representation of the APTrust IntellectualObject
 to the specified file. UUIDs in the JSON dump will be regenerated
 each time validation runs, so don't depend on them.
