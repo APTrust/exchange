@@ -238,4 +238,11 @@ func (storer *DPNReplicationStorer) finishWithSuccess(manifest *models.Replicati
 	} else {
 		manifest.NsqMessage.Requeue(1 * time.Minute)
 	}
+
+	// Delete the tar file from our staging area.
+	// Once we've copied it into storage there's nothing
+	// left to do, and we don't need a local copy.
+	storer.Context.MessageLog.Info(note)
+	storer.Context.MessageLog.Info("Deleting %s", manifest.LocalPath)
+	os.Remove(manifest.LocalPath)
 }
