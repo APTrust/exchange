@@ -64,6 +64,15 @@ func (validator *DPNValidator) HandleMessage(message *nsq.Message) error {
 	manifest := SetupReplicationManifest(message, "validate", validator.Context,
 		validator.LocalClient, validator.RemoteClients)
 
+	// Stop processing if item has already been stored.
+	// Item will go into the dpn_replication_store queue,
+	// and the storer will delete the tar file.
+	if manifest.ReplicationTransfer.Stored == true {
+		EnsureItemIsMarkedComplete(validator.Context, manifest)
+		message.Finish()
+		return nil
+	}
+
 	manifest.ValidateSummary.Start()
 	manifest.ValidateSummary.Attempted = true
 	manifest.ValidateSummary.AttemptNumber += 1

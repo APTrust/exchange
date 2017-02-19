@@ -71,6 +71,28 @@ func (copier *DPNCopier) HandleMessage(message *nsq.Message) error {
 	// manifest := copier.buildReplicationManifest(message)
 	manifest := SetupReplicationManifest(message, "copy", copier.Context,
 		copier.LocalClient, copier.RemoteClients)
+
+	// In some cases, we've actually managed to store the replication,
+	// but NSQ thinks the job timed out and sends a message to start
+	// the process again. Don't redo the work!
+	if manifest.ReplicationTransfer.Stored == true {
+		EnsureItemIsMarkedComplete(copier.Context, manifest)
+		message.Finish()
+		return nil
+	}
+
+	// Sometimes completed copies get requeued because NSQ thinks they timed out.
+	// Don't recopy the file. The big ones take many hours.
+	if fileutil.FileExists(manifest.LocalPath) {
+		stat, err := os.Stat(manifest.LocalPath)
+		if err == nil && stat != nil && manifest.DPNBag != nil && uint64(stat.Size()) == manifest.DPNBag.Size {
+			copier.Context.MessageLog.Info("Message %s: Bag %s for replication %s is already on disk",
+				string(message.Body), manifest.DPNBag.UUID, manifest.ReplicationTransfer.ReplicationId)
+		}
+		copier.PostProcessChannel <- manifest
+		return nil
+	}
+
 	manifest.CopySummary.Start()
 	manifest.CopySummary.Attempted = true
 	manifest.CopySummary.AttemptNumber += 1

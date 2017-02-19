@@ -64,6 +64,15 @@ func (storer *DPNReplicationStorer) HandleMessage(message *nsq.Message) error {
 	manifest := SetupReplicationManifest(message, "store", storer.Context,
 		storer.LocalClient, storer.RemoteClients)
 
+	// Stop processing if item has already been stored.
+	if manifest.ReplicationTransfer.Stored == true {
+		EnsureItemIsMarkedComplete(storer.Context, manifest)
+		storer.Context.MessageLog.Info("Deleting %s", manifest.LocalPath)
+		os.Remove(manifest.LocalPath)
+		message.Finish()
+		return nil
+	}
+
 	manifest.StoreSummary.Start()
 	manifest.StoreSummary.Attempted = true
 	manifest.StoreSummary.AttemptNumber += 1

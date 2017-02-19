@@ -717,3 +717,23 @@ func PushToQueue(_context *context.Context, manifest *models.DPNIngestManifest, 
 		SaveWorkItemState(_context, manifest, activeSummary)
 	}
 }
+
+// EnsureItemIsMarkedComplete makes sure a stored replication is marked
+// as complete in the DPNWorkItems table. Normally, the workers handle
+// this, but in some cases, a previous store attempt may have succeeded
+// and then failed to update the DPNWorkItems table. That's usually the
+// result of a message timeout or restarting a service.
+func EnsureItemIsMarkedComplete(_context *context.Context, manifest *models.ReplicationManifest) {
+	if manifest.ReplicationTransfer.Stored == false {
+		panic("Don't call HandleCompletedReplication unless the bag has been stored!")
+	}
+	if manifest.DPNWorkItem.CompletedAt.IsZero() {
+		now := time.Now().UTC()
+		manifest.DPNWorkItem.CompletedAt = &now
+		SaveDPNWorkItemState(_context, manifest, manifest.CopySummary)
+	}
+	_context.MessageLog.Info("Message %s: replication %s (bag %s) was "+
+		"already stored on a prior attempt.", string(manifest.NsqMessage.Body),
+		manifest.ReplicationTransfer.ReplicationId,
+		manifest.ReplicationTransfer.Bag)
+}
