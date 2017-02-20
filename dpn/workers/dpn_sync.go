@@ -532,6 +532,10 @@ func (dpnSync *DPNSync) SyncFixities(remoteNode *models.Node) {
 func (dpnSync *DPNSync) syncFixities(fixities []*models.FixityCheck, result *models.SyncResult) {
 	log := dpnSync.Context.MessageLog
 	for _, fixity := range fixities {
+		if fixity == nil {
+			log.Debug("Skipping nil fixity record")
+			continue
+		}
 		resp := dpnSync.LocalClient.FixityCheckCreate(fixity)
 		if resp.Response.StatusCode == 409 {
 			// Do nothing. This fixity record already exists
@@ -594,6 +598,10 @@ func (dpnSync *DPNSync) SyncReplicationRequests(remoteNode *models.Node) {
 func (dpnSync *DPNSync) syncReplicationRequests(xfers []*models.ReplicationTransfer, result *models.SyncResult) {
 	log := dpnSync.Context.MessageLog
 	for _, xfer := range xfers {
+		if xfer == nil {
+			log.Debug("Skipping nil replication transfer record")
+			continue
+		}
 		log.Debug("Processing replication %s from %s (bag %s)", xfer.ReplicationId,
 			xfer.FromNode, xfer.Bag)
 		resp := dpnSync.LocalClient.ReplicationTransferGet(xfer.ReplicationId)
@@ -672,6 +680,10 @@ func (dpnSync *DPNSync) SyncRestoreRequests(remoteNode *models.Node) {
 func (dpnSync *DPNSync) syncRestoreRequests(xfers []*models.RestoreTransfer, result *models.SyncResult) {
 	log := dpnSync.Context.MessageLog
 	for _, xfer := range xfers {
+		if xfer == nil {
+			log.Debug("Skipping nil restore transfer record")
+			continue
+		}
 		log.Debug("Processing restore %s from %s (bag %s)", xfer.RestoreId,
 			xfer.FromNode, xfer.Bag)
 		resp := dpnSync.LocalClient.RestoreTransferGet(xfer.RestoreId)
