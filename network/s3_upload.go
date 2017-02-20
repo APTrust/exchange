@@ -97,14 +97,20 @@ func (client *S3Upload) Send(reader io.Reader, size int64) {
 	client.UploadInput.Body = reader
 	uploader := s3manager.NewUploader(_session)
 
+	// Limit concurrency on large chunk size, because it looks
+	// like the AWS uploader reads the entire chunk into memory before
+	// sending it.
 	if size < s3manager.MinUploadPartSize {
-		uploader.PartSize = s3manager.MinUploadPartSize // 5MV  -> Max upload ~ 50GB
+		uploader.PartSize = s3manager.MinUploadPartSize // 5MB  -> Max upload ~ 50GB
 	} else if size >= (s3manager.MinUploadPartSize*100) && size < (s3manager.MinUploadPartSize*1000) {
 		uploader.PartSize = 128 * 1024 * 1024 // 128MB chunks   -> Max upload ~  1TB
+		uploader.Concurrency = 2
 	} else if size >= (s3manager.MinUploadPartSize*1000) && size < (s3manager.MinUploadPartSize*10000) {
 		uploader.PartSize = 512 * 1024 * 1024 // 512MB chunks   -> Max upload ~  5TB
+		uploader.Concurrency = 1
 	} else {
-		uploader.PartSize = 1536 * 1024 * 1024 // 1536MB chunks -> Max upload ~ 15TB
+		uploader.PartSize = 1024 * 1024 * 1024 // 1024MB chunks -> Max upload ~ 10TB
+		uploader.Concurrency = 1
 	}
 	client.chunkSize = uploader.PartSize
 
