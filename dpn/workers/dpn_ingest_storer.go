@@ -140,7 +140,7 @@ func (storer *DPNIngestStorer) copyToLongTermStorage(manifest *models.DPNIngestM
 			manifest.LocalTarFile, err)
 		return
 	}
-	upload.Send(reader)
+	upload.Send(reader, int64(manifest.DPNBag.Size))
 	if upload.ErrorMessage != "" {
 		manifest.StoreSummary.AddError("Error uploading tar file %s: %s",
 			manifest.LocalTarFile, upload.ErrorMessage)

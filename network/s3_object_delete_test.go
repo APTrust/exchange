@@ -62,7 +62,12 @@ func upload(t *testing.T, key string) error {
 	upload.AddMetadata("testdata", "THIS IS DELETABLE TEST DATA")
 	file, err := os.Open("../testdata/unit_test_bags/virginia.edu.uva-lib_2278801.tar")
 	require.Nil(t, err)
-	upload.Send(file)
+	size := int64(1 * 1024 * 1024)
+	stat, err := file.Stat()
+	if stat != nil {
+		size = stat.Size()
+	}
+	upload.Send(file, size)
 	if upload.ErrorMessage != "" {
 		return fmt.Errorf(upload.ErrorMessage)
 	}

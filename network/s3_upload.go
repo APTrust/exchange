@@ -32,6 +32,7 @@ type S3Upload struct {
 	UploadInput  *s3manager.UploadInput
 	Response     *s3manager.UploadOutput
 	session      *session.Session
+	chunkSize    int64
 }
 
 // Creates a new S3 upload object using the s3Manager.Uploader described at
@@ -88,17 +89,33 @@ func (client *S3Upload) AddMetadata(key, value string) {
 // Upload a file to S3. If ErrorMessage == "", the upload succeeded.
 // Check S3Upload.Response.Localtion for the item's S3 URL.
 // Caller is responsible for closing the reader.
-func (client *S3Upload) Send(reader io.Reader) {
+func (client *S3Upload) Send(reader io.Reader, size int64) {
 	_session := client.GetSession()
 	if _session == nil {
 		return
 	}
 	client.UploadInput.Body = reader
 	uploader := s3manager.NewUploader(_session)
+
+	if size < s3manager.MinUploadPartSize {
+		uploader.PartSize = s3manager.MinUploadPartSize // 5MV  -> Max upload ~ 50GB
+	} else if size >= (s3manager.MinUploadPartSize*100) && size < (s3manager.MinUploadPartSize*1000) {
+		uploader.PartSize = 128 * 1024 * 1024 // 128MB chunks   -> Max upload ~  1TB
+	} else if size >= (s3manager.MinUploadPartSize*1000) && size < (s3manager.MinUploadPartSize*10000) {
+		uploader.PartSize = 512 * 1024 * 1024 // 512MB chunks   -> Max upload ~  5TB
+	} else {
+		uploader.PartSize = 1536 * 1024 * 1024 // 1536MB chunks -> Max upload ~ 15TB
+	}
+	client.chunkSize = uploader.PartSize
+
 	uploader.LeavePartsOnError = false // we have to pay for abandoned parts
 	var err error
 	client.Response, err = uploader.Upload(client.UploadInput)
 	if err != nil {
 		client.ErrorMessage = err.Error()
 	}
+}
+
+func (client *S3Upload) ChunkSize() int64 {
+	return client.chunkSize
 }

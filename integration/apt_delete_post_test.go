@@ -43,9 +43,11 @@ func TestDeleteResults(t *testing.T) {
 	params.Set("page", "1")
 	params.Set("per_page", "100")
 	resp := _context.PharosClient.PremisEventList(params)
+
+	// 7 events: 6 files, plus one for the object itself.
 	require.Nil(t, resp.Error)
 	events := resp.PremisEvents()
-	assert.Equal(t, 6, len(events))
+	assert.Equal(t, 7, len(events))
 
 	maxKeys := int64(10)
 	s3Client := network.NewS3ObjectList(
@@ -57,7 +59,11 @@ func TestDeleteResults(t *testing.T) {
 	// Make sure files don't exist in S3
 	for _, event := range events {
 		// Find the UUID for this file. That's the storage key
-		// for S3 and Glacier.
+		// for S3 and Glacier. But ignore the object-level delete
+		// event, because that's not associated with any file.
+		if event.GenericFileIdentifier == "" {
+			continue
+		}
 		resp := _context.PharosClient.GenericFileGet(event.GenericFileIdentifier, false)
 		require.Nil(t, resp.Error)
 		gf := resp.GenericFile()

@@ -59,7 +59,7 @@ func TestS3UploadBadFile(t *testing.T) {
 		"application/tar",
 	)
 	file, _ := os.Open("file/does/not/exist.tar")
-	upload.Send(file)
+	upload.Send(file, int64(500000))
 	assert.True(t, strings.Contains(upload.ErrorMessage, "invalid argument"))
 }
 
@@ -80,6 +80,11 @@ func TestS3UploadGoodFile(t *testing.T) {
 	upload.AddMetadata("sha256", "FAKE-TEST-SHA256")
 	file, err := os.Open("../testdata/unit_test_bags/virginia.edu.uva-lib_2278801.tar")
 	require.Nil(t, err)
-	upload.Send(file)
+	size := int64(1 * 1024 * 1024)
+	stat, err := file.Stat()
+	if stat != nil {
+		size = stat.Size()
+	}
+	upload.Send(file, size)
 	assert.Equal(t, "", upload.ErrorMessage)
 }

@@ -404,7 +404,9 @@ func (storer *APTStorer) copyToLongTermStorage(storageSummary *models.StorageSum
 			if readCloser != nil && tarFileIterator != nil {
 				defer readCloser.Close()
 				defer tarFileIterator.Close()
-				uploader.Send(readCloser)
+				uploader.Send(readCloser, gf.Size)
+				storer.Context.MessageLog.Info("Upload chunk size for %s was %d",
+					gf.Identifier, uploader.ChunkSize())
 				if uploader.ErrorMessage == "" {
 					storer.Context.MessageLog.Info("Stored %s in %s after %d attempts",
 						gf.Identifier, sendWhere, attemptNumber)
