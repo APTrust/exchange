@@ -84,16 +84,6 @@ func cleanDirectory(_context *context.Context, dpnClient *network.DPNRestClient,
 			_context.MessageLog.Info("Deleting %s: %d successful replications",
 				tarfile, len(successfulReplications))
 			removeFile(_context, tarfile)
-			// ------------------------------------------------------------------------
-			// Skip this for now. We're linking the entire /home/dpn.*/outbound dirs
-			// to the DPN staging dir. If there are no problems with that, delete
-			// this whole block of commented code.
-			// ------------------------------------------------------------------------
-			// for _, xfer := range successfulReplications {
-			// 	symlink := fmt.Sprintf("%s/dpn.%s/outbound/%s.tar",
-			// 		_context.Config.DPN.RemoteNodeHomeDirectory, xfer.ToNode, bagUUID)
-			// 	removeFile(_context, symlink)
-			// }
 		} else {
 			_context.MessageLog.Info("Leaving %s: only %d successful replications so far",
 				tarfile, len(successfulReplications))
@@ -129,7 +119,7 @@ once the items have been replicated to the minimum number of required
 nodes. The number of required nodes is defined in the config file,
 under DPN.ReplicateToNumNodes.
 
-Usage: apt_cleanup -config=<path to config file>
+Usage: dpn_cleanup -config=<path to config file>
 
 Param -config is required. It can be an absolute path, or a path in the format
 config/env.json, where env is dev, test, demo, integration or production.
