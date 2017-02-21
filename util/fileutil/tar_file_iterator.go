@@ -61,6 +61,8 @@ func (iter *TarFileIterator) Next() (io.ReadCloser, *FileSummary, error) {
 	// of whatever file the current header describes.
 	tarReadCloser := TarReadCloser{
 		tarReader: iter.tarReader,
+		size:      header.Size,
+		index:     0,
 	}
 	return tarReadCloser, fs, nil
 }
@@ -127,6 +129,8 @@ func (iter *TarFileIterator) Close() {
 // TarReaderCloser implements the io.ReadCloser interface.
 type TarReadCloser struct {
 	tarReader *tar.Reader
+	size      int64
+	index     int64
 }
 
 // Read reads bytes into buffer p, returning number of bytes read
@@ -139,4 +143,53 @@ func (tarReadCloser TarReadCloser) Read(p []byte) (int, error) {
 // a file and does not need to be closed.
 func (tarReadCloser TarReadCloser) Close() error {
 	return nil // noop
+}
+
+// TarReadSeekCloser is a late addition that had to be worked
+// in without too much disruption. Hence it duplicates much
+// of TarReadCloser. This is used in a hack in workers/apt_storer.
+type TarReadSeekCloser struct {
+	tarReader *tar.Reader
+	size      int64
+	index     int64
+}
+
+func NewTarReadSeekCloser(t TarReadCloser) TarReadSeekCloser {
+	return TarReadSeekCloser{
+		tarReader: t.tarReader,
+		size:      t.size,
+		index:     t.index,
+	}
+}
+
+// Read reads bytes into buffer p, returning number of bytes read
+// and an error, if there was one.
+func (t TarReadSeekCloser) Read(p []byte) (int, error) {
+	return t.tarReader.Read(p)
+}
+
+// Close is a no-op that pretends to close something that is not
+// a file and does not need to be closed.
+func (t TarReadSeekCloser) Close() error {
+	return nil // noop
+}
+
+// Seek to specified position.
+func (t TarReadSeekCloser) Seek(offset int64, whence int) (int64, error) {
+	var abs int64
+	switch whence {
+	case io.SeekStart:
+		abs = offset
+	case io.SeekCurrent:
+		abs = t.index + offset
+	case io.SeekEnd:
+		abs = t.size + offset
+	default:
+		return 0, fmt.Errorf("Seek: invalid whence")
+	}
+	if abs < 0 {
+		return 0, fmt.Errorf("Seek: negative position")
+	}
+	t.index = abs
+	return abs, nil
 }

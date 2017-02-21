@@ -404,7 +404,9 @@ func (storer *APTStorer) copyToLongTermStorage(storageSummary *models.StorageSum
 			if readCloser != nil && tarFileIterator != nil {
 				defer readCloser.Close()
 				defer tarFileIterator.Close()
-				uploader.Send(readCloser, gf.Size)
+				// HACK to give Amazon's S3 uploader a Seeker, so it doesn't
+				// try to read the entire file into memory at once.
+				uploader.Send(fileutil.NewTarReadSeekCloser(readCloser.(fileutil.TarReadCloser)), gf.Size)
 				storer.Context.MessageLog.Info("Upload chunk size for %s was %d",
 					gf.Identifier, uploader.ChunkSize())
 				if uploader.ErrorMessage == "" {
