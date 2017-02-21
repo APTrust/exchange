@@ -9,6 +9,7 @@ import (
 	"github.com/APTrust/exchange/util/fileutil"
 	"github.com/APTrust/exchange/validation"
 	"github.com/nsqio/go-nsq"
+	"os"
 	"strings"
 	"time"
 )
@@ -74,6 +75,29 @@ func (fetcher *APTFetcher) HandleMessage(message *nsq.Message) error {
 			ingestState.WorkItem.Name, ingestState.WorkItem.Node,
 			ingestState.WorkItem.Pid, ingestState.WorkItem.UpdatedAt)
 		message.Finish()
+		return nil
+	}
+
+	if fileutil.FileExists(ingestState.IngestManifest.Object.IngestTarFilePath) {
+		stat, err := os.Stat(ingestState.IngestManifest.Object.IngestTarFilePath)
+		if err == nil && stat != nil && stat.Size() == ingestState.WorkItem.Size {
+			fetcher.Context.MessageLog.Info("Bag %s is already on disk and appears "+
+				"to be complete.", ingestState.WorkItem.Bucket,
+				ingestState.WorkItem.Name)
+			if ingestState.IngestManifest.ValidateResult.Attempted == true &&
+				ingestState.IngestManifest.ValidateResult.FinishedAt.IsZero() == false &&
+				ingestState.IngestManifest.ValidateResult.HasErrors() == false &&
+				len(ingestState.IngestManifest.Object.GenericFiles) > 1 {
+				fetcher.Context.MessageLog.Info("Bag %s has already been validated. "+
+					"Now it's going to the cleanup channel.",
+					ingestState.WorkItem.Bucket, ingestState.WorkItem.Name)
+				fetcher.CleanupChannel <- ingestState
+			} else {
+				fetcher.Context.MessageLog.Info("Bag %s is going to the validation channel.",
+					ingestState.WorkItem.Bucket, ingestState.WorkItem.Name)
+				fetcher.ValidationChannel <- ingestState
+			}
+		}
 		return nil
 	}
 
