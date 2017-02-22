@@ -90,51 +90,15 @@ func (client *S3Upload) AddMetadata(key, value string) {
 // Upload a file to S3. If ErrorMessage == "", the upload succeeded.
 // Check S3Upload.Response.Localtion for the item's S3 URL.
 // Caller is responsible for closing the reader.
-func (client *S3Upload) Send(reader io.ReadSeeker, size int64) {
+func (client *S3Upload) Send(reader io.Reader, size int64) {
 	_session := client.GetSession()
 	if _session == nil {
 		return
 	}
+	uploader := s3manager.NewUploader(_session)
 	client.UploadInput.Body = reader
-	client.partSize = s3manager.MinUploadPartSize
-	client.concurrency = 1
-
-	// Limit concurrency on large chunk size, because it looks
-	// like the AWS uploader reads the entire chunk into memory before
-	// sending it.
-	if size < s3manager.MinUploadPartSize {
-		client.partSize = s3manager.MinUploadPartSize // 5MB  -> Max upload ~ 50GB
-		client.concurrency = 5
-	} else if size >= (s3manager.MinUploadPartSize*100) && size < (s3manager.MinUploadPartSize*1000) {
-		client.partSize = 128 * 1024 * 1024 // 128MB chunks   -> Max upload ~  1TB
-		client.concurrency = 2
-	} else if size >= (s3manager.MinUploadPartSize*1000) && size < (s3manager.MinUploadPartSize*10000) {
-		client.partSize = 512 * 1024 * 1024 // 512MB chunks   -> Max upload ~  5TB
-		client.concurrency = 1              // Low concurrency because uploader reads chunks into memory
-	} else {
-		client.partSize = 1024 * 1024 * 1024 // 1GB chunks -> Max upload ~ 10TB
-		client.concurrency = 1               // Low concurrency because uploader reads chunks into memory
-	}
-
-	// WTF, Amazon? None of these settings work as documented.
-	// uploader.PartSize = client.partSize
-	// uploader.Concurrency = client.concurrency
-	// uploader.LeavePartsOnError = false // we have to pay for abandoned parts
-
-	uploader := s3manager.NewUploader(_session, func(u *s3manager.Uploader) {
-		u.PartSize = client.partSize
-		u.Concurrency = client.concurrency
-		u.LeavePartsOnError = false
-	})
-
 	var err error
 	client.Response, err = uploader.Upload(client.UploadInput)
-	// client.Response, err = uploader.Upload(client.UploadInput, func(u *s3manager.Uploader) {
-	// 	u.PartSize = client.partSize
-	// 	u.Concurrency = client.concurrency
-	// 	u.LeavePartsOnError = false
-	// })
-
 	if err != nil {
 		client.ErrorMessage = err.Error()
 	}
