@@ -96,8 +96,6 @@ func (client *S3Upload) Send(reader io.ReadSeeker, size int64) {
 		return
 	}
 	client.UploadInput.Body = reader
-	uploader := s3manager.NewUploader(_session)
-
 	client.partSize = s3manager.MinUploadPartSize
 	client.concurrency = 1
 
@@ -109,27 +107,33 @@ func (client *S3Upload) Send(reader io.ReadSeeker, size int64) {
 		client.concurrency = 5
 	} else if size >= (s3manager.MinUploadPartSize*100) && size < (s3manager.MinUploadPartSize*1000) {
 		client.partSize = 128 * 1024 * 1024 // 128MB chunks   -> Max upload ~  1TB
-		client.concurrency = 4
+		client.concurrency = 2
 	} else if size >= (s3manager.MinUploadPartSize*1000) && size < (s3manager.MinUploadPartSize*10000) {
 		client.partSize = 512 * 1024 * 1024 // 512MB chunks   -> Max upload ~  5TB
 		client.concurrency = 1              // Low concurrency because uploader reads chunks into memory
 	} else {
-		client.partSize = 1024 * 1024 * 1024 // 1024MB chunks -> Max upload ~ 10TB
+		client.partSize = 1024 * 1024 * 1024 // 1GB chunks -> Max upload ~ 10TB
 		client.concurrency = 1               // Low concurrency because uploader reads chunks into memory
 	}
 
 	// WTF, Amazon? None of these settings work as documented.
-	uploader.PartSize = client.partSize
-	uploader.Concurrency = client.concurrency
-	uploader.LeavePartsOnError = false // we have to pay for abandoned parts
+	// uploader.PartSize = client.partSize
+	// uploader.Concurrency = client.concurrency
+	// uploader.LeavePartsOnError = false // we have to pay for abandoned parts
 
-	var err error
-	// client.Response, err = uploader.Upload(client.UploadInput)
-	client.Response, err = uploader.Upload(client.UploadInput, func(u *s3manager.Uploader) {
+	uploader := s3manager.NewUploader(_session, func(u *s3manager.Uploader) {
 		u.PartSize = client.partSize
 		u.Concurrency = client.concurrency
 		u.LeavePartsOnError = false
 	})
+
+	var err error
+	client.Response, err = uploader.Upload(client.UploadInput)
+	// client.Response, err = uploader.Upload(client.UploadInput, func(u *s3manager.Uploader) {
+	// 	u.PartSize = client.partSize
+	// 	u.Concurrency = client.concurrency
+	// 	u.LeavePartsOnError = false
+	// })
 
 	if err != nil {
 		client.ErrorMessage = err.Error()
