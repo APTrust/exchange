@@ -145,7 +145,7 @@ func (storer *DPNReplicationStorer) copyToLongTermStorage(manifest *models.Repli
 		manifest.StoreSummary.AddError("Error opening reader for tar file: %v", err)
 		return
 	}
-	upload.Send(reader, int64(manifest.DPNBag.Size))
+	upload.Send(reader)
 	if upload.ErrorMessage != "" {
 		manifest.StoreSummary.AddError("Error uploading tar file: %s", upload.ErrorMessage)
 		return

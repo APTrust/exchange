@@ -90,7 +90,16 @@ func (client *S3Upload) AddMetadata(key, value string) {
 // Upload a file to S3. If ErrorMessage == "", the upload succeeded.
 // Check S3Upload.Response.Localtion for the item's S3 URL.
 // Caller is responsible for closing the reader.
-func (client *S3Upload) Send(reader io.Reader, size int64) {
+//
+// If you're sending anything larger than constants.S3LargeFileSize,
+// don't pass a tarReader into this function. Pass in a File, or
+// something that supports Seek() and ReadAt(). Otherwise, Amazon's
+// s3 upload library will be very stupid and read ALL of the buffered
+// chunks into memory at once. (Seriously, what's the point of buffering
+// and chunking if you do that?) That causes the worker process to
+// crash due to lack of memory. (Esp. when we're dealing with 1TB files.)
+// See apt_storer for an example.
+func (client *S3Upload) Send(reader io.Reader) {
 	_session := client.GetSession()
 	if _session == nil {
 		return

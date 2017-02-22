@@ -11,6 +11,8 @@ import (
 	"github.com/nsqio/go-nsq"
 	"io"
 	"net/url"
+	"os"
+	"path/filepath"
 	"strings"
 	"sync"
 	"time"
@@ -404,9 +406,46 @@ func (storer *APTStorer) copyToLongTermStorage(storageSummary *models.StorageSum
 			if readCloser != nil && tarFileIterator != nil {
 				defer readCloser.Close()
 				defer tarFileIterator.Close()
+
+				// Handle large files. Amazon's moronic uploader will read the
+				// entire file into memory, unless we give it a reader that
+				// supports both Seek() and ReadAt(). We cannot convert a tarReader
+				// to do that, because the underlying reader doesn't support
+				// ReadAt(). So we have to copy the entire file to disk and then
+				// pass the uploader a File object, which does support those
+				// methods. Fun.
+				reader := readCloser
+				if gf.Size > constants.S3LargeFileSize {
+					storer.Context.MessageLog.Info("Copying file %s (size: %d) to filesystem "+
+						"before uploading.", gf.Identifier, gf.Size)
+					var filePath string
+					var err error
+					reader, filePath, err = storer.getFileReader(readCloser, gf)
+					if reader != nil {
+						defer reader.Close()
+					}
+					if filePath != "" {
+						defer os.Remove(filePath)
+					}
+					if err != nil {
+						errMsg := fmt.Sprintf("Error copying '%s' from tarfile to "+
+							"filesystem at '%s' for large file upload: %v", gf.Identifier,
+							filePath, err)
+						storer.Context.MessageLog.Error(errMsg)
+						storageSummary.StoreResult.AddError(errMsg)
+						return
+					}
+				} else {
+					storer.Context.MessageLog.Info("Upload file %s (size: %d) directly "+
+						"from the tar file", gf.Identifier, gf.Size)
+				}
+
 				storer.Context.MessageLog.Info("Starting to upload file %s (size: %d)",
 					gf.Identifier, gf.Size)
-				uploader.Send(readCloser, gf.Size)
+
+				// Now do the upload
+				uploader.Send(readCloser)
+
 				storer.Context.MessageLog.Info("Uploaded chunk of %s with part size %d, concurrency %d",
 					gf.Identifier, uploader.PartSize(), uploader.Concurrency())
 				if uploader.ErrorMessage == "" {
@@ -426,6 +465,30 @@ func (storer *APTStorer) copyToLongTermStorage(storageSummary *models.StorageSum
 			}
 		}
 	}
+}
+
+// See the comment above, that begins "Handle large files."
+// We put temp files on the /mnt, not in /tmp, because they
+// may be too large for the root partition.
+func (storer *APTStorer) getFileReader(reader io.Reader, gf *models.GenericFile) (*os.File, string, error) {
+	filePath := filepath.Join(storer.Context.Config.TarDirectory, "tmp", gf.IngestUUID)
+	err := os.MkdirAll(filePath, 0755)
+	if err != nil {
+		return nil, "", fmt.Errorf("MkdirAll failed: %v", err)
+	}
+	tempFile, err := os.Create(filePath)
+	if err != nil {
+		return nil, "", fmt.Errorf("Cannot create file: %v", err)
+	}
+	_, err = io.Copy(tempFile, reader)
+	if err != nil {
+		return nil, "", fmt.Errorf("Error copying data from tar file: %v", err)
+	}
+	_, err = tempFile.Seek(0, io.SeekStart)
+	if err != nil {
+		return nil, "", fmt.Errorf("Bad seek in tempFile: %v", err)
+	}
+	return tempFile, filePath, nil
 }
 
 // Returns true if the GenericFile IngestUUID is present and looks good.

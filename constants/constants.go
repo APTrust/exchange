@@ -24,7 +24,14 @@ var PosixFileNamePattern = regexp.MustCompile("^[A-Za-z0-9\\._\\-]+$")
 // tabs, newlines, carriage returns or vertical tabs.
 var PermissivePattern = regexp.MustCompile("[^\\a\\f\\t\\n\\r\\v]+")
 
+// APTrustSystemUser is the APTrust system user in Pharos.
 const APTrustSystemUser = "system@aptrust.org"
+
+// S3LargeFileSize is the largest file size we'll allow Amazon's S3
+// chunked uploader to handle. If a file is larger than this, we'll
+// chunk it ourselves, so that jackass AWS library doesn't try to read
+// the whole thing into memory.
+const S3LargeFileSize = 100 * 1024 * 1024 // 100MB
 
 const (
 	APTrustNamespace        = "urn:mace:aptrust.org"

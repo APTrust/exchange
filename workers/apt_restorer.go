@@ -407,12 +407,7 @@ func (restorer *APTRestorer) uploadBag(restoreState *models.RestoreState) {
 	}
 
 	// Send the tarred bag to the depositor's restoration bucket.
-	size := int64(1 * 1024 * 1024)
-	stat, err := reader.Stat()
-	if stat != nil {
-		size = stat.Size()
-	}
-	upload.Send(reader, size)
+	upload.Send(reader)
 	if upload.ErrorMessage != "" {
 		restoreState.CopySummary.AddError("Error uploading tar file %s: %s",
 			restoreState.LocalTarFile, upload.ErrorMessage)
