@@ -1,14 +1,12 @@
 language: go
 sudo: required
 go:
-- 1.5
-- 1.6
+- 1.7
 - tip
 addons:
   apt:
     packages:
     - libmagic-dev
-env: GO15VENDOREXPERIMENT=1
 install:
 - go get -v github.com/Masterminds/glide
 - cd $GOPATH/src/github.com/Masterminds/glide && go install && cd -
