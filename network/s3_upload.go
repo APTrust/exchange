@@ -118,6 +118,9 @@ func (client *S3Upload) Send(reader io.ReadSeeker, size int64) {
 		client.concurrency = 1               // Low concurrency because uploader reads chunks into memory
 	}
 
+	// WTF, Amazon? None of these settings work as documented.
+	uploader.PartSize = client.partSize
+	uploader.Concurrency = client.concurrency
 	uploader.LeavePartsOnError = false // we have to pay for abandoned parts
 
 	var err error

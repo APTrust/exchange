@@ -404,6 +404,8 @@ func (storer *APTStorer) copyToLongTermStorage(storageSummary *models.StorageSum
 			if readCloser != nil && tarFileIterator != nil {
 				defer readCloser.Close()
 				defer tarFileIterator.Close()
+				storer.Context.MessageLog.Info("Starting to upload file %s (size: %d)",
+					gf.Identifier, gf.Size)
 				// HACK to give Amazon's S3 uploader a Seeker, so it doesn't
 				// try to read the entire file into memory at once.
 				uploader.Send(fileutil.NewTarReadSeekCloser(readCloser.(fileutil.TarReadCloser)), gf.Size)
