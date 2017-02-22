@@ -420,6 +420,7 @@ func (storer *APTStorer) copyToLongTermStorage(storageSummary *models.StorageSum
 						"before uploading.", gf.Identifier, gf.Size)
 					var filePath string
 					var err error
+					// Replace the reader with a File, if we can.
 					reader, filePath, err = storer.getFileReader(readCloser, gf)
 					if reader != nil {
 						defer reader.Close()
@@ -435,6 +436,8 @@ func (storer *APTStorer) copyToLongTermStorage(storageSummary *models.StorageSum
 						storageSummary.StoreResult.AddError(errMsg)
 						return
 					}
+					storer.Context.MessageLog.Info("File %s is being written temporarily to %s"+
+						gf.Identifier, filePath)
 				} else {
 					storer.Context.MessageLog.Info("Upload file %s (size: %d) directly "+
 						"from the tar file", gf.Identifier, gf.Size)
@@ -444,7 +447,7 @@ func (storer *APTStorer) copyToLongTermStorage(storageSummary *models.StorageSum
 					gf.Identifier, gf.Size)
 
 				// Now do the upload
-				uploader.Send(readCloser)
+				uploader.Send(reader)
 
 				storer.Context.MessageLog.Info("Uploaded chunk of %s with part size %d, concurrency %d",
 					gf.Identifier, uploader.PartSize(), uploader.Concurrency())
