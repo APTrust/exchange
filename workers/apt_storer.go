@@ -472,7 +472,7 @@ func (storer *APTStorer) copyToLongTermStorage(storageSummary *models.StorageSum
 // may be too large for the root partition.
 func (storer *APTStorer) getFileReader(reader io.Reader, gf *models.GenericFile) (*os.File, string, error) {
 	filePath := filepath.Join(storer.Context.Config.TarDirectory, "tmp", gf.IngestUUID)
-	err := os.MkdirAll(filePath, 0755)
+	err := os.MkdirAll(filepath.Dir(filePath), 0755)
 	if err != nil {
 		return nil, "", fmt.Errorf("MkdirAll failed: %v", err)
 	}
