@@ -394,104 +394,148 @@ func (storer *APTStorer) copyToLongTermStorage(storageSummary *models.StorageSum
 	}
 	storer.Context.MessageLog.Info("Sending %s to %s", gf.Identifier, sendWhere)
 	for attemptNumber := 1; attemptNumber <= MAX_UPLOAD_ATTEMPTS; attemptNumber++ {
-		uploader := storer.initUploader(storageSummary, sendWhere)
-		if uploader == nil {
-			msg := "S3 uploader is nil. Cannot proceed."
-			storageSummary.StoreResult.AddError(msg)
-			storer.Context.MessageLog.Error(msg)
-			return // We have some config problem here. Stop trying.
+		storer.doUpload(storageSummary, sendWhere, attemptNumber)
+		// Stop trying if storage succeeded
+		if sendWhere == "s3" && gf.IngestStoredAt.IsZero() == false {
+			break
+		} else if sendWhere == "glacier" && gf.IngestReplicatedAt.IsZero() == false {
+			break
 		}
-		if storer.assertRequiredMetadata(storageSummary, uploader) {
-			tarFileIterator, readCloser := storer.getReadCloser(storageSummary)
-			if readCloser != nil && tarFileIterator != nil {
-				defer readCloser.Close()
-				defer tarFileIterator.Close()
+	}
+}
 
-				// Handle large files. Amazon's moronic uploader will read the
-				// entire file into memory, unless we give it a reader that
-				// supports both Seek() and ReadAt(). We cannot convert a tarReader
-				// to do that, because the underlying reader doesn't support
-				// ReadAt(). So we have to copy the entire file to disk and then
-				// pass the uploader a File object, which does support those
-				// methods. Fun.
-				reader := readCloser
-				if gf.Size > constants.S3LargeFileSize {
-					storer.Context.MessageLog.Info("Copying file %s (size: %d) to filesystem "+
-						"before uploading.", gf.Identifier, gf.Size)
-					var filePath string
-					var err error
-					// Replace the reader with a File, if we can.
-					reader, filePath, err = storer.getFileReader(readCloser, gf)
-					if reader != nil {
-						defer reader.Close()
-					}
-					if filePath != "" {
-						defer os.Remove(filePath)
-					}
-					if err != nil {
-						errMsg := fmt.Sprintf("Error copying '%s' from tarfile to "+
-							"filesystem at '%s' for large file upload: %v", gf.Identifier,
-							filePath, err)
-						storer.Context.MessageLog.Error(errMsg)
-						storageSummary.StoreResult.AddError(errMsg)
-						return
-					}
-					storer.Context.MessageLog.Info("File %s is being written temporarily to %s"+
-						gf.Identifier, filePath)
-				} else {
-					storer.Context.MessageLog.Info("Upload file %s (size: %d) directly "+
-						"from the tar file", gf.Identifier, gf.Size)
-				}
+func (storer *APTStorer) doUpload(storageSummary *models.StorageSummary, sendWhere string, attemptNumber int) {
+	gf := storageSummary.GenericFile
+	uploader := storer.initUploader(storageSummary, sendWhere)
+	if uploader == nil {
+		msg := "S3 uploader is nil. Cannot proceed."
+		storageSummary.StoreResult.AddError(msg)
+		storer.Context.MessageLog.Error(msg)
+		return // We have some config problem here. Stop trying.
+	}
+	if !storer.assertRequiredMetadata(storageSummary, uploader) {
+		return
+	}
+	tarFileIterator, readCloser := storer.getReadCloser(storageSummary)
+	if readCloser != nil && tarFileIterator != nil {
+		defer readCloser.Close()
+		defer tarFileIterator.Close()
+		defer storer.cleanupTempFile(gf)
 
-				storer.Context.MessageLog.Info("Starting to upload file %s (size: %d)",
-					gf.Identifier, gf.Size)
+		// Handle large files. Amazon's moronic uploader will read the
+		// entire file into memory, unless we give it a reader that
+		// supports both Seek() and ReadAt(). We cannot convert a tarReader
+		// to do that, because the underlying reader doesn't support
+		// ReadAt(). So we have to copy the entire file to disk and then
+		// pass the uploader a File object, which does support those
+		// methods. Fun.
+		reader := readCloser
+		if gf.Size > constants.S3LargeFileSize {
+			reader, err := storer.getFileReader(readCloser, gf, attemptNumber)
+			if err != nil {
+				errMsg := fmt.Sprintf("Error copying '%s' from tarfile to "+
+					"filesystem at '%s' for large file upload: %v", gf.Identifier,
+					storer.getTempFilePath(gf), err)
+				storer.Context.MessageLog.Error(errMsg)
+				storageSummary.StoreResult.AddError(errMsg)
+				return
+			}
+			defer reader.Close()
+		} else {
+			storer.Context.MessageLog.Info("Upload file %s (size: %d) directly "+
+				"from the tar file", gf.Identifier, gf.Size)
+		}
 
-				// Now do the upload
-				uploader.Send(reader)
+		storer.Context.MessageLog.Info("Starting to upload file %s (size: %d)",
+			gf.Identifier, gf.Size)
 
-				storer.Context.MessageLog.Info("Uploaded chunk of %s with part size %d, concurrency %d",
-					gf.Identifier, uploader.PartSize(), uploader.Concurrency())
-				if uploader.ErrorMessage == "" {
-					storer.Context.MessageLog.Info("Stored %s in %s after %d attempts",
-						gf.Identifier, sendWhere, attemptNumber)
-					storer.markFileAsStored(gf, sendWhere, uploader.Response.Location)
-					return // Upload succeeded
-				} else {
-					storer.Context.MessageLog.Error("Upload error for %s: %s",
-						gf.Identifier, uploader.ErrorMessage)
-					if attemptNumber == MAX_UPLOAD_ATTEMPTS {
-						storageSummary.StoreResult.AddError(uploader.ErrorMessage)
-					}
-				}
-			} else {
-				storer.Context.MessageLog.Error("Could not get reader from tar file.")
+		// Now do the upload using the tar file reader for smaller files
+		// and the File reader for very large files.
+		uploader.Send(reader)
+
+		if uploader.ErrorMessage == "" {
+			storer.Context.MessageLog.Info("Stored %s in %s after %d attempts",
+				gf.Identifier, sendWhere, attemptNumber)
+			storer.markFileAsStored(gf, sendWhere, uploader.Response.Location)
+			return // Upload succeeded
+		} else {
+			storer.Context.MessageLog.Error("Upload error for %s: %s",
+				gf.Identifier, uploader.ErrorMessage)
+			if attemptNumber == MAX_UPLOAD_ATTEMPTS {
+				storageSummary.StoreResult.AddError(uploader.ErrorMessage)
 			}
 		}
+	} else {
+		storer.Context.MessageLog.Error("Could not get reader from tar file.")
 	}
 }
 
 // See the comment above, that begins "Handle large files."
 // We put temp files on the /mnt, not in /tmp, because they
 // may be too large for the root partition.
-func (storer *APTStorer) getFileReader(reader io.Reader, gf *models.GenericFile) (*os.File, string, error) {
-	filePath := filepath.Join(storer.Context.Config.TarDirectory, "tmp", gf.IngestUUID)
+func (storer *APTStorer) getFileReader(reader io.Reader, gf *models.GenericFile, attemptNumber int) (*os.File, error) {
+	filePath := storer.getTempFilePath(gf)
+	// We may have created this file already for the S3 upload,
+	// and now we're doing the Glacier upload. These files can
+	// be very large (1TB+), so we don't want to erase and rewrite
+	// them.
+	if fileutil.FileExists(filePath) {
+		stat, _ := os.Stat(filePath)
+		if stat != nil && stat.Size() == gf.Size {
+			tempFile, err := os.Open(filePath)
+			if err == nil {
+				storer.Context.MessageLog.Info("Using existing temp file at %s "+
+					"(Attempt %d)", filePath, attemptNumber)
+				return tempFile, nil
+			}
+		}
+	}
+
+	storer.Context.MessageLog.Info("Copying file %s (size: %d) to %s "+
+		"before uploading. (Attempt %d)", gf.Identifier, gf.Size, filePath,
+		attemptNumber)
+
 	err := os.MkdirAll(filepath.Dir(filePath), 0755)
 	if err != nil {
-		return nil, "", fmt.Errorf("MkdirAll failed: %v", err)
+		return nil, fmt.Errorf("MkdirAll failed: %v", err)
 	}
 	tempFile, err := os.Create(filePath)
 	if err != nil {
-		return nil, "", fmt.Errorf("Cannot create file: %v", err)
+		return nil, fmt.Errorf("Cannot create file: %v", err)
 	}
 	_, err = io.Copy(tempFile, reader)
 	if err != nil {
-		return nil, "", fmt.Errorf("Error copying data from tar file: %v", err)
+		return nil, fmt.Errorf("Error copying data from tar file: %v", err)
 	}
 	_, err = tempFile.Seek(0, io.SeekStart)
 	if err != nil {
-		return nil, "", fmt.Errorf("Bad seek in tempFile: %v", err)
+		return nil, fmt.Errorf("Bad seek in tempFile: %v", err)
 	}
-	return tempFile, filePath, nil
+	return tempFile, nil
+}
+
+func (storer *APTStorer) getTempFilePath(gf *models.GenericFile) string {
+	return filepath.Join(storer.Context.Config.TarDirectory, "tmp", gf.IngestUUID)
+}
+
+func (storer *APTStorer) cleanupTempFile(gf *models.GenericFile) {
+	tempFilePath := storer.getTempFilePath(gf)
+	// >95% of of files are smaller than constants.S3LargeFileSize
+	// so we never even extracted them to disk
+	if !fileutil.FileExists(tempFilePath) {
+		return
+	}
+	// Delete the file only if it's been copied to both S3 and Glacier
+	fileIsStored := !gf.IngestStoredAt.IsZero()
+	fileIsReplicated := !gf.IngestReplicatedAt.IsZero()
+	looksSafeToDelete := fileutil.LooksSafeToDelete(tempFilePath, 12, 3)
+
+	if fileIsStored && fileIsReplicated && looksSafeToDelete {
+		storer.Context.MessageLog.Info("Deleting temp file %s: "+
+			"file %s has been stored and replicated",
+			tempFilePath, gf.Identifier)
+		os.Remove(tempFilePath)
+	}
 }
 
 // Returns true if the GenericFile IngestUUID is present and looks good.
