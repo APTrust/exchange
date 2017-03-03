@@ -94,6 +94,18 @@ To run integration tests, you'll need the following:
 
 Once you have all that, simply run `ruby ./scripts/test.rb --help` to see which integration tests are available and what they do. Note that integration tests are cumulative, with each test bringing the various services into the state that the next test needs to start. Currently, `./scripts/test.rb dpn_ingest` will run through all APTrust ingest and DPN ingest tests.
 
+## Building the Go applications and services
+
+You can build all of the Go applications and services with this command:
+
+`ruby ./scripts/build.rb <path to output dir>`
+
+Note that some applications build differently for Windows. For example, apt_validate
+does not try to use mime magic when built for Windows. You can specify Windows, Mac,
+or Linux builds using go build tags, e.g.:
+
+`go build -tags="windows partners" apt_validate.go`
+
 ## TODO
 
 Most of the TODOs are embedded in the code, and you can find them with this:
