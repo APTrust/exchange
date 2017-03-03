@@ -90,11 +90,9 @@ To run integration tests, you'll need the following:
 - A copy of the Pharos repo
 - Environment variables AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY set to values that can access APTrust's test buckets
 - Environment variables PHAROS_API_USER=system@aptrust.org and PHAROS_API_KEY=c3958c7b09e40af1d065020484dafa9b2a35cea0
+- A copy of the develop branch of the [dpn-server repo](https://github.com/dpn-admin/dpn-server) if you want to do DPN integration testing
 
-Once you have all that, simple run `./scripts/test.rb --help` to see which integration tests are available. Note that
-integration tests are cumulative, with each test bringing the various services into the state that the next
-test needs to start. Currently, `./scripts/test.rb dpn_store` will run through all APTrust ingest and DPN replication
-tests.
+Once you have all that, simply run `ruby ./scripts/test.rb --help` to see which integration tests are available and what they do. Note that integration tests are cumulative, with each test bringing the various services into the state that the next test needs to start. Currently, `./scripts/test.rb dpn_ingest` will run through all APTrust ingest and DPN ingest tests.
 
 ## TODO
 

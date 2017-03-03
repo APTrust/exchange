@@ -38,7 +38,7 @@ def tests
     'apt_fixity' => 'Test the APTrust fixity checking process (runs apt_restore)',
     'dpn_rest_client' => 'Test the DPN REST client against a local cluster',
     'dpn_sync' => 'Test DPN sync against a local cluster',
-    'dpn_replicate' => 'Test DPN replication',
+    'dpn_replicate' => 'Test DPN replication. Runs dpn_sync and dpn_rest_client',
     'dpn_ingest' => 'Test DPN ingest (runs apt_ingest)',
     'units' => 'Run all unit tests. Starts no external services, but does talk to S3.',
   }
@@ -74,6 +74,28 @@ and those buckets should be cleaned out periodically.
 Valid options for test_to_run include:
 
 #{tests_string}
+
+You may see sporadic failures in these tests when you have a slow
+connection to S3. One test in apt_volume_service occasionally fails,
+if other processes are writing or deleting files while the test runs.
+
+Generally, you'll want to run one of these three tests, which
+together cover everything.
+
+    - apt_fixity: runs all APTrust operations except send-to-DPN
+    - dpn_replicate: runs dpn_sync, exercises the dpn_rest_client,
+      and tests all inter-node operations.
+    - dpn_ingest: runs the APTrust send-to-DPN operations.
+
+Each of those tests may take 10 minutes or more to run. The tests
+for apt_bucket_reader, apt_queue, dpn_rest_client and dpn_sync
+run much more quickly. Use those if your changes only affect one
+of those operations.
+
+The units test usually runs in a few seconds, and only tests basic
+code units. It does not do any integration testing, except for some
+exchanges with S3.
+
 eoh
 end
 
