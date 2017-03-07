@@ -108,12 +108,14 @@ or Linux builds using go build tags, e.g.:
 
 ## TODO
 
-Most of the TODOs are embedded in the code, and you can find them with this:
+Most of the TODOs are embedded in the code, and you can find them by running this command from the project's top-level directory:
 
 ```
-grep -r TODO . --include=*.go
+grep -r TODO . --include=*.go --exclude=./vendor/*
 ```
+
+The code in the /workers directory and in the /dpn/workers directory could use some cleanup. We added a number of logical tests and logging statements to that code after APTrust 2.0 went into production. In general, the fuctions in /workers and /dpn/workers should be broken up into shorter units, and some of it should be moved out into files and/or packages that can be unit-tested.
 
 This is the list of global TODOs (not related to a specific package).
 
- Aim for ~100% test coverage. Run the above test command with the -cover option to see coverage.
+Aim for ~100% test coverage. Run the above test command with the -cover option to see coverage.
