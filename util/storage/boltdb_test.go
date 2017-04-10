@@ -20,6 +20,7 @@ func TestBoltDB(t *testing.T) {
 	require.Nil(t, err)
 	defer bolt.Close()
 
+	// Save and retrieve an object
 	obj := testutil.MakeIntellectualObject(1, 1, 1, 10)
 	err = bolt.Save("Test Object", obj)
 	require.Nil(t, err)
@@ -33,4 +34,18 @@ func TestBoltDB(t *testing.T) {
 	require.Nil(t, err)
 	require.Nil(t, nilObj)
 
+	// Save and retrieve a generic file
+	gf := testutil.MakeGenericFile(2, 2, "uc.edu/bag/data/file.json")
+
+	err = bolt.Save(gf.Identifier, gf)
+	require.Nil(t, err)
+
+	restoredFile, err := bolt.GetGenericFile(gf.Identifier)
+	require.Nil(t, err)
+	require.NotNil(t, restoredFile)
+	assert.Equal(t, gf.Identifier, restoredFile.Identifier)
+
+	nilFile, err := bolt.GetGenericFile("Nil File")
+	require.Nil(t, err)
+	require.Nil(t, nilFile)
 }
