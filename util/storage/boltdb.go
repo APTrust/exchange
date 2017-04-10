@@ -83,15 +83,20 @@ func (boltDB *BoltDB) Save(key string, value interface{}) error {
 // the specified key. This object will NOT include GenericFiles.
 // There may be tens of thousands of those, so you have to fetch
 // them individually. Param key is the IntellectualObject.Identifier.
+// If key is not found, this returns nil and no error.
 func (boltDB *BoltDB) GetIntellectualObject(key string) (*models.IntellectualObject, error) {
+	var err error
 	obj := &models.IntellectualObject{}
-	err := boltDB.db.View(func(tx *bolt.Tx) error {
+	err = boltDB.db.View(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket([]byte(DEFAULT_BUCKET))
 		value := bucket.Get([]byte(key))
-		buf := bytes.NewBuffer(value)
-		decoder := gob.NewDecoder(buf)
-		// Decode data from buf into obj
-		err := decoder.Decode(obj)
+		if len(value) > 0 {
+			buf := bytes.NewBuffer(value)
+			decoder := gob.NewDecoder(buf)
+			err = decoder.Decode(obj)
+		} else {
+			obj = nil
+		}
 		return err
 	})
 	return obj, err
@@ -99,16 +104,21 @@ func (boltDB *BoltDB) GetIntellectualObject(key string) (*models.IntellectualObj
 
 // GetGenericFile returns the GenericFile with the specified identifier.
 // The GenericFile will include checksums and events, if they are available.
-// Param key is the GenericFile.Identifier.
+// Param key is the GenericFile.Identifier. If key is not found this returns
+// nil and no error.
 func (boltDB *BoltDB) GetGenericFile(key string) (*models.GenericFile, error) {
+	var err error
 	gf := &models.GenericFile{}
-	err := boltDB.db.View(func(tx *bolt.Tx) error {
+	err = boltDB.db.View(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket([]byte(DEFAULT_BUCKET))
 		value := bucket.Get([]byte(key))
-		buf := bytes.NewBuffer(value)
-		decoder := gob.NewDecoder(buf)
-		// Decode data from buf into gf
-		err := decoder.Decode(gf)
+		if len(value) > 0 {
+			buf := bytes.NewBuffer(value)
+			decoder := gob.NewDecoder(buf)
+			err = decoder.Decode(gf)
+		} else {
+			gf = nil
+		}
 		return err
 	})
 	return gf, err
