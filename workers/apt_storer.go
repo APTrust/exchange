@@ -513,6 +513,8 @@ func (storer *APTStorer) getFileReader(reader io.Reader, gf *models.GenericFile,
 				filePath, gf.Identifier, gf.Size, measuredSize)
 			storer.Context.MessageLog.Error(err.Error())
 			return nil, err
+		} else {
+			storer.Context.MessageLog.Info("Actual measured size of %s is %d", filePath, measuredSize)
 		}
 	} else {
 		err = fmt.Errorf("Temp file for %s at %s is missing or wrong size", gf.Identifier, filePath)
