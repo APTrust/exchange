@@ -475,60 +475,99 @@ func (storer *APTStorer) doUpload(storageSummary *models.StorageSummary, sendWhe
 // We put temp files on the /mnt, not in /tmp, because they
 // may be too large for the root partition.
 func (storer *APTStorer) getFileReader(reader io.Reader, gf *models.GenericFile, attemptNumber int) (*os.File, error) {
+	var err error
+	var tempFile *os.File
 	filePath := storer.getTempFilePath(gf)
-	// We may have created this file already for the S3 upload,
-	// and now we're doing the Glacier upload. These files can
-	// be very large (1TB+), so we don't want to erase and rewrite
-	// them.
-	if fileutil.FileExists(filePath) {
-		stat, _ := os.Stat(filePath)
-		if stat != nil && stat.Size() == gf.Size {
-			tempFile, err := os.Open(filePath)
-			if err == nil {
-				storer.Context.MessageLog.Info("Using existing temp file at %s "+
-					"(Attempt %d)", filePath, attemptNumber)
-				return tempFile, nil
-			}
+	// PT #143660373: S3 zero-size file bug.
+	// We have to copy larger files from the tar archive to disk,
+	// so the AWS S3 uploader doesn't read them into memory.
+	// When creating large files on EFS, the first attempt to
+	// read them results in a zero-length read, and a zero-length
+	// file being written to S3. So here, we try copying the file
+	// to disk, closing the file handle, and re-opening it to see
+	// if we can get a reliable file reader from EFS.
+	if !fileutil.FileExists(filePath) {
+		err = storer.createTempFile(reader, gf, attemptNumber)
+		if err != nil {
+			return nil, err
 		}
 	}
+	stat, err := os.Stat(filePath)
+	if err != nil {
+		storer.Context.MessageLog.Error("Can't stat %s (%s): %v", filePath, gf.Identifier, err)
+	}
+	if stat != nil && stat.Size() == gf.Size {
+		tempFile, err = os.Open(filePath)
+		if err == nil {
+			storer.Context.MessageLog.Info("Using existing temp file at %s "+
+				"for %s (Attempt %d)", filePath, gf.Identifier, attemptNumber)
+		} else {
+			err = fmt.Errorf("Error opening %s (%s): %v", filePath, gf.Identifier, err)
+			storer.Context.MessageLog.Error(err.Error())
+			return nil, err
+		}
+		// PT #143660373: S3 zero-size file bug.
+		measuredSize := storer.getActualFileSize(tempFile, filePath)
+		if measuredSize != gf.Size {
+			err = fmt.Errorf("Wrong actual size for %s (%s). Should be %d, got %d",
+				filePath, gf.Identifier, gf.Size, measuredSize)
+			storer.Context.MessageLog.Error(err.Error())
+			return nil, err
+		}
+	} else {
+		err = fmt.Errorf("Temp file for %s at %s is missing or wrong size", gf.Identifier, filePath)
+	}
+	return tempFile, err
+}
 
+// TODO: Move this to where it can be unit tested.
+func (storer *APTStorer) createTempFile(reader io.Reader, gf *models.GenericFile, attemptNumber int) error {
+	filePath := storer.getTempFilePath(gf)
 	storer.Context.MessageLog.Info("Copying file %s (size: %d) to %s "+
 		"before uploading. (Attempt %d)", gf.Identifier, gf.Size, filePath,
 		attemptNumber)
-
 	err := os.MkdirAll(filepath.Dir(filePath), 0755)
 	if err != nil {
-		return nil, fmt.Errorf("MkdirAll failed: %v", err)
+		return fmt.Errorf("MkdirAll failed: %v", err)
 	}
-
 	// PT #143660373: S3 zero-size file bug. Lots of checks here...
 	tempFile, err := os.Create(filePath)
 	if err != nil {
-		return nil, fmt.Errorf("Cannot create file: %v", err)
+		return fmt.Errorf("Cannot create file: %v", err)
 	}
+	defer tempFile.Close()
+
 	bytesCopied, err := io.Copy(tempFile, reader)
 	if err != nil {
-		tempFile.Close()
-		return nil, fmt.Errorf("Error copying data from tar file: %v", err)
+		return fmt.Errorf("Error copying data from tar file: %v", err)
 	}
 	if bytesCopied != gf.Size {
-		tempFile.Close()
-		return nil, fmt.Errorf("Copied only %d of %d bytes for file %s", bytesCopied, gf.Size, gf.Identifier)
-	}
-	offset, err := tempFile.Seek(0, io.SeekStart)
-	if err != nil || offset != 0 {
-		return nil, fmt.Errorf("Bad seek in tempFile, offset after seek is %d: %v", offset, err)
+		return fmt.Errorf("Copied only %d of %d bytes for file %s", bytesCopied, gf.Size, gf.Identifier)
+	} else {
+		storer.Context.MessageLog.Info("Copied %d bytes for %s to %s", bytesCopied, gf.Identifier, filePath)
 	}
 	finfo, err := tempFile.Stat()
 	if err != nil {
-		return nil, fmt.Errorf("Can't stat tempFile %s at %s", gf.Identifier, filePath)
+		return fmt.Errorf("Can't stat tempFile %s at %s", gf.Identifier, filePath)
 	}
 	if finfo.Size() != gf.Size {
-		return nil, fmt.Errorf("Temp file has only %d of %d bytes for file %s",
+		return fmt.Errorf("Temp file has only %d of %d bytes for file %s",
 			finfo.Size(), gf.Size, gf.Identifier)
 	}
+	return nil
+}
 
-	return tempFile, nil
+// Read the actual number of bytes in the EFS file.
+// The AWS uploader keeps coming up with zero on the first try. Why?
+// Note that this rewinds the file to the beginning after the size check.
+func (storer *APTStorer) getActualFileSize(r io.ReadSeeker, filePath string) int64 {
+	defer r.Seek(0, io.SeekStart)
+	size, err := r.Seek(0, io.SeekEnd)
+	if err != nil {
+		storer.Context.MessageLog.Error("Error seeking through %s: %v", filePath, err)
+		return -1
+	}
+	return size
 }
 
 func (storer *APTStorer) getTempFilePath(gf *models.GenericFile) string {
