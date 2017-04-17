@@ -503,14 +503,38 @@ func (storer *APTStorer) getFileReader(reader io.Reader, gf *models.GenericFile,
 	if err != nil {
 		return nil, fmt.Errorf("Cannot create file: %v", err)
 	}
-	_, err = io.Copy(tempFile, reader)
+	bytesCopied, err := io.Copy(tempFile, reader)
 	if err != nil {
+		tempFile.Close()
 		return nil, fmt.Errorf("Error copying data from tar file: %v", err)
 	}
-	_, err = tempFile.Seek(0, io.SeekStart)
-	if err != nil {
-		return nil, fmt.Errorf("Bad seek in tempFile: %v", err)
+	if bytesCopied != gf.Size {
+		tempFile.Close()
+		return nil, fmt.Errorf("Copied only %d of %d bytes for file %s", bytesCopied, gf.Size, gf.Identifier)
 	}
+
+	// PT #143660373: S3 zero-size file bug.
+	// EFS behaves oddly. After writing a file to EFS, and then rewinding it
+	// with tempFile.Seek(0, io.SeekStart), the first read always reads zero
+	// bytes and then EOF. So instead of rewinding, let's try closing the file
+	// and reopening. Maybe the close is necessary to flush to contents
+	// to the NFS mount.
+
+	// offset, err := tempFile.Seek(0, io.SeekStart)
+	// if err != nil || offset != 0 {
+	// 	return nil, fmt.Errorf("Bad seek in tempFile, offset after seek is %d: %v", offset, err)
+	// }
+
+	tempFile.Close()
+	tempFile, err = os.Open(filePath)
+	finfo, err := tempFile.Stat()
+	if err != nil {
+		return nil, fmt.Errorf("Can't stat tempFile %s at %s", gf.Identifier, filePath)
+	}
+	if finfo.Size() != gf.Size {
+		return nil, fmt.Errorf("Temp file has only %d of %d bytes for file %s", finfo.Size(), gf.Size, gf.Identifier)
+	}
+
 	return tempFile, nil
 }
 
