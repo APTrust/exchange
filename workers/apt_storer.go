@@ -460,19 +460,19 @@ func (storer *APTStorer) doUpload(storageSummary *models.StorageSummary, sendWhe
 		// sometimes zero, sometimes 10x the actual file size.
 		s3Obj := storer.getS3FileDetail(gf.IngestUUID)
 		if s3Obj == nil {
-			errMsg := fmt.Sprintf("%s returned nothing for %s (%s)", sendWhere, gf.IngestUUID, gf.Identifier)
+			errMsg := fmt.Sprintf("%s returned nothing for %s (%s).", sendWhere, gf.IngestUUID, gf.Identifier)
 			if attemptNumber == MAX_UPLOAD_ATTEMPTS {
 				storageSummary.StoreResult.AddError(errMsg)
 			} else {
-				storer.Context.MessageLog.Warning(errMsg)
+				storer.Context.MessageLog.Warning(errMsg + ". Will retry.")
 			}
 		} else if *s3Obj.Size != gf.Size {
-			errMsg := fmt.Sprintf("%s returned size %d for %s (%s), should be %d",
+			errMsg := fmt.Sprintf("%s returned size %d for %s (%s), should be %d.",
 				sendWhere, s3Obj.Size, gf.IngestUUID, gf.Identifier, gf.Size)
 			if attemptNumber == MAX_UPLOAD_ATTEMPTS {
 				storageSummary.StoreResult.AddError(errMsg)
 			} else {
-				storer.Context.MessageLog.Warning(errMsg)
+				storer.Context.MessageLog.Warning(errMsg + " Will retry.")
 			}
 		}
 		uploadSucceeded := (s3Obj != nil && *s3Obj.Size == gf.Size && uploader.ErrorMessage == "")
@@ -482,7 +482,7 @@ func (storer *APTStorer) doUpload(storageSummary *models.StorageSummary, sendWhe
 				gf.Identifier, sendWhere, attemptNumber)
 			storer.markFileAsStored(gf, sendWhere, uploader.Response.Location)
 			return // Upload succeeded
-		} else {
+		} else if uploader.ErrorMessage != "" {
 			storer.Context.MessageLog.Error("Upload error for %s: %s",
 				gf.Identifier, uploader.ErrorMessage)
 			if attemptNumber == MAX_UPLOAD_ATTEMPTS {
