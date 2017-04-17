@@ -8,6 +8,7 @@ import (
 	"github.com/APTrust/exchange/network"
 	"github.com/APTrust/exchange/util"
 	"github.com/APTrust/exchange/util/fileutil"
+	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/nsqio/go-nsq"
 	"io"
 	"net/url"
@@ -454,7 +455,16 @@ func (storer *APTStorer) doUpload(storageSummary *models.StorageSummary, sendWhe
 		// and the File reader for very large files.
 		uploader.Send(reader)
 
-		if uploader.ErrorMessage == "" {
+		s3Obj := storer.getS3FileDetail(gf.IngestUUID)
+		if s3Obj == nil {
+			storer.Context.MessageLog.Warning("s3 returned nothing for %s (%s)", gf.IngestUUID, gf.Identifier)
+		} else if *s3Obj.Size != gf.Size {
+			storer.Context.MessageLog.Warning("s3 returned size %d for %s (%s), should be %d",
+				s3Obj.Size, gf.IngestUUID, gf.Identifier, gf.Size)
+		}
+		uploadSucceeded := (s3Obj != nil && *s3Obj.Size == gf.Size && uploader.ErrorMessage == "")
+
+		if uploadSucceeded {
 			storer.Context.MessageLog.Info("Stored %s in %s after %d attempts",
 				gf.Identifier, sendWhere, attemptNumber)
 			storer.markFileAsStored(gf, sendWhere, uploader.Response.Location)
@@ -716,4 +726,16 @@ func (storer *APTStorer) markFileAsStored(gf *models.GenericFile, sendWhere, sto
 			events[0].DateTime = time.Now().UTC()
 		}
 	}
+}
+
+// PT #143660373: S3 zero-size file bug.
+func (storer *APTStorer) getS3FileDetail(fileUUID string) *s3.Object {
+	s3Client := network.NewS3ObjectList(
+		storer.Context.Config.APTrustS3Region,
+		storer.Context.Config.PreservationBucket, 1)
+	s3Client.GetList(fileUUID)
+	if len(s3Client.Response.Contents) > 0 {
+		return s3Client.Response.Contents[0]
+	}
+	return nil
 }
