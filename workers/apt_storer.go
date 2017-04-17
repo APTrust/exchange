@@ -455,12 +455,25 @@ func (storer *APTStorer) doUpload(storageSummary *models.StorageSummary, sendWhe
 		// and the File reader for very large files.
 		uploader.Send(reader)
 
+		// PT #143660373: S3 zero-size file bug.
+		// S3 returns some very weird stuff here,
+		// sometimes zero, sometimes 10x the actual file size.
 		s3Obj := storer.getS3FileDetail(gf.IngestUUID)
 		if s3Obj == nil {
-			storer.Context.MessageLog.Warning("s3 returned nothing for %s (%s)", gf.IngestUUID, gf.Identifier)
+			errMsg := fmt.Sprintf("%s returned nothing for %s (%s)", sendWhere, gf.IngestUUID, gf.Identifier)
+			if attemptNumber == MAX_UPLOAD_ATTEMPTS {
+				storageSummary.StoreResult.AddError(errMsg)
+			} else {
+				storer.Context.MessageLog.Warning(errMsg)
+			}
 		} else if *s3Obj.Size != gf.Size {
-			storer.Context.MessageLog.Warning("s3 returned size %d for %s (%s), should be %d",
-				s3Obj.Size, gf.IngestUUID, gf.Identifier, gf.Size)
+			errMsg := fmt.Sprintf("%s returned size %d for %s (%s), should be %d",
+				sendWhere, s3Obj.Size, gf.IngestUUID, gf.Identifier, gf.Size)
+			if attemptNumber == MAX_UPLOAD_ATTEMPTS {
+				storageSummary.StoreResult.AddError(errMsg)
+			} else {
+				storer.Context.MessageLog.Warning(errMsg)
+			}
 		}
 		uploadSucceeded := (s3Obj != nil && *s3Obj.Size == gf.Size && uploader.ErrorMessage == "")
 
