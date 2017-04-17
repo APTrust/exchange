@@ -278,6 +278,8 @@ func (storer *APTStorer) saveFile(storageSummary *models.StorageSummary) {
 		if gf.IngestReplicatedAt.IsZero() || gf.IngestReplicationURL == "" {
 			storer.copyToLongTermStorage(storageSummary, "glacier")
 		}
+		// Don't do cleanup until both copies are saved.
+		defer storer.cleanupTempFile(gf)
 	} else {
 		if !util.HasSavableName(gf.OriginalPath()) {
 			storer.Context.MessageLog.Info("Skipping %s: doesn't have savable name", gf.Identifier)
@@ -420,7 +422,6 @@ func (storer *APTStorer) doUpload(storageSummary *models.StorageSummary, sendWhe
 	if readCloser != nil && tarFileIterator != nil {
 		defer readCloser.Close()
 		defer tarFileIterator.Close()
-		defer storer.cleanupTempFile(gf)
 
 		// Handle large files. Amazon's moronic uploader will read the
 		// entire file into memory, unless we give it a reader that
@@ -443,11 +444,11 @@ func (storer *APTStorer) doUpload(storageSummary *models.StorageSummary, sendWhe
 			defer reader.Close()
 		} else {
 			storer.Context.MessageLog.Info("Upload file %s (size: %d) directly "+
-				"from the tar file", gf.Identifier, gf.Size)
+				"to %s from the tar file", gf.Identifier, gf.Size, sendWhere)
 		}
 
-		storer.Context.MessageLog.Info("Starting to upload file %s (size: %d)",
-			gf.Identifier, gf.Size)
+		storer.Context.MessageLog.Info("Starting to upload file %s (size: %d) to %s",
+			gf.Identifier, gf.Size, sendWhere)
 
 		// Now do the upload using the tar file reader for smaller files
 		// and the File reader for very large files.
@@ -499,6 +500,8 @@ func (storer *APTStorer) getFileReader(reader io.Reader, gf *models.GenericFile,
 	if err != nil {
 		return nil, fmt.Errorf("MkdirAll failed: %v", err)
 	}
+
+	// PT #143660373: S3 zero-size file bug. Lots of checks here...
 	tempFile, err := os.Create(filePath)
 	if err != nil {
 		return nil, fmt.Errorf("Cannot create file: %v", err)
@@ -512,27 +515,17 @@ func (storer *APTStorer) getFileReader(reader io.Reader, gf *models.GenericFile,
 		tempFile.Close()
 		return nil, fmt.Errorf("Copied only %d of %d bytes for file %s", bytesCopied, gf.Size, gf.Identifier)
 	}
-
-	// PT #143660373: S3 zero-size file bug.
-	// EFS behaves oddly. After writing a file to EFS, and then rewinding it
-	// with tempFile.Seek(0, io.SeekStart), the first read always reads zero
-	// bytes and then EOF. So instead of rewinding, let's try closing the file
-	// and reopening. Maybe the close is necessary to flush to contents
-	// to the NFS mount.
-
-	// offset, err := tempFile.Seek(0, io.SeekStart)
-	// if err != nil || offset != 0 {
-	// 	return nil, fmt.Errorf("Bad seek in tempFile, offset after seek is %d: %v", offset, err)
-	// }
-
-	tempFile.Close()
-	tempFile, err = os.Open(filePath)
+	offset, err := tempFile.Seek(0, io.SeekStart)
+	if err != nil || offset != 0 {
+		return nil, fmt.Errorf("Bad seek in tempFile, offset after seek is %d: %v", offset, err)
+	}
 	finfo, err := tempFile.Stat()
 	if err != nil {
 		return nil, fmt.Errorf("Can't stat tempFile %s at %s", gf.Identifier, filePath)
 	}
 	if finfo.Size() != gf.Size {
-		return nil, fmt.Errorf("Temp file has only %d of %d bytes for file %s", finfo.Size(), gf.Size, gf.Identifier)
+		return nil, fmt.Errorf("Temp file has only %d of %d bytes for file %s",
+			finfo.Size(), gf.Size, gf.Identifier)
 	}
 
 	return tempFile, nil

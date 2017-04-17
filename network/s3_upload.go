@@ -68,10 +68,10 @@ func NewS3Upload(region, bucket, key, contentType string) *S3Upload {
 func (client *S3Upload) GetSession() *session.Session {
 	if client.session == nil {
 		var err error
+		client.session, err = GetS3Session(client.AWSRegion)
 		if err != nil {
 			client.ErrorMessage = err.Error()
 		}
-		client.session, err = GetS3Session(client.AWSRegion)
 	}
 	return client.session
 }
@@ -111,6 +111,7 @@ func (client *S3Upload) Send(reader io.Reader) {
 	if err != nil {
 		client.ErrorMessage = err.Error()
 	}
+
 }
 
 func (client *S3Upload) PartSize() int64 {
