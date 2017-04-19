@@ -52,7 +52,7 @@ func (client *S3ObjectList) GetList(prefix string) {
 	var err error = nil
 	service := s3.New(_session)
 
-	if client.Response != nil && *client.Response.IsTruncated {
+	if client.Response != nil && client.Response.IsTruncated != nil && *client.Response.IsTruncated {
 		client.ListObjectsInput.Marker = client.Response.NextMarker
 	}
 	if prefix != "" {

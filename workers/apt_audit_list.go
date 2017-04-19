@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/APTrust/exchange/context"
 	"github.com/APTrust/exchange/network"
+	"github.com/APTrust/exchange/util"
 	"github.com/aws/aws-sdk-go/service/s3"
 	"os"
 	"sync"
@@ -31,7 +32,7 @@ type APTAuditList struct {
 	results      []string
 	count        int
 	errOccurred  bool
-	mutex        *sync.Mutex
+	mutex        *sync.RWMutex
 }
 
 const (
@@ -52,7 +53,7 @@ const (
 // Param limit is the maximum number of keys to return. Set
 // limit to zero to return an unlimited number of keys.
 // Param concurrency is the number of items to fetch
-// simultaneously. It defaults to one. Max is 32.
+// simultaneously. It defaults to 4. Max is 32.
 func NewAPTAuditList(context *context.Context, region, bucket, keyPrefix, format string, limit, concurrency int) (*APTAuditList, error) {
 	if context == nil {
 		return nil, fmt.Errorf("Param context cannot be nil")
@@ -70,7 +71,7 @@ func NewAPTAuditList(context *context.Context, region, bucket, keyPrefix, format
 		return nil, fmt.Errorf("Param concurrency can be no higher than 32")
 	}
 	if concurrency <= 0 {
-		concurrency = 1
+		concurrency = 4
 	}
 	delimiter := ','
 	if format == "tsv" {
@@ -82,6 +83,7 @@ func NewAPTAuditList(context *context.Context, region, bucket, keyPrefix, format
 	}
 	return &APTAuditList{
 		context:      context,
+		region:       region,
 		bucket:       bucket,
 		keyPrefix:    keyPrefix,
 		limit:        limit,
@@ -92,21 +94,29 @@ func NewAPTAuditList(context *context.Context, region, bucket, keyPrefix, format
 		results:      make([]string, 0),
 		count:        0,
 		errOccurred:  false,
-		mutex:        &sync.Mutex{},
+		mutex:        &sync.RWMutex{},
 	}, nil
 }
 
-// List prints a list of files to STDOUT, and errors to STDERR.
+// Run prints a list of files to STDOUT, and errors to STDERR.
 // It returns the number of items listed, and an error if it
 // encountered any errors during its run. Check the STDERR log
 // for errors if List returns an error.
-func (list *APTAuditList) List() (int, error) {
+func (list *APTAuditList) Run() (int, error) {
+	listAttempts := 0
+	listErrCount := 0
 	var err error
+	list.initClients()
 	for {
+		listAttempts += 1
 		list.listClient.GetList(list.keyPrefix)
 		if list.listClient.ErrorMessage != "" {
 			fmt.Fprintln(os.Stderr, list.listClient.ErrorMessage)
 			list.flagError()
+			listErrCount += 1
+			if listAttempts == 3 && listErrCount == 3 {
+				break // Config error.
+			}
 			continue
 		}
 
@@ -114,24 +124,25 @@ func (list *APTAuditList) List() (int, error) {
 		// The number of goroutines is specified by list.concurrency.
 		start := 0
 		for {
-			start = list.fetchBatch(list.listClient.Response.Contents, start, list.concurrency)
-			if start >= len(list.listClient.Response.Contents) {
+			start = list.fetchBatch(list.listClient.Response.Contents, start)
+			if start >= len(list.listClient.Response.Contents) || list.getCount() >= list.limit {
 				break
 			}
 		}
 
-		if *list.listClient.Response.IsTruncated == false || list.count >= list.limit {
+		if *list.listClient.Response.IsTruncated == false || list.getCount() >= list.limit {
 			list.printAll()
 			list.clearResults()
 			break // no more items to fetch
 		}
 	}
-	return list.count, err
+	return list.getCount(), err
 }
 
 // fetchBatch issues a batch of S3 Head requests. The size of the batch
 // should be set to list.concurrency. Returns the next start index.
-func (list *APTAuditList) fetchBatch(objects []*s3.Object, startIndex, howMany int) int {
+func (list *APTAuditList) fetchBatch(objects []*s3.Object, startIndex int) int {
+	howMany := len(list.headClients)
 	end := startIndex + howMany
 	if end > len(objects) {
 		end = len(objects)
@@ -142,8 +153,8 @@ func (list *APTAuditList) fetchBatch(objects []*s3.Object, startIndex, howMany i
 		obj := list.listClient.Response.Contents[i]
 		client := list.headClients[clientIndex]
 		clientIndex += 1
+		wg.Add(1)
 		go func(client *network.S3Head, key string) {
-			wg.Add(1)
 			list.fetchOne(client, key)
 			list.incrementCount()
 			defer wg.Done()
@@ -180,7 +191,7 @@ func (list *APTAuditList) fetchOne(client *network.S3Head, key string) {
 		}
 	}
 	if err != nil {
-		fmt.Fprintln(os.Stderr, err.Error(), "key", key)
+		fmt.Fprintln(os.Stderr, "[Key", key, "]", err.Error())
 		list.flagError()
 	} else {
 		list.addResult(strRecord)
@@ -192,7 +203,8 @@ func (list *APTAuditList) fetchOne(client *network.S3Head, key string) {
 // setting.
 func (list *APTAuditList) initClients() {
 	if list.listClient == nil {
-		list.listClient = network.NewS3ObjectList(list.region, list.bucket, ITEMS_PER_REQUEST)
+		maxKeys := int64(util.Min(list.limit, ITEMS_PER_REQUEST))
+		list.listClient = network.NewS3ObjectList(list.region, list.bucket, maxKeys)
 		list.headClients = make([]*network.S3Head, list.concurrency)
 		for i := 0; i < list.concurrency; i++ {
 			list.headClients[i] = network.NewS3Head(list.region, list.bucket)
@@ -221,6 +233,14 @@ func (list *APTAuditList) incrementCount() {
 	list.mutex.Unlock()
 }
 
+// getCount returns the number of items already fetched
+func (list *APTAuditList) getCount() int {
+	list.mutex.RLock()
+	count := list.count
+	list.mutex.RUnlock()
+	return count
+}
+
 // flagError sets a flag saying an error occurred
 func (list *APTAuditList) flagError() {
 	list.mutex.Lock()
@@ -231,6 +251,6 @@ func (list *APTAuditList) flagError() {
 // printAll prints the list of results to STDOUT
 func (list *APTAuditList) printAll() {
 	for _, result := range list.results {
-		fmt.Println(result)
+		fmt.Print(result)
 	}
 }
