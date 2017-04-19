@@ -29,6 +29,7 @@ class Context
     # Applications can be started by service.rb and will run until done.
     # Special apps have special methods in service.rb to run them.
     @apps = {
+      'apt_audit_list' => App.new('apt_audit_list', 'application'),
       'apt_bucket_reader' => App.new('apt_bucket_reader', 'application'),
       'apt_queue' => App.new('apt_queue', 'application'),
       'apt_queue_fixity' => App.new('apt_queue_fixity', 'application'),
