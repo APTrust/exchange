@@ -252,6 +252,28 @@ func MakeWorkSummary() *models.WorkSummary {
 	}
 }
 
+func MakeStoredFile() *models.StoredFile {
+	now := time.Now().UTC()
+	return &models.StoredFile{
+		Id:           int64(rand.Intn(100000)),
+		UUID:         uuid.NewV4().String(),
+		StoredIn:     RandomFromList(constants.StorageTypes),
+		Size:         int64(rand.Intn(900000000)),
+		ContentType:  fake.Word(),
+		Institution:  fake.Word(),
+		BagName:      fake.Word(),
+		PathInBag:    fake.Word(),
+		Md5:          fake.Word(),
+		Sha256:       fake.Word(),
+		ETag:         fake.Word(),
+		LastModified: now,
+		LastSeenAt:   now,
+		CreatedAt:    now,
+		UpdatedAt:    now,
+		DeletedAt:    now,
+	}
+}
+
 func RandomDateTime() time.Time {
 	t := time.Now().UTC()
 	minutes := rand.Intn(500000) * -1

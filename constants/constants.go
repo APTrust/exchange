@@ -149,6 +149,18 @@ const (
 	AWSOregon   = "us-west-2"
 )
 
+// Storage types. We will likely add to these if we pick
+// up new storage providers.
+const (
+	S3Virginia    = "S3-VA"
+	GlacierOregon = "Glacier-OR"
+)
+
+var StorageTypes []string = []string{
+	S3Virginia,
+	GlacierOregon,
+}
+
 // GenericFile types. GenericFile.IngestFileType
 const (
 	PAYLOAD_FILE     = "payload_file"
