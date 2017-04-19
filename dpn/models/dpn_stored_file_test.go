@@ -4,6 +4,7 @@ import (
 	"github.com/APTrust/exchange/dpn/util/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"strings"
 	"testing"
 )
 
@@ -25,7 +26,13 @@ func TestStoredFileToStringArray(t *testing.T) {
 
 func TestStoredFileToCSV(t *testing.T) {
 	f := testutil.MakeDPNStoredFile()
-	csvString, err := f.ToCSV()
+	csvString, err := f.ToCSV(',')
 	require.Nil(t, err)
 	assert.NotEmpty(t, csvString)
+	assert.True(t, strings.Contains(csvString, ","))
+
+	csvString, err = f.ToCSV('|')
+	require.Nil(t, err)
+	assert.NotEmpty(t, csvString)
+	assert.True(t, strings.Contains(csvString, "|"))
 }

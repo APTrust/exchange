@@ -73,10 +73,12 @@ func (f *StoredFile) ToJson() (string, error) {
 // ToCSV converts this object to a CSV record.
 // When listing thousands of files, we dump records
 // to a CSV file that we can import later to a SQL DB.
-func (f *StoredFile) ToCSV() (string, error) {
+// Param delimiter is the field delimiter (comma, tab, pipe, etc).
+func (f *StoredFile) ToCSV(delimiter rune) (string, error) {
 	buf := make([]byte, 0)
 	buffer := bytes.NewBuffer(buf)
 	writer := csv.NewWriter(buffer)
+	writer.Comma = delimiter
 	writer.Write(f.ToStringArray())
 	writer.Flush()
 	return buffer.String(), writer.Error()
