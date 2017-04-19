@@ -11,6 +11,7 @@ import (
 	"github.com/icrowley/fake"
 	"github.com/nsqio/go-nsq"
 	"github.com/satori/go.uuid"
+	"math/rand"
 	"net/url"
 	"time"
 )
@@ -193,6 +194,28 @@ func MakeIngest(bagUUID string) *models.Ingest {
 		Ingested:         true,
 		ReplicatingNodes: []string{"tdr", "sdr"},
 		CreatedAt:        time.Now().UTC(),
+	}
+}
+
+func MakeDPNStoredFile() *models.DPNStoredFile {
+	now := time.Now().UTC()
+	return &models.DPNStoredFile{
+		Id:           int64(rand.Intn(100000)),
+		Key:          uuid.NewV4().String(),
+		Bucket:       fake.Word(),
+		Size:         int64(rand.Intn(900000000)),
+		ContentType:  fake.Word(),
+		Member:       fake.Word(),
+		FromNode:     fake.Word(),
+		TransferId:   fake.Word(),
+		LocalId:      fake.Word(),
+		Version:      fake.Word(),
+		ETag:         fake.Word(),
+		LastModified: now,
+		LastSeenAt:   now,
+		CreatedAt:    now,
+		UpdatedAt:    now,
+		DeletedAt:    now,
 	}
 }
 

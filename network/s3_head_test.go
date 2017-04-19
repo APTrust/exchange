@@ -5,6 +5,7 @@ import (
 	apt_testutil "github.com/APTrust/exchange/util/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"strings"
 	"testing"
 )
 
@@ -18,8 +19,16 @@ func TestHead(t *testing.T) {
 	require.Nil(t, err, "Could not create context")
 	client := network.NewS3Head(_context.Config.APTrustS3Region, testBucket)
 	client.Head(testFile)
-	require.Empty(t, client.ErrorMessage)
 	assert.EqualValues(t, testFileSize, *client.Response.ContentLength)
 	assert.Equal(t, testFileETag, *client.Response.ETag)
 	assert.Equal(t, "application/x-tar", *client.Response.ContentType)
+	trimmedETag := strings.Replace(testFileETag, "\"", "", -1)
+
+	storedFile := client.StoredFile()
+	assert.NotNil(t, storedFile)
+	assert.Equal(t, trimmedETag, storedFile.ETag)
+
+	dpnStoredFile := client.StoredFile()
+	assert.NotNil(t, dpnStoredFile)
+
 }

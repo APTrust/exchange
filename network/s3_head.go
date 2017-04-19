@@ -1,9 +1,14 @@
 package network
 
 import (
+	dpn_models "github.com/APTrust/exchange/dpn/models"
+	"github.com/APTrust/exchange/models"
+	"github.com/APTrust/exchange/util"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
+	"strings"
+	"time"
 )
 
 type S3Head struct {
@@ -11,6 +16,7 @@ type S3Head struct {
 	BucketName   string
 	ErrorMessage string
 	Response     *s3.HeadObjectOutput
+	input        *s3.HeadObjectInput
 	session      *session.Session
 }
 
@@ -47,6 +53,8 @@ func (client *S3Head) GetSession() *session.Session {
 // The most relevant items for us in the HeadObjectOutput struct are
 // ContentLength, ContentType, LastModified, Metadata, and VersionId.
 func (client *S3Head) Head(key string) {
+	client.Response = nil
+	client.ErrorMessage = ""
 	_session := client.GetSession()
 	if _session == nil {
 		return
@@ -63,10 +71,75 @@ func (client *S3Head) Head(key string) {
 		Bucket: aws.String(client.BucketName),
 		Key:    aws.String(key),
 	}
+	client.input = params
 	request, response := service.HeadObjectRequest(params)
 	err := request.Send()
 	if err != nil {
 		client.ErrorMessage = err.Error()
+		return
 	}
 	client.Response = response
+}
+
+// GetHeaderMetadata
+func (client *S3Head) GetHeaderMetadata(key string) string {
+	resp := client.Response
+	value := ""
+	if resp != nil && resp.Metadata != nil {
+		valPointer := resp.Metadata[key]
+		if valPointer != nil {
+			value = *valPointer
+		}
+	}
+	return value
+}
+
+func (client *S3Head) StoredFile() *models.StoredFile {
+	resp := client.Response
+	if resp == nil || client.input == nil {
+		return nil
+	}
+	now := time.Now().UTC()
+	storedFile := &models.StoredFile{
+		Key:          util.PointerToString(client.input.Key),
+		ETag:         strings.Replace(*resp.ETag, "\"", "", -1),
+		LastModified: *resp.LastModified,
+		Size:         *resp.ContentLength,
+		Bucket:       util.PointerToString(client.input.Bucket),
+		ContentType:  util.PointerToString(resp.ContentType),
+		Institution:  client.GetHeaderMetadata("Institution"),
+		BagName:      client.GetHeaderMetadata("Bag"),
+		PathInBag:    client.GetHeaderMetadata("Bagpath"),
+		Md5:          client.GetHeaderMetadata("Md5"),
+		Sha256:       client.GetHeaderMetadata("Sha256"),
+		LastSeenAt:   now,
+		CreatedAt:    now,
+		UpdatedAt:    now,
+	}
+	return storedFile
+}
+
+func (client *S3Head) DPNStoredFile() *dpn_models.DPNStoredFile {
+	resp := client.Response
+	if resp == nil || client.input == nil {
+		return nil
+	}
+	now := time.Now().UTC()
+	storedFile := &dpn_models.DPNStoredFile{
+		Key:          util.PointerToString(client.input.Key),
+		ETag:         strings.Replace(*resp.ETag, "\"", "", -1),
+		LastModified: *resp.LastModified,
+		Size:         *resp.ContentLength,
+		Bucket:       util.PointerToString(client.input.Bucket),
+		ContentType:  util.PointerToString(resp.ContentType),
+		Member:       client.GetHeaderMetadata("Member"),
+		FromNode:     client.GetHeaderMetadata("From_node"),
+		TransferId:   client.GetHeaderMetadata("Transfer_id"),
+		LocalId:      client.GetHeaderMetadata("Local_id"),
+		Version:      client.GetHeaderMetadata("Version"),
+		LastSeenAt:   now,
+		CreatedAt:    now,
+		UpdatedAt:    now,
+	}
+	return storedFile
 }

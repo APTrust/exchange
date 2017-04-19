@@ -4,6 +4,7 @@ import (
 	"github.com/APTrust/exchange/constants"
 	"github.com/APTrust/exchange/util/testutil"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -196,6 +197,27 @@ func TestMakeWorkSummary(t *testing.T) {
 	assert.False(t, ws.StartedAt.IsZero())
 	assert.False(t, ws.FinishedAt.IsZero())
 	assert.True(t, ws.Retry)
+}
+
+func TestMakeStoredFile(t *testing.T) {
+	f := testutil.MakeStoredFile()
+	require.NotNil(t, f)
+	assert.NotEmpty(t, f.Id)
+	assert.NotEmpty(t, f.Key)
+	assert.NotEmpty(t, f.Bucket)
+	assert.NotEmpty(t, f.Size)
+	assert.NotEmpty(t, f.ContentType)
+	assert.NotEmpty(t, f.Institution)
+	assert.NotEmpty(t, f.BagName)
+	assert.NotEmpty(t, f.PathInBag)
+	assert.NotEmpty(t, f.Md5)
+	assert.NotEmpty(t, f.Sha256)
+	assert.NotEmpty(t, f.ETag)
+	assert.NotEmpty(t, f.LastModified)
+	assert.NotEmpty(t, f.LastSeenAt)
+	assert.NotEmpty(t, f.CreatedAt)
+	assert.NotEmpty(t, f.UpdatedAt)
+	assert.NotEmpty(t, f.DeletedAt)
 }
 
 func TestLoadIntelObjFixture(t *testing.T) {

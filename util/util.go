@@ -193,3 +193,12 @@ func IntListContains(list []int, item int) bool {
 	}
 	return false
 }
+
+// PointerToString returns the string pointed to, or an empty
+// string if the pointer is nil.
+func PointerToString(strPointer *string) string {
+	if strPointer == nil {
+		return ""
+	}
+	return *strPointer
+}

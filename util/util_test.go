@@ -188,3 +188,11 @@ func TestIntListContains(t *testing.T) {
 	// Don't crash on nil list
 	assert.False(t, util.IntListContains(nil, 599))
 }
+
+func TestPointerToString(t *testing.T) {
+	str := "Hello"
+	strPointer := &str
+	var nilPointer *string
+	assert.Equal(t, str, util.PointerToString(strPointer))
+	assert.Equal(t, "", util.PointerToString(nilPointer))
+}

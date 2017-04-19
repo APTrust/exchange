@@ -140,19 +140,13 @@ func TestIngestStoreItemsAreInStorage(t *testing.T) {
 		require.Empty(t, s3Head.ErrorMessage)
 		metadata := s3Head.Response.Metadata
 		require.NotNil(t, metadata, dpnTarFileName)
-		// Notice the Amazon library transforms the first letter of
-		// all our keys to upper case. WTF?
-		require.NotNil(t, metadata["From_node"], dpnTarFileName)
-		require.NotNil(t, metadata["Transfer_id"], dpnTarFileName)
-		require.NotNil(t, metadata["Member"], dpnTarFileName)
-		require.NotNil(t, metadata["Local_id"], dpnTarFileName)
-		require.NotNil(t, metadata["Version"], dpnTarFileName)
 
-		assert.NotEmpty(t, *metadata["From_node"], dpnTarFileName)
-		assert.NotEmpty(t, *metadata["Transfer_id"], dpnTarFileName)
-		assert.NotEmpty(t, *metadata["Member"], dpnTarFileName)
-		assert.NotEmpty(t, *metadata["Local_id"], dpnTarFileName)
-		assert.NotEmpty(t, *metadata["Version"], dpnTarFileName)
+		dpnStoredFile := s3Head.DPNStoredFile()
+		assert.NotEmpty(t, dpnStoredFile.Member)
+		assert.NotEmpty(t, dpnStoredFile.FromNode)
+		assert.NotEmpty(t, dpnStoredFile.TransferId)
+		assert.NotEmpty(t, dpnStoredFile.LocalId)
+		assert.NotEmpty(t, dpnStoredFile.Version)
 	}
 }
 

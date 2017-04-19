@@ -256,8 +256,8 @@ func MakeStoredFile() *models.StoredFile {
 	now := time.Now().UTC()
 	return &models.StoredFile{
 		Id:           int64(rand.Intn(100000)),
-		UUID:         uuid.NewV4().String(),
-		StoredIn:     RandomFromList(constants.StorageTypes),
+		Key:          uuid.NewV4().String(),
+		Bucket:       fake.Word(),
 		Size:         int64(rand.Intn(900000000)),
 		ContentType:  fake.Word(),
 		Institution:  fake.Word(),

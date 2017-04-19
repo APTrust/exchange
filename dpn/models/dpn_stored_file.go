@@ -1,5 +1,13 @@
 package models
 
+/*
+	assert.NotEmpty(t, *metadata["From_node"])
+	assert.NotEmpty(t, *metadata["Transfer_id"])
+	assert.NotEmpty(t, *metadata["Member"])
+	assert.NotEmpty(t, *metadata["Local_id"])
+	assert.NotEmpty(t, *metadata["Version"])
+*/
+
 import (
 	"bytes"
 	"encoding/csv"
@@ -8,13 +16,13 @@ import (
 	"time"
 )
 
-// StoredFile represents a file stored in a long-term storage
+// DPNStoredFile represents a file stored in a long-term storage
 // bucket on S3 or Glacier. This object is used primarily for
 // audit purposes, when we occasionally scan through our S3
 // and Glacier buckets to get a list of what is actually stored
 // there.
-type StoredFile struct {
-	// Id is a unique identifier for this StoredFile,
+type DPNStoredFile struct {
+	// Id is a unique identifier for this DPNStoredFile,
 	// if it happens to be stored in a SQL database.
 	// This can be zero for items not stored in a DB.
 	Id int64 `json:"id"`
@@ -31,21 +39,24 @@ type StoredFile struct {
 	Size int64 `json:"size"`
 	// ContentType is the object's mime type. E.g. image/jpeg.
 	ContentType string `json:"content_type"`
-	// Institution is the domain name of the institution
-	// that owns the file. E.g. virginia.edu
-	Institution string `json:"institution"`
-	// BagName is the name of the bag this file belongs to.
-	// It's the same as the intellectual object identifier.
-	BagName string `json:"bag_name"`
-	// PathInBag is the file's path in the original bag.
-	// For examople, data/subdir/image.jpeg. Combine this
-	// with BagName to get the GenericDile.Identifier.
-	PathInBag string `json:"path_in_bag"`
-	// Md5 is the md5 sum we calculated for this file at ingest.
-	Md5 string `json:"md5"`
-	// Sha256 is the sha256 checksum we calculated for this
-	// file on ingest.
-	Sha256 string `json:"sha256"`
+	// Member is the name or UUID of the institution
+	// that owns the file.
+	Member string `json:"member"`
+	// FromNode is the namespace of the node this bag was
+	// replicated from. This will be empty if we ingested
+	// the bag ourselves.
+	FromNode string `json:"from_node"`
+	// TransferId is the UUID of the ReplicationTransfer
+	// request we fulfilled when copying this bag. This will
+	// be empty if we ingested the bag ourselves.
+	TransferId string `json:"transfer_id"`
+	// LocalId is the depositor's identifier for this bag.
+	// If the bag was ingested by APTrust, LocalId will be
+	// the APTrust IntellectualObject.Identifier.
+	LocalId string `json:"local_id"`
+	// Version is the version number for this bag, in string
+	// format.
+	Version string `json:"version"`
 	// ETag is Amazon's etag for this item. For multipart
 	// uploads, the etag will contain a dash.
 	ETag string `json:"etag"`
@@ -65,7 +76,7 @@ type StoredFile struct {
 }
 
 // ToJson converts this object to JSON.
-func (f *StoredFile) ToJson() (string, error) {
+func (f *DPNStoredFile) ToJson() (string, error) {
 	jsonString, err := json.Marshal(f)
 	return string(jsonString), err
 }
@@ -73,7 +84,7 @@ func (f *StoredFile) ToJson() (string, error) {
 // ToCSV converts this object to a CSV record.
 // When listing thousands of files, we dump records
 // to a CSV file that we can import later to a SQL DB.
-func (f *StoredFile) ToCSV() (string, error) {
+func (f *DPNStoredFile) ToCSV() (string, error) {
 	buf := make([]byte, 0)
 	buffer := bytes.NewBuffer(buf)
 	writer := csv.NewWriter(buffer)
@@ -84,18 +95,18 @@ func (f *StoredFile) ToCSV() (string, error) {
 
 // ToStringArray converts this record to a string array,
 // usually so it can be serialized to CSV format.
-func (f *StoredFile) ToStringArray() []string {
+func (f *DPNStoredFile) ToStringArray() []string {
 	s := make([]string, 16)
 	s[0] = strconv.FormatInt(f.Id, 10)
 	s[1] = f.Key
 	s[2] = f.Bucket
 	s[3] = strconv.FormatInt(f.Size, 10)
 	s[4] = f.ContentType
-	s[5] = f.Institution
-	s[6] = f.BagName
-	s[7] = f.PathInBag
-	s[8] = f.Md5
-	s[9] = f.Sha256
+	s[5] = f.Member
+	s[6] = f.FromNode
+	s[7] = f.TransferId
+	s[8] = f.LocalId
+	s[9] = f.Version
 	s[10] = f.ETag
 	s[11] = f.LastModified.Format(time.RFC3339)
 	s[12] = f.LastSeenAt.Format(time.RFC3339)
