@@ -110,6 +110,8 @@ Param -format specifies the output format. The default is "tsv",
        "csv"  - Comma-separated values
        "tsv"  - Tab-separated values
 Param -limit is the maximum number of records to fetch. The default is 50.
+       If you want to list everything in a bucket, set limit to something
+       like 2000000000 (two billion)
 Param -concurrency is the number of concurrent HTTP requests to issue when
        building the list. The default is 4, and the max is 32.
 
