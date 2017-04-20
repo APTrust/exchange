@@ -53,7 +53,16 @@ func (client *S3ObjectList) GetList(prefix string) {
 	service := s3.New(_session)
 
 	if client.Response != nil && client.Response.IsTruncated != nil && *client.Response.IsTruncated {
-		client.ListObjectsInput.Marker = client.Response.NextMarker
+		if prefix == "" {
+			// See doc for ListObjectOutput.NextMarker at
+			// https://docs.aws.amazon.com/sdk-for-go/api/service/s3/
+			// If there's no prefix in the initial request, we have
+			// to set this ourselves.
+			lastKey := client.Response.Contents[len(client.Response.Contents)-1].Key
+			client.ListObjectsInput.Marker = lastKey
+		} else {
+			client.ListObjectsInput.Marker = client.Response.NextMarker
+		}
 	}
 	if prefix != "" {
 		client.ListObjectsInput.Prefix = &prefix

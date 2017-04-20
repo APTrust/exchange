@@ -136,7 +136,7 @@ func (list *APTAuditList) Run() (int, error) {
 		list.printAll()
 		list.clearResults()
 
-		// If the S3 response is truncated, there are no more records to fetch.
+		// If the S3 response is not truncated, there are no more records to fetch.
 		// In that case, or if we've already fetched the limit, we're done.
 		if *list.listClient.Response.IsTruncated == false || list.getCount() >= list.limit {
 			break // no more items to fetch
