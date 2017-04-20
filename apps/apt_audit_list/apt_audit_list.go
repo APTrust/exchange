@@ -90,16 +90,18 @@ Usage: apt_audit_list -config=<path> \
 
 Starred (*) params are required.
 
-Param -config (*) is the path to the APTrust config file.
+Param -config (*) is the path to the APTrust config file. It can be an
+       absolute path, or config/<file.json> if it's in the config directory
+       of $EXCHANGE_HOME.
 Param -region (*) is the AWS region containing the S3 or Glacier bucket.
        "us-east-1" is Virginia (All buckets other than APTrust Glacier)
        "us-west-2" is Oregon (APTrust Glacier only)
 Param -bucket (*) is the name of the bucket.
-       "aptrust-dpn-preservation" is the DPN production bucket
-       "aptrust-dpn-test" is the DPN test bucket
-       "aptrust-preservation-oregon" is the APTrust Glacier bucket
-       "aptrust-preservation-storage" is the APTrust production S3 bucket
-       "aptrust-test-preservation" is the APTrust test bucket
+       "aptrust.dpn.preservation"     - DPN production bucket (us-east-1)
+       "aptrust.dpn.test"             - DPN test bucket (us-east-1)
+       "aptrust.preservation.oregon"  - APTrust Glacier bucket (us-west-2)
+       "aptrust.preservation.storage" - APTrust production S3 bucket (us-east-1)
+       "aptrust.test.preservation"    - APTrust test bucket (us-east-1)
 Param -prefix will limit the list to keys beginning with the specified
        prefix. To list all keys, omit the prefix flag.
 Param -format specifies the output format. The default is "tsv",
@@ -110,6 +112,30 @@ Param -format specifies the output format. The default is "tsv",
 Param -limit is the maximum number of records to fetch. The default is 50.
 Param -concurrency is the number of concurrent HTTP requests to issue when
        building the list. The default is 4, and the max is 32.
+
+Examples
+--------
+
+List the first 100 items from the main preservation bucket in S3/Virginia:
+
+apt_audit_list -config=config/production.json -region="us-east-1" \
+               -bucket="aptrust.preservation.storage" -limit=100
+
+
+List the first 100 items from Glacier/Oregon whose keys start with "a00"
+and use JSON as the output format:
+
+apt_audit_list -config=config/production.json -region="us-west-2" \
+               -bucket="aptrust.preservation.oregon" -prefix="a00" \
+               -limit=100 -format=json
+
+List the first 100 items in the DPN preservation bucket, using 10
+concurrent connections:
+
+apt_audit_list -config=config/production.json -region="us-east-1" \
+               -bucket="aptrust.dpn.preservaton" -limit=100 \
+               -concurrency=10
+
 `
 	fmt.Println(message)
 }
