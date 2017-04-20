@@ -14,9 +14,18 @@ import (
 	"time"
 )
 
-// Change these as needed.
+// -------------------------------------------------------------
+// This code was meant to reproduce the EFS-to-S3 zero-byte
+// file bug described in the README. You all it takes to
+// build this is `go build`.
+//
+// This was run on our production server (apt-prod-services)
+// on April 20, 2017, and did not reproduce the problem.
+// -------------------------------------------------------------
+
+// Change these as needed for your environment.
 const (
-	efsPath     = "/Users/apd4n/tmp" // "/mnt/efs/tmp"
+	efsPath     = "/mnt/efs/tmp"
 	s3Region    = "us-east-1"
 	s3Bucket    = "aptrust.test.preservation"
 	s3Key       = "efs_bug_test_file.txt"
