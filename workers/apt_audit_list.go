@@ -130,9 +130,15 @@ func (list *APTAuditList) Run() (int, error) {
 			}
 		}
 
+		// Print the batch of results we just fetched. This will be <=100 records.
+		// Clear the results list, so we're never holding more than 100 items at
+		// once in memory.
+		list.printAll()
+		list.clearResults()
+
+		// If the S3 response is truncated, there are no more records to fetch.
+		// In that case, or if we've already fetched the limit, we're done.
 		if *list.listClient.Response.IsTruncated == false || list.getCount() >= list.limit {
-			list.printAll()
-			list.clearResults()
 			break // no more items to fetch
 		}
 	}
