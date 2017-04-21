@@ -299,7 +299,7 @@ func (vbag *VirtualBag) parseManifest(reader io.Reader, relFilePath string) {
 
 // Parse the tag fields in a file.
 func (vbag *VirtualBag) parseTags(reader io.Reader, relFilePath string) {
-	re := regexp.MustCompile(`^(\S*\:)?(\s.*)?$`)
+	re := regexp.MustCompile(`^(\S*\s*\:)?(\s*.*)?$`)
 	scanner := bufio.NewScanner(reader)
 	var tag *Tag
 	for scanner.Scan() {
@@ -309,7 +309,7 @@ func (vbag *VirtualBag) parseTags(reader io.Reader, relFilePath string) {
 		}
 		if re.MatchString(line) {
 			data := re.FindStringSubmatch(line)
-			data[1] = strings.Replace(data[1], ":", "", 1)
+			data[1] = strings.TrimSpace(strings.Replace(data[1], ":", "", 1))
 			if data[1] != "" {
 				if tag != nil && tag.Label != "" {
 					vbag.obj.IngestTags = append(vbag.obj.IngestTags, tag)
@@ -318,7 +318,7 @@ func (vbag *VirtualBag) parseTags(reader io.Reader, relFilePath string) {
 				vbag.setIntelObjTagValue(tag)
 				continue
 			}
-			value := strings.Trim(data[2], " ")
+			value := strings.TrimSpace(data[2])
 			tag.Value = strings.Join([]string{tag.Value, value}, " ")
 			vbag.setIntelObjTagValue(tag)
 		} else {
