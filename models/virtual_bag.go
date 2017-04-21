@@ -325,7 +325,7 @@ func (vbag *VirtualBag) parseTags(reader io.Reader, relFilePath string) {
 			vbag.summary.AddError("Unable to parse tag data from line: '%s'", line)
 		}
 	}
-	if tag.Label != "" {
+	if tag != nil && tag.Label != "" {
 		vbag.obj.IngestTags = append(vbag.obj.IngestTags, tag)
 	}
 	if scanner.Err() != nil {
