@@ -39,6 +39,11 @@ type Output struct {
 }
 
 func main() {
+
+	// TODO: First see if the item is available through S3,
+	// since we don't have a good marker to see when the
+	// restore is actually complete.
+
 	opts := parseCommandLine()
 	aptRestore := network.NewS3Restore(
 		opts.Region, opts.Bucket, opts.Key,
