@@ -49,10 +49,10 @@ func NewS3ObjectDelete(region, bucket string, keys []string) *S3ObjectDelete {
 func (client *S3ObjectDelete) GetSession() *session.Session {
 	if client.session == nil {
 		var err error
+		client.session, err = GetS3Session(client.AWSRegion)
 		if err != nil {
 			client.ErrorMessage = err.Error()
 		}
-		client.session, err = GetS3Session(client.AWSRegion)
 	}
 	return client.session
 }

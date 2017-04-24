@@ -38,6 +38,7 @@ class Context
       'apt_store' => App.new('apt_store', 'service'),
       'apt_record' => App.new('apt_record', 'service'),
       'apt_restore' => App.new('apt_restore', 'service'),
+      'apt_restore_from_glacier' => App.new('apt_restore_from_glacier', 'application'),
       'apt_file_delete' => App.new('apt_file_delete', 'service'),
       'apt_validate' => App.new('apt_validate', 'application'),
       'apt_fixity_check' => App.new('apt_fixity_check', 'service'),

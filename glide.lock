@@ -1,12 +1,12 @@
-hash: 0197e49eb203b715ccfe9f3973e42f1fb424dcae4ccc6d5e89fd6c90265d970b
-updated: 2016-11-21T12:35:37.475865858-05:00
+hash: 0926726e764e8b25aaea719b8f29eee19567740c370eb5c4f6d3fdb8589c688d
+updated: 2017-04-24T12:36:16.012849076-04:00
 imports:
 - name: github.com/APTrust/bagins
   version: 5bc94534149810750faf248f6ac948b48cbb2fc5
   subpackages:
   - bagutil
 - name: github.com/aws/aws-sdk-go
-  version: 898c81ba64b9a467379d35e3fabad133beae0ee4
+  version: f6ea558f30e0a983d529b32c741e4caed17c7df0
   subpackages:
   - aws
   - aws/awserr
@@ -20,17 +20,16 @@ imports:
   - aws/credentials/stscreds
   - aws/defaults
   - aws/ec2metadata
+  - aws/endpoints
   - aws/request
   - aws/session
   - aws/signer/v4
-  - private/endpoints
   - private/protocol
   - private/protocol/query
   - private/protocol/query/queryutil
   - private/protocol/rest
   - private/protocol/restxml
   - private/protocol/xml/xmlutil
-  - private/waiter
   - service/s3
   - service/s3/s3iface
   - service/s3/s3manager
@@ -84,8 +83,6 @@ imports:
   - internal/util
   - internal/version
   - nsqd
-- name: github.com/nu7hatch/gouuid
-  version: 179d4d0c4d8d407a32af483c2354df1d2c91e6c3
 - name: github.com/op/go-logging
   version: b2cb9fa56473e98db8caba80237377e83fe44db5
 - name: github.com/rakyll/magicmime

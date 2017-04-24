@@ -64,10 +64,10 @@ func NewS3Download(region, bucket, key, localPath string, calculateMd5, calculat
 func (client *S3Download) GetSession() *session.Session {
 	if client.session == nil {
 		var err error
+		client.session, err = GetS3Session(client.AWSRegion)
 		if err != nil {
 			client.ErrorMessage = err.Error()
 		}
-		client.session, err = GetS3Session(client.AWSRegion)
 	}
 	return client.session
 }

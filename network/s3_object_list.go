@@ -30,10 +30,10 @@ func NewS3ObjectList(region, bucket string, maxKeys int64) *S3ObjectList {
 func (client *S3ObjectList) GetSession() *session.Session {
 	if client.session == nil {
 		var err error
+		client.session, err = GetS3Session(client.AWSRegion)
 		if err != nil {
 			client.ErrorMessage = err.Error()
 		}
-		client.session, err = GetS3Session(client.AWSRegion)
 	}
 	return client.session
 }
