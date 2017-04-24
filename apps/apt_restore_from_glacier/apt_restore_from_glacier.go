@@ -58,31 +58,20 @@ func main() {
 		RestoreStatus:   restoreStatus,
 		RequestTime:     now,
 	}
-	// if output.RestoreStatus == "AlreadyInProgress" {
 
-	// }
-	isRestoreComplete(opts, &output)
+	headClient := network.NewS3Head(opts.Region, opts.Bucket)
+	headClient.Head(opts.Key)
+	if headClient.ErrorMessage != "" {
+		fmt.Fprintln(os.Stderr, "Error in HEAD request for", opts.Key, ":", headClient.ErrorMessage)
+	}
+	output.StorageClass = *headClient.Response.StorageClass
+
 	jsonBytes, err := json.Marshal(output)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "JSON marshal error:", err.Error())
 		os.Exit(1)
 	}
 	fmt.Println(string(jsonBytes))
-}
-
-func isRestoreComplete(opts Options, output *Output) bool {
-	client := network.NewS3Head(opts.Region, opts.Bucket)
-	client.Head(opts.Key)
-	if client.ErrorMessage != "" {
-		fmt.Fprintln(os.Stderr, "Error in HEAD request for", opts.Key, ":", client.ErrorMessage)
-	} else {
-		// Restore: ongoing-request="true" means the request is still in progress
-		//
-		fmt.Println("Restore:", *client.Response.Restore)
-		fmt.Println("Storage Class:", *client.Response.StorageClass)
-	}
-	output.StorageClass = *client.Response.StorageClass
-	return false
 }
 
 // See if you can figure out from the function name what this does.
@@ -98,7 +87,7 @@ func parseCommandLine() Options {
 
 	flag.Parse()
 	if region == "" || bucket == "" || key == "" {
-		fmt.Fprintln(os.Stderr, "Params region, bucket and key are required")
+		fmt.Fprintln(os.Stderr, "Params region, bucket, and key are required")
 		printUsage()
 		os.Exit(1)
 	}
@@ -157,9 +146,37 @@ Return Codes
     has completed. Check the output for details.
 1 - Request failed.
 
+
 Output
 ------
 
+Output for a newly initiated request will look like this (without the line
+breaks):
+
+{
+ "RequestTime":"2017-04-24T18:15:07.547004384Z",
+ "RequestAccepted":true,
+ "ErrorMessage":"",
+ "RestoreStatus":"Initiated",
+ "StorageClass":"GLACIER",
+ "Bucket":"aptrust.preservation.oregon",
+ "Key":"000091f4-28ab-4ee1-b06e-b8bc771ceb40",
+ "Days":2
+}
+
+Output for a request in progress will look like this (without the line
+breaks):
+
+{
+ "RequestTime":"2017-04-24T18:17:02.454944Z",
+ "RequestAccepted":true,
+ "ErrorMessage":"",
+ "RestoreStatus":"AlreadyInProgress",
+ "StorageClass":"GLACIER",
+ "Bucket":"aptrust.preservation.oregon",
+ "Key":"000091f4-28ab-4ee1-b06e-b8bc771ceb40",
+ "Days":2
+}
 
 `
 	fmt.Println(message)
