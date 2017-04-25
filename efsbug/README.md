@@ -97,10 +97,10 @@ to extract the data from Pharos. It runs in rails console:
 
 File.open('/home/adiamond/generic_files.txt', 'w') do |f|
   GenericFile.find_in_batches do |batch|
-    batch.each do |gf|
-      gone = gf.state == 'D'
-      f.puts "#{gf.identifier}\t#{gf.uri.split("/").last}\t#{gf.size}\t#{gone}\t#{gf.created_at}\t#{gf.updated_at}"
-    end
+	batch.each do |gf|
+	  gone = gf.state == 'D'
+	  f.puts "#{gf.identifier}\t#{gf.uri.split("/").last}\t#{gf.size}\t#{gone}\t#{gf.created_at}\t#{gf.updated_at}"
+	end
   end
 end; 0
 
@@ -109,3 +109,42 @@ end; 0
 Once all the data is in the SQLite database, we can compare what *should* be
 stored (pharos_files) to what's actually stored (stored_files). We can identify
 bad copies in S3 and overwrite them with good copies from Glacier.
+
+## Listing files in S3 and Glacier
+
+Use the apt_audit_list program to list files and their metadata from S3 and
+Glacier. The lists take around 24 hours to complete.
+
+List all items in the S3 production bucket:
+
+`apt_audit_list -config=config/production.json -region="us-east-1" -bucket="aptrust.preservation.storage" -limit=2000000000 > s3_files.txt 2> s3_errors.txt`
+
+
+List all items in the Glacier production bucket:
+
+`apt_audit_list -config=config/production.json -region="us-west-2" -bucket="aptrust.preservation.oregon" -limit=2000000000 > glacier_files.txt 2> glacier_errors.txt`
+
+## Initiating Restoration from Glacier
+
+We have to restore files from Glacier incrementally to avoid paying
+substantial charges. We're allowed to restore 5% of our total storage per
+month, and that's pro-rated down to the hour. So that comes out to
+((total_storage / 20) / 720). As of April, 2017, that works out to about 6GB
+every four hours.
+
+We compiled a list of 1507 files that need to be restored from Glacier.
+Those are in the fixed_files table of the audit.db SQLite database. The script
+make_batches.rb runs through that table and assigns a batch number to each
+file. The total size of all the files in each batch is <6GB.
+
+A ruby script called restore_batch.rb runs as a cron job every four hours and
+initiates the restore process for another batch of files. Note that restoring
+Glacier is a two-step process. The first step is to request the restore. Then,
+four or so hours later, the restored file will be available from S3 for
+download. Our restore requests ask that the file be kept in S3 for 14 days.
+
+Here's the cron job that restores a batch every four hours:
+
+`0 0,4,8,12,16,20 * * * . /home/diamond/.profile; cd /home/adiamond/data; /home/adiamond/.rbenv/bin/rbenv local 2.3.0; /home/adiamond/.rbenv/shims/ruby restore_batch.rb &>> restore_batch.log`
+
+The two ruby scripts are in this directory.
