@@ -43,7 +43,12 @@ type Result struct {
 	S3StorageClass         string             `json:"s3_storage_class"`
 	S3VersionId            string             `json:"s3_version_id"`
 	ErrorMessage           string             `json:"error_message"`
+	AccessKeyFrom          string             `json:"access_key_from"`
+	SecretKeyFrom          string             `json:"secret_key_from"`
 }
+
+var accessKeyFrom = "Could not find your AWS Access Key Id"
+var secretKeyFrom = "Could not find your AWS Secret Key"
 
 func main() {
 	opts := getUserOptions()
@@ -72,28 +77,32 @@ func printResult(opts *Options, client *network.S3Download) {
 		Sha256:          client.Sha256Digest,
 		BytesDownloaded: client.BytesCopied,
 		ErrorMessage:    client.ErrorMessage,
-	}
-	var contentLength int64
-	var lastModified time.Time
-	var partsCount int64
-	if client.Response.ContentLength != nil {
-		contentLength = *client.Response.ContentLength
-	}
-	if client.Response.LastModified != nil {
-		lastModified = *client.Response.LastModified
-	}
-	if client.Response.PartsCount != nil {
-		partsCount = *client.Response.PartsCount
+		AccessKeyFrom:   accessKeyFrom,
+		SecretKeyFrom:   secretKeyFrom,
 	}
 	if client.Response != nil {
-		result.S3ContentLength = contentLength
-		result.S3ETag = util.PointerToString(client.Response.ETag)
-		result.S3LastModified = lastModified
-		result.S3Metadata = client.Response.Metadata
-		result.S3PartsCount = partsCount
-		result.S3ServerSideEncryption = util.PointerToString(client.Response.ServerSideEncryption)
-		result.S3StorageClass = util.PointerToString(client.Response.StorageClass)
-		result.S3VersionId = util.PointerToString(client.Response.VersionId)
+		var contentLength int64
+		var lastModified time.Time
+		var partsCount int64
+		if client.Response.ContentLength != nil {
+			contentLength = *client.Response.ContentLength
+		}
+		if client.Response.LastModified != nil {
+			lastModified = *client.Response.LastModified
+		}
+		if client.Response.PartsCount != nil {
+			partsCount = *client.Response.PartsCount
+		}
+		if client.Response != nil {
+			result.S3ContentLength = contentLength
+			result.S3ETag = util.PointerToString(client.Response.ETag)
+			result.S3LastModified = lastModified
+			result.S3Metadata = client.Response.Metadata
+			result.S3PartsCount = partsCount
+			result.S3ServerSideEncryption = util.PointerToString(client.Response.ServerSideEncryption)
+			result.S3StorageClass = util.PointerToString(client.Response.StorageClass)
+			result.S3VersionId = util.PointerToString(client.Response.VersionId)
+		}
 	}
 	exitCode := 0
 	jsonBytes, err := json.Marshal(result)
@@ -114,6 +123,7 @@ func getUserOptions() *Options {
 	opts := parseCommandLine()
 	verifyFormat(opts)
 	ensureDirIsSet(opts)
+	verifyRequired(opts)
 	return opts
 }
 
@@ -124,16 +134,18 @@ func parseCommandLine() *Options {
 	var key string
 	var dir string
 	var outputFormat string
+	var help bool
 	flag.StringVar(&pathToConfigFile, "config", "", "Path to partner config file")
 	flag.StringVar(&region, "region", constants.AWSVirginia, "AWS region to download from (default 'us-east-1')")
 	flag.StringVar(&bucket, "bucket", "", "The bucket to fetch from (default is your restore bucket)")
 	flag.StringVar(&key, "key", "", "The key you want to fetch")
 	flag.StringVar(&dir, "dir", "", "Download file to this directory (default is current dir)")
 	flag.StringVar(&outputFormat, "format", "text", "Output format ('text' or 'json')")
+	flag.BoolVar(&help, "help", false, "Show help")
 
 	flag.Parse()
 
-	options := &Options{
+	opts := &Options{
 		PathToConfigFile: pathToConfigFile,
 		Region:           region,
 		Bucket:           bucket,
@@ -141,7 +153,38 @@ func parseCommandLine() *Options {
 		Dir:              dir,
 		OutputFormat:     outputFormat,
 	}
-	return options
+
+	if os.Getenv("AWS_ACCESS_KEY_ID") != "" {
+		opts.AccessKeyId = os.Getenv("AWS_ACCESS_KEY_ID")
+		accessKeyFrom = "ENV['AWS_ACCESS_KEY_ID']"
+	}
+	if os.Getenv("AWS_SECRET_ACCESS_KEY") != "" {
+		opts.SecretAccessKey = os.Getenv("AWS_SECRET_ACCESS_KEY")
+		secretKeyFrom = "ENV['AWS_SECRET_ACCESS_KEY']"
+	}
+
+	return opts
+}
+
+// Make sure required options are set
+func verifyRequired(opts *Options) {
+	msg := ""
+	if opts.Key == "" {
+		msg += "Param -key must be specified on the command line"
+	}
+	if opts.Bucket == "" {
+		msg += "Param -bucket must be specified on the command line or in the config file"
+	}
+	if opts.AccessKeyId == "" {
+		msg += "Cannot find AWS_ACCESS_KEY_ID in environment or config file"
+	}
+	if opts.SecretAccessKey == "" {
+		msg += "Cannot find AWS_SECRET_ACCESS_KEY in environment or config file"
+	}
+	if msg != "" {
+		fmt.Fprintln(os.Stderr, msg)
+		os.Exit(1)
+	}
 }
 
 // Make sure the user specified a valid output format.
@@ -155,7 +198,13 @@ func verifyFormat(opts *Options) {
 // Make sure we have a directory to download the file into.
 func ensureDirIsSet(opts *Options) {
 	var err error
-	dir := opts.Dir
+	// If the dir setting has a tilde, expand it to the user's
+	// home directory. This call fails if the system cannot
+	// determine the user.
+	dir, _ := fileutil.ExpandTilde(opts.Dir)
+	if dir == "" {
+		dir = opts.Dir
+	}
 	if dir == "" {
 		dir, err = os.Getwd()
 		if err != nil {
@@ -182,13 +231,17 @@ func mergeConfigFileOptions(opts *Options) {
 	}
 	if partnerConfig.AwsAccessKeyId != "" {
 		opts.AccessKeyId = partnerConfig.AwsAccessKeyId
+		accessKeyFrom = opts.PathToConfigFile
 	} else {
 		opts.AccessKeyId = os.Getenv("AWS_ACCESS_KEY_ID")
+		accessKeyFrom = "ENV['AWS_ACCESS_KEY_ID']"
 	}
 	if partnerConfig.AwsSecretAccessKey != "" {
 		opts.SecretAccessKey = partnerConfig.AwsSecretAccessKey
+		accessKeyFrom = opts.PathToConfigFile
 	} else {
 		opts.SecretAccessKey = os.Getenv("AWS_SECRET_ACCESS_KEY")
+		secretKeyFrom = "ENV['AWS_SECRET_ACCESS_KEY']"
 	}
 }
 
@@ -225,6 +278,69 @@ func loadConfigFile(opts *Options) *models.PartnerConfig {
 // Tell the user about the program.
 func printUsage() {
 	message := `
+apt_download downloads a file from S3 to a local directory
+
+Usage:
+
+apt_download -config=<path to config file> \
+			 -region=<aws region to connect to> \
+			 -bucket=<bucket to download from> \
+			 -key=<name/key of object to downlad> \
+			 -dir=<download the object to this dir> \
+
+Params:
+
+Note that key is the only required param. This program will get your
+AWS credentials from the config file, if it can find one. Otherwise,
+it will get your AWS credentials from the environment variables
+"AWS_ACCESS_KEY_ID" and "AWS_SECRET_ACCESS_KEY". If it can't find your
+AWS credentials, the download will fail.
+
+-config is the optional path to your APTrust partner config file.
+		If you omit this, the downloader uses the config at
+		~/.aptrust_partner.conf (Mac/Linux) or %HOMEPATH%\.aptrust_partner.conf
+		(Windows) if that file exists. The config file should contain
+		your AWS keys, and the locations of your receiving bucket, restore
+		bucket, and the local directory into which you want items downloaded.
+		For info about what should be in your config file, see
+		https://sites.google.com/a/aptrust.org/member-wiki/partner-tools
+
+-region is the S3 region to connect to. This defaults to us-east-1. You
+		generally should not have to set this for APTrust downloads,
+		but you may set it on the command line to download non-APTrust
+		files from your own buckets.
+
+-bucket is the name of the S3 bucket to download from. If this is not
+		specified on the command line, apt_download will use the
+		restoration bucket specified in your APTrust partner config file.
+		See the -config option for more info.
+
+-key    is the name of the item you want to download from S3. This param
+		is required.
+
+-dir    is the directory into which you want to download the S3 file.
+		If this is not specified, and you have an APTrust partner config
+		file, apt_download will use the DownloadDir setting there. If
+		there's no config file, your S3 item will be downloaded into the
+		current working directory from which you're running this app.
+
+Examples:
+
+1. Download item "my_bag.tar" from your restoration bucket, using your
+   default APTrust partner config file in ~/.aptrust_partner.conf (Mac/Linux)
+   or %HOMEPATH%\.aptrust_partner.conf
+
+   apt_download -key="my_bag.tar"
+
+2. Download item "my_bag.tar" from your restoration bucket, using a
+   custom APTrust partner config file
+
+   apt_download -key="my_bag.tar" -config="/home/joy/aptrust_config.txt"
+
+3. Download item "my_bag.tar" from a specified bucket and save it in
+   /home/joy/downloads
+
+   apt_download -key="my_bag.tar" -bucket="my.custom.bucket" -dir="/home/joy/downloads"
 `
 	fmt.Println(message)
 }
