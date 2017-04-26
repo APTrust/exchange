@@ -15,6 +15,8 @@ func TestNewS3Upload(t *testing.T) {
 		return
 	}
 	upload := network.NewS3Upload(
+		os.Getenv("AWS_ACCESS_KEY_ID"),
+		os.Getenv("AWS_SECRET_ACCESS_KEY"),
 		constants.AWSVirginia,
 		testBucket,
 		"s3_upload_test.tar",
@@ -31,6 +33,8 @@ func TestS3UploadAddMetadata(t *testing.T) {
 		return
 	}
 	upload := network.NewS3Upload(
+		os.Getenv("AWS_ACCESS_KEY_ID"),
+		os.Getenv("AWS_SECRET_ACCESS_KEY"),
 		constants.AWSVirginia,
 		testBucket,
 		"s3_upload_test.tar",
@@ -53,6 +57,8 @@ func TestS3UploadBadFile(t *testing.T) {
 		return
 	}
 	upload := network.NewS3Upload(
+		os.Getenv("AWS_ACCESS_KEY_ID"),
+		os.Getenv("AWS_SECRET_ACCESS_KEY"),
 		constants.AWSVirginia,
 		testBucket,
 		"s3_upload_test.tar",
@@ -68,6 +74,8 @@ func TestS3UploadGoodFile(t *testing.T) {
 		return
 	}
 	upload := network.NewS3Upload(
+		os.Getenv("AWS_ACCESS_KEY_ID"),
+		os.Getenv("AWS_SECRET_ACCESS_KEY"),
 		constants.AWSVirginia,
 		testBucket,
 		"s3_upload_test.tar",

@@ -7,6 +7,7 @@ import (
 	"github.com/APTrust/exchange/models"
 	"github.com/APTrust/exchange/network"
 	"github.com/nsqio/go-nsq"
+	"os"
 	"time"
 )
 
@@ -135,7 +136,10 @@ func (deleter *APTFileDeleter) deleteFromStorage(deleteState *models.DeleteState
 		deleteState.DeleteSummary.ErrorIsFatal = true
 		return
 	}
-	client := network.NewS3ObjectDelete(region, bucket, keys)
+	client := network.NewS3ObjectDelete(
+		os.Getenv("AWS_ACCESS_KEY_ID"),
+		os.Getenv("AWS_SECRET_ACCESS_KEY"),
+		region, bucket, keys)
 	client.DeleteList()
 	if client.ErrorMessage != "" {
 		msg := fmt.Sprintf("Error deleting %s from %s: %v",

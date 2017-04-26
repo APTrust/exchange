@@ -46,6 +46,8 @@ func main() {
 
 	opts := parseCommandLine()
 	aptRestore := network.NewS3Restore(
+		os.Getenv("AWS_ACCESS_KEY_ID"),
+		os.Getenv("AWS_SECRET_ACCESS_KEY"),
 		opts.Region, opts.Bucket, opts.Key,
 		"Standard", opts.Days)
 	now := time.Now().UTC()
@@ -64,7 +66,10 @@ func main() {
 		RequestTime:     now,
 	}
 
-	headClient := network.NewS3Head(opts.Region, opts.Bucket)
+	headClient := network.NewS3Head(
+		os.Getenv("AWS_ACCESS_KEY_ID"),
+		os.Getenv("AWS_SECRET_ACCESS_KEY"),
+		opts.Region, opts.Bucket)
 	headClient.Head(opts.Key)
 	if headClient.ErrorMessage != "" {
 		fmt.Fprintln(os.Stderr, "Error in HEAD request for", opts.Key, ":", headClient.ErrorMessage)
@@ -114,22 +119,22 @@ and non-zero on failure. See the exit codes below. It also prints details in JSO
 format to STDOUT.
 
 Usage: apt_restore_from_glacier -config=<path> \
-             -region=<aws region> \
-             -bucket=<bucket name> \
-             -key=<key to restore> \
-             -days=<number of days to keep restored item in S3>
+			 -region=<aws region> \
+			 -bucket=<bucket name> \
+			 -key=<key to restore> \
+			 -days=<number of days to keep restored item in S3>
 
 Starred (*) params are required.
 
 Param -config (*) is the path to the APTrust config file. It can be an
-       absolute path, or config/<file.json> if it's in the config directory
-       of $EXCHANGE_HOME.
+	   absolute path, or config/<file.json> if it's in the config directory
+	   of $EXCHANGE_HOME.
 Param -region (*) is the AWS region containing the S3/Glacier bucket.
-       "us-east-1" is Virginia (DPN Glacier)
-       "us-west-2" is Oregon (APTrust Glacier only)
+	   "us-east-1" is Virginia (DPN Glacier)
+	   "us-west-2" is Oregon (APTrust Glacier only)
 Param -bucket (*) is the name of the bucket.
-       "aptrust.dpn.preservation"     - DPN production bucket (us-east-1)
-       "aptrust.preservation.oregon"  - APTrust Glacier bucket (us-west-2)
+	   "aptrust.dpn.preservation"     - DPN production bucket (us-east-1)
+	   "aptrust.preservation.oregon"  - APTrust Glacier bucket (us-west-2)
 Param -key (*) is the key to restore from Glacier back into S3
 Param -days is the number of days to leave the restored item in the S3 bucket.
 
@@ -140,15 +145,15 @@ Restore MyFile.txt from the Oregon Glacier bucket to the Oregon S3 bucket,
 and leave the copy in Oregon S3 for ten days:
 
 apt_restore_from_glacier -config=config/production.json -region="us-west-2" \
-               -bucket="aptrust.preservation.storage" -key="MyFile.txt" -days=10
+			   -bucket="aptrust.preservation.storage" -key="MyFile.txt" -days=10
 
 
 Return Codes
 ------------
 
 0 - Request succeeded and program exited normally. You'll get this if the
-    restore request succeeded, if it's already in progress, or if it
-    has completed. Check the output for details.
+	restore request succeeded, if it's already in progress, or if it
+	has completed. Check the output for details.
 1 - Request failed.
 
 

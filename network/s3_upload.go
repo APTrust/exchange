@@ -27,13 +27,15 @@ import (
 // urlOfNewItem := upload.Response.Location
 //
 type S3Upload struct {
-	AWSRegion    string
-	ErrorMessage string
-	UploadInput  *s3manager.UploadInput
-	Response     *s3manager.UploadOutput
-	session      *session.Session
-	partSize     int64
-	concurrency  int
+	AWSRegion       string
+	ErrorMessage    string
+	UploadInput     *s3manager.UploadInput
+	Response        *s3manager.UploadOutput
+	session         *session.Session
+	accessKeyId     string
+	secretAccessKey string
+	partSize        int64
+	concurrency     int
 }
 
 // Creates a new S3 upload object using the s3Manager.Uploader described at
@@ -45,13 +47,15 @@ type S3Upload struct {
 //
 // Params:
 //
+// accessKeyId     - The AWS Access Key Id used to authenticate with AWS.
+// secretAccessKey - The AWS secret access key.
 // region     - The name of the AWS region to download from.
 //              E.g. us-east-1 (VA), us-west-2 (Oregon), or use
 //              constants.AWSVirginia, constants.AWSOregon
 // bucket     - The name of the bucket to download from.
 // key        - The name of the file to download.
 // contentType - A standard Content-Type header, like text/html.
-func NewS3Upload(region, bucket, key, contentType string) *S3Upload {
+func NewS3Upload(accessKeyId, secretAccessKey, region, bucket, key, contentType string) *S3Upload {
 	uploadInput := &s3manager.UploadInput{
 		Bucket:      &bucket,
 		Key:         &key,
@@ -59,8 +63,10 @@ func NewS3Upload(region, bucket, key, contentType string) *S3Upload {
 	}
 	uploadInput.Metadata = make(map[string]*string)
 	return &S3Upload{
-		AWSRegion:   region,
-		UploadInput: uploadInput,
+		AWSRegion:       region,
+		UploadInput:     uploadInput,
+		accessKeyId:     accessKeyId,
+		secretAccessKey: secretAccessKey,
 	}
 }
 
@@ -68,7 +74,8 @@ func NewS3Upload(region, bucket, key, contentType string) *S3Upload {
 func (client *S3Upload) GetSession() *session.Session {
 	if client.session == nil {
 		var err error
-		client.session, err = GetS3Session(client.AWSRegion)
+		client.session, err = GetS3Session(client.AWSRegion,
+			client.accessKeyId, client.secretAccessKey)
 		if err != nil {
 			client.ErrorMessage = err.Error()
 		}

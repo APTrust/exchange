@@ -11,6 +11,7 @@ import (
 	apt_testutil "github.com/APTrust/exchange/util/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -113,11 +114,16 @@ func TestIngestStoreItemsAreInStorage(t *testing.T) {
 	maxItemsToList := int64(1)
 	// s3List lists bucket contents.
 	s3List := network.NewS3ObjectList(
+		os.Getenv("AWS_ACCESS_KEY_ID"),
+		os.Getenv("AWS_SECRET_ACCESS_KEY"),
 		constants.AWSVirginia,
 		_context.Config.DPN.DPNPreservationBucket,
 		maxItemsToList)
 	// s3Head gets metadata about specific objects in S3/Glacier.
-	s3Head := network.NewS3Head(_context.Config.APTrustS3Region,
+	s3Head := network.NewS3Head(
+		os.Getenv("AWS_ACCESS_KEY_ID"),
+		os.Getenv("AWS_SECRET_ACCESS_KEY"),
+		_context.Config.APTrustS3Region,
 		_context.Config.DPN.DPNPreservationBucket)
 
 	pathToLogFile := filepath.Join(_context.Config.LogDirectory, "dpn_ingest_store.json")

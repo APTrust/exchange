@@ -7,6 +7,7 @@ import (
 	"github.com/APTrust/exchange/models"
 	"github.com/APTrust/exchange/network"
 	"github.com/nsqio/go-nsq"
+	"os"
 	"strings"
 	"time"
 )
@@ -182,6 +183,8 @@ func (checker *APTFixityChecker) getFixityValueOfS3File(fixityResult *models.Fix
 		return
 	}
 	downloader := network.NewS3Download(
+		os.Getenv("AWS_ACCESS_KEY_ID"),
+		os.Getenv("AWS_SECRET_ACCESS_KEY"),
 		constants.AWSVirginia,
 		bucket,      // should be S3 preservation bucket
 		key,         // s3 key to fetch

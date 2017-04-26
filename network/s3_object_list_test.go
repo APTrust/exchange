@@ -4,6 +4,7 @@ import (
 	"github.com/APTrust/exchange/constants"
 	"github.com/APTrust/exchange/network"
 	"github.com/stretchr/testify/assert"
+	"os"
 	"testing"
 )
 
@@ -12,6 +13,8 @@ func TestNewS3ObjectList(t *testing.T) {
 		return
 	}
 	s3ObjectList := network.NewS3ObjectList(
+		os.Getenv("AWS_ACCESS_KEY_ID"),
+		os.Getenv("AWS_SECRET_ACCESS_KEY"),
 		constants.AWSVirginia,
 		testBucket,
 		int64(100),
@@ -26,6 +29,8 @@ func TestS3ObjectGetList(t *testing.T) {
 		return
 	}
 	s3ObjectList := network.NewS3ObjectList(
+		os.Getenv("AWS_ACCESS_KEY_ID"),
+		os.Getenv("AWS_SECRET_ACCESS_KEY"),
 		constants.AWSVirginia,
 		testBucket,
 		int64(100),

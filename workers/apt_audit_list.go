@@ -210,10 +210,16 @@ func (list *APTAuditList) fetchOne(client *network.S3Head, key string) {
 func (list *APTAuditList) initClients() {
 	if list.listClient == nil {
 		maxKeys := int64(util.Min(list.limit, ITEMS_PER_REQUEST))
-		list.listClient = network.NewS3ObjectList(list.region, list.bucket, maxKeys)
+		list.listClient = network.NewS3ObjectList(
+			os.Getenv("AWS_ACCESS_KEY_ID"),
+			os.Getenv("AWS_SECRET_ACCESS_KEY"),
+			list.region, list.bucket, maxKeys)
 		list.headClients = make([]*network.S3Head, list.concurrency)
 		for i := 0; i < list.concurrency; i++ {
-			list.headClients[i] = network.NewS3Head(list.region, list.bucket)
+			list.headClients[i] = network.NewS3Head(
+				os.Getenv("AWS_ACCESS_KEY_ID"),
+				os.Getenv("AWS_SECRET_ACCESS_KEY"),
+				list.region, list.bucket)
 		}
 	}
 }

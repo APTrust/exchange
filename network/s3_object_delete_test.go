@@ -15,6 +15,8 @@ func TestNewS3ObjectDelete(t *testing.T) {
 		return
 	}
 	s3ObjectDelete := network.NewS3ObjectDelete(
+		os.Getenv("AWS_ACCESS_KEY_ID"),
+		os.Getenv("AWS_SECRET_ACCESS_KEY"),
 		constants.AWSVirginia,
 		testBucket,
 		[]string{"test_obj_1.tar", "test_obj_2.tar"},
@@ -42,6 +44,8 @@ func TestS3ObjectDelete(t *testing.T) {
 
 	// Now delete those objects
 	s3ObjectDelete := network.NewS3ObjectDelete(
+		os.Getenv("AWS_ACCESS_KEY_ID"),
+		os.Getenv("AWS_SECRET_ACCESS_KEY"),
 		constants.AWSVirginia,
 		testBucket,
 		[]string{"test_obj_1.tar", "test_obj_2.tar"},
@@ -54,6 +58,8 @@ func TestS3ObjectDelete(t *testing.T) {
 
 func upload(t *testing.T, key string) error {
 	upload := network.NewS3Upload(
+		os.Getenv("AWS_ACCESS_KEY_ID"),
+		os.Getenv("AWS_SECRET_ACCESS_KEY"),
 		constants.AWSVirginia,
 		testBucket,
 		key,

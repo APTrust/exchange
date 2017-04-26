@@ -5,6 +5,7 @@ import (
 	apt_testutil "github.com/APTrust/exchange/util/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"os"
 	"strings"
 	"testing"
 )
@@ -17,7 +18,10 @@ func TestHead(t *testing.T) {
 	}
 	_context, err := apt_testutil.GetContext("integration.json")
 	require.Nil(t, err, "Could not create context")
-	client := network.NewS3Head(_context.Config.APTrustS3Region, testBucket)
+	client := network.NewS3Head(
+		os.Getenv("AWS_ACCESS_KEY_ID"),
+		os.Getenv("AWS_SECRET_ACCESS_KEY"),
+		_context.Config.APTrustS3Region, testBucket)
 	client.Head(testFile)
 	assert.EqualValues(t, testFileSize, *client.Response.ContentLength)
 	assert.Equal(t, testFileETag, *client.Response.ETag)

@@ -10,6 +10,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"net/url"
+	"os"
 	"testing"
 	"time"
 )
@@ -95,12 +96,17 @@ func TestItemsAreInLongTermStorage(t *testing.T) {
 
 	// s3List lists bucket contents.
 	s3List := apt_network.NewS3ObjectList(
+		os.Getenv("AWS_ACCESS_KEY_ID"),
+		os.Getenv("AWS_SECRET_ACCESS_KEY"),
 		constants.AWSVirginia,
 		_context.Config.DPN.DPNPreservationBucket,
 		int64(100),
 	)
 	// s3Head gets metadata about specific objects in S3/Glacier.
-	s3Head := apt_network.NewS3Head(_context.Config.APTrustS3Region,
+	s3Head := apt_network.NewS3Head(
+		os.Getenv("AWS_ACCESS_KEY_ID"),
+		os.Getenv("AWS_SECRET_ACCESS_KEY"),
+		_context.Config.APTrustS3Region,
 		_context.Config.DPN.DPNPreservationBucket)
 
 	for _, identifier := range dpn_testutil.BAG_IDS {

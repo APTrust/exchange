@@ -651,6 +651,8 @@ func (storer *APTStorer) initUploader(storageSummary *models.StorageSummary, sen
 		return nil
 	}
 	uploader := network.NewS3Upload(
+		os.Getenv("AWS_ACCESS_KEY_ID"),
+		os.Getenv("AWS_SECRET_ACCESS_KEY"),
 		region,
 		bucket,
 		gf.IngestUUID,
@@ -744,6 +746,8 @@ func (storer *APTStorer) markFileAsStored(gf *models.GenericFile, sendWhere, sto
 // PT #143660373: S3 zero-size file bug.
 func (storer *APTStorer) getS3FileDetail(fileUUID string) *s3.Object {
 	s3Client := network.NewS3ObjectList(
+		os.Getenv("AWS_ACCESS_KEY_ID"),
+		os.Getenv("AWS_SECRET_ACCESS_KEY"),
 		storer.Context.Config.APTrustS3Region,
 		storer.Context.Config.PreservationBucket, 1)
 	s3Client.GetList(fileUUID)

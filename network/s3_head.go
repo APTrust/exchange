@@ -12,24 +12,30 @@ import (
 )
 
 type S3Head struct {
-	AWSRegion    string
-	BucketName   string
-	ErrorMessage string
-	Response     *s3.HeadObjectOutput
-	input        *s3.HeadObjectInput
-	session      *session.Session
+	AWSRegion       string
+	BucketName      string
+	ErrorMessage    string
+	Response        *s3.HeadObjectOutput
+	input           *s3.HeadObjectInput
+	session         *session.Session
+	accessKeyId     string
+	secretAccessKey string
 }
 
 // Sets up a new S3 head request. Params:
 //
+// accessKeyId     - The AWS Access Key Id used to authenticate with AWS.
+// secretAccessKey - The AWS secret access key.
 // region     - The name of the AWS region to download from.
 //              E.g. us-east-1 (VA), us-west-2 (Oregon), or use
 //              constants.AWSVirginia, constants.AWSOregon
 // bucket     - The name of the bucket to download from.
-func NewS3Head(region, bucket string) *S3Head {
+func NewS3Head(accessKeyId, secretAccessKey, region, bucket string) *S3Head {
 	return &S3Head{
-		AWSRegion:  region,
-		BucketName: bucket,
+		AWSRegion:       region,
+		BucketName:      bucket,
+		accessKeyId:     accessKeyId,
+		secretAccessKey: secretAccessKey,
 	}
 }
 
@@ -37,7 +43,8 @@ func NewS3Head(region, bucket string) *S3Head {
 func (client *S3Head) GetSession() *session.Session {
 	if client.session == nil {
 		var err error
-		client.session, err = GetS3Session(client.AWSRegion)
+		client.session, err = GetS3Session(client.AWSRegion,
+			client.accessKeyId, client.secretAccessKey)
 		if err != nil {
 			client.ErrorMessage = err.Error()
 		}

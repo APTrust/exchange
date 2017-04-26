@@ -10,6 +10,7 @@ import (
 	"github.com/APTrust/exchange/util"
 	"github.com/aws/aws-sdk-go/service/s3"
 	"net/url"
+	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -158,7 +159,10 @@ func (reader *APTBucketReader) readAllBuckets() {
 
 func (reader *APTBucketReader) processBucket(bucketName string) {
 	reader.Context.MessageLog.Debug("Checking bucket %s", bucketName)
-	s3ObjList := network.NewS3ObjectList(reader.Context.Config.APTrustS3Region,
+	s3ObjList := network.NewS3ObjectList(
+		os.Getenv("AWS_ACCESS_KEY_ID"),
+		os.Getenv("AWS_SECRET_ACCESS_KEY"),
+		reader.Context.Config.APTrustS3Region,
 		bucketName, MAX_KEYS)
 	keepFetching := true
 	for keepFetching {

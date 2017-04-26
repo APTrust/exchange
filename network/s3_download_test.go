@@ -45,6 +45,8 @@ func getS3DownloadObject(t *testing.T) *network.S3Download {
 	}
 	tmpFilePath := filepath.Join(tmpDir, testFile)
 	return network.NewS3Download(
+		os.Getenv("AWS_ACCESS_KEY_ID"),
+		os.Getenv("AWS_SECRET_ACCESS_KEY"),
 		constants.AWSVirginia,
 		testBucket,
 		testFile,

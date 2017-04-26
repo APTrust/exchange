@@ -32,24 +32,28 @@ type S3Download struct {
 	// been read and closed.
 	Response *s3.GetObjectOutput
 
-	session *session.Session
+	accessKeyId     string
+	secretAccessKey string
+	session         *session.Session
 }
 
 // Sets up a new S3 download. Params:
 //
-// region     - The name of the AWS region to download from.
-//              E.g. us-east-1 (VA), us-west-2 (Oregon), or use
-//              constants.AWSVirginia, constants.AWSOregon
-// bucket     - The name of the bucket to download from.
-// key        - The name of the file to download.
-// localPath  - Path to which to save the downloaded file.
-//              This may be /dev/null in cases where we're
-//              just running a fixity check.
-// calculateMd5 - Should we calculate an md5 checksum on
-//              the download?
+// accessKeyId     - The AWS Access Key Id used to authenticate with AWS.
+// secretAccessKey - The AWS secret access key.
+// region          - The name of the AWS region to download from.
+//                   E.g. us-east-1 (VA), us-west-2 (Oregon), or use
+//                   constants.AWSVirginia, constants.AWSOregon
+// bucket          - The name of the bucket to download from.
+// key             - The name of the file to download.
+// localPath       - Path to which to save the downloaded file.
+//                   This may be /dev/null in cases where we're
+//                   just running a fixity check.
+// calculateMd5    - Should we calculate an md5 checksum on
+//                   the download?
 // calculateSha256 - Should we calculate a sha256 checksum
-//              on the download?
-func NewS3Download(region, bucket, key, localPath string, calculateMd5, calculateSha256 bool) *S3Download {
+//                   on the download?
+func NewS3Download(accessKeyId, secretAccessKey, region, bucket, key, localPath string, calculateMd5, calculateSha256 bool) *S3Download {
 	return &S3Download{
 		AWSRegion:       region,
 		BucketName:      bucket,
@@ -57,6 +61,8 @@ func NewS3Download(region, bucket, key, localPath string, calculateMd5, calculat
 		LocalPath:       localPath,
 		CalculateMd5:    calculateMd5,
 		CalculateSha256: calculateSha256,
+		accessKeyId:     accessKeyId,
+		secretAccessKey: secretAccessKey,
 	}
 }
 
@@ -64,7 +70,8 @@ func NewS3Download(region, bucket, key, localPath string, calculateMd5, calculat
 func (client *S3Download) GetSession() *session.Session {
 	if client.session == nil {
 		var err error
-		client.session, err = GetS3Session(client.AWSRegion)
+		client.session, err = GetS3Session(client.AWSRegion,
+			client.accessKeyId, client.secretAccessKey)
 		if err != nil {
 			client.ErrorMessage = err.Error()
 		}

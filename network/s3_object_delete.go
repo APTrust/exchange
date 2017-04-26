@@ -16,17 +16,22 @@ type S3ObjectDelete struct {
 	DeleteObjectsInput *s3.DeleteObjectsInput
 	Response           *s3.DeleteObjectsOutput
 
-	session *session.Session
+	session         *session.Session
+	accessKeyId     string
+	secretAccessKey string
 }
 
-// NewS3ObjectDelete returns a new S3ObjectDelete object. Param region
-// is the S3 region you want to connect to. Regions are listed at
-// http://docs.aws.amazon.com/general/latest/gr/rande.html#s3_region,
-// and are configured in config settings APTrustS3Region, APTrustGlacierRegion,
-// and DPNGlacierRegion. Param bucket is the name of the bucket that contains
-// the key you want to delete. Param keys is a list of keys you want to
-// delete from that bucket.
-func NewS3ObjectDelete(region, bucket string, keys []string) *S3ObjectDelete {
+// NewS3ObjectDelete returns a new S3ObjectDelete object. Params:
+//
+// accessKeyId     - The AWS Access Key Id used to authenticate with AWS.
+// secretAccessKey - The AWS secret access key.
+// region - is the S3 region you want to connect to. Regions are listed at
+//          http://docs.aws.amazon.com/general/latest/gr/rande.html#s3_region,
+//          and are configured in config settings APTrustS3Region,
+//          APTrustGlacierRegion, and DPNGlacierRegion.
+// bucket - is the name of the bucket that contains the keys you want to delete.
+// keys   - is a list of keys you want to delete from that bucket.
+func NewS3ObjectDelete(accessKeyId, secretAccessKey, region, bucket string, keys []string) *S3ObjectDelete {
 	objects := make([]*s3.ObjectIdentifier, len(keys))
 	for i := range keys {
 		objects[i] = &s3.ObjectIdentifier{
@@ -42,6 +47,8 @@ func NewS3ObjectDelete(region, bucket string, keys []string) *S3ObjectDelete {
 	return &S3ObjectDelete{
 		AWSRegion:          region,
 		DeleteObjectsInput: deleteObjectsInput,
+		accessKeyId:        accessKeyId,
+		secretAccessKey:    secretAccessKey,
 	}
 }
 
@@ -49,7 +56,8 @@ func NewS3ObjectDelete(region, bucket string, keys []string) *S3ObjectDelete {
 func (client *S3ObjectDelete) GetSession() *session.Session {
 	if client.session == nil {
 		var err error
-		client.session, err = GetS3Session(client.AWSRegion)
+		client.session, err = GetS3Session(client.AWSRegion,
+			client.accessKeyId, client.secretAccessKey)
 		if err != nil {
 			client.ErrorMessage = err.Error()
 		}

@@ -18,6 +18,8 @@ type S3Restore struct {
 	Response                 *s3.RestoreObjectOutput
 	RestoreAlreadyInProgress bool
 	session                  *session.Session
+	accessKeyId              string
+	secretAccessKey          string
 }
 
 // Sets up as S3 restore request, which is for S3 items
@@ -31,6 +33,8 @@ type S3Restore struct {
 //
 // Params:
 //
+// accessKeyId     - The AWS Access Key Id used to authenticate with AWS.
+// secretAccessKey - The AWS secret access key.
 // region     - The name of the AWS region to download from.
 //              E.g. us-east-1 (VA), us-west-2 (Oregon), or use
 //              constants.AWSVirginia, constants.AWSOregon
@@ -42,7 +46,7 @@ type S3Restore struct {
 //              saves us much.
 // days       - The number of days to leave the restored item in
 //              the S3 bucket after retrieving it.
-func NewS3Restore(region, bucket, key, tier string, days int64) *S3Restore {
+func NewS3Restore(accessKeyId, secretAccessKey, region, bucket, key, tier string, days int64) *S3Restore {
 	return &S3Restore{
 		AWSRegion:  region,
 		BucketName: bucket,
@@ -50,6 +54,8 @@ func NewS3Restore(region, bucket, key, tier string, days int64) *S3Restore {
 		Tier:       tier,
 		Days:       days,
 		RestoreAlreadyInProgress: false,
+		accessKeyId:              accessKeyId,
+		secretAccessKey:          secretAccessKey,
 	}
 }
 
@@ -57,7 +63,8 @@ func NewS3Restore(region, bucket, key, tier string, days int64) *S3Restore {
 func (client *S3Restore) GetSession() *session.Session {
 	if client.session == nil {
 		var err error
-		client.session, err = GetS3Session(client.AWSRegion)
+		client.session, err = GetS3Session(client.AWSRegion,
+			client.accessKeyId, client.secretAccessKey)
 		if err != nil {
 			client.ErrorMessage = err.Error()
 		}

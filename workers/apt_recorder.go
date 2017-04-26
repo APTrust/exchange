@@ -8,6 +8,7 @@ import (
 	"github.com/APTrust/exchange/network"
 	"github.com/APTrust/exchange/util"
 	"github.com/nsqio/go-nsq"
+	"os"
 	"time"
 )
 
@@ -345,6 +346,8 @@ func (recorder *APTRecorder) deleteBagFromReceivingBucket(ingestState *models.In
 		return
 	}
 	deleter := network.NewS3ObjectDelete(
+		os.Getenv("AWS_ACCESS_KEY_ID"),
+		os.Getenv("AWS_SECRET_ACCESS_KEY"),
 		constants.AWSVirginia,
 		ingestState.IngestManifest.S3Bucket,
 		[]string{ingestState.IngestManifest.S3Key})

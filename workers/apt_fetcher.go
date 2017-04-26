@@ -349,6 +349,8 @@ func (fetcher *APTFetcher) canSkipFetchAndValidate(ingestState *models.IngestSta
 // Download the file, and update the IngestManifest while we're at it.
 func (fetcher *APTFetcher) downloadFile(ingestState *models.IngestState) error {
 	downloader := network.NewS3Download(
+		os.Getenv("AWS_ACCESS_KEY_ID"),
+		os.Getenv("AWS_SECRET_ACCESS_KEY"),
 		constants.AWSVirginia,
 		ingestState.IngestManifest.S3Bucket,
 		ingestState.IngestManifest.S3Key,

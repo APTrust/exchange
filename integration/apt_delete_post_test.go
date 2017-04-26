@@ -9,6 +9,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"net/url"
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -51,9 +52,13 @@ func TestDeleteResults(t *testing.T) {
 
 	maxKeys := int64(10)
 	s3Client := network.NewS3ObjectList(
+		os.Getenv("AWS_ACCESS_KEY_ID"),
+		os.Getenv("AWS_SECRET_ACCESS_KEY"),
 		_context.Config.APTrustS3Region,
 		_context.Config.PreservationBucket, maxKeys)
 	glacierClient := network.NewS3ObjectList(
+		os.Getenv("AWS_ACCESS_KEY_ID"),
+		os.Getenv("AWS_SECRET_ACCESS_KEY"),
 		_context.Config.APTrustGlacierRegion,
 		_context.Config.ReplicationBucket, maxKeys)
 	// Make sure files don't exist in S3

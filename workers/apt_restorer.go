@@ -390,6 +390,8 @@ func (restorer *APTRestorer) uploadBag(restoreState *models.RestoreState) {
 	restorer.Context.MessageLog.Info("Uploading %s to %s/%s",
 		restoreState.LocalTarFile, restorationBucket, s3Key)
 	upload := network.NewS3Upload(
+		os.Getenv("AWS_ACCESS_KEY_ID"),
+		os.Getenv("AWS_SECRET_ACCESS_KEY"),
 		constants.AWSVirginia,
 		restorationBucket,
 		s3Key,
@@ -769,6 +771,8 @@ func (restorer *APTRestorer) fetchAllFiles(restoreState *models.RestoreState) {
 
 	// Set up a downloader to fetch files from S3 long-term storage.
 	downloader := network.NewS3Download(
+		os.Getenv("AWS_ACCESS_KEY_ID"),
+		os.Getenv("AWS_SECRET_ACCESS_KEY"),
 		constants.AWSVirginia,
 		restorer.Context.Config.PreservationBucket,
 		"",   // s3 key to fetch - to be set below

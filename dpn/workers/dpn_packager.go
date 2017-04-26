@@ -377,6 +377,8 @@ func (packager *DPNPackager) assembleFilesAndManifests(manifest *models.DPNInges
 // TODO: Don't even try to solve the issue above without a thorough plan.
 func (packager *DPNPackager) fetchAllFiles(manifest *models.DPNIngestManifest) {
 	downloader := apt_network.NewS3Download(
+		os.Getenv("AWS_ACCESS_KEY_ID"),
+		os.Getenv("AWS_SECRET_ACCESS_KEY"),
 		constants.AWSVirginia,
 		packager.Context.Config.PreservationBucket,
 		"",    // s3 key to fetch - to be set below

@@ -122,6 +122,8 @@ func (storer *DPNIngestStorer) postProcess() {
 func (storer *DPNIngestStorer) copyToLongTermStorage(manifest *models.DPNIngestManifest) {
 	manifest.StoreSummary.ClearErrors()
 	upload := apt_network.NewS3Upload(
+		os.Getenv("AWS_ACCESS_KEY_ID"),
+		os.Getenv("AWS_SECRET_ACCESS_KEY"),
 		constants.AWSVirginia,
 		storer.Context.Config.DPN.DPNPreservationBucket,
 		fmt.Sprintf("%s.tar", manifest.DPNBag.UUID),

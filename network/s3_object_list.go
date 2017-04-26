@@ -12,10 +12,20 @@ type S3ObjectList struct {
 	ListObjectsInput *s3.ListObjectsInput
 	Response         *s3.ListObjectsOutput
 
-	session *session.Session
+	session         *session.Session
+	accessKeyId     string
+	secretAccessKey string
 }
 
-func NewS3ObjectList(region, bucket string, maxKeys int64) *S3ObjectList {
+// NewS3ObjectList returns an object that will list items in an
+// S3 bucket.
+//
+// accessKeyId     - The AWS Access Key Id used to authenticate with AWS.
+// secretAccessKey - The AWS secret access key.
+// region - The S3 region to connect to.
+// bucket - The bucket to list
+// maxKeys - The maximum number of items to list
+func NewS3ObjectList(accessKeyId, secretAccessKey, region, bucket string, maxKeys int64) *S3ObjectList {
 	listObjectsInput := &s3.ListObjectsInput{
 		Bucket:  &bucket,
 		MaxKeys: &maxKeys,
@@ -23,6 +33,8 @@ func NewS3ObjectList(region, bucket string, maxKeys int64) *S3ObjectList {
 	return &S3ObjectList{
 		AWSRegion:        region,
 		ListObjectsInput: listObjectsInput,
+		accessKeyId:      accessKeyId,
+		secretAccessKey:  secretAccessKey,
 	}
 }
 
@@ -30,7 +42,8 @@ func NewS3ObjectList(region, bucket string, maxKeys int64) *S3ObjectList {
 func (client *S3ObjectList) GetSession() *session.Session {
 	if client.session == nil {
 		var err error
-		client.session, err = GetS3Session(client.AWSRegion)
+		client.session, err = GetS3Session(client.AWSRegion,
+			client.accessKeyId, client.secretAccessKey)
 		if err != nil {
 			client.ErrorMessage = err.Error()
 		}
