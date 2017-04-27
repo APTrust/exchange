@@ -90,9 +90,22 @@ func TestNewDownloadResut(t *testing.T) {
 }
 
 func TestToJson(t *testing.T) {
-
+	opts := getOpts()
+	client, err := getDownloadClient()
+	require.Nil(t, err)
+	result := common.NewDownloadResult(opts, client)
+	require.NotNil(t, result)
+	jsonString, err := result.ToJson()
+	require.Nil(t, err)
+	expected := `{"region":"us-east-1","bucket":"test.bucket","key":"TestKey","saved_to":"~/tmp/","md5":"12345","sha256":"54321","bytes_downloaded":0,"s3_content_length":1635,"s3_etag":"e42935a09f6cb31646a814e321ea8fa0","s3_last_modified":"2017-01-22T19:10:55Z","s3_metadata":{"Bag":"uc.edu/cin.websites.2016-12-15","Bagpath":"data/www/html/oesper/museum/case20/shelf_01/RF0001/views/RF0001_view2/TileGroup0/4-9-1.jpg","Institution":"uc.edu","Md5":"e42935a09f6cb31646a814e321ea8fa0","Sha256":"41a5a19c45022e715b9743a8cd9fdb3aeb1f7f044ef493b7cfb0e2eae1797820"}}`
+	assert.Equal(t, expected, jsonString)
 }
 
 func TestToText(t *testing.T) {
-
+	opts := getOpts()
+	client, err := getDownloadClient()
+	require.Nil(t, err)
+	result := common.NewDownloadResult(opts, client)
+	require.NotNil(t, result)
+	assert.Equal(t, "[OK] Downloaded 'TestKey' to '~/tmp/'. md5: 12345, sha256: 54321", result.ToText())
 }
