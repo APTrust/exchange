@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/APTrust/exchange/network"
 	"github.com/APTrust/exchange/util"
+	"strings"
 	"time"
 )
 
@@ -52,8 +53,9 @@ func NewDownloadResult(opts *Options, client *network.S3Download) *DownloadResul
 			partsCount = *client.Response.PartsCount
 		}
 		if client.Response != nil {
+			etag := strings.Replace(util.PointerToString(client.Response.ETag), "\"", "", -1)
 			result.S3ContentLength = contentLength
-			result.S3ETag = util.PointerToString(client.Response.ETag)
+			result.S3ETag = etag
 			result.S3LastModified = lastModified
 			result.S3Metadata = client.Response.Metadata
 			result.S3PartsCount = partsCount

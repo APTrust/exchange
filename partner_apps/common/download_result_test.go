@@ -14,6 +14,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 )
 
 func getDownloadClient() (*network.S3Download, error) {
@@ -42,6 +43,8 @@ func getDownloadClient() (*network.S3Download, error) {
 		true,
 	)
 	client.Response = &s3GetObjectOutput
+	client.Md5Digest = "12345"
+	client.Sha256Digest = "54321"
 	return client, nil
 }
 
@@ -67,6 +70,23 @@ func TestNewDownloadResut(t *testing.T) {
 	result := common.NewDownloadResult(opts, client)
 	require.NotNil(t, result)
 	assert.Equal(t, opts.Region, result.Region)
+	assert.Equal(t, opts.Bucket, result.Bucket)
+	assert.Equal(t, opts.Key, result.Key)
+	assert.Equal(t, "~/tmp/", result.SavedTo)
+	assert.Equal(t, "12345", result.Md5)
+	assert.Equal(t, "54321", result.Sha256)
+	assert.Equal(t, int64(0), result.BytesDownloaded)
+	assert.Equal(t, "", result.ErrorMessage)
+	assert.Equal(t, int64(1635), result.S3ContentLength)
+	assert.Equal(t, "e42935a09f6cb31646a814e321ea8fa0", result.S3ETag)
+	lastModified, err := time.Parse(time.RFC3339, "2017-01-22T19:10:55Z")
+	assert.Nil(t, err)
+	assert.Equal(t, lastModified, result.S3LastModified)
+	assert.NotEmpty(t, result.S3Metadata)
+	assert.Equal(t, int64(0), result.S3PartsCount)
+	assert.Equal(t, "", result.S3ServerSideEncryption)
+	assert.Equal(t, "", result.S3StorageClass)
+	assert.Equal(t, "", result.S3VersionId)
 }
 
 func TestToJson(t *testing.T) {
