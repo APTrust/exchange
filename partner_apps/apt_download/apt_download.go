@@ -8,23 +8,10 @@ import (
 	"github.com/APTrust/exchange/network"
 	"github.com/APTrust/exchange/partner_apps/common"
 	"github.com/APTrust/exchange/util"
-	"github.com/APTrust/exchange/util/fileutil"
-	"github.com/APTrust/exchange/util/partner"
 	"os"
 	"path/filepath"
 	"time"
 )
-
-type Options struct {
-	PathToConfigFile string
-	AccessKeyId      string
-	SecretAccessKey  string
-	Region           string
-	Bucket           string
-	Key              string
-	Dir              string
-	OutputFormat     string
-}
 
 type Result struct {
 	Region                 string             `json:"region"`
@@ -52,6 +39,10 @@ var secretKeyFrom = "Could not find your AWS Secret Key"
 
 func main() {
 	opts := getUserOptions()
+	if opts.HasErrors() {
+		fmt.Fprintln(os.Stderr, opts.AllErrorsAsString())
+		os.Exit(1)
+	}
 	client := network.NewS3Download(
 		opts.AccessKeyId,
 		opts.SecretAccessKey,
@@ -67,7 +58,7 @@ func main() {
 }
 
 // Print the result of the fetch operation to STDOUT.
-func printResult(opts *Options, client *network.S3Download) {
+func printResult(opts *common.Options, client *network.S3Download) {
 	result := Result{
 		Region:          opts.Region,
 		Bucket:          opts.Bucket,
@@ -119,15 +110,13 @@ func printResult(opts *Options, client *network.S3Download) {
 
 // Get user-specified options from the command line,
 // environment, and/or config file.
-func getUserOptions() *Options {
+func getUserOptions() *common.Options {
 	opts := parseCommandLine()
-	verifyFormat(opts)
-	ensureDirIsSet(opts)
-	verifyRequired(opts)
+	opts.SetAndVerifyDownloadOptions()
 	return opts
 }
 
-func parseCommandLine() *Options {
+func parseCommandLine() *common.Options {
 	var pathToConfigFile string
 	var region string
 	var bucket string
@@ -145,7 +134,7 @@ func parseCommandLine() *Options {
 
 	flag.Parse()
 
-	opts := &Options{
+	opts := &common.Options{
 		PathToConfigFile: pathToConfigFile,
 		Region:           region,
 		Bucket:           bucket,
@@ -156,123 +145,14 @@ func parseCommandLine() *Options {
 
 	if os.Getenv("AWS_ACCESS_KEY_ID") != "" {
 		opts.AccessKeyId = os.Getenv("AWS_ACCESS_KEY_ID")
-		accessKeyFrom = "ENV['AWS_ACCESS_KEY_ID']"
+		opts.AccessKeyFrom = "environment"
 	}
 	if os.Getenv("AWS_SECRET_ACCESS_KEY") != "" {
 		opts.SecretAccessKey = os.Getenv("AWS_SECRET_ACCESS_KEY")
-		secretKeyFrom = "ENV['AWS_SECRET_ACCESS_KEY']"
+		opts.SecretKeyFrom = "environment"
 	}
 
 	return opts
-}
-
-// Make sure required options are set
-func verifyRequired(opts *Options) {
-	msg := ""
-	if opts.Key == "" {
-		msg += "Param -key must be specified on the command line"
-	}
-	if opts.Bucket == "" {
-		msg += "Param -bucket must be specified on the command line or in the config file"
-	}
-	if opts.AccessKeyId == "" {
-		msg += "Cannot find AWS_ACCESS_KEY_ID in environment or config file"
-	}
-	if opts.SecretAccessKey == "" {
-		msg += "Cannot find AWS_SECRET_ACCESS_KEY in environment or config file"
-	}
-	if msg != "" {
-		fmt.Fprintln(os.Stderr, msg)
-		os.Exit(1)
-	}
-}
-
-// Make sure the user specified a valid output format.
-func verifyFormat(opts *Options) {
-	if opts.OutputFormat != "text" && opts.OutputFormat != "json" {
-		fmt.Fprintln(os.Stderr, "Param -format must be either 'text' or 'json'")
-		os.Exit(1)
-	}
-}
-
-// Make sure we have a directory to download the file into.
-func ensureDirIsSet(opts *Options) {
-	var err error
-	// If the dir setting has a tilde, expand it to the user's
-	// home directory. This call fails if the system cannot
-	// determine the user.
-	dir, _ := fileutil.ExpandTilde(opts.Dir)
-	if dir == "" {
-		dir = opts.Dir
-	}
-	if dir == "" {
-		dir, err = os.Getwd()
-		if err != nil {
-			dir, err = fileutil.RelativeToAbsPath(".")
-			if err != nil {
-				dir = "."
-			}
-		}
-	}
-	opts.Dir = dir
-}
-
-// If the user left some options unspecified on the command line,
-// load them from the config file, if we can. If the user specified
-// a config file, use that. Otherwise, use the default config file
-// in ~/.aptrust_partner.conf or %HOMEPATH%\.aptrust_partner.conf
-func mergeConfigFileOptions(opts *Options) {
-	if opts.PathToConfigFile == "" && !partner.DefaultConfigFileExists() {
-		return // there is no partner config to load
-	}
-	partnerConfig := loadConfigFile(opts)
-	if opts.Bucket == "" {
-		opts.Bucket = partnerConfig.RestorationBucket
-	}
-	if partnerConfig.AwsAccessKeyId != "" {
-		opts.AccessKeyId = partnerConfig.AwsAccessKeyId
-		accessKeyFrom = opts.PathToConfigFile
-	} else {
-		opts.AccessKeyId = os.Getenv("AWS_ACCESS_KEY_ID")
-		accessKeyFrom = "ENV['AWS_ACCESS_KEY_ID']"
-	}
-	if partnerConfig.AwsSecretAccessKey != "" {
-		opts.SecretAccessKey = partnerConfig.AwsSecretAccessKey
-		accessKeyFrom = opts.PathToConfigFile
-	} else {
-		opts.SecretAccessKey = os.Getenv("AWS_SECRET_ACCESS_KEY")
-		secretKeyFrom = "ENV['AWS_SECRET_ACCESS_KEY']"
-	}
-}
-
-// loadConfigFile loads the Partner Config file, which contains settings
-// to connect to AWS S3. We must be able to load this file if certain
-// command-line options are not specified.
-func loadConfigFile(opts *Options) *common.PartnerConfig {
-	var err error
-	defaultConfigFile, _ := partner.DefaultConfigFile()
-	if opts.PathToConfigFile == "" && partner.DefaultConfigFileExists() {
-		opts.PathToConfigFile, err = fileutil.RelativeToAbsPath(defaultConfigFile)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Cannot determine absolute path of %s: %v\n",
-				opts.PathToConfigFile, err.Error())
-			os.Exit(1)
-		}
-	}
-	partnerConfig, err := common.LoadPartnerConfig(opts.PathToConfigFile)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Cannot load config file from %s: %v\n",
-			opts.PathToConfigFile, err.Error())
-		os.Exit(1)
-	}
-	warnings := partnerConfig.Warnings()
-	for _, warning := range warnings {
-		fmt.Fprintln(os.Stderr, warning)
-	}
-	if len(warnings) > 0 {
-		os.Exit(1)
-	}
-	return partnerConfig
 }
 
 // Tell the user about the program.
