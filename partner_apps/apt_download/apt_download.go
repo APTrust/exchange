@@ -1,41 +1,14 @@
 package main
 
 import (
-	"encoding/json"
 	"flag"
 	"fmt"
 	"github.com/APTrust/exchange/constants"
 	"github.com/APTrust/exchange/network"
 	"github.com/APTrust/exchange/partner_apps/common"
-	"github.com/APTrust/exchange/util"
 	"os"
 	"path/filepath"
-	"time"
 )
-
-type Result struct {
-	Region                 string             `json:"region"`
-	Bucket                 string             `json:"bucket"`
-	Key                    string             `json:"key"`
-	SavedTo                string             `json:"saved_to"`
-	Md5                    string             `json:"md5"`
-	Sha256                 string             `json:"sha256"`
-	BytesDownloaded        int64              `json:"bytes_downloaded"`
-	S3ContentLength        int64              `json:"s3_content_length"`
-	S3ETag                 string             `json:"s3_etag"`
-	S3LastModified         time.Time          `json:"s3_last_modified"`
-	S3Metadata             map[string]*string `json:"s3_metadata"`
-	S3PartsCount           int64              `json:"s3_parts_count"`
-	S3ServerSideEncryption string             `json:"s3_server_side_encryption"`
-	S3StorageClass         string             `json:"s3_storage_class"`
-	S3VersionId            string             `json:"s3_version_id"`
-	ErrorMessage           string             `json:"error_message"`
-	AccessKeyFrom          string             `json:"access_key_from"`
-	SecretKeyFrom          string             `json:"secret_key_from"`
-}
-
-var accessKeyFrom = "Could not find your AWS Access Key Id"
-var secretKeyFrom = "Could not find your AWS Secret Key"
 
 func main() {
 	opts := getUserOptions()
@@ -54,58 +27,18 @@ func main() {
 		true,
 	)
 	client.Fetch()
-	printResult(opts, client)
-}
-
-// Print the result of the fetch operation to STDOUT.
-func printResult(opts *common.Options, client *network.S3Download) {
-	result := Result{
-		Region:          opts.Region,
-		Bucket:          opts.Bucket,
-		Key:             opts.Key,
-		SavedTo:         client.LocalPath,
-		Md5:             client.Md5Digest,
-		Sha256:          client.Sha256Digest,
-		BytesDownloaded: client.BytesCopied,
-		ErrorMessage:    client.ErrorMessage,
-		AccessKeyFrom:   accessKeyFrom,
-		SecretKeyFrom:   secretKeyFrom,
-	}
-	if client.Response != nil {
-		var contentLength int64
-		var lastModified time.Time
-		var partsCount int64
-		if client.Response.ContentLength != nil {
-			contentLength = *client.Response.ContentLength
-		}
-		if client.Response.LastModified != nil {
-			lastModified = *client.Response.LastModified
-		}
-		if client.Response.PartsCount != nil {
-			partsCount = *client.Response.PartsCount
-		}
-		if client.Response != nil {
-			result.S3ContentLength = contentLength
-			result.S3ETag = util.PointerToString(client.Response.ETag)
-			result.S3LastModified = lastModified
-			result.S3Metadata = client.Response.Metadata
-			result.S3PartsCount = partsCount
-			result.S3ServerSideEncryption = util.PointerToString(client.Response.ServerSideEncryption)
-			result.S3StorageClass = util.PointerToString(client.Response.StorageClass)
-			result.S3VersionId = util.PointerToString(client.Response.VersionId)
+	result := common.NewDownloadResult(opts, client)
+	output := result.ToText()
+	if opts.OutputFormat == "json" {
+		var err error
+		output, err = result.ToJson()
+		if err != nil {
+			fmt.Fprintf(os.Stderr, result.ToText())
+			fmt.Fprintf(os.Stderr, err.Error())
+			os.Exit(1)
 		}
 	}
-	exitCode := 0
-	jsonBytes, err := json.Marshal(result)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error converting result to JSON: %v", err)
-	} else {
-		fmt.Println(string(jsonBytes))
-	}
-	if err != nil || client.ErrorMessage != "" {
-		exitCode = 1
-	}
-	os.Exit(exitCode)
+	fmt.Println(output)
 }
 
 // Get user-specified options from the command line,
@@ -167,6 +100,7 @@ apt_download -config=<path to config file> \
 			 -bucket=<bucket to download from> \
 			 -key=<name/key of object to downlad> \
 			 -dir=<download the object to this dir> \
+             -format=<'text' or 'json'>
 
 Params:
 
@@ -203,6 +137,10 @@ AWS credentials, the download will fail.
 		file, apt_download will use the DownloadDir setting there. If
 		there's no config file, your S3 item will be downloaded into the
 		current working directory from which you're running this app.
+
+-format is the format of the output printed to STDOUT when the download
+        is complete. Options are 'text' and 'json', and the default is
+        'text'.
 
 Examples:
 
