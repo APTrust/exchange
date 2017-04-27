@@ -5,8 +5,8 @@ import (
 	"flag"
 	"fmt"
 	"github.com/APTrust/exchange/constants"
-	"github.com/APTrust/exchange/models"
 	"github.com/APTrust/exchange/network"
+	"github.com/APTrust/exchange/partner_apps/common"
 	"github.com/APTrust/exchange/util"
 	"github.com/APTrust/exchange/util/fileutil"
 	"github.com/APTrust/exchange/util/partner"
@@ -248,7 +248,7 @@ func mergeConfigFileOptions(opts *Options) {
 // loadConfigFile loads the Partner Config file, which contains settings
 // to connect to AWS S3. We must be able to load this file if certain
 // command-line options are not specified.
-func loadConfigFile(opts *Options) *models.PartnerConfig {
+func loadConfigFile(opts *Options) *common.PartnerConfig {
 	var err error
 	defaultConfigFile, _ := partner.DefaultConfigFile()
 	if opts.PathToConfigFile == "" && partner.DefaultConfigFileExists() {
@@ -259,7 +259,7 @@ func loadConfigFile(opts *Options) *models.PartnerConfig {
 			os.Exit(1)
 		}
 	}
-	partnerConfig, err := models.LoadPartnerConfig(opts.PathToConfigFile)
+	partnerConfig, err := common.LoadPartnerConfig(opts.PathToConfigFile)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Cannot load config file from %s: %v\n",
 			opts.PathToConfigFile, err.Error())

@@ -1,8 +1,8 @@
-package models_test
+package common_test
 
 import (
 	"fmt"
-	"github.com/APTrust/exchange/models"
+	"github.com/APTrust/exchange/partner_apps/common"
 	"github.com/APTrust/exchange/util/fileutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -15,7 +15,7 @@ import (
 func TestLoadPartnerConfigGood(t *testing.T) {
 	filePath, err := fileutil.RelativeToAbsPath(filepath.Join("testdata", "config", "partner_config_valid.conf"))
 	require.Nil(t, err)
-	partnerConfig, err := models.LoadPartnerConfig(filePath)
+	partnerConfig, err := common.LoadPartnerConfig(filePath)
 	require.Nil(t, err)
 	assert.Equal(t, "123456789XYZ", partnerConfig.AwsAccessKeyId)
 	assert.Equal(t, "THIS KEY INCLUDES SPACES AND DOES NOT NEED QUOTES", partnerConfig.AwsSecretAccessKey)
@@ -27,14 +27,14 @@ func TestLoadPartnerConfigGood(t *testing.T) {
 func TestLoadPartnerConfigWrongFileType(t *testing.T) {
 	filePath, err := fileutil.RelativeToAbsPath(filepath.Join("testdata", "config", "intel_obj.json"))
 	require.Nil(t, err)
-	_, err = models.LoadPartnerConfig(filePath)
+	_, err = common.LoadPartnerConfig(filePath)
 	require.NotNil(t, err)
 }
 
 func TestLoadPartnerConfigMissingFile(t *testing.T) {
 	filePath, err := fileutil.RelativeToAbsPath(filepath.Join("testdata", "config", "_non_existent_file.conf_"))
 	require.Nil(t, err)
-	_, err = models.LoadPartnerConfig(filePath)
+	_, err = common.LoadPartnerConfig(filePath)
 	require.NotNil(t, err)
 }
 
@@ -46,7 +46,7 @@ func TestLoadAwsFromEnv(t *testing.T) {
 	filePath, err := fileutil.RelativeToAbsPath(filepath.Join("testdata", "config", "partner_config_invalid.conf"))
 	require.Nil(t, err)
 
-	partnerConfig, err := models.LoadPartnerConfig(filePath)
+	partnerConfig, err := common.LoadPartnerConfig(filePath)
 	require.Nil(t, err)
 
 	if partnerConfig.AwsAccessKeyId != "" {
@@ -63,7 +63,7 @@ func TestLoadAwsFromEnv(t *testing.T) {
 func TestLoadPartnerConfigBad(t *testing.T) {
 	filePath, err := fileutil.RelativeToAbsPath(filepath.Join("testdata", "config", "partner_config_invalid.conf"))
 	require.Nil(t, err)
-	partnerConfig, err := models.LoadPartnerConfig(filePath)
+	partnerConfig, err := common.LoadPartnerConfig(filePath)
 	require.Nil(t, err)
 	// Make sure we get warnings on unexpected settings and on
 	// expected settings that are not there.
@@ -86,7 +86,7 @@ func TestLoadPartnerConfigBad(t *testing.T) {
 }
 
 func TestPartnerConfigValidate(t *testing.T) {
-	partnerConfig := &models.PartnerConfig{
+	partnerConfig := &common.PartnerConfig{
 		AwsAccessKeyId:     "abc",
 		AwsSecretAccessKey: "xyz",
 		ReceivingBucket:    "aptrust.receiving.xyz.edu",
