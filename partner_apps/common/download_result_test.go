@@ -48,22 +48,8 @@ func getDownloadClient() (*network.S3Download, error) {
 	return client, nil
 }
 
-func getOpts() *common.Options {
-	return &common.Options{
-		PathToConfigFile: "",
-		AccessKeyId:      "Ax S Kee Eye Dee",
-		AccessKeyFrom:    "environment",
-		SecretAccessKey:  "Shh! Seekrit!",
-		SecretKeyFrom:    "environment",
-		Region:           "us-east-1",
-		Bucket:           "test.bucket",
-		Key:              "TestKey",
-		Dir:              "tmp/",
-		OutputFormat:     "json",
-	}
-}
-
 func TestNewDownloadResut(t *testing.T) {
+	// Note that getOpts is defined in options_test.go
 	opts := getOpts()
 	client, err := getDownloadClient()
 	require.Nil(t, err)
