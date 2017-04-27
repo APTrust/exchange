@@ -86,13 +86,13 @@ func (partnerConfig *PartnerConfig) addWarning(message string) {
 func (partnerConfig *PartnerConfig) Warnings() []string {
 	warnings := make([]string, len(partnerConfig.warnings))
 	copy(warnings, partnerConfig.warnings)
-	if partnerConfig.AwsAccessKeyId == "" && os.Getenv("AWS_ACCESS_KEY_ID") == "" {
+	if partnerConfig.AwsAccessKeyId == "" {
 		warnings = append(warnings,
 			"AwsAccessKeyId is missing. This setting is required only for copying files "+
 				"to and from S3. You may set this in the environment instead of in the config file "+
 				"if you prefer.")
 	}
-	if partnerConfig.AwsSecretAccessKey == "" && os.Getenv("AWS_SECRET_ACCESS_KEY") == "" {
+	if partnerConfig.AwsSecretAccessKey == "" {
 		warnings = append(warnings,
 			"AwsSecretAccessKey is missing. This setting is required only for copying files "+
 				"to and from S3. You may set this in the environment instead of in the config file "+

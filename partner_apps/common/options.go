@@ -137,9 +137,9 @@ func (opts *Options) LoadConfigFile() (*PartnerConfig, error) {
 			opts.PathToConfigFile, err.Error()))
 		return nil, err
 	}
-	for _, warning := range partnerConfig.Warnings() {
-		fmt.Fprintln(os.Stderr, "WARNING -", warning)
-	}
+	//for _, warning := range partnerConfig.Warnings() {
+	//	fmt.Fprintln(os.Stderr, "WARNING -", warning)
+	//}
 	return partnerConfig, nil
 }
 
