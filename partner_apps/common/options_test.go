@@ -28,7 +28,15 @@ func getOpts() *common.Options {
 }
 
 func TestSetAndVerifyDownloadOptions(t *testing.T) {
+	keyId := os.Getenv("AWS_ACCESS_KEY_ID")
+	secret := os.Getenv("AWS_SECRET_ACCESS_KEY")
+	os.Setenv("AWS_ACCESS_KEY_ID", "")
+	os.Setenv("AWS_SECRET_ACCESS_KEY", "")
+	defer os.Setenv("AWS_ACCESS_KEY_ID", keyId)
+	defer os.Setenv("AWS_SECRET_ACCESS_KEY", secret)
+
 	opts := common.Options{}
+	opts.PathToConfigFile = "/dev/null"
 	opts.SetAndVerifyDownloadOptions()
 	assert.Equal(t, 4, len(opts.Errors()))
 

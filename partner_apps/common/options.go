@@ -9,17 +9,46 @@ import (
 )
 
 type Options struct {
+	// PathToConfigFile is the path the APTrust partner config
+	// file. If not specified, this defaults to ~/.aptrust_partner.conf.
+	// This can be omitted entirely if you supply the -bucket and -key
+	// options on the command line. Any required options not specified
+	// on the command line will be pulled from this file.
 	PathToConfigFile string
-	AccessKeyId      string
-	AccessKeyFrom    string
-	SecretAccessKey  string
-	SecretKeyFrom    string
-	Region           string
-	Bucket           string
-	Key              string
-	Dir              string
-	OutputFormat     string
-	errors           []string
+	// AccessKeyId is your AWS access key id. Used for authentication.
+	AccessKeyId string
+	// AccessKeyFrom describes the source from which the Options object
+	// loaded the AWS AccessKeyId. This is used only for testing and debugging.
+	AccessKeyFrom string
+	// SecretAccessKey is the AWS Secret Access Key used to access your
+	// S3 bucket.
+	SecretAccessKey string
+	// SecretKeyFrom describes the source from which the Options object
+	// loaded the AWS SecretAccessKey. This is used only for testing and
+	// debugging.
+	SecretKeyFrom string
+	// Region is the AWS S3 region to connect to.
+	Region string
+	// Bucket is the name of the bucket you're working with.
+	Bucket string
+	// Key is the name of the S3 key to download, list, or delete.
+	Key string
+	// Dir is the directory into which the S3 object should be downloaded.
+	// This option is for downloads only.
+	Dir string
+	// ContentType is the content type of the object being uploaded
+	// to S3. This option applies to uploads only, and can be left
+	// empty.
+	ContentType string
+	// FileToUpload is the path the file that should be uploaded to S3.
+	// This is required for apt_upload only, and is ignored elsewhere.
+	FileToUpload string
+	// OutputFormat specifies how the program should print its results
+	// to STDOUT. Options are "text" and "json".
+	OutputFormat string
+	// error contains a list of errors describing why these options are
+	// not valid for an operation like upload or download.
+	errors []string
 }
 
 // SetAndVerifyDownloadOptions tries to fill in options
@@ -37,6 +66,13 @@ func (opts *Options) SetAndVerifyDownloadOptions() {
 	opts.VerifyOutputFormat()
 	opts.EnsureDownloadDirIsSet()
 	opts.VerifyRequiredDownloadOptions()
+}
+
+// SetAndVerifyUploadOptions
+func (opts *Options) SetAndVerifyUploadOptions() {
+
+	// TODO: Implement me!
+
 }
 
 // VerifyRequiredDownloadOptions checks to see that all

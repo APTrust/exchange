@@ -54,12 +54,17 @@ type S3Upload struct {
 //              constants.AWSVirginia, constants.AWSOregon
 // bucket     - The name of the bucket to download from.
 // key        - The name of the file to download.
-// contentType - A standard Content-Type header, like text/html.
+// contentType - A standard Content-Type header, like text/html. APTrust
+//               ingest uploads should always set this, but the apt_upload
+//               utility in partner_apps doesn't have to. If contentType
+//               is an empty string, the uploader will ignore it.
 func NewS3Upload(accessKeyId, secretAccessKey, region, bucket, key, contentType string) *S3Upload {
 	uploadInput := &s3manager.UploadInput{
-		Bucket:      &bucket,
-		Key:         &key,
-		ContentType: &contentType,
+		Bucket: &bucket,
+		Key:    &key,
+	}
+	if contentType != "" {
+		uploadInput.ContentType = &contentType
 	}
 	uploadInput.Metadata = make(map[string]*string)
 	return &S3Upload{
