@@ -70,9 +70,13 @@ func (opts *Options) SetAndVerifyDownloadOptions() {
 
 // SetAndVerifyUploadOptions
 func (opts *Options) SetAndVerifyUploadOptions() {
-
-	// TODO: Implement me!
-
+	opts.ClearErrors()
+	if opts.OutputFormat == "" {
+		opts.OutputFormat = "text"
+	}
+	opts.MergeConfigFileOptions()
+	opts.VerifyOutputFormat()
+	opts.VerifyRequiredUploadOptions()
 }
 
 // VerifyRequiredDownloadOptions checks to see that all
@@ -89,6 +93,23 @@ func (opts *Options) VerifyRequiredDownloadOptions() {
 	}
 	if opts.SecretAccessKey == "" {
 		opts.addError("Cannot find AWS_SECRET_ACCESS_KEY in environment or config file")
+	}
+}
+
+// VerifyRequiredUploadOptions checks to see that all
+// required upload options are set.
+func (opts *Options) VerifyRequiredUploadOptions() {
+	if opts.Bucket == "" {
+		opts.addError("Param -bucket must be specified on the command line or in the config file")
+	}
+	if opts.AccessKeyId == "" {
+		opts.addError("Cannot find AWS_ACCESS_KEY_ID in environment or config file")
+	}
+	if opts.SecretAccessKey == "" {
+		opts.addError("Cannot find AWS_SECRET_ACCESS_KEY in environment or config file")
+	}
+	if opts.FileToUpload == "" {
+		opts.addError("You must specify a file to upload")
 	}
 }
 

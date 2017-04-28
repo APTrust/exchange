@@ -54,7 +54,6 @@ func printResult(opts *common.Options, uploadClient *network.S3Upload) {
 		}
 	}
 	fmt.Println(output)
-
 }
 
 // Get user-specified options from the command line,

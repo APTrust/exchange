@@ -79,6 +79,57 @@ func TestSetAndVerifyDownloadOptions(t *testing.T) {
 	assert.Empty(t, opts.Errors())
 }
 
+func TestSetAndVerifyUploadOptions(t *testing.T) {
+	keyId := os.Getenv("AWS_ACCESS_KEY_ID")
+	secret := os.Getenv("AWS_SECRET_ACCESS_KEY")
+	os.Setenv("AWS_ACCESS_KEY_ID", "")
+	os.Setenv("AWS_SECRET_ACCESS_KEY", "")
+	defer os.Setenv("AWS_ACCESS_KEY_ID", keyId)
+	defer os.Setenv("AWS_SECRET_ACCESS_KEY", secret)
+
+	opts := common.Options{}
+	opts.PathToConfigFile = "/dev/null"
+	opts.SetAndVerifyUploadOptions()
+	assert.Equal(t, 4, len(opts.Errors()))
+
+	opts = common.Options{}
+	filePath, err := getConfigFilePath()
+	require.Nil(t, err)
+	opts.PathToConfigFile = filePath
+	opts.SetAndVerifyUploadOptions()
+	assert.Equal(t, 1, len(opts.Errors()))
+
+	// Should NOT overwrite opts if explicitly set.
+	conf := getTestConfig(t)
+	require.NotNil(t, conf)
+	opts = common.Options{
+		AccessKeyId:      "1234",
+		SecretAccessKey:  "5678",
+		PathToConfigFile: filePath,
+		Bucket:           "bucket",
+		FileToUpload:     "./some/file.txt",
+	}
+	opts.SetAndVerifyUploadOptions()
+	assert.Equal(t, "bucket", opts.Bucket)
+	assert.Equal(t, "1234", opts.AccessKeyId)
+	assert.Equal(t, "5678", opts.SecretAccessKey)
+	assert.Equal(t, "bucket", opts.Bucket)
+	assert.Equal(t, "./some/file.txt", opts.FileToUpload)
+	assert.Empty(t, opts.Errors())
+
+	// Should set opts from file if not explicitly set.
+	opts = common.Options{
+		PathToConfigFile: filePath,
+		FileToUpload:     "./some/file.txt",
+	}
+	opts.SetAndVerifyUploadOptions()
+	assert.Equal(t, conf.RestorationBucket, opts.Bucket)
+	assert.Equal(t, conf.DownloadDir, opts.Dir)
+	assert.Equal(t, conf.AwsAccessKeyId, opts.AccessKeyId)
+	assert.Equal(t, conf.AwsSecretAccessKey, opts.SecretAccessKey)
+	assert.Empty(t, opts.Errors())
+}
+
 func TestVerifyRequiredDownloadOptions(t *testing.T) {
 	opts := common.Options{}
 	opts.VerifyRequiredDownloadOptions()
@@ -95,6 +146,25 @@ func TestVerifyRequiredDownloadOptions(t *testing.T) {
 	opts.Key = "key"
 	opts.ClearErrors()
 	opts.VerifyRequiredDownloadOptions()
+	assert.Empty(t, opts.Errors())
+}
+
+func TestVerifyRequiredUploadOptions(t *testing.T) {
+	opts := common.Options{}
+	opts.VerifyRequiredUploadOptions()
+	assert.Equal(t, 4, len(opts.Errors()))
+
+	filePath, err := getConfigFilePath()
+	require.Nil(t, err)
+	opts.PathToConfigFile = filePath
+	opts.ClearErrors()
+	opts.MergeConfigFileOptions()
+	opts.VerifyRequiredUploadOptions()
+	assert.Equal(t, 1, len(opts.Errors()))
+
+	opts.FileToUpload = "/home/joy/video.mp4"
+	opts.ClearErrors()
+	opts.VerifyRequiredUploadOptions()
 	assert.Empty(t, opts.Errors())
 }
 
