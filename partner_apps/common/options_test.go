@@ -23,6 +23,7 @@ func getOpts() *common.Options {
 		Bucket:           "test.bucket",
 		Key:              "TestKey",
 		Dir:              "tmp/",
+		FileToUpload:     "/dev/null/file.txt",
 		OutputFormat:     "json",
 	}
 }

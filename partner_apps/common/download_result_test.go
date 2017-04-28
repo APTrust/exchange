@@ -48,7 +48,7 @@ func getDownloadClient() (*network.S3Download, error) {
 	return client, nil
 }
 
-func TestNewDownloadResut(t *testing.T) {
+func TestNewDownloadResult(t *testing.T) {
 	// Note that getOpts is defined in options_test.go
 	opts := getOpts()
 	client, err := getDownloadClient()
@@ -75,7 +75,7 @@ func TestNewDownloadResut(t *testing.T) {
 	assert.Equal(t, "", result.S3VersionId)
 }
 
-func TestToJson(t *testing.T) {
+func TestDownloadResultToJson(t *testing.T) {
 	opts := getOpts()
 	client, err := getDownloadClient()
 	require.Nil(t, err)
@@ -87,7 +87,7 @@ func TestToJson(t *testing.T) {
 	assert.Equal(t, expected, jsonString)
 }
 
-func TestToText(t *testing.T) {
+func TestDownloadResultToText(t *testing.T) {
 	opts := getOpts()
 	client, err := getDownloadClient()
 	require.Nil(t, err)
