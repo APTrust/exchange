@@ -29,7 +29,7 @@ type Options struct {
 // Check opts.HasErrors() after calling this, to see if we
 // have sufficient options info to proceed with a download.
 func (opts *Options) SetAndVerifyDownloadOptions() {
-	opts.errors = make([]string, 0)
+	opts.ClearErrors()
 	opts.MergeConfigFileOptions()
 	opts.VerifyOutputFormat()
 	opts.EnsureDownloadDirIsSet()
@@ -169,14 +169,18 @@ func (opts *Options) AllErrorsAsString() string {
 		return strings.Join(errors, "\n")
 	}
 	return ""
-
 }
 
 // Errors returns a list of errors, such as invalid or
 // missing params.
 func (opts *Options) Errors() []string {
 	if opts.errors == nil {
-		opts.errors = make([]string, 0)
+		opts.ClearErrors()
 	}
 	return opts.errors
+}
+
+// ClearErrors clears all errors. This is used in testing.
+func (opts *Options) ClearErrors() {
+	opts.errors = make([]string, 0)
 }

@@ -1,21 +1,15 @@
 package common_test
 
 import (
-	//	"encoding/json"
-	//	"fmt"
-	//	"github.com/APTrust/exchange/constants"
-	//	"github.com/APTrust/exchange/network"
 	"github.com/APTrust/exchange/partner_apps/common"
 	"github.com/APTrust/exchange/util/fileutil"
 	"github.com/APTrust/exchange/util/partner"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	//	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
-	//	"time"
 )
 
 func getOpts() *common.Options {
@@ -34,13 +28,26 @@ func getOpts() *common.Options {
 }
 
 func TestSetAndVerifyDownloadOptions(t *testing.T) {
-	opts := common.Options{}
-	opts.VerifyRequiredDownloadOptions()
-	assert.Equal(t, 4, len(opts.Errors()))
+
 }
 
 func TestVerifyRequiredDownloadOptions(t *testing.T) {
+	opts := common.Options{}
+	opts.VerifyRequiredDownloadOptions()
+	assert.Equal(t, 4, len(opts.Errors()))
 
+	filePath, err := getConfigFilePath()
+	require.Nil(t, err)
+	opts.PathToConfigFile = filePath
+	opts.ClearErrors()
+	opts.MergeConfigFileOptions()
+	opts.VerifyRequiredDownloadOptions()
+	assert.Equal(t, 1, len(opts.Errors()))
+
+	opts.Key = "key"
+	opts.ClearErrors()
+	opts.VerifyRequiredDownloadOptions()
+	assert.Empty(t, opts.Errors())
 }
 
 func TestVerifyOutputFormat(t *testing.T) {
@@ -71,19 +78,18 @@ func TestEnsureDownloadDirIsSet(t *testing.T) {
 }
 
 func TestMergeConfigFileOptions(t *testing.T) {
-	// First, find out what's in the test config file.
-	opts := &common.Options{}
-	f := filepath.Join("testdata", "config", "partner_config_valid.conf")
-	filePath, err := fileutil.RelativeToAbsPath(f)
+	filePath, err := getConfigFilePath()
 	require.Nil(t, err)
-	opts.PathToConfigFile = filePath
-	conf, err := opts.LoadConfigFile()
-	assert.Nil(t, err)
-	assert.NotNil(t, conf)
+
+	conf := getTestConfig(t)
+	require.NotNil(t, conf)
 
 	// Now make sure values are merged correctly.
 	// These four options, if not explicitly supplied
 	// by the user, should be pulled from the config file.
+	opts := &common.Options{
+		PathToConfigFile: filePath,
+	}
 	opts.MergeConfigFileOptions()
 	assert.Equal(t, conf.RestorationBucket, opts.Bucket)
 	assert.Equal(t, conf.DownloadDir, opts.Dir)
@@ -100,13 +106,8 @@ func TestLoadConfigFile(t *testing.T) {
 		assert.NotNil(t, conf)
 	}
 
-	f := filepath.Join("testdata", "config", "partner_config_valid.conf")
-	filePath, err := fileutil.RelativeToAbsPath(f)
-	require.Nil(t, err)
-	opts.PathToConfigFile = filePath
-	conf, err := opts.LoadConfigFile()
-	assert.Nil(t, err)
-	assert.NotNil(t, conf)
+	conf := getTestConfig(t)
+	require.NotNil(t, conf)
 }
 
 func TestHasErrors(t *testing.T) {
@@ -121,8 +122,32 @@ func TestErrors(t *testing.T) {
 	assert.Equal(t, 4, len(opts.Errors()))
 }
 
+func TestClearErrors(t *testing.T) {
+	opts := common.Options{}
+	opts.VerifyRequiredDownloadOptions()
+	assert.Equal(t, 4, len(opts.Errors()))
+	opts.ClearErrors()
+	assert.Empty(t, opts.Errors())
+}
+
 func AllErrorsAsString(t *testing.T) {
 	opts := common.Options{}
 	opts.VerifyRequiredDownloadOptions()
 	assert.Equal(t, "", opts.AllErrorsAsString())
+}
+
+func getTestConfig(t *testing.T) *common.PartnerConfig {
+	filePath, err := getConfigFilePath()
+	require.Nil(t, err)
+	opts := &common.Options{}
+	opts.PathToConfigFile = filePath
+	conf, err := opts.LoadConfigFile()
+	assert.Nil(t, err)
+	assert.NotNil(t, conf)
+	return conf
+}
+
+func getConfigFilePath() (string, error) {
+	f := filepath.Join("testdata", "config", "partner_config_valid.conf")
+	return fileutil.RelativeToAbsPath(f)
 }
