@@ -213,7 +213,7 @@ func (recorder *DPNIngestRecorder) buildTransferRequests(manifest *models.DPNIng
 		relPath := strings.Replace(manifest.LocalTarFile,
 			recorder.Context.Config.DPN.StagingDirectory, "", 1)
 		if strings.HasPrefix(relPath, "/") {
-			relPath = relPath[0 : len(relPath)-1]
+			relPath = relPath[0:len(relPath)]
 		}
 		link := fmt.Sprintf("dpn.%s@%s:outbound/%s", toNode, domain, relPath)
 		xfer, err := manifest.BuildReplicationTransfer(
