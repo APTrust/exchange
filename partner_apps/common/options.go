@@ -30,6 +30,9 @@ type Options struct {
 // have sufficient options info to proceed with a download.
 func (opts *Options) SetAndVerifyDownloadOptions() {
 	opts.ClearErrors()
+	if opts.OutputFormat == "" {
+		opts.OutputFormat = "text"
+	}
 	opts.MergeConfigFileOptions()
 	opts.VerifyOutputFormat()
 	opts.EnsureDownloadDirIsSet()
@@ -94,8 +97,9 @@ func (opts *Options) MergeConfigFileOptions() {
 	if opts.PathToConfigFile == "" && !partner.DefaultConfigFileExists() {
 		return // there is no partner config to load
 	}
-	partnerConfig, _ := opts.LoadConfigFile()
-	if partnerConfig == nil {
+	partnerConfig, err := opts.LoadConfigFile()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, err.Error())
 		return
 	}
 	if opts.Bucket == "" {
@@ -104,19 +108,23 @@ func (opts *Options) MergeConfigFileOptions() {
 	if opts.Dir == "" {
 		opts.Dir = partnerConfig.DownloadDir
 	}
-	if partnerConfig.AwsAccessKeyId != "" {
-		opts.AccessKeyId = partnerConfig.AwsAccessKeyId
-		opts.AccessKeyFrom = opts.PathToConfigFile
-	} else {
-		opts.AccessKeyId = os.Getenv("AWS_ACCESS_KEY_ID")
-		opts.AccessKeyFrom = "ENV['AWS_ACCESS_KEY_ID']"
+	if opts.AccessKeyId == "" {
+		if partnerConfig.AwsAccessKeyId != "" {
+			opts.AccessKeyId = partnerConfig.AwsAccessKeyId
+			opts.AccessKeyFrom = opts.PathToConfigFile
+		} else {
+			opts.AccessKeyId = os.Getenv("AWS_ACCESS_KEY_ID")
+			opts.AccessKeyFrom = "ENV['AWS_ACCESS_KEY_ID']"
+		}
 	}
-	if partnerConfig.AwsSecretAccessKey != "" {
-		opts.SecretAccessKey = partnerConfig.AwsSecretAccessKey
-		opts.AccessKeyFrom = opts.PathToConfigFile
-	} else {
-		opts.SecretAccessKey = os.Getenv("AWS_SECRET_ACCESS_KEY")
-		opts.SecretKeyFrom = "ENV['AWS_SECRET_ACCESS_KEY']"
+	if opts.SecretAccessKey == "" {
+		if partnerConfig.AwsSecretAccessKey != "" {
+			opts.SecretAccessKey = partnerConfig.AwsSecretAccessKey
+			opts.AccessKeyFrom = opts.PathToConfigFile
+		} else {
+			opts.SecretAccessKey = os.Getenv("AWS_SECRET_ACCESS_KEY")
+			opts.SecretKeyFrom = "ENV['AWS_SECRET_ACCESS_KEY']"
+		}
 	}
 }
 

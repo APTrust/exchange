@@ -28,7 +28,47 @@ func getOpts() *common.Options {
 }
 
 func TestSetAndVerifyDownloadOptions(t *testing.T) {
+	opts := common.Options{}
+	opts.SetAndVerifyDownloadOptions()
+	assert.Equal(t, 4, len(opts.Errors()))
 
+	opts = common.Options{}
+	filePath, err := getConfigFilePath()
+	require.Nil(t, err)
+	opts.PathToConfigFile = filePath
+	opts.SetAndVerifyDownloadOptions()
+	assert.Equal(t, 1, len(opts.Errors()))
+
+	// Should NOT overwrite opts if explicitly set.
+	conf := getTestConfig(t)
+	require.NotNil(t, conf)
+	opts = common.Options{
+		AccessKeyId:      "1234",
+		SecretAccessKey:  "5678",
+		PathToConfigFile: filePath,
+		Key:              "key",
+		Bucket:           "bucket",
+		Dir:              "dir",
+	}
+	opts.SetAndVerifyDownloadOptions()
+	assert.Equal(t, "bucket", opts.Bucket)
+	assert.Equal(t, "dir", opts.Dir)
+	assert.Equal(t, "1234", opts.AccessKeyId)
+	assert.Equal(t, "5678", opts.SecretAccessKey)
+	assert.Equal(t, "bucket", opts.Bucket)
+	assert.Empty(t, opts.Errors())
+
+	// Should set opts from file if not explicitly set.
+	opts = common.Options{
+		PathToConfigFile: filePath,
+		Key:              "key",
+	}
+	opts.SetAndVerifyDownloadOptions()
+	assert.Equal(t, conf.RestorationBucket, opts.Bucket)
+	assert.Equal(t, conf.DownloadDir, opts.Dir)
+	assert.Equal(t, conf.AwsAccessKeyId, opts.AccessKeyId)
+	assert.Equal(t, conf.AwsSecretAccessKey, opts.SecretAccessKey)
+	assert.Empty(t, opts.Errors())
 }
 
 func TestVerifyRequiredDownloadOptions(t *testing.T) {
