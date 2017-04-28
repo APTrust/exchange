@@ -71,7 +71,24 @@ func TestEnsureDownloadDirIsSet(t *testing.T) {
 }
 
 func TestMergeConfigFileOptions(t *testing.T) {
+	// First, find out what's in the test config file.
+	opts := &common.Options{}
+	f := filepath.Join("testdata", "config", "partner_config_valid.conf")
+	filePath, err := fileutil.RelativeToAbsPath(f)
+	require.Nil(t, err)
+	opts.PathToConfigFile = filePath
+	conf, err := opts.LoadConfigFile()
+	assert.Nil(t, err)
+	assert.NotNil(t, conf)
 
+	// Now make sure values are merged correctly.
+	// These four options, if not explicitly supplied
+	// by the user, should be pulled from the config file.
+	opts.MergeConfigFileOptions()
+	assert.Equal(t, conf.RestorationBucket, opts.Bucket)
+	assert.Equal(t, conf.DownloadDir, opts.Dir)
+	assert.Equal(t, conf.AwsAccessKeyId, opts.AccessKeyId)
+	assert.Equal(t, conf.AwsSecretAccessKey, opts.SecretAccessKey)
 }
 
 func TestLoadConfigFile(t *testing.T) {
@@ -93,13 +110,19 @@ func TestLoadConfigFile(t *testing.T) {
 }
 
 func TestHasErrors(t *testing.T) {
-
+	opts := common.Options{}
+	opts.VerifyRequiredDownloadOptions()
+	assert.True(t, opts.HasErrors())
 }
 
 func TestErrors(t *testing.T) {
-
+	opts := common.Options{}
+	opts.VerifyRequiredDownloadOptions()
+	assert.Equal(t, 4, len(opts.Errors()))
 }
 
 func AllErrorsAsString(t *testing.T) {
-
+	opts := common.Options{}
+	opts.VerifyRequiredDownloadOptions()
+	assert.Equal(t, "", opts.AllErrorsAsString())
 }

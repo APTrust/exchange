@@ -101,6 +101,9 @@ func (opts *Options) MergeConfigFileOptions() {
 	if opts.Bucket == "" {
 		opts.Bucket = partnerConfig.RestorationBucket
 	}
+	if opts.Dir == "" {
+		opts.Dir = partnerConfig.DownloadDir
+	}
 	if partnerConfig.AwsAccessKeyId != "" {
 		opts.AccessKeyId = partnerConfig.AwsAccessKeyId
 		opts.AccessKeyFrom = opts.PathToConfigFile
