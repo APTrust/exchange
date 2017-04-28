@@ -6,13 +6,13 @@ import (
 	//	"github.com/APTrust/exchange/constants"
 	//	"github.com/APTrust/exchange/network"
 	"github.com/APTrust/exchange/partner_apps/common"
-	//	"github.com/APTrust/exchange/util/fileutil"
-	//	"github.com/aws/aws-sdk-go/service/s3"
+	"github.com/APTrust/exchange/util/fileutil"
+	"github.com/APTrust/exchange/util/partner"
 	"github.com/stretchr/testify/assert"
-	//	"github.com/stretchr/testify/require"
+	"github.com/stretchr/testify/require"
 	//	"io/ioutil"
 	"os"
-	//	"path/filepath"
+	"path/filepath"
 	"strings"
 	"testing"
 	//	"time"
@@ -34,7 +34,9 @@ func getOpts() *common.Options {
 }
 
 func TestSetAndVerifyDownloadOptions(t *testing.T) {
-
+	opts := common.Options{}
+	opts.VerifyRequiredDownloadOptions()
+	assert.Equal(t, 4, len(opts.Errors()))
 }
 
 func TestVerifyRequiredDownloadOptions(t *testing.T) {
@@ -73,7 +75,21 @@ func TestMergeConfigFileOptions(t *testing.T) {
 }
 
 func TestLoadConfigFile(t *testing.T) {
+	opts := &common.Options{}
 
+	if partner.DefaultConfigFileExists() {
+		conf, err := opts.LoadConfigFile()
+		assert.Nil(t, err)
+		assert.NotNil(t, conf)
+	}
+
+	f := filepath.Join("testdata", "config", "partner_config_valid.conf")
+	filePath, err := fileutil.RelativeToAbsPath(f)
+	require.Nil(t, err)
+	opts.PathToConfigFile = filePath
+	conf, err := opts.LoadConfigFile()
+	assert.Nil(t, err)
+	assert.NotNil(t, conf)
 }
 
 func TestHasErrors(t *testing.T) {
