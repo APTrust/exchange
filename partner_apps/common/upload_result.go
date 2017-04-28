@@ -13,11 +13,12 @@ type UploadResult struct {
 	Region          string    `json:"region"`
 	Bucket          string    `json:"bucket"`
 	Key             string    `json:"key"`
-	S3Location      string    `json:"s3_location"`
-	S3UploadId      string    `json:"s3_upload_id"`
-	S3LastModified  time.Time `json:"s3_last_modified"`
-	S3ContentLength int64     `json:"s3_content_length"`
-	S3ETag          string    `json:"s3_etag"`
+	CopiedFrom      string    `json:"copied_from"`
+	S3Location      string    `json:"s3_location,omitempty"`
+	S3UploadId      string    `json:"s3_upload_id,omitempty"`
+	S3LastModified  time.Time `json:"s3_last_modified,omitempty"`
+	S3ContentLength int64     `json:"s3_content_length,omitempty"`
+	S3ETag          string    `json:"s3_etag,omitempty"`
 	S3PartsCount    int64     `json:"s3_parts_count,omitempty"`
 	ErrorMessage    string    `json:"error_message,omitempty"`
 }
@@ -27,6 +28,7 @@ func NewUploadResult(opts *Options, uploadClient *network.S3Upload, headClient *
 		Region:       opts.Region,
 		Bucket:       opts.Bucket,
 		Key:          opts.Key,
+		CopiedFrom:   opts.FileToUpload,
 		ErrorMessage: uploadClient.ErrorMessage,
 	}
 	if uploadClient.Response != nil {
@@ -77,10 +79,11 @@ func (result *UploadResult) ToText() string {
 	var msg string
 	if result.ErrorMessage != "" {
 		msg = fmt.Sprintf("[ERROR] Failed to upload '%s': %s",
-			result.Key, result.ErrorMessage)
+			result.CopiedFrom, result.ErrorMessage)
 	} else {
-		msg = fmt.Sprintf("[OK] Uploaded '%s' to '%s' with etag '%s'",
-			result.Key, result.Bucket, result.S3ETag)
+		msg = fmt.Sprintf("[OK] Uploaded '%s' to '%s/%s' (%d bytes) with etag '%s'",
+			result.CopiedFrom, result.Bucket, result.Key,
+			result.S3ContentLength, result.S3ETag)
 	}
 	return msg
 }

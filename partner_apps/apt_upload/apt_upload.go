@@ -8,7 +8,7 @@ import (
 	"github.com/APTrust/exchange/partner_apps/common"
 	"os"
 	"path"
-	//	"path/filepath"
+	"path/filepath"
 )
 
 func main() {
@@ -26,7 +26,7 @@ func main() {
 		opts.ContentType)
 	file, err := os.Open(opts.FileToUpload)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, err.Error())
+		fmt.Fprintln(os.Stderr, err.Error())
 		os.Exit(1)
 	}
 	defer file.Close()
@@ -48,8 +48,8 @@ func printResult(opts *common.Options, uploadClient *network.S3Upload) {
 		var err error
 		output, err = result.ToJson()
 		if err != nil {
-			fmt.Fprintf(os.Stderr, result.ToText())
-			fmt.Fprintf(os.Stderr, err.Error())
+			fmt.Fprintln(os.Stderr, result.ToText())
+			fmt.Fprintln(os.Stderr, err.Error())
 			os.Exit(1)
 		}
 	}
@@ -82,12 +82,21 @@ func parseCommandLine() *common.Options {
 
 	flag.Parse()
 
-	if len(os.Args) < 2 {
-		fmt.Fprintf(os.Stderr, "Please specify one or more files to upload.")
+	if help {
+		printUsage()
+		os.Exit(0)
+	}
+
+	if len(flag.Args()) < 1 {
+		fmt.Fprintln(os.Stderr, "Please specify a file to upload.")
 		os.Exit(1)
 	}
 
-	filePath := path.Base(flag.Arg(0))
+	filePath, err := filepath.Abs(flag.Arg(0))
+	if err != nil {
+		fmt.Println(os.Stderr, err.Error())
+		os.Exit(1)
+	}
 	if key == "" {
 		key = path.Base(filePath)
 	}
@@ -167,8 +176,10 @@ AWS credentials, the upload will fail.
 -contentType is the optional content type of the file you're uploading.
         If you choose to specify this, it should be in mime type format.
         For example, "image/jpeg" or "text/plain". You typically don't
-        need to set this. If you want to set it, you'll find a full list
-        of mime types at https://developer.mozilla.org/en-US/docs/Web/HTTP/Basics_of_HTTP/MIME_types/Complete_list_of_MIME_types
+        need to set this. If left unset, this usually defaults to something
+        generic and unhelpful like "application/octet-stream".
+        If you want to set it, you'll find a full list of mime types at
+        https://developer.mozilla.org/en-US/docs/Web/HTTP/Basics_of_HTTP/MIME_types/Complete_list_of_MIME_types
 
 -format is the format of the output printed to STDOUT when the upload
         is complete. Options are 'text' and 'json', and the default is

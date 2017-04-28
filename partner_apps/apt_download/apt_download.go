@@ -67,6 +67,11 @@ func parseCommandLine() *common.Options {
 
 	flag.Parse()
 
+	if help {
+		printUsage()
+		os.Exit(0)
+	}
+
 	opts := &common.Options{
 		PathToConfigFile: pathToConfigFile,
 		Region:           region,
