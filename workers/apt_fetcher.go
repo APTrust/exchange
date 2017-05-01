@@ -78,6 +78,18 @@ func (fetcher *APTFetcher) HandleMessage(message *nsq.Message) error {
 		return nil
 	}
 
+	stage := ingestState.WorkItem.Stage
+	if stage != constants.StageReceive && stage != constants.StageFetch &&
+		stage != constants.StageUnpack && stage != constants.StageValidate {
+		fetcher.Context.MessageLog.Info("Marking WorkItem %d (%s/%s) as finished "+
+			"without doing any work, because this item is already past the "+
+			"ingest phase.",
+			ingestState.WorkItem.Id, ingestState.WorkItem.Bucket,
+			ingestState.WorkItem.Name)
+		message.Finish()
+		return nil
+	}
+
 	if fileutil.FileExists(ingestState.IngestManifest.Object.IngestTarFilePath) {
 		stat, err := os.Stat(ingestState.IngestManifest.Object.IngestTarFilePath)
 		if err == nil && stat != nil && stat.Size() == ingestState.WorkItem.Size {
