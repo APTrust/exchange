@@ -5,7 +5,7 @@ require 'json'
 # the glacier_download JSON files.
 class Restorer
 
-  def initialize(file)
+  def initialize
     @bucket = 'aptrust.preservation.storage'
     @download_info = self.load_download_info
   end
@@ -15,8 +15,9 @@ class Restorer
     for i in 1..6
       file = "glacier_download_0#{i}.json"
       if File.exist?(file)
+        STDERR.puts "Reading #{file}"
         File.open(file, 'r').each do |line|
-          next if line.trim == ''
+          next if line.strip == ''
           records.push(JSON.parse(line))
         end
       end
@@ -27,7 +28,7 @@ class Restorer
   def run
     download_info = self.load_download_info
     download_info.each do |record|
-      if self.file_exists?(record) && self.file_is_valid(record)
+      if self.file_exists?(record) && self.file_is_valid?(record)
         copy_to_s3(record)
       else
         puts "File #{record['saved_to']} is missing or invalid"
@@ -43,7 +44,7 @@ class Restorer
   def get_copy_command(record)
     key = record['key']
     file_path = record['saved_to']
-    meta_string = records['s3_metadata'].to_json
+    meta_string = record['s3_metadata'].to_json
     return "apt_upload -bucket='#{@bucket}' -key='#{key}' -format='json' -metadata='#{meta_string}' #{file_path}"
   end
 
