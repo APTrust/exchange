@@ -40,6 +40,9 @@ type Options struct {
 	// to S3. This option applies to uploads only, and can be left
 	// empty.
 	ContentType string
+	// Metadata is optional metadata to be saved in S3 when uploading
+	// a file.
+	Metadata map[string]string
 	// FileToUpload is the path the file that should be uploaded to S3.
 	// This is required for apt_upload only, and is ignored elsewhere.
 	FileToUpload string

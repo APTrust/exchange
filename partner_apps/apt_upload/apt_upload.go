@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"flag"
 	"fmt"
 	"github.com/APTrust/exchange/constants"
@@ -9,6 +10,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"strings"
 )
 
 func main() {
@@ -30,6 +32,11 @@ func main() {
 		os.Exit(1)
 	}
 	defer file.Close()
+	if opts.Metadata != nil {
+		for key, value := range opts.Metadata {
+			uploadClient.AddMetadata(strings.ToLower(key), value)
+		}
+	}
 	uploadClient.Send(file)
 	printResult(opts, uploadClient)
 }
@@ -71,6 +78,7 @@ func parseCommandLine() *common.Options {
 	var key string
 	var contentType string
 	var outputFormat string
+	var metadata string
 	var help bool
 	flag.StringVar(&pathToConfigFile, "config", "", "Path to partner config file")
 	flag.StringVar(&region, "region", constants.AWSVirginia, "AWS region to upload to (default 'us-east-1')")
@@ -78,6 +86,7 @@ func parseCommandLine() *common.Options {
 	flag.StringVar(&key, "key", "", "The name the object should have when stored in S3")
 	flag.StringVar(&contentType, "contentType", "", "The mime type being uploaded (optional)")
 	flag.StringVar(&outputFormat, "format", "text", "Output format ('text' or 'json')")
+	flag.StringVar(&metadata, "metadata", "", "Optional metadata to store in S3")
 	flag.BoolVar(&help, "help", false, "Show help")
 
 	flag.Parse()
@@ -120,6 +129,16 @@ func parseCommandLine() *common.Options {
 		opts.SecretKeyFrom = "environment"
 	}
 
+	if metadata != "" {
+		meta := make(map[string]string)
+		err := json.Unmarshal([]byte(metadata), &meta)
+		if err != nil {
+			fmt.Fprintln(os.Stderr, "Cannot parse metadata JSON: %v", err)
+			os.Exit(1)
+		}
+		opts.Metadata = meta
+	}
+
 	return opts
 }
 
@@ -133,11 +152,12 @@ Usage:
 apt_update [options] <file>
 
 apt_upload -config=<path to config file> \
-	       -region=<aws region to connect to> \
-		   -bucket=<bucket to upload to> \
-		   -key=<name/key of object to upload> \
-		   -contentType=<mime type of upload> \
+           -region=<aws region to connect to> \
+           -bucket=<bucket to upload to> \
+           -key=<name/key of object to upload> \
+           -contentType=<mime type of upload> \
            -format=<'text' or 'json'> \
+           -metadata=<json string> \
            <file>
 
 Params:
@@ -184,6 +204,12 @@ AWS credentials, the upload will fail.
 -format is the format of the output printed to STDOUT when the upload
         is complete. Options are 'text' and 'json', and the default is
         'text'.
+
+-metadata allows you to specify optional metadata, in json format, to be
+        saved in S3 with your file. A metadata json string should look
+        like this:
+
+        -metadata='{"Bag":"my_bag","Bagpath":"data/Image001.tif","Institution":"virginia.edu","Md5":"12345","Sha256":"54321"}'
 
 Examples:
 
