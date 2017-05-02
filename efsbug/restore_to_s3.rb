@@ -7,12 +7,11 @@ class Restorer
 
   def initialize
     @bucket = 'aptrust.preservation.storage'
-    @download_info = self.load_download_info
   end
 
   def load_download_info
     records = []
-    for i in 1..6
+    for i in 1..4
       file = "glacier_download_0#{i}.json"
       if File.exist?(file)
         STDERR.puts "Reading #{file}"
@@ -39,6 +38,8 @@ class Restorer
   def copy_to_s3(record)
     cmd = get_copy_command(record)
     STDERR.puts(cmd)
+    output = `#{cmd}`
+    puts output
   end
 
   def get_copy_command(record)
