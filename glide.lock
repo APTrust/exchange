@@ -1,12 +1,12 @@
-hash: 0926726e764e8b25aaea719b8f29eee19567740c370eb5c4f6d3fdb8589c688d
-updated: 2017-04-24T12:36:16.012849076-04:00
+hash: e2b60e35c45dd804b52f6a9cbf205bbae844e125014401f737dc9cf2afcfe140
+updated: 2017-05-03T15:03:50.297939453-04:00
 imports:
 - name: github.com/APTrust/bagins
   version: 5bc94534149810750faf248f6ac948b48cbb2fc5
   subpackages:
   - bagutil
 - name: github.com/aws/aws-sdk-go
-  version: f6ea558f30e0a983d529b32c741e4caed17c7df0
+  version: 0dbc446aca87aebb6e0a24509b59bafc0e3ec0ae
   subpackages:
   - aws
   - aws/awserr
@@ -44,6 +44,8 @@ imports:
   version: d9a9656a3a4b1c2864fdb44db2ef8619772d92aa
   subpackages:
   - quantile
+- name: github.com/boltdb/bolt
+  version: 583e8937c61f1af6513608ccc75c97b6abdf4ff9
 - name: github.com/crowdmob/goamz
   version: 3a06871fe9fc0281ca90f3a7d97258d042ed64c0
   subpackages:
@@ -95,6 +97,10 @@ imports:
   version: d4c757aa9afd1e2fc1832aaab209b5794eb336e1
   subpackages:
   - convey
+- name: golang.org/x/sys
+  version: 9ccfe848b9db8435a24c424abbc07a921adf1df5
+  subpackages:
+  - unix
 - name: gopkg.in/check.v1
   version: 4f90aeace3a26ad7021961c297b22c42160c7b25
 testImports:
