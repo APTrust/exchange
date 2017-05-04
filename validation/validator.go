@@ -262,6 +262,16 @@ func (validator *Validator) addFile(readIterator fileutil.ReadIterator) error {
 		gf.IngestFileGid = fileSummary.Gid
 	}
 
+	// Keep track of which required/forbidden files we encounter.
+	fileSpec, isInSpec := validator.BagValidationConfig.FileSpecs[gf.OriginalPath()]
+	if isInSpec {
+		if fileSpec.Presence == REQUIRED {
+			validator.requiredFiles = append(validator.requiredFiles, gf.OriginalPath())
+		} else if fileSpec.Presence == FORBIDDEN {
+			validator.forbiddenFiles = append(validator.forbiddenFiles, gf.OriginalPath())
+		}
+	}
+
 	// We calculate checksums in all contexts, because that's part of
 	// basic bag validation. Even if checksum calculation fails (which
 	// has not yet happened), we still want to keep a record of the
