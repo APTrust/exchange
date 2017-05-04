@@ -340,17 +340,30 @@ func (validator *Validator) parseManifestsTagFilesAndMimeTypes() {
 		return
 	}
 	for {
+		// Don't use "defer reader.Close()" because the readers
+		// won't be closed until we exit the for loop, and we may
+		// have 100k+ files.
 		reader, fileSummary, err := readIterator.Next()
-		if reader != nil {
-			defer reader.Close()
-		}
 		if err == io.EOF {
+			if reader != nil {
+				reader.Close()
+			}
 			return
 		}
 		if err != nil {
+			if reader != nil {
+				reader.Close()
+			}
 			validator.summary.AddError(err.Error())
 			continue
 		}
+		if fileSummary.IsDir {
+			if reader != nil {
+				reader.Close()
+			}
+			continue
+		}
+
 		// genericFile will sometimes be nil because the iterator
 		// returns directory names as well as file names
 		gfIdentifier := fmt.Sprintf("%s/%s", validator.objIdentifier, fileSummary.RelPath)
@@ -364,6 +377,9 @@ func (validator *Validator) parseManifestsTagFilesAndMimeTypes() {
 			continue
 		}
 		validator.parseOrSetMimeType(reader, gf, fileSummary)
+		if reader != nil {
+			reader.Close()
+		}
 	}
 }
 
@@ -505,7 +521,7 @@ func (validator *Validator) parseManifest(reader io.Reader, fileSummary *fileuti
 			filePath := data[2]
 
 			gfIdentifier := fmt.Sprintf("%s/%s", validator.objIdentifier, fileSummary.RelPath)
-			genericFile, err := validator.db.GetGenericFile(filePath)
+			genericFile, err := validator.db.GetGenericFile(gfIdentifier)
 			if err != nil {
 				validator.summary.AddError("Error finding generic file '%s' in db: %v", gfIdentifier)
 			}
