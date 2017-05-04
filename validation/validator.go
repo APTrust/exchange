@@ -146,13 +146,13 @@ func (validator *Validator) Validate() (*models.WorkSummary, error) {
 
 	validator.readBag()
 
-	if !validator.summary.HasErrors() {
-		validator.verifyManifestPresent()
-		validator.verifyTopLevelFolder()
-		validator.verifyFileSpecs()
-		validator.verifyTagSpecs()
-		validator.verifyGenericFiles()
-	}
+	//	if !validator.summary.HasErrors() {
+	validator.verifyManifestPresent()
+	validator.verifyTopLevelFolder()
+	validator.verifyFileSpecs()
+	validator.verifyTagSpecs()
+	validator.verifyGenericFiles()
+	//	}
 
 	validator.summary.Finish()
 	return validator.summary, nil
@@ -530,7 +530,7 @@ func (validator *Validator) parseManifest(reader io.Reader, fileSummary *fileuti
 			digest := data[1]
 			filePath := data[2]
 
-			gfIdentifier := fmt.Sprintf("%s/%s", validator.objIdentifier, fileSummary.RelPath)
+			gfIdentifier := fmt.Sprintf("%s/%s", validator.objIdentifier, filePath)
 			genericFile, err := validator.db.GetGenericFile(gfIdentifier)
 			if err != nil {
 				validator.summary.AddError("Error finding generic file '%s' in db: %v", gfIdentifier)
@@ -719,7 +719,7 @@ func (validator *Validator) verifyGenericFiles() {
 	// The function signature is "fn func(k, v []byte) error".
 	detail := validator.fileValidationDetail()
 	verificationFuction := func(key, value []byte) error {
-		if key == nil || string(key) == validator.objIdentifier || value == nil || len(value) > 0 {
+		if key == nil || string(key) == validator.objIdentifier || value == nil || len(value) == 0 {
 			// Ignore the key that points to the IntellectualObject.
 			// A nil value indicates a sub-bucket.
 			// An empty value cannot be deserialized.
@@ -736,6 +736,7 @@ func (validator *Validator) verifyGenericFiles() {
 			validator.summary.AddError("Could not get file metadata from db: %v", err)
 			return err
 		}
+		// Md5 digests
 		if gf.IngestManifestMd5 != "" && gf.IngestManifestMd5 != gf.IngestMd5 {
 			validator.summary.AddError(
 				"Bad md5 digest for '%s': manifest says '%s', file digest is '%s'",

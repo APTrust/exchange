@@ -298,6 +298,8 @@ func TestValidator_InvalidBag(t *testing.T) {
 	err_7 := "Bad sha256 digest for 'custom_tags/tracked_tag_file.txt': manifest says '0000000000000000000000000000000000000000000000000000000000000000', file digest is '3f2f50c5bde87b58d6132faee14d1a295d115338643c658df7fa147e2296ccdd'"
 	assert.Equal(t, 8, len(summary.Errors))
 
+	fmt.Println(summary.AllErrorsAsString())
+
 	assert.True(t, util.StringListContains(summary.Errors, err_0))
 	assert.True(t, util.StringListContains(summary.Errors, err_1))
 	assert.True(t, util.StringListContains(summary.Errors, err_2))
@@ -409,6 +411,8 @@ func TestValidator_BadFileNames(t *testing.T) {
 	assert.Nil(t, err)
 	assert.NotNil(t, summary)
 	require.True(t, summary.HasErrors())
+
+	fmt.Println(summary.AllErrorsAsString())
 	// TODO: Check specific errors
 }
 
@@ -497,6 +501,8 @@ func TestValidator_NoDataDir(t *testing.T) {
 	assert.Nil(t, err)
 	assert.NotNil(t, summary)
 	require.True(t, summary.HasErrors())
+
+	fmt.Println(summary.AllErrorsAsString())
 	// TODO: Check specific errors
 }
 
