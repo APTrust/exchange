@@ -123,3 +123,18 @@ func (boltDB *BoltDB) GetGenericFile(key string) (*models.GenericFile, error) {
 	})
 	return gf, err
 }
+
+// ForEach calls the specified function for each key in the database's
+// default bucket.
+func (boltDB *BoltDB) ForEach(fn func(k, v []byte) error) error {
+	var err error
+	boltDB.db.View(func(tx *bolt.Tx) error {
+		bucket := tx.Bucket([]byte(DEFAULT_BUCKET))
+		err = bucket.ForEach(fn)
+		if err != nil {
+			return err
+		}
+		return nil
+	})
+	return err
+}

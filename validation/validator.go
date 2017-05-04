@@ -2,8 +2,10 @@ package validation
 
 import (
 	"bufio"
+	"bytes"
 	"crypto/md5"
 	"crypto/sha256"
+	"encoding/gob"
 	"fmt"
 	"github.com/APTrust/exchange/constants"
 	"github.com/APTrust/exchange/models"
@@ -31,9 +33,12 @@ type Validator struct {
 	PreserveExtendedAttributes bool
 	summary                    *models.WorkSummary
 	objIdentifier              string
+	intelObj                   *models.IntellectualObject
 	tagFilesToParse            []string
 	manifests                  []string
 	tagManifests               []string
+	requiredFiles              []string
+	forbiddenFiles             []string
 	calculateMd5               bool
 	calculateSha256            bool
 	db                         *storage.BoltDB
@@ -71,6 +76,8 @@ func NewValidator(pathToBag string, bagValidationConfig *BagValidationConfig, pr
 		manifests:                  make([]string, 0),
 		tagManifests:               make([]string, 0),
 		tagFilesToParse:            tagFilesToParse,
+		requiredFiles:              make([]string, 0),
+		forbiddenFiles:             make([]string, 0),
 		calculateMd5:               calculateMd5,
 		calculateSha256:            calculateSha256,
 	}
@@ -140,12 +147,11 @@ func (validator *Validator) Validate() (*models.WorkSummary, error) {
 	validator.readBag()
 
 	if !validator.summary.HasErrors() {
-		// -------------- TODO: START HERE ------------------------
-		// validator.verifyManifestPresent(result)
-		// validator.verifyTopLevelFolder(result)
-		// validator.verifyFileSpecs(result)
-		// validator.verifyTagSpecs(result)
-		// validator.verifyGenericFiles(result)
+		validator.verifyManifestPresent()
+		validator.verifyTopLevelFolder()
+		validator.verifyFileSpecs()
+		validator.verifyTagSpecs()
+		validator.verifyGenericFiles()
 	}
 
 	validator.summary.Finish()
@@ -159,16 +165,21 @@ func (validator *Validator) Validate() (*models.WorkSummary, error) {
 func (validator *Validator) readBag() {
 	// Call this for the side-effect of initializing the IntellectualObject
 	// if it doesn't already exist.
-	_, err := validator.getIntellectualObject()
+	obj, err := validator.getIntellectualObject()
 	if err != nil {
 		validator.summary.AddError("Could not init object: %v", err)
 		return
 	}
+	validator.intelObj = obj
 	validator.addFiles()
 	if validator.summary.HasErrors() {
 		return
 	}
 	validator.parseManifestsTagFilesAndMimeTypes()
+	err = validator.db.Save(obj.Identifier, obj)
+	if err != nil {
+		validator.summary.AddError("Could not save intelObj metadata: %v", err)
+	}
 }
 
 // getIntellectualObject returns a lightweight representation of the
@@ -176,6 +187,9 @@ func (validator *Validator) readBag() {
 // will not include PremisEvents or GenericFiles. GenericFiles are
 // stored separately in the db.
 func (validator *Validator) getIntellectualObject() (*models.IntellectualObject, error) {
+	if validator.intelObj != nil {
+		return validator.intelObj, nil
+	}
 	obj, err := validator.db.GetIntellectualObject(validator.objIdentifier)
 	if err != nil {
 		return nil, err
@@ -214,6 +228,7 @@ func (validator *Validator) addFiles() {
 			validator.summary.AddError(err.Error())
 		}
 	}
+	validator.intelObj.IngestTopLevelDirNames = iterator.GetTopLevelDirNames()
 }
 
 // addFile adds a record for a single file to our validation database.
@@ -554,4 +569,195 @@ func (validator *Validator) setMimeType(reader io.Reader, gf *models.GenericFile
 	if err != nil {
 		validator.summary.AddError(err.Error())
 	}
+}
+
+// verifyManifestPresent checks to see if at least one payload manifest
+// is present in the bag. If not, it adds an error message to the
+// WorkSummary.
+func (validator *Validator) verifyManifestPresent() {
+	if len(validator.manifests) == 0 {
+		validator.summary.AddError("Bag contains no payload manifest.")
+	}
+}
+
+// verifyTopLevelFolder ensures the top-level folder inside a tar file
+// has the same name as the bag. There should be exactly one top-level
+// folder whose name is the same as the bag. Anything else is an error.
+func (validator *Validator) verifyTopLevelFolder() {
+	obj, err := validator.getIntellectualObject()
+	if err != nil {
+		validator.summary.AddError("Can't get object: %v", err)
+		return
+	}
+	if obj.IngestTarFilePath == "" {
+		return
+	}
+	re := regexp.MustCompile("\\.tar$")
+	baseName := path.Base(obj.IngestTarFilePath)
+	expectedDirName := re.ReplaceAllString(baseName, "")
+	dirNames := obj.IngestTopLevelDirNames
+	if dirNames != nil {
+		for _, dirName := range dirNames {
+			if dirName != expectedDirName {
+				validator.summary.AddError(
+					"Tarred bag should untar to directory '%s', not '%s'",
+					expectedDirName, dirName)
+			}
+		}
+	}
+}
+
+// verifyFileSpecs ensures required files are present and forbidden files
+// are not. This adds an error to the WorkSummary for any violations.
+func (validator *Validator) verifyFileSpecs() {
+	for gfPath, fileSpec := range validator.BagValidationConfig.FileSpecs {
+		if fileSpec.Presence == REQUIRED && !util.StringListContains(validator.requiredFiles, gfPath) {
+			validator.summary.AddError("Required file '%s' is missing.", gfPath)
+		} else if fileSpec.Presence == FORBIDDEN && util.StringListContains(validator.forbiddenFiles, gfPath) {
+			validator.summary.AddError("Bag contains forbidden file '%s'.", gfPath)
+		}
+	}
+}
+
+// verifyTagSpecs ensures required tags are present and values are allowed.
+func (validator *Validator) verifyTagSpecs() {
+	obj, err := validator.getIntellectualObject()
+	if err != nil {
+		validator.summary.AddError("Cannot get object metadata from db: %v")
+		return
+	}
+	for tagName, tagSpec := range validator.BagValidationConfig.TagSpecs {
+		tags := obj.FindTag(tagName)
+		if tagSpec.Presence == FORBIDDEN {
+			validator.summary.AddError("Forbidden tag '%s' found in file '%s'.",
+				tagName, tags[0].SourceFile)
+			continue
+		}
+		if tagSpec.Presence == REQUIRED {
+			validator.checkRequiredTag(tagName, tags, tagSpec)
+		}
+		if tags != nil && tagSpec.AllowedValues != nil && len(tagSpec.AllowedValues) > 0 {
+			validator.checkAllowedTagValue(tagName, tags, tagSpec)
+		}
+	}
+}
+
+// checkRequiredTag ensures that a required tag is present.
+// It adds and error to the WorkSummary if not.
+func (validator *Validator) checkRequiredTag(tagName string, tags []*models.Tag, tagSpec TagSpec) {
+	if tags == nil {
+		validator.summary.AddError("Required tag '%s' is missing.", tagName)
+		return
+	}
+	if !tagSpec.EmptyOK {
+		tagHasValue := false
+		for _, tag := range tags {
+			if tag.Value != "" {
+				tagHasValue = true
+				break
+			}
+		}
+		if !tagHasValue {
+			validator.summary.AddError("Value for tag '%s' is missing.", tagName)
+		}
+	}
+}
+
+// checkAllowedTagValue ensures that the value of a tag is one of a
+// set of values enumerated in the BagValidationConfig. It adds an
+// error to the WorkSummary if not.
+func (validator *Validator) checkAllowedTagValue(tagName string, tags []*models.Tag, tagSpec TagSpec) {
+	valueOk := false
+	lastValue := ""
+	for _, value := range tagSpec.AllowedValues {
+		for _, tag := range tags {
+			lcValue := strings.TrimSpace(strings.ToLower(value))
+			tagValue := strings.TrimSpace(strings.ToLower(tag.Value))
+			lastValue = tagValue
+			if lcValue == tagValue {
+				valueOk = true
+			}
+		}
+	}
+	if !valueOk {
+		validator.summary.AddError("Tag '%s' has illegal value '%s'.", tagName, lastValue)
+	}
+}
+
+// verifyGenericFiles verifies a number of attributes related to generic files,
+// including their checksums, presence in payload manifests, and whether they
+// follow specified naming restrictions.
+func (validator *Validator) verifyGenericFiles() {
+
+	// We have to pass a verification function into the BoltDB key iterator.
+	// The function signature is "fn func(k, v []byte) error".
+	detail := validator.fileValidationDetail()
+	verificationFuction := func(key, value []byte) error {
+		if key == nil || string(key) == validator.objIdentifier || value == nil || len(value) > 0 {
+			// Ignore the key that points to the IntellectualObject.
+			// A nil value indicates a sub-bucket.
+			// An empty value cannot be deserialized.
+			return nil
+		}
+		// The value should be a GenericFile, since it's not the intellectual object.
+		// Turn the bytes back into an object, and then validate the properties of
+		// the object.
+		gf := &models.GenericFile{}
+		buf := bytes.NewBuffer(value)
+		decoder := gob.NewDecoder(buf)
+		err := decoder.Decode(gf)
+		if err != nil {
+			validator.summary.AddError("Could not get file metadata from db: %v", err)
+			return err
+		}
+		if gf.IngestManifestMd5 != "" && gf.IngestManifestMd5 != gf.IngestMd5 {
+			validator.summary.AddError(
+				"Bad md5 digest for '%s': manifest says '%s', file digest is '%s'",
+				gf.OriginalPath(), gf.IngestManifestMd5, gf.IngestMd5)
+		} else {
+			gf.IngestMd5VerifiedAt = time.Now().UTC()
+		}
+		// Sha256 digests
+		if gf.IngestManifestSha256 != "" && gf.IngestManifestSha256 != gf.IngestSha256 {
+			validator.summary.AddError(
+				"Bad sha256 digest for '%s': manifest says '%s', file digest is '%s'",
+				gf.OriginalPath(), gf.IngestManifestSha256, gf.IngestSha256)
+		} else {
+			gf.IngestSha256VerifiedAt = time.Now().UTC()
+		}
+		// No manifest entry?
+		if gf.IngestFileType == constants.PAYLOAD_FILE &&
+			gf.IngestManifestMd5 == "" && gf.IngestManifestSha256 == "" {
+			validator.summary.AddError(
+				"File '%s' does not appear in any payload manifest (md5 or sha256)",
+				gf.OriginalPath())
+		}
+		// Make sure name is valid
+		if validator.BagValidationConfig.FileNameRegex != nil {
+			for _, pathComponent := range strings.Split(gf.OriginalPath(), "/") {
+				if !validator.BagValidationConfig.FileNameRegex.MatchString(pathComponent) {
+					validator.summary.AddError(
+						"Filename '%s' is not valid according to %s",
+						gf.OriginalPath(), detail)
+				}
+			}
+		}
+		return nil
+	} // end of verification function
+
+	// Not run the verification fuction on each item in the db.
+	validator.db.ForEach(verificationFuction)
+
+}
+
+// fileValidationDetail returns a specific description of the file name
+// validation rules in effect.
+func (validator *Validator) fileValidationDetail() string {
+	detail := "validation pattern " + validator.BagValidationConfig.FileNamePattern
+	if strings.ToUpper(validator.BagValidationConfig.FileNamePattern) == "APTRUST" {
+		detail = "APTrust validation rules"
+	} else if strings.ToUpper(validator.BagValidationConfig.FileNamePattern) == "POSIX" {
+		detail = "POSIX validation rules"
+	}
+	return detail
 }

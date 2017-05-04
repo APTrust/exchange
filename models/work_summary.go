@@ -3,6 +3,7 @@ package models
 import (
 	"fmt"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -43,6 +44,8 @@ type WorkSummary struct {
 	// true, because fatal errors are rare, and we don't want to
 	// give up on transient errors. Just requeue and try again.
 	Retry bool
+
+	mutex *sync.RWMutex
 }
 
 func NewWorkSummary() *WorkSummary {
@@ -54,6 +57,7 @@ func NewWorkSummary() *WorkSummary {
 		StartedAt:     time.Time{},
 		FinishedAt:    time.Time{},
 		Retry:         true,
+		mutex:         &sync.RWMutex{},
 	}
 }
 
@@ -86,32 +90,46 @@ func (summary *WorkSummary) RunTime() time.Duration {
 }
 
 func (summary *WorkSummary) Succeeded() bool {
-	return summary.Finished() && len(summary.Errors) == 0
+	summary.mutex.RLock()
+	succeeded := summary.Finished() && len(summary.Errors) == 0
+	summary.mutex.RUnlock()
+	return succeeded
 }
 
 func (summary *WorkSummary) AddError(format string, a ...interface{}) {
+	summary.mutex.Lock()
 	summary.Errors = append(summary.Errors, fmt.Sprintf(format, a...))
+	summary.mutex.Unlock()
 }
 
 func (summary *WorkSummary) ClearErrors() {
+	summary.mutex.Lock()
 	summary.Errors = nil
 	summary.ErrorIsFatal = false
 	summary.Errors = make([]string, 0)
+	summary.mutex.Unlock()
 }
 
 func (summary *WorkSummary) HasErrors() bool {
-	return len(summary.Errors) > 0
+	summary.mutex.RLock()
+	hasErrors := len(summary.Errors) > 0
+	summary.mutex.RUnlock()
+	return hasErrors
 }
 
 func (summary *WorkSummary) FirstError() string {
+	summary.mutex.RLock()
 	firstError := ""
 	if len(summary.Errors) > 0 {
 		firstError = summary.Errors[0]
 	}
+	summary.mutex.RUnlock()
 	return firstError
 }
 
 func (summary *WorkSummary) AllErrorsAsString() string {
+	summary.mutex.RLock()
+	defer summary.mutex.RUnlock()
 	if len(summary.Errors) > 0 {
 		return strings.Join(summary.Errors, "\n")
 	}
