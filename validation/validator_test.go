@@ -61,7 +61,7 @@ func getValidator(t *testing.T, bagName string, includeExtendedMetada bool) *val
 	bagValidationConfig := getConfig(t)
 	validator, err := validation.NewValidator(pathToBag, bagValidationConfig, true)
 	if err != nil {
-		assert.Fail(t, "Error creating BagValidator: %s", err.Error())
+		assert.Fail(t, "Error creating Validator: %s", err.Error())
 	}
 	return validator
 }
@@ -76,7 +76,7 @@ func validatorWithOptionalSpec(t *testing.T, bagName string) *validation.Validat
 	pathToBag := getBagPath(t, bagName)
 	validator, err := validation.NewValidator(pathToBag, bagValidationConfig, true)
 	if err != nil {
-		assert.Fail(t, "NewBagValidator returned unexpected error: %s", err.Error())
+		assert.Fail(t, "NewValidator returned unexpected error: %s", err.Error())
 	}
 	return validator
 }
@@ -134,7 +134,7 @@ func TestNewValidator_FileDoesNotExist(t *testing.T) {
 	}
 	_, err = validation.NewValidator("/blah/blah/blah", bagValidationConfig, true)
 	if err == nil {
-		assert.Fail(t, "NewBagValidator should have raised error on non-existent file")
+		assert.Fail(t, "NewValidator should have raised error on non-existent file")
 	}
 }
 
@@ -148,12 +148,12 @@ func TestNewValidatorWithBadParams(t *testing.T) {
 	pathToBag := "/path/does/not/exist.tar"
 	_, err = validation.NewValidator(pathToBag, bagValidationConfig, true)
 	if err == nil {
-		assert.Fail(t, "NewBagValidator should have complained about bad bag path.")
+		assert.Fail(t, "NewValidator should have complained about bad bag path.")
 	}
 	pathToBag = getBagPath(t, "example.edu.tagsample_good.tar")
 	_, err = validation.NewValidator(pathToBag, nil, true)
 	if err == nil {
-		assert.Fail(t, "NewBagValidator should have complained about nil BagValidationConfig.")
+		assert.Fail(t, "NewValidator should have complained about nil BagValidationConfig.")
 	}
 }
 
@@ -225,7 +225,7 @@ func TestValidator_BadFileFormat(t *testing.T) {
 	}
 	validator, err := validation.NewValidator(thisfile, bagValidationConfig, true)
 	if err != nil {
-		assert.Fail(t, "NewBagValidator raised unexpected error: %s", err.Error())
+		assert.Fail(t, "NewValidator raised unexpected error: %s", err.Error())
 	}
 	defer deleteFile(validator.DBName())
 	summary, err := validator.Validate()
@@ -286,7 +286,7 @@ func TestValidator_GoodBags(t *testing.T) {
 		pathToBag, err := filepath.Abs(path.Join(dir, "..", "testdata", "unit_test_bags", goodBag))
 		validator, err := validation.NewValidator(pathToBag, bagValidationConfig, true)
 		if err != nil {
-			assert.Fail(t, "NewBagValidator returned unexpected error: %s", err.Error())
+			assert.Fail(t, "NewValidator returned unexpected error: %s", err.Error())
 		}
 		defer deleteFile(validator.DBName())
 		summary, err := validator.Validate()
