@@ -67,6 +67,21 @@ func getValidator(t *testing.T, bagName string, includeExtendedMetada bool) *val
 	return validator
 }
 
+func validatorWithOptionalSpec(t *testing.T, bagName string) *validation.Validator {
+	bagValidationConfig, err := getValidationConfig()
+	if err != nil {
+		assert.Fail(t, "Could not load BagValidationConfig: %s", err.Error())
+	}
+	optionalFileSpec := validation.FileSpec{Presence: "OPTIONAL"}
+	bagValidationConfig.FileSpecs["tagmanifest-md5.txt"] = optionalFileSpec
+	pathToBag := getBagPath(t, bagName)
+	validator, err := validation.NewValidator(pathToBag, bagValidationConfig, true)
+	if err != nil {
+		assert.Fail(t, "NewBagValidator returned unexpected error: %s", err.Error())
+	}
+	return validator
+}
+
 func TestNewValidator(t *testing.T) {
 	validator := getValidator(t, "example.edu.tagsample_good.tar", true)
 	defer deleteFile(validator.DBName())
@@ -77,12 +92,12 @@ func TestNewValidator(t *testing.T) {
 }
 
 func TestNewValidator_BadConfig(t *testing.T) {
-	_, filename, _, _ := runtime.Caller(0)
-	dir := filepath.Dir(filename)
-	pathToBag, err := filepath.Abs(path.Join(dir, "..", "testdata", "unit_test_bags", "example.edu.tagsample_good.tar"))
-	if err != nil {
-		assert.Fail(t, "Can't figure out Abs path: %s", err.Error())
-	}
+	// _, filename, _, _ := runtime.Caller(0)
+	// dir := filepath.Dir(filename)
+	// pathToBag, err := filepath.Abs(path.Join(dir, "..", "testdata", "unit_test_bags", "example.edu.tagsample_good.tar"))
+	// if err != nil {
+	// 	assert.Fail(t, "Can't figure out Abs path: %s", err.Error())
+	// }
 	bagValidationConfig, err := getValidationConfig()
 	if err != nil {
 		assert.Fail(t, "Could not load BagValidationConfig: %v", err)
@@ -99,6 +114,7 @@ func TestNewValidator_BadConfig(t *testing.T) {
 	}
 	bagValidationConfig.TagSpecs["bad_path_spec"] = badPathSpec
 	bagValidationConfig.TagSpecs["bad_presence"] = badPresenceSpec
+	pathToBag := getBagPath(t, "example.edu.tagsample_good.tar")
 	_, err = validation.NewValidator(pathToBag, bagValidationConfig, true)
 	require.NotNil(t, err)
 	assert.True(t, strings.Contains(err.Error(), "TagSpec for file ''"))
@@ -106,17 +122,18 @@ func TestNewValidator_BadConfig(t *testing.T) {
 }
 
 func TestNewValidator_BadRegex(t *testing.T) {
-	_, filename, _, _ := runtime.Caller(0)
-	dir := filepath.Dir(filename)
-	pathToBag, err := filepath.Abs(path.Join(dir, "..", "testdata", "unit_test_bags", "example.edu.tagsample_good.tar"))
-	if err != nil {
-		assert.Fail(t, "Can't figure out Abs path: %s", err.Error())
-	}
+	// _, filename, _, _ := runtime.Caller(0)
+	// dir := filepath.Dir(filename)
+	// pathToBag, err := filepath.Abs(path.Join(dir, "..", "testdata", "unit_test_bags", "example.edu.tagsample_good.tar"))
+	// if err != nil {
+	// 	assert.Fail(t, "Can't figure out Abs path: %s", err.Error())
+	// }
 	bagValidationConfig, err := getValidationConfig()
 	if err != nil {
 		assert.Fail(t, "Could not load BagValidationConfig: %v", err)
 	}
 	bagValidationConfig.FileNamePattern = "ThisPatternIsInvalid[-"
+	pathToBag := getBagPath(t, "example.edu.tagsample_good.tar")
 	_, err = validation.NewValidator(pathToBag, bagValidationConfig, true)
 	require.NotNil(t, err)
 	assert.True(t, strings.Contains(err.Error(), "Cannot compile regex"))
@@ -146,14 +163,7 @@ func TestNewValidatorWithBadParams(t *testing.T) {
 	if err == nil {
 		assert.Fail(t, "NewBagValidator should have complained about bad bag path.")
 	}
-
-	// Good bag path, bad BagValidationConfig
-	_, filename, _, _ := runtime.Caller(0)
-	dir := filepath.Dir(filename)
-	pathToBag, err = filepath.Abs(path.Join(dir, "..", "testdata", "unit_test_bags", "example.edu.tagsample_good.tar"))
-	if err != nil {
-		assert.Fail(t, "Can't figure out Abs path: %s", err.Error())
-	}
+	pathToBag = getBagPath(t, "example.edu.tagsample_good.tar")
 	_, err = validation.NewValidator(pathToBag, nil, true)
 	if err == nil {
 		assert.Fail(t, "NewBagValidator should have complained about nil BagValidationConfig.")
@@ -317,19 +327,20 @@ func TestValidator_BadAccess(t *testing.T) {
 }
 
 func TestValidator_BadChecksums(t *testing.T) {
-	bagValidationConfig, err := getValidationConfig()
-	if err != nil {
-		assert.Fail(t, "Could not load BagValidationConfig: %s", err.Error())
-	}
-	optionalFileSpec := validation.FileSpec{Presence: "OPTIONAL"}
-	bagValidationConfig.FileSpecs["tagmanifest-md5.txt"] = optionalFileSpec
-	_, filename, _, _ := runtime.Caller(0)
-	dir := filepath.Dir(filename)
-	pathToBag, err := filepath.Abs(path.Join(dir, "..", "testdata", "unit_test_bags", "example.edu.sample_bad_checksums.tar"))
-	validator, err := validation.NewValidator(pathToBag, bagValidationConfig, true)
-	if err != nil {
-		assert.Fail(t, "NewBagValidator returned unexpected error: %s", err.Error())
-	}
+	// bagValidationConfig, err := getValidationConfig()
+	// if err != nil {
+	// 	assert.Fail(t, "Could not load BagValidationConfig: %s", err.Error())
+	// }
+	// optionalFileSpec := validation.FileSpec{Presence: "OPTIONAL"}
+	// bagValidationConfig.FileSpecs["tagmanifest-md5.txt"] = optionalFileSpec
+	// _, filename, _, _ := runtime.Caller(0)
+	// dir := filepath.Dir(filename)
+	// pathToBag, err := filepath.Abs(path.Join(dir, "..", "testdata", "unit_test_bags", "example.edu.sample_bad_checksums.tar"))
+	// validator, err := validation.NewValidator(pathToBag, bagValidationConfig, true)
+	// if err != nil {
+	// 	assert.Fail(t, "NewBagValidator returned unexpected error: %s", err.Error())
+	// }
+	validator := validatorWithOptionalSpec(t, "example.edu.sample_bad_checksums.tar")
 	defer deleteFile(validator.DBName())
 	summary, err := validator.Validate()
 	assert.Nil(t, err)
@@ -339,19 +350,20 @@ func TestValidator_BadChecksums(t *testing.T) {
 }
 
 func TestValidator_BadFileNames(t *testing.T) {
-	bagValidationConfig, err := getValidationConfig()
-	if err != nil {
-		assert.Fail(t, "Could not load BagValidationConfig: %s", err.Error())
-	}
-	optionalFileSpec := validation.FileSpec{Presence: "OPTIONAL"}
-	bagValidationConfig.FileSpecs["tagmanifest-md5.txt"] = optionalFileSpec
-	_, filename, _, _ := runtime.Caller(0)
-	dir := filepath.Dir(filename)
-	pathToBag, err := filepath.Abs(path.Join(dir, "..", "testdata", "unit_test_bags", "example.edu.sample_bad_file_names.tar"))
-	validator, err := validation.NewValidator(pathToBag, bagValidationConfig, true)
-	if err != nil {
-		assert.Fail(t, "NewBagValidator returned unexpected error: %s", err.Error())
-	}
+	// bagValidationConfig, err := getValidationConfig()
+	// if err != nil {
+	// 	assert.Fail(t, "Could not load BagValidationConfig: %s", err.Error())
+	// }
+	// optionalFileSpec := validation.FileSpec{Presence: "OPTIONAL"}
+	// bagValidationConfig.FileSpecs["tagmanifest-md5.txt"] = optionalFileSpec
+	// _, filename, _, _ := runtime.Caller(0)
+	// dir := filepath.Dir(filename)
+	// pathToBag, err := filepath.Abs(path.Join(dir, "..", "testdata", "unit_test_bags", "example.edu.sample_bad_file_names.tar"))
+	// validator, err := validation.NewValidator(pathToBag, bagValidationConfig, true)
+	// if err != nil {
+	// 	assert.Fail(t, "NewBagValidator returned unexpected error: %s", err.Error())
+	// }
+	validator := validatorWithOptionalSpec(t, "example.edu.sample_bad_file_names.tar")
 	defer deleteFile(validator.DBName())
 	summary, err := validator.Validate()
 	assert.Nil(t, err)
@@ -363,19 +375,20 @@ func TestValidator_BadFileNames(t *testing.T) {
 }
 
 func TestValidator_MissingDataFile(t *testing.T) {
-	bagValidationConfig, err := getValidationConfig()
-	if err != nil {
-		assert.Fail(t, "Could not load BagValidationConfig: %s", err.Error())
-	}
-	optionalFileSpec := validation.FileSpec{Presence: "OPTIONAL"}
-	bagValidationConfig.FileSpecs["tagmanifest-md5.txt"] = optionalFileSpec
-	_, filename, _, _ := runtime.Caller(0)
-	dir := filepath.Dir(filename)
-	pathToBag, err := filepath.Abs(path.Join(dir, "..", "testdata", "unit_test_bags", "example.edu.sample_missing_data_file.tar"))
-	validator, err := validation.NewValidator(pathToBag, bagValidationConfig, true)
-	if err != nil {
-		assert.Fail(t, "NewBagValidator returned unexpected error: %s", err.Error())
-	}
+	// bagValidationConfig, err := getValidationConfig()
+	// if err != nil {
+	// 	assert.Fail(t, "Could not load BagValidationConfig: %s", err.Error())
+	// }
+	// optionalFileSpec := validation.FileSpec{Presence: "OPTIONAL"}
+	// bagValidationConfig.FileSpecs["tagmanifest-md5.txt"] = optionalFileSpec
+	// _, filename, _, _ := runtime.Caller(0)
+	// dir := filepath.Dir(filename)
+	// pathToBag, err := filepath.Abs(path.Join(dir, "..", "testdata", "unit_test_bags", "example.edu.sample_missing_data_file.tar"))
+	// validator, err := validation.NewValidator(pathToBag, bagValidationConfig, true)
+	// if err != nil {
+	// 	assert.Fail(t, "NewBagValidator returned unexpected error: %s", err.Error())
+	// }
+	validator := validatorWithOptionalSpec(t, "example.edu.sample_missing_data_file.tar")
 	defer deleteFile(validator.DBName())
 	summary, err := validator.Validate()
 	assert.Nil(t, err)
@@ -385,19 +398,20 @@ func TestValidator_MissingDataFile(t *testing.T) {
 }
 
 func TestValidator_NoAPTrustInfo(t *testing.T) {
-	bagValidationConfig, err := getValidationConfig()
-	if err != nil {
-		assert.Fail(t, "Could not load BagValidationConfig: %s", err.Error())
-	}
-	optionalFileSpec := validation.FileSpec{Presence: "OPTIONAL"}
-	bagValidationConfig.FileSpecs["tagmanifest-md5.txt"] = optionalFileSpec
-	_, filename, _, _ := runtime.Caller(0)
-	dir := filepath.Dir(filename)
-	pathToBag, err := filepath.Abs(path.Join(dir, "..", "testdata", "unit_test_bags", "example.edu.sample_no_aptrust_info.tar"))
-	validator, err := validation.NewValidator(pathToBag, bagValidationConfig, true)
-	if err != nil {
-		assert.Fail(t, "NewBagValidator returned unexpected error: %s", err.Error())
-	}
+	// bagValidationConfig, err := getValidationConfig()
+	// if err != nil {
+	// 	assert.Fail(t, "Could not load BagValidationConfig: %s", err.Error())
+	// }
+	// optionalFileSpec := validation.FileSpec{Presence: "OPTIONAL"}
+	// bagValidationConfig.FileSpecs["tagmanifest-md5.txt"] = optionalFileSpec
+	// _, filename, _, _ := runtime.Caller(0)
+	// dir := filepath.Dir(filename)
+	// pathToBag, err := filepath.Abs(path.Join(dir, "..", "testdata", "unit_test_bags", "example.edu.sample_no_aptrust_info.tar"))
+	// validator, err := validation.NewValidator(pathToBag, bagValidationConfig, true)
+	// if err != nil {
+	// 	assert.Fail(t, "NewBagValidator returned unexpected error: %s", err.Error())
+	// }
+	validator := validatorWithOptionalSpec(t, "example.edu.sample_no_aptrust_info.tar")
 	defer deleteFile(validator.DBName())
 	summary, err := validator.Validate()
 	assert.Nil(t, err)
@@ -407,19 +421,20 @@ func TestValidator_NoAPTrustInfo(t *testing.T) {
 }
 
 func TestValidator_NoBagInfo(t *testing.T) {
-	bagValidationConfig, err := getValidationConfig()
-	if err != nil {
-		assert.Fail(t, "Could not load BagValidationConfig: %s", err.Error())
-	}
-	optionalFileSpec := validation.FileSpec{Presence: "OPTIONAL"}
-	bagValidationConfig.FileSpecs["tagmanifest-md5.txt"] = optionalFileSpec
-	_, filename, _, _ := runtime.Caller(0)
-	dir := filepath.Dir(filename)
-	pathToBag, err := filepath.Abs(path.Join(dir, "..", "testdata", "unit_test_bags", "example.edu.sample_no_bag_info.tar"))
-	validator, err := validation.NewValidator(pathToBag, bagValidationConfig, true)
-	if err != nil {
-		assert.Fail(t, "NewBagValidator returned unexpected error: %s", err.Error())
-	}
+	// bagValidationConfig, err := getValidationConfig()
+	// if err != nil {
+	// 	assert.Fail(t, "Could not load BagValidationConfig: %s", err.Error())
+	// }
+	// optionalFileSpec := validation.FileSpec{Presence: "OPTIONAL"}
+	// bagValidationConfig.FileSpecs["tagmanifest-md5.txt"] = optionalFileSpec
+	// _, filename, _, _ := runtime.Caller(0)
+	// dir := filepath.Dir(filename)
+	// pathToBag, err := filepath.Abs(path.Join(dir, "..", "testdata", "unit_test_bags", "example.edu.sample_no_bag_info.tar"))
+	// validator, err := validation.NewValidator(pathToBag, bagValidationConfig, true)
+	// if err != nil {
+	// 	assert.Fail(t, "NewBagValidator returned unexpected error: %s", err.Error())
+	// }
+	validator := validatorWithOptionalSpec(t, "example.edu.sample_no_bag_info.tar")
 	defer deleteFile(validator.DBName())
 	summary, err := validator.Validate()
 	assert.Nil(t, err)
@@ -429,19 +444,20 @@ func TestValidator_NoBagInfo(t *testing.T) {
 }
 
 func TestValidator_NoDataDir(t *testing.T) {
-	bagValidationConfig, err := getValidationConfig()
-	if err != nil {
-		assert.Fail(t, "Could not load BagValidationConfig: %s", err.Error())
-	}
-	optionalFileSpec := validation.FileSpec{Presence: "OPTIONAL"}
-	bagValidationConfig.FileSpecs["tagmanifest-md5.txt"] = optionalFileSpec
-	_, filename, _, _ := runtime.Caller(0)
-	dir := filepath.Dir(filename)
-	pathToBag, err := filepath.Abs(path.Join(dir, "..", "testdata", "unit_test_bags", "example.edu.sample_no_data_dir.tar"))
-	validator, err := validation.NewValidator(pathToBag, bagValidationConfig, true)
-	if err != nil {
-		assert.Fail(t, "NewBagValidator returned unexpected error: %s", err.Error())
-	}
+	// bagValidationConfig, err := getValidationConfig()
+	// if err != nil {
+	// 	assert.Fail(t, "Could not load BagValidationConfig: %s", err.Error())
+	// }
+	// optionalFileSpec := validation.FileSpec{Presence: "OPTIONAL"}
+	// bagValidationConfig.FileSpecs["tagmanifest-md5.txt"] = optionalFileSpec
+	// _, filename, _, _ := runtime.Caller(0)
+	// dir := filepath.Dir(filename)
+	// pathToBag, err := filepath.Abs(path.Join(dir, "..", "testdata", "unit_test_bags", "example.edu.sample_no_data_dir.tar"))
+	// validator, err := validation.NewValidator(pathToBag, bagValidationConfig, true)
+	// if err != nil {
+	// 	assert.Fail(t, "NewBagValidator returned unexpected error: %s", err.Error())
+	// }
+	validator := validatorWithOptionalSpec(t, "example.edu.sample_no_data_dir.tar")
 	defer deleteFile(validator.DBName())
 	summary, err := validator.Validate()
 	assert.Nil(t, err)
@@ -453,19 +469,20 @@ func TestValidator_NoDataDir(t *testing.T) {
 }
 
 func TestValidator_NoMd5Manifest(t *testing.T) {
-	bagValidationConfig, err := getValidationConfig()
-	if err != nil {
-		assert.Fail(t, "Could not load BagValidationConfig: %s", err.Error())
-	}
-	optionalFileSpec := validation.FileSpec{Presence: "OPTIONAL"}
-	bagValidationConfig.FileSpecs["tagmanifest-md5.txt"] = optionalFileSpec
-	_, filename, _, _ := runtime.Caller(0)
-	dir := filepath.Dir(filename)
-	pathToBag, err := filepath.Abs(path.Join(dir, "..", "testdata", "unit_test_bags", "example.edu.sample_no_md5_manifest.tar"))
-	validator, err := validation.NewValidator(pathToBag, bagValidationConfig, true)
-	if err != nil {
-		assert.Fail(t, "NewBagValidator returned unexpected error: %s", err.Error())
-	}
+	// bagValidationConfig, err := getValidationConfig()
+	// if err != nil {
+	// 	assert.Fail(t, "Could not load BagValidationConfig: %s", err.Error())
+	// }
+	// optionalFileSpec := validation.FileSpec{Presence: "OPTIONAL"}
+	// bagValidationConfig.FileSpecs["tagmanifest-md5.txt"] = optionalFileSpec
+	// _, filename, _, _ := runtime.Caller(0)
+	// dir := filepath.Dir(filename)
+	// pathToBag, err := filepath.Abs(path.Join(dir, "..", "testdata", "unit_test_bags", "example.edu.sample_no_md5_manifest.tar"))
+	// validator, err := validation.NewValidator(pathToBag, bagValidationConfig, true)
+	// if err != nil {
+	// 	assert.Fail(t, "NewBagValidator returned unexpected error: %s", err.Error())
+	// }
+	validator := validatorWithOptionalSpec(t, "example.edu.sample_no_md5_manifest.tar")
 	defer deleteFile(validator.DBName())
 	summary, err := validator.Validate()
 	assert.Nil(t, err)
@@ -475,19 +492,20 @@ func TestValidator_NoMd5Manifest(t *testing.T) {
 }
 
 func TestValidator_NoTitle(t *testing.T) {
-	bagValidationConfig, err := getValidationConfig()
-	if err != nil {
-		assert.Fail(t, "Could not load BagValidationConfig: %s", err.Error())
-	}
-	optionalFileSpec := validation.FileSpec{Presence: "OPTIONAL"}
-	bagValidationConfig.FileSpecs["tagmanifest-md5.txt"] = optionalFileSpec
-	_, filename, _, _ := runtime.Caller(0)
-	dir := filepath.Dir(filename)
-	pathToBag, err := filepath.Abs(path.Join(dir, "..", "testdata", "unit_test_bags", "example.edu.sample_no_title.tar"))
-	validator, err := validation.NewValidator(pathToBag, bagValidationConfig, true)
-	if err != nil {
-		assert.Fail(t, "NewBagValidator returned unexpected error: %s", err.Error())
-	}
+	// bagValidationConfig, err := getValidationConfig()
+	// if err != nil {
+	// 	assert.Fail(t, "Could not load BagValidationConfig: %s", err.Error())
+	// }
+	// optionalFileSpec := validation.FileSpec{Presence: "OPTIONAL"}
+	// bagValidationConfig.FileSpecs["tagmanifest-md5.txt"] = optionalFileSpec
+	// _, filename, _, _ := runtime.Caller(0)
+	// dir := filepath.Dir(filename)
+	// pathToBag, err := filepath.Abs(path.Join(dir, "..", "testdata", "unit_test_bags", "example.edu.sample_no_title.tar"))
+	// validator, err := validation.NewValidator(pathToBag, bagValidationConfig, true)
+	// if err != nil {
+	// 	assert.Fail(t, "NewBagValidator returned unexpected error: %s", err.Error())
+	// }
+	validator := validatorWithOptionalSpec(t, "example.edu.sample_no_title.tar")
 	defer deleteFile(validator.DBName())
 	summary, err := validator.Validate()
 	assert.Nil(t, err)
@@ -497,19 +515,20 @@ func TestValidator_NoTitle(t *testing.T) {
 }
 
 func TestValidator_WrongFolderName(t *testing.T) {
-	bagValidationConfig, err := getValidationConfig()
-	if err != nil {
-		assert.Fail(t, "Could not load BagValidationConfig: %s", err.Error())
-	}
-	optionalFileSpec := validation.FileSpec{Presence: "OPTIONAL"}
-	bagValidationConfig.FileSpecs["tagmanifest-md5.txt"] = optionalFileSpec
-	_, filename, _, _ := runtime.Caller(0)
-	dir := filepath.Dir(filename)
-	pathToBag, err := filepath.Abs(path.Join(dir, "..", "testdata", "unit_test_bags", "example.edu.sample_wrong_folder_name.tar"))
-	validator, err := validation.NewValidator(pathToBag, bagValidationConfig, true)
-	if err != nil {
-		assert.Fail(t, "NewBagValidator returned unexpected error: %s", err.Error())
-	}
+	// bagValidationConfig, err := getValidationConfig()
+	// if err != nil {
+	// 	assert.Fail(t, "Could not load BagValidationConfig: %s", err.Error())
+	// }
+	// optionalFileSpec := validation.FileSpec{Presence: "OPTIONAL"}
+	// bagValidationConfig.FileSpecs["tagmanifest-md5.txt"] = optionalFileSpec
+	// _, filename, _, _ := runtime.Caller(0)
+	// dir := filepath.Dir(filename)
+	// pathToBag, err := filepath.Abs(path.Join(dir, "..", "testdata", "unit_test_bags", "example.edu.sample_wrong_folder_name.tar"))
+	// validator, err := validation.NewValidator(pathToBag, bagValidationConfig, true)
+	// if err != nil {
+	// 	assert.Fail(t, "NewBagValidator returned unexpected error: %s", err.Error())
+	// }
+	validator := validatorWithOptionalSpec(t, "example.edu.sample_wrong_folder_name.tar")
 	defer deleteFile(validator.DBName())
 	summary, err := validator.Validate()
 	assert.Nil(t, err)
