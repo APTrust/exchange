@@ -139,21 +139,15 @@ func (validator *Validator) Validate() (*models.WorkSummary, error) {
 		return nil, err
 	}
 	validator.db = db
-
 	validator.summary.Start()
 	validator.summary.Attempted = true
 	validator.summary.AttemptNumber += 1
-
 	validator.readBag()
-
-	//	if !validator.summary.HasErrors() {
 	validator.verifyManifestPresent()
 	validator.verifyTopLevelFolder()
 	validator.verifyFileSpecs()
 	validator.verifyTagSpecs()
 	validator.verifyGenericFiles()
-	//	}
-
 	validator.summary.Finish()
 	return validator.summary, nil
 }
@@ -172,9 +166,6 @@ func (validator *Validator) readBag() {
 	}
 	validator.intelObj = obj
 	validator.addFiles()
-	if validator.summary.HasErrors() {
-		return
-	}
 	validator.parseManifestsTagFilesAndMimeTypes()
 	err = validator.db.Save(obj.Identifier, obj)
 	if err != nil {
@@ -339,7 +330,9 @@ func (validator *Validator) setFileType(gf *models.GenericFile, fileSummary *fil
 	}
 }
 
-//
+// parseManifestsTagFilesAndMimeTypes parses files that the bagging config
+// says to parse, like manifests and certain tag files. For payload files,
+// it sets the mime type.
 func (validator *Validator) parseManifestsTagFilesAndMimeTypes() {
 	// We have to get a new iterator here, because if we're
 	// dealing with a TarFileIterator (which is likely), it's
@@ -351,15 +344,19 @@ func (validator *Validator) parseManifestsTagFilesAndMimeTypes() {
 	}
 	for {
 		// Don't use "defer reader.Close()" because the readers
-		// won't be closed until we exit the for loop, and we may
-		// have 100k+ files.
+		// won't be closed until we exit the enclosing funcion,
+		// and the for loop may have opened 100k+ files by then.
 		reader, fileSummary, err := readIterator.Next()
+
+		// EOF means there are no more files to iterate through.
 		if err == io.EOF {
 			if reader != nil {
 				reader.Close()
 			}
 			return
 		}
+
+		// Non EOF error means something went wrong.
 		if err != nil {
 			if reader != nil {
 				reader.Close()
@@ -367,6 +364,8 @@ func (validator *Validator) parseManifestsTagFilesAndMimeTypes() {
 			validator.summary.AddError(err.Error())
 			continue
 		}
+
+		// If the iterator returns a directory, skip it.
 		if fileSummary.IsDir {
 			if reader != nil {
 				reader.Close()
@@ -374,16 +373,22 @@ func (validator *Validator) parseManifestsTagFilesAndMimeTypes() {
 			continue
 		}
 
-		// genericFile will sometimes be nil because the iterator
-		// returns directory names as well as file names
+		// At this point, we should have an open reader
+		// pointing to a legitimate file.
 		gfIdentifier := fmt.Sprintf("%s/%s", validator.objIdentifier, fileSummary.RelPath)
 		gf, err := validator.db.GetGenericFile(gfIdentifier)
 		if err != nil {
 			validator.summary.AddError("Error finding '%s' in validation db: %v", gfIdentifier, err)
+			if reader != nil {
+				reader.Close()
+			}
 			continue
 		}
 		if gf == nil {
 			validator.summary.AddError("Cannot find '%s' in validation db", gfIdentifier)
+			if reader != nil {
+				reader.Close()
+			}
 			continue
 		}
 		validator.parseOrSetMimeType(reader, gf, fileSummary)
@@ -398,6 +403,9 @@ func (validator *Validator) parseManifestsTagFilesAndMimeTypes() {
 // those, this will set its mime type (e.g. application/xml). We set mime
 // type only if we're tracking extended attributes. For general validation,
 // mime-type is irrelevant.
+//
+// TODO: Replace mime magic with Apache's mime-type list.
+// https://svn.apache.org/repos/asf/httpd/httpd/trunk/docs/conf/mime.types
 func (validator *Validator) parseOrSetMimeType(reader io.ReadCloser, gf *models.GenericFile, fileSummary *fileutil.FileSummary) {
 
 	parseAsTagFile := util.StringListContains(validator.tagFilesToParse, fileSummary.RelPath)
@@ -431,6 +439,8 @@ func (validator *Validator) parseOrSetMimeType(reader io.ReadCloser, gf *models.
 
 // parseTags parses the tags in a bagit-format tag file. That's a plain-text
 // file with names and values separated by a colon.
+//
+// TODO: Move this into a separate file and make it more generic.
 func (validator *Validator) parseTags(reader io.Reader, relFilePath string) {
 	obj, err := validator.getIntellectualObject()
 	if err != nil {
@@ -505,6 +515,8 @@ func (validator *Validator) setIntelObjTagValue(obj *models.IntellectualObject, 
 }
 
 // Parse the checksums in a manifest.
+//
+// TODO: Move this into a separate file and make it more generic.
 func (validator *Validator) parseManifest(reader io.Reader, fileSummary *fileutil.FileSummary) {
 	alg := ""
 	if strings.Contains(fileSummary.RelPath, constants.AlgSha256) {
