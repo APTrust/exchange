@@ -26,7 +26,7 @@ import (
 // 	return conf, nil
 // }
 
-func deleteDBFile(filePath string) {
+func deleteFile(filePath string) {
 	if fileutil.LooksSafeToDelete(filePath, 12, 3) {
 		os.Remove(filePath)
 	}
@@ -52,7 +52,13 @@ func getConfig(t *testing.T) *validation.BagValidationConfig {
 }
 
 func getValidator(t *testing.T, bagName string, includeExtendedMetada bool) *validation.Validator {
-	pathToBag := getBagPath(t, bagName)
+	pathToBag := ""
+	fullPath, _ := filepath.Abs(bagName)
+	if bagName == fullPath {
+		pathToBag = bagName
+	} else {
+		pathToBag = getBagPath(t, bagName)
+	}
 	bagValidationConfig := getConfig(t)
 	validator, err := validation.NewValidator(pathToBag, bagValidationConfig, true)
 	if err != nil {
@@ -63,7 +69,7 @@ func getValidator(t *testing.T, bagName string, includeExtendedMetada bool) *val
 
 func TestNewValidator(t *testing.T) {
 	validator := getValidator(t, "example.edu.tagsample_good.tar", true)
-	defer deleteDBFile(validator.DBName())
+	defer deleteFile(validator.DBName())
 	assert.NotNil(t, validator)
 	assert.True(t, strings.HasSuffix(validator.PathToBag, "example.edu.tagsample_good.tar"))
 	assert.NotNil(t, validator.BagValidationConfig)
@@ -157,7 +163,7 @@ func TestNewValidatorWithBadParams(t *testing.T) {
 // Read a valid bag from a tar file.
 func TestValidator_FromTarFile_BagValid(t *testing.T) {
 	validator := getValidator(t, "example.edu.tagsample_good.tar", true)
-	defer deleteDBFile(validator.DBName())
+	defer deleteFile(validator.DBName())
 	summary, err := validator.Validate()
 	assert.Nil(t, err)
 	assert.NotNil(t, summary)
@@ -167,18 +173,8 @@ func TestValidator_FromTarFile_BagValid(t *testing.T) {
 
 // Read an invalid bag from a tar file.
 func TestValidator_FromTarFile_BagInvalid(t *testing.T) {
-	bagValidationConfig, err := getValidationConfig()
-	if err != nil {
-		assert.Fail(t, "Could not load BagValidationConfig: %s", err.Error())
-	}
-	_, filename, _, _ := runtime.Caller(0)
-	dir := filepath.Dir(filename)
-	pathToBag, err := filepath.Abs(path.Join(dir, "..", "testdata", "unit_test_bags", "example.edu.tagsample_bad.tar"))
-	validator, err := validation.NewValidator(pathToBag, bagValidationConfig, true)
-	if err != nil {
-		assert.Fail(t, "NewBagValidator returned unexpected error: %s", err.Error())
-	}
-	defer deleteDBFile(validator.DBName())
+	validator := getValidator(t, "example.edu.tagsample_bad.tar", true)
+	defer deleteFile(validator.DBName())
 	summary, err := validator.Validate()
 	assert.Nil(t, err)
 	assert.NotNil(t, summary)
@@ -195,20 +191,13 @@ func TestValidator_FromDirectory_BagValid(t *testing.T) {
 	if tempDir != "" {
 		defer os.RemoveAll(tempDir)
 	}
-	bagValidationConfig, err := getValidationConfig()
-	if err != nil {
-		assert.Fail(t, "Could not load BagValidationConfig: %s", err.Error())
-	}
-	validator, err := validation.NewValidator(bagPath, bagValidationConfig, true)
-	if err != nil {
-		assert.Fail(t, "NewBagValidator returned unexpected error: %s", err.Error())
-	}
-	defer deleteDBFile(validator.DBName())
+	validator := getValidator(t, bagPath, true)
+	defer deleteFile(validator.DBName())
+	defer deleteFile(bagPath)
 	summary, err := validator.Validate()
 	assert.Nil(t, err)
 	assert.NotNil(t, summary)
 	assert.False(t, summary.HasErrors())
-	fmt.Println(summary.AllErrorsAsString())
 }
 
 // Read an invalid bag from a directory
@@ -220,15 +209,9 @@ func TestValidator_FromDirectory_BagInvalid(t *testing.T) {
 	if tempDir != "" {
 		defer os.RemoveAll(tempDir)
 	}
-	bagValidationConfig, err := getValidationConfig()
-	if err != nil {
-		assert.Fail(t, "Could not load BagValidationConfig: %s", err.Error())
-	}
-	validator, err := validation.NewValidator(bagPath, bagValidationConfig, true)
-	if err != nil {
-		assert.Fail(t, "NewBagValidator returned unexpected error: %s", err.Error())
-	}
-	defer deleteDBFile(validator.DBName())
+	validator := getValidator(t, bagPath, true)
+	defer deleteFile(validator.DBName())
+	defer deleteFile(bagPath)
 	summary, err := validator.Validate()
 	assert.Nil(t, err)
 	assert.NotNil(t, summary)
@@ -247,7 +230,7 @@ func TestValidator_BadFileFormat(t *testing.T) {
 	if err != nil {
 		assert.Fail(t, "NewBagValidator raised unexpected error: %s", err.Error())
 	}
-	defer deleteDBFile(validator.DBName())
+	defer deleteFile(validator.DBName())
 	summary, err := validator.Validate()
 	assert.True(t, summary.HasErrors())
 	// TODO: Check specific errors
@@ -266,7 +249,7 @@ func TestValidator_ValidBag(t *testing.T) {
 	if err != nil {
 		assert.Fail(t, "NewBagValidator returned unexpected error: %s", err.Error())
 	}
-	defer deleteDBFile(validator.DBName())
+	defer deleteFile(validator.DBName())
 	summary, err := validator.Validate()
 	assert.Nil(t, err)
 	assert.NotNil(t, summary)
@@ -288,7 +271,7 @@ func TestValidator_InvalidBag(t *testing.T) {
 	if err != nil {
 		assert.Fail(t, "NewBagValidator returned unexpected error: %s", err.Error())
 	}
-	defer deleteDBFile(validator.DBName())
+	defer deleteFile(validator.DBName())
 	summary, err := validator.Validate()
 	assert.Nil(t, err)
 	assert.NotNil(t, summary)
@@ -339,7 +322,7 @@ func TestValidator_GoodBags(t *testing.T) {
 		if err != nil {
 			assert.Fail(t, "NewBagValidator returned unexpected error: %s", err.Error())
 		}
-		defer deleteDBFile(validator.DBName())
+		defer deleteFile(validator.DBName())
 		summary, err := validator.Validate()
 		require.Nil(t, err)
 		assert.NotNil(t, summary)
@@ -368,7 +351,7 @@ func TestValidator_BadAccess(t *testing.T) {
 	if err != nil {
 		assert.Fail(t, "NewBagValidator returned unexpected error: %s", err.Error())
 	}
-	defer deleteDBFile(validator.DBName())
+	defer deleteFile(validator.DBName())
 	summary, err := validator.Validate()
 	assert.Nil(t, err)
 	assert.NotNil(t, summary)
@@ -390,7 +373,7 @@ func TestValidator_BadChecksums(t *testing.T) {
 	if err != nil {
 		assert.Fail(t, "NewBagValidator returned unexpected error: %s", err.Error())
 	}
-	defer deleteDBFile(validator.DBName())
+	defer deleteFile(validator.DBName())
 	summary, err := validator.Validate()
 	assert.Nil(t, err)
 	assert.NotNil(t, summary)
@@ -412,7 +395,7 @@ func TestValidator_BadFileNames(t *testing.T) {
 	if err != nil {
 		assert.Fail(t, "NewBagValidator returned unexpected error: %s", err.Error())
 	}
-	defer deleteDBFile(validator.DBName())
+	defer deleteFile(validator.DBName())
 	summary, err := validator.Validate()
 	assert.Nil(t, err)
 	assert.NotNil(t, summary)
@@ -436,7 +419,7 @@ func TestValidator_MissingDataFile(t *testing.T) {
 	if err != nil {
 		assert.Fail(t, "NewBagValidator returned unexpected error: %s", err.Error())
 	}
-	defer deleteDBFile(validator.DBName())
+	defer deleteFile(validator.DBName())
 	summary, err := validator.Validate()
 	assert.Nil(t, err)
 	assert.NotNil(t, summary)
@@ -458,7 +441,7 @@ func TestValidator_NoAPTrustInfo(t *testing.T) {
 	if err != nil {
 		assert.Fail(t, "NewBagValidator returned unexpected error: %s", err.Error())
 	}
-	defer deleteDBFile(validator.DBName())
+	defer deleteFile(validator.DBName())
 	summary, err := validator.Validate()
 	assert.Nil(t, err)
 	assert.NotNil(t, summary)
@@ -480,7 +463,7 @@ func TestValidator_NoBagInfo(t *testing.T) {
 	if err != nil {
 		assert.Fail(t, "NewBagValidator returned unexpected error: %s", err.Error())
 	}
-	defer deleteDBFile(validator.DBName())
+	defer deleteFile(validator.DBName())
 	summary, err := validator.Validate()
 	assert.Nil(t, err)
 	assert.NotNil(t, summary)
@@ -502,7 +485,7 @@ func TestValidator_NoDataDir(t *testing.T) {
 	if err != nil {
 		assert.Fail(t, "NewBagValidator returned unexpected error: %s", err.Error())
 	}
-	defer deleteDBFile(validator.DBName())
+	defer deleteFile(validator.DBName())
 	summary, err := validator.Validate()
 	assert.Nil(t, err)
 	assert.NotNil(t, summary)
@@ -526,7 +509,7 @@ func TestValidator_NoMd5Manifest(t *testing.T) {
 	if err != nil {
 		assert.Fail(t, "NewBagValidator returned unexpected error: %s", err.Error())
 	}
-	defer deleteDBFile(validator.DBName())
+	defer deleteFile(validator.DBName())
 	summary, err := validator.Validate()
 	assert.Nil(t, err)
 	assert.NotNil(t, summary)
@@ -548,7 +531,7 @@ func TestValidator_NoTitle(t *testing.T) {
 	if err != nil {
 		assert.Fail(t, "NewBagValidator returned unexpected error: %s", err.Error())
 	}
-	defer deleteDBFile(validator.DBName())
+	defer deleteFile(validator.DBName())
 	summary, err := validator.Validate()
 	assert.Nil(t, err)
 	assert.NotNil(t, summary)
@@ -570,7 +553,7 @@ func TestValidator_WrongFolderName(t *testing.T) {
 	if err != nil {
 		assert.Fail(t, "NewBagValidator returned unexpected error: %s", err.Error())
 	}
-	defer deleteDBFile(validator.DBName())
+	defer deleteFile(validator.DBName())
 	summary, err := validator.Validate()
 	assert.Nil(t, err)
 	assert.NotNil(t, summary)
