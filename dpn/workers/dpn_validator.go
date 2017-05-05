@@ -111,6 +111,7 @@ func (validator *DPNValidator) validate() {
 			validator.BagValidationConfig)
 		if err != nil {
 			// Could not create a BagValidator. Should this be fatal?
+			validator.Context.MessageLog.Error(err.Error())
 			manifest.ValidateSummary.AddError(err.Error())
 		} else {
 			// Validation can take hours for very large bags.
