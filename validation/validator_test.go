@@ -32,24 +32,40 @@ func deleteDBFile(filePath string) {
 	}
 }
 
-func TestNewValidator(t *testing.T) {
+func getBagPath(t *testing.T, bagname string) string {
 	_, filename, _, _ := runtime.Caller(0)
 	dir := filepath.Dir(filename)
-	pathToBag, err := filepath.Abs(path.Join(dir, "..", "testdata", "unit_test_bags", "example.edu.tagsample_good.tar"))
+	pathToBag, err := filepath.Abs(path.Join(dir, "..", "testdata", "unit_test_bags", bagname))
 	if err != nil {
 		assert.Fail(t, "Can't figure out Abs path: %s", err.Error())
 	}
-	bagValidationConfig, err := getValidationConfig()
-	if err != nil {
-		assert.Fail(t, "Could not load BagValidationConfig: %v", err)
+	return pathToBag
+}
+
+func getConfig(t *testing.T) *validation.BagValidationConfig {
+	configFilePath := path.Join("testdata", "json_objects", "bag_validation_config.json")
+	conf, errors := validation.LoadBagValidationConfig(configFilePath)
+	if errors != nil && len(errors) > 0 {
+		assert.Fail(t, "Could not load BagValidationConfig: %v", errors[0])
 	}
+	return conf
+}
+
+func getValidator(t *testing.T, bagName string, includeExtendedMetada bool) *validation.Validator {
+	pathToBag := getBagPath(t, bagName)
+	bagValidationConfig := getConfig(t)
 	validator, err := validation.NewValidator(pathToBag, bagValidationConfig, true)
 	if err != nil {
 		assert.Fail(t, "Error creating BagValidator: %s", err.Error())
 	}
+	return validator
+}
+
+func TestNewValidator(t *testing.T) {
+	validator := getValidator(t, "example.edu.tagsample_good.tar", true)
 	defer deleteDBFile(validator.DBName())
 	assert.NotNil(t, validator)
-	assert.Equal(t, pathToBag, validator.PathToBag)
+	assert.True(t, strings.HasSuffix(validator.PathToBag, "example.edu.tagsample_good.tar"))
 	assert.NotNil(t, validator.BagValidationConfig)
 	assert.True(t, validator.PreserveExtendedAttributes)
 }
@@ -140,17 +156,7 @@ func TestNewValidatorWithBadParams(t *testing.T) {
 
 // Read a valid bag from a tar file.
 func TestValidator_FromTarFile_BagValid(t *testing.T) {
-	bagValidationConfig, err := getValidationConfig()
-	if err != nil {
-		assert.Fail(t, "Could not load BagValidationConfig: %s", err.Error())
-	}
-	_, filename, _, _ := runtime.Caller(0)
-	dir := filepath.Dir(filename)
-	pathToBag, err := filepath.Abs(path.Join(dir, "..", "testdata", "unit_test_bags", "example.edu.tagsample_good.tar"))
-	validator, err := validation.NewValidator(pathToBag, bagValidationConfig, true)
-	if err != nil {
-		assert.Fail(t, "NewBagValidator returned unexpected error: %s", err.Error())
-	}
+	validator := getValidator(t, "example.edu.tagsample_good.tar", true)
 	defer deleteDBFile(validator.DBName())
 	summary, err := validator.Validate()
 	assert.Nil(t, err)
