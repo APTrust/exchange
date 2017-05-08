@@ -62,7 +62,7 @@ func getConfig(t *testing.T) *validation.BagValidationConfig {
 	return conf
 }
 
-func getValidator(t *testing.T, bagName string, includeExtendedMetada bool) *validation.Validator {
+func getValidator(t *testing.T, bagName string, includeExtendedMetadata bool) *validation.Validator {
 	pathToBag := ""
 	fullPath, _ := filepath.Abs(bagName)
 	if bagName == fullPath {
@@ -71,7 +71,7 @@ func getValidator(t *testing.T, bagName string, includeExtendedMetada bool) *val
 		pathToBag = getBagPath(t, bagName)
 	}
 	bagValidationConfig := getConfig(t)
-	validator, err := validation.NewValidator(pathToBag, bagValidationConfig, true)
+	validator, err := validation.NewValidator(pathToBag, bagValidationConfig, includeExtendedMetadata)
 	if err != nil {
 		assert.Fail(t, "Error creating Validator: %s", err.Error())
 	}
@@ -177,7 +177,6 @@ func TestValidator_FromTarFile_BagValid(t *testing.T) {
 	assert.Nil(t, err)
 	assert.NotNil(t, summary)
 	assert.False(t, summary.HasErrors())
-	fmt.Println(summary.AllErrorsAsString())
 }
 
 // Read an invalid bag from a tar file.
@@ -262,6 +261,8 @@ func TestValidator_FromDirectory_BagInvalid(t *testing.T) {
 	assert.True(t, util.StringListContains(summary.Errors, err_5))
 	assert.True(t, util.StringListContains(summary.Errors, err_6))
 	assert.True(t, util.StringListContains(summary.Errors, err_7))
+	fmt.Println(summary.AllErrorsAsString())
+	fmt.Println(bagPath)
 }
 
 // Read from a file that is not a directory or a valid tar file.
@@ -522,13 +523,73 @@ func TestValidator_SavesMinimumMetadata(t *testing.T) {
 		assert.NotEmpty(t, gf.Identifier)
 		assert.NotEmpty(t, gf.IntellectualObjectIdentifier)
 		assert.NotEmpty(t, gf.IngestMd5)
-		assert.NotEmpty(t, gf.IngestMd5GeneratedAt)
 		assert.NotEmpty(t, gf.IngestSha256)
-		assert.NotEmpty(t, gf.IngestSha256GeneratedAt)
 		assert.NotEmpty(t, gf.IngestFileType)
+		// And we didn't bother to set info we're not interested in.
+		assert.Empty(t, gf.Id)
+		assert.Empty(t, gf.IntellectualObjectId)
+		if strings.Contains(gf.Identifier, "manifest") {
+			assert.Equal(t, "text/plain", gf.FileFormat)
+		} else {
+			assert.Empty(t, gf.FileFormat)
+		}
+		assert.Empty(t, gf.Size)
+		assert.Empty(t, gf.FileCreated)
+		assert.Empty(t, gf.FileModified)
+		assert.Empty(t, gf.CreatedAt)
+		assert.Empty(t, gf.UpdatedAt)
+		assert.Nil(t, gf.Checksums)
+		assert.Nil(t, gf.PremisEvents)
+		assert.Empty(t, gf.LastFixityCheck)
+		assert.Empty(t, gf.State)
+		assert.Empty(t, gf.IngestMd5GeneratedAt)
+		assert.Empty(t, gf.IngestMd5VerifiedAt)
+		assert.Empty(t, gf.IngestSha256GeneratedAt)
+		assert.Empty(t, gf.IngestSha256VerifiedAt)
+		assert.Empty(t, gf.IngestUUIDGeneratedAt)
+		assert.Empty(t, gf.IngestStoredAt)
+		assert.Empty(t, gf.IngestReplicatedAt)
+		assert.True(t, gf.IngestNeedsSave)
 	}
 }
 
 func TestValidator_SavesExtendedMetadata(t *testing.T) {
+	validator := getValidator(t, "example.edu.tagsample_good.tar", true)
+	defer deleteFile(validator.DBName())
+	_, err := validator.Validate()
+	require.Nil(t, err)
+	boltDB := validator.DB()
+	require.NotNil(t, boltDB)
+	obj, err := boltDB.GetIntellectualObject("example.edu.tagsample_good")
+	require.Nil(t, err)
+	require.NotNil(t, obj)
+	// Make sure we have basic obj info
+	assert.NotEmpty(t, obj.Identifier)
+	assert.NotEmpty(t, obj.Institution)
+	assert.NotEmpty(t, obj.Title)
+	assert.NotEmpty(t, obj.Description)
+	assert.NotEmpty(t, obj.Access)
+	assert.NotEmpty(t, obj.AltIdentifier)
+	assert.NotEmpty(t, obj.IngestTarFilePath)
+	assert.NotEmpty(t, obj.IngestTopLevelDirNames)
+	assert.Equal(t, 10, len(obj.IngestTags))
 
+	for _, identifier := range gfIdentifiers {
+		gf, err := boltDB.GetGenericFile(identifier)
+		require.Nil(t, err)
+		require.NotNil(t, gf)
+		// Make sure we have extended generic file info
+		assert.NotEmpty(t, gf.Identifier)
+		assert.NotEmpty(t, gf.IntellectualObjectIdentifier)
+		assert.NotEmpty(t, gf.Size)
+		assert.NotEmpty(t, gf.FileModified)
+		assert.NotEmpty(t, gf.IngestFileType)
+		assert.NotEmpty(t, gf.IngestMd5)
+		assert.NotEmpty(t, gf.IngestMd5GeneratedAt)
+		assert.NotEmpty(t, gf.IngestSha256)
+		assert.NotEmpty(t, gf.IngestSha256GeneratedAt)
+		assert.NotEmpty(t, gf.IngestFileType)
+		assert.NotEmpty(t, gf.IngestUUID)
+		assert.NotEmpty(t, gf.IngestUUIDGeneratedAt)
+	}
 }

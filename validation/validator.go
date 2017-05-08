@@ -241,6 +241,9 @@ func (validator *Validator) addFile(readIterator fileutil.ReadIterator) error {
 	gf := models.NewGenericFile()
 	gf.Identifier = fmt.Sprintf("%s/%s", validator.objIdentifier, fileSummary.RelPath)
 
+	// Unfortunately, we need this to compute gf.OriginalPath()
+	gf.IntellectualObjectIdentifier = validator.objIdentifier
+
 	// Figure out whether this is a manifest, payload file, etc.
 	// This is not the same as setting the file's mime type.
 	validator.setFileType(gf, fileSummary)
@@ -250,7 +253,6 @@ func (validator *Validator) addFile(readIterator fileutil.ReadIterator) error {
 	// the APTrust organization.
 	if validator.PreserveExtendedAttributes {
 		_uuid := uuid.NewV4()
-		gf.IntellectualObjectIdentifier = validator.objIdentifier
 		gf.Size = fileSummary.Size
 		gf.FileModified = fileSummary.ModTime
 		gf.IngestLocalPath = fileSummary.AbsPath // will be empty if bag is tarred
