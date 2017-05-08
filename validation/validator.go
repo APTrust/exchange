@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"github.com/APTrust/exchange/constants"
 	"github.com/APTrust/exchange/models"
-	"github.com/APTrust/exchange/platform"
 	"github.com/APTrust/exchange/util"
 	"github.com/APTrust/exchange/util/fileutil"
 	"github.com/APTrust/exchange/util/storage"
@@ -172,8 +171,13 @@ func (validator *Validator) readBag() {
 		return
 	}
 	validator.intelObj = obj
+
+	// Add all files in the bag to the GenericFiles list
 	validator.addFiles()
-	validator.parseManifestsTagFilesAndMimeTypes()
+
+	// Parse the files that can be parsed (manifests & plaintext tag files)
+	validator.parseFiles()
+
 	err = validator.db.Save(obj.Identifier, obj)
 	if err != nil {
 		validator.summary.AddError("Could not save intelObj metadata: %v", err)
@@ -260,6 +264,7 @@ func (validator *Validator) addFile(readIterator fileutil.ReadIterator) error {
 		gf.IngestUUIDGeneratedAt = time.Now().UTC()
 		gf.IngestFileUid = fileSummary.Uid
 		gf.IngestFileGid = fileSummary.Gid
+		validator.setMimeType(gf)
 	}
 
 	// Keep track of which required/forbidden files we encounter.
@@ -339,10 +344,9 @@ func (validator *Validator) setFileType(gf *models.GenericFile, fileSummary *fil
 	}
 }
 
-// parseManifestsTagFilesAndMimeTypes parses files that the bagging config
-// says to parse, like manifests and certain tag files. For payload files,
-// it sets the mime type.
-func (validator *Validator) parseManifestsTagFilesAndMimeTypes() {
+// parseFiles parses files that the bagging config says to parse,
+// like manifests and certain tag files.
+func (validator *Validator) parseFiles() {
 	// We have to get a new iterator here, because if we're
 	// dealing with a TarFileIterator (which is likely), it's
 	// forward-only. We can't rewind it.
@@ -400,49 +404,27 @@ func (validator *Validator) parseManifestsTagFilesAndMimeTypes() {
 			}
 			continue
 		}
-		validator.parseOrSetMimeType(reader, gf, fileSummary)
+		validator.parseFile(reader, gf, fileSummary)
 		if reader != nil {
 			reader.Close()
 		}
 	}
 }
 
-// parseOrSetMimeType parses a file's contents if the file is a manifest,
-// tag manifest, or parsable plain-text tag file. It the file is none of
-// those, this will set its mime type (e.g. application/xml). We set mime
-// type only if we're tracking extended attributes. For general validation,
-// mime-type is irrelevant.
-//
-// TODO: Replace mime magic with Apache's mime-type list.
-// https://svn.apache.org/repos/asf/httpd/httpd/trunk/docs/conf/mime.types
-func (validator *Validator) parseOrSetMimeType(reader io.ReadCloser, gf *models.GenericFile, fileSummary *fileutil.FileSummary) {
-
+// parseFile parses a file's contents if the file is a manifest,
+// tag manifest, or parsable plain-text tag file. If the file
+// doesn't match either of these cases, we skip it, and this is
+// a no-op.
+func (validator *Validator) parseFile(reader io.ReadCloser, gf *models.GenericFile, fileSummary *fileutil.FileSummary) {
 	parseAsTagFile := util.StringListContains(validator.tagFilesToParse, fileSummary.RelPath)
 	parseAsManifest := util.StringListContains(validator.manifests, fileSummary.RelPath) ||
 		util.StringListContains(validator.tagManifests, fileSummary.RelPath)
-	weCareAboutMimeTypes := (gf != nil && validator.PreserveExtendedAttributes)
 
 	if parseAsTagFile {
 		validator.parseTags(reader, fileSummary.RelPath)
-		if weCareAboutMimeTypes {
-			// We can only parse text files, so this
-			// should be a plain text file.
-			if strings.HasSuffix(gf.Identifier, ".txt") {
-				gf.FileFormat = "text/plain"
-			} else {
-				gf.FileFormat = "application/binary"
-			}
-		}
 	} else if parseAsManifest {
 		// Get the checksums out of the manifest.
 		validator.parseManifest(reader, fileSummary)
-	} else if weCareAboutMimeTypes {
-		// This is either a payload file, or some kind of tag
-		// file that we don't know how to parse, so just figure
-		// out its mime type for reporting and storage.
-		// APTrust tracks file mime types, but we don't need this for
-		// basic validation.
-		validator.setMimeType(reader, gf)
 	}
 }
 
@@ -585,36 +567,6 @@ func (validator *Validator) parseManifest(reader io.Reader, fileSummary *fileuti
 				lineNum, fileSummary.RelPath, line))
 		}
 		lineNum += 1
-	}
-}
-
-// setMimeType attempts to set the FileFormat attribute to the correct
-// mime type (e.g. image/jpeg). We do not run this function unless we're
-// PreserveExtendedAttributes is on. This function does nothing on Windows.
-// It only sets a meaningful file type on *nix platforms that have access
-// to the mime magic database.
-func (validator *Validator) setMimeType(reader io.Reader, gf *models.GenericFile) {
-	// on err, defaults to application/binary
-	bufLen := 128
-	if gf.Size < int64(bufLen) {
-		bufLen = int(gf.Size - 1)
-		if bufLen < 1 {
-			// We actually do permit zero-length files, and we can
-			// save them in S3. These files can be necessary in
-			// certain cases, such as __init__.py files for Python,
-			// PHP templates whose presence is required, ".keep" files, etc.
-			gf.FileFormat = "text/empty"
-			return
-		}
-	}
-	buf := make([]byte, bufLen)
-	_, err := reader.Read(buf)
-	if err != nil {
-		validator.summary.AddError(err.Error())
-	}
-	gf.FileFormat, err = platform.GuessMimeTypeByBuffer(buf)
-	if err != nil {
-		validator.summary.AddError(err.Error())
 	}
 }
 
@@ -808,4 +760,18 @@ func (validator *Validator) fileValidationDetail() string {
 		detail = "POSIX validation rules"
 	}
 	return detail
+}
+
+// setMimeType sets the FileFormat attribute of a GenericFile, based
+// on the file's extension.
+func (validator *Validator) setMimeType(gf *models.GenericFile) {
+	mimeType := "application/binary"
+	ext := path.Ext(gf.Identifier)
+	if len(ext) > 1 {
+		ext = ext[1:] // get rid of leading dot
+		if t, ok := fileutil.MimeTypes[ext]; ok {
+			mimeType = t
+		}
+	}
+	gf.FileFormat = mimeType
 }
