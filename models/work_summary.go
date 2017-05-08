@@ -22,7 +22,9 @@ type WorkSummary struct {
 	ErrorIsFatal bool
 
 	// Errors is a list of strings describing errors that occurred
-	// during bag validation.
+	// during bag validation. Don't write to this. It's public so
+	// we can serialize it to/from JSON, but access is locked internally
+	// with a mutex. Hmm...
 	Errors []string
 
 	// StartedAt describes when the attempt to read the bag started.

@@ -473,3 +473,62 @@ func TestValidator_WrongFolderName(t *testing.T) {
 	assert.Equal(t, 1, len(summary.Errors))
 	assert.True(t, util.StringListContains(summary.Errors, "Tarred bag should untar to directory 'example.edu.sample_wrong_folder_name', not 'wrong_folder_name'"))
 }
+
+var gfIdentifiers = []string{
+	"example.edu.tagsample_good/aptrust-info.txt",
+	"example.edu.tagsample_good/bag-info.txt",
+	"example.edu.tagsample_good/bagit.txt",
+	"example.edu.tagsample_good/custom_tag_file.txt",
+	"example.edu.tagsample_good/junk_file.txt",
+	"example.edu.tagsample_good/manifest-md5.txt",
+	"example.edu.tagsample_good/manifest-sha256.txt",
+	"example.edu.tagsample_good/tagmanifest-md5.txt",
+	"example.edu.tagsample_good/tagmanifest-sha256.txt",
+	"example.edu.tagsample_good/data/datastream-DC",
+	"example.edu.tagsample_good/data/datastream-descMetadata",
+	"example.edu.tagsample_good/data/datastream-MARC",
+	"example.edu.tagsample_good/data/datastream-RELS-EXT",
+	"example.edu.tagsample_good/custom_tags/tracked_file_custom.xml",
+	"example.edu.tagsample_good/custom_tags/tracked_tag_file.txt",
+	"example.edu.tagsample_good/custom_tags/untracked_tag_file.txt",
+}
+
+func TestValidator_SavesMinimumMetadata(t *testing.T) {
+	validator := getValidator(t, "example.edu.tagsample_good.tar", false)
+	defer deleteFile(validator.DBName())
+	_, err := validator.Validate()
+	require.Nil(t, err)
+	boltDB := validator.DB()
+	require.NotNil(t, boltDB)
+	obj, err := boltDB.GetIntellectualObject("example.edu.tagsample_good")
+	require.Nil(t, err)
+	require.NotNil(t, obj)
+	// Make sure we have basic obj info
+	assert.NotEmpty(t, obj.Identifier)
+	assert.NotEmpty(t, obj.Institution)
+	assert.NotEmpty(t, obj.Title)
+	assert.NotEmpty(t, obj.Description)
+	assert.NotEmpty(t, obj.Access)
+	assert.NotEmpty(t, obj.AltIdentifier)
+	assert.NotEmpty(t, obj.IngestTarFilePath)
+	assert.NotEmpty(t, obj.IngestTopLevelDirNames)
+	assert.Equal(t, 10, len(obj.IngestTags))
+
+	for _, identifier := range gfIdentifiers {
+		gf, err := boltDB.GetGenericFile(identifier)
+		require.Nil(t, err)
+		require.NotNil(t, gf)
+		// Make sure we have basic generic file info
+		assert.NotEmpty(t, gf.Identifier)
+		assert.NotEmpty(t, gf.IntellectualObjectIdentifier)
+		assert.NotEmpty(t, gf.IngestMd5)
+		assert.NotEmpty(t, gf.IngestMd5GeneratedAt)
+		assert.NotEmpty(t, gf.IngestSha256)
+		assert.NotEmpty(t, gf.IngestSha256GeneratedAt)
+		assert.NotEmpty(t, gf.IngestFileType)
+	}
+}
+
+func TestValidator_SavesExtendedMetadata(t *testing.T) {
+
+}
