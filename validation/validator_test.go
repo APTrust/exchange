@@ -16,6 +16,18 @@ import (
 	"testing"
 )
 
+// These are some common errors that we expect to encounter repeatedly
+// in our tests.
+
+var err_0 = "File 'data/file-not-in-bag' in manifest 'manifest-sha256.txt' is missing from bag"
+var err_1 = "File 'custom_tags/tag_file_xyz.pdf' in manifest 'tagmanifest-md5.txt' is missing from bag"
+var err_2 = "File 'custom_tags/tag_file_xyz.pdf' in manifest 'tagmanifest-sha256.txt' is missing from bag"
+var err_3 = "Value for tag 'Title' is missing."
+var err_4 = "Tag 'Access' has illegal value 'acksess'."
+var err_5 = "Bad sha256 digest for 'data/datastream-descMetadata': manifest says 'This-checksum-is-bad-on-purpose.-The-validator-should-catch-it!!', file digest is 'cf9cbce80062932e10ee9cd70ec05ebc24019deddfea4e54b8788decd28b4bc7'"
+var err_6 = "Bad md5 digest for 'custom_tags/tracked_tag_file.txt': manifest says '00000000000000000000000000000000', file digest is 'dafbffffc3ed28ef18363394935a2651'"
+var err_7 = "Bad sha256 digest for 'custom_tags/tracked_tag_file.txt': manifest says '0000000000000000000000000000000000000000000000000000000000000000', file digest is '3f2f50c5bde87b58d6132faee14d1a295d115338643c658df7fa147e2296ccdd'"
+
 // func getValidationConfig() (*validation.BagValidationConfig, error) {
 // 	configFilePath := path.Join("testdata", "json_objects", "bag_validation_config.json")
 // 	conf, errors := validation.LoadBagValidationConfig(configFilePath)
@@ -197,8 +209,8 @@ func TestValidator_FromDirectory_BagValid(t *testing.T) {
 	assert.False(t, summary.HasErrors())
 }
 
-// Read an invalid bag from a directory
-func TestValidator_FromDirectory_BagInvalid(t *testing.T) {
+// Read an invalid bag from a directory, while tracking APTrust ingest data.
+func TestValidator_FromDirectory_BagInvalid_NoMeta(t *testing.T) {
 	tempDir, bagPath, err := testhelper.UntarTestBag("example.edu.tagsample_bad.tar")
 	if err != nil {
 		assert.Fail(t, err.Error())
@@ -213,7 +225,43 @@ func TestValidator_FromDirectory_BagInvalid(t *testing.T) {
 	assert.Nil(t, err)
 	assert.NotNil(t, summary)
 	assert.True(t, summary.HasErrors())
-	// TODO: Check specific errors
+	assert.Equal(t, 8, len(summary.Errors))
+	assert.True(t, util.StringListContains(summary.Errors, err_0))
+	assert.True(t, util.StringListContains(summary.Errors, err_1))
+	assert.True(t, util.StringListContains(summary.Errors, err_2))
+	assert.True(t, util.StringListContains(summary.Errors, err_3))
+	assert.True(t, util.StringListContains(summary.Errors, err_4))
+	assert.True(t, util.StringListContains(summary.Errors, err_5))
+	assert.True(t, util.StringListContains(summary.Errors, err_6))
+	assert.True(t, util.StringListContains(summary.Errors, err_7))
+}
+
+// Read an invalid bag from a directory, without tracking APTrust
+// ingest data.
+func TestValidator_FromDirectory_BagInvalid(t *testing.T) {
+	tempDir, bagPath, err := testhelper.UntarTestBag("example.edu.tagsample_bad.tar")
+	if err != nil {
+		assert.Fail(t, err.Error())
+	}
+	if tempDir != "" {
+		defer os.RemoveAll(tempDir)
+	}
+	validator := getValidator(t, bagPath, false)
+	defer deleteFile(validator.DBName())
+	defer deleteFile(bagPath)
+	summary, err := validator.Validate()
+	assert.Nil(t, err)
+	assert.NotNil(t, summary)
+	assert.True(t, summary.HasErrors())
+	assert.Equal(t, 8, len(summary.Errors))
+	assert.True(t, util.StringListContains(summary.Errors, err_0))
+	assert.True(t, util.StringListContains(summary.Errors, err_1))
+	assert.True(t, util.StringListContains(summary.Errors, err_2))
+	assert.True(t, util.StringListContains(summary.Errors, err_3))
+	assert.True(t, util.StringListContains(summary.Errors, err_4))
+	assert.True(t, util.StringListContains(summary.Errors, err_5))
+	assert.True(t, util.StringListContains(summary.Errors, err_6))
+	assert.True(t, util.StringListContains(summary.Errors, err_7))
 }
 
 // Read from a file that is not a directory or a valid tar file.
@@ -230,7 +278,16 @@ func TestValidator_BadFileFormat(t *testing.T) {
 	defer deleteFile(validator.DBName())
 	summary, err := validator.Validate()
 	assert.True(t, summary.HasErrors())
-	// TODO: Check specific errors
+	assert.Equal(t, 10, len(summary.Errors))
+	assert.True(t, strings.Contains(summary.Errors[0], "Error getting file iterator"))
+	assert.True(t, strings.Contains(summary.Errors[1], "is not a directory"))
+	assert.True(t, util.StringListContains(summary.Errors, "Required file 'tagmanifest-md5.txt' is missing."))
+	assert.True(t, util.StringListContains(summary.Errors, "Required file 'bagit.txt' is missing."))
+	assert.True(t, util.StringListContains(summary.Errors, "Required file 'bag-info.txt' is missing."))
+	assert.True(t, util.StringListContains(summary.Errors, "Required file 'aptrust-info.txt' is missing."))
+	assert.True(t, util.StringListContains(summary.Errors, "Required file 'manifest-md5.txt' is missing."))
+	assert.True(t, util.StringListContains(summary.Errors, "Required tag 'Access' is missing."))
+	assert.True(t, util.StringListContains(summary.Errors, "Required tag 'Title' is missing."))
 }
 
 // Make sure we catch all errors in an invalid bag.
@@ -242,19 +299,7 @@ func TestValidator_InvalidBag(t *testing.T) {
 	assert.Nil(t, err)
 	assert.NotNil(t, summary)
 	assert.True(t, summary.HasErrors())
-
-	err_0 := "File 'data/file-not-in-bag' in manifest 'manifest-sha256.txt' is missing from bag"
-	err_1 := "File 'custom_tags/tag_file_xyz.pdf' in manifest 'tagmanifest-md5.txt' is missing from bag"
-	err_2 := "File 'custom_tags/tag_file_xyz.pdf' in manifest 'tagmanifest-sha256.txt' is missing from bag"
-	err_3 := "Value for tag 'Title' is missing."
-	err_4 := "Tag 'Access' has illegal value 'acksess'."
-	err_5 := "Bad sha256 digest for 'data/datastream-descMetadata': manifest says 'This-checksum-is-bad-on-purpose.-The-validator-should-catch-it!!', file digest is 'cf9cbce80062932e10ee9cd70ec05ebc24019deddfea4e54b8788decd28b4bc7'"
-	err_6 := "Bad md5 digest for 'custom_tags/tracked_tag_file.txt': manifest says '00000000000000000000000000000000', file digest is 'dafbffffc3ed28ef18363394935a2651'"
-	err_7 := "Bad sha256 digest for 'custom_tags/tracked_tag_file.txt': manifest says '0000000000000000000000000000000000000000000000000000000000000000', file digest is '3f2f50c5bde87b58d6132faee14d1a295d115338643c658df7fa147e2296ccdd'"
 	assert.Equal(t, 8, len(summary.Errors))
-
-	fmt.Println(summary.AllErrorsAsString())
-
 	assert.True(t, util.StringListContains(summary.Errors, err_0))
 	assert.True(t, util.StringListContains(summary.Errors, err_1))
 	assert.True(t, util.StringListContains(summary.Errors, err_2))
@@ -303,7 +348,9 @@ func TestValidator_BadAccess(t *testing.T) {
 	assert.Nil(t, err)
 	assert.NotNil(t, summary)
 	require.True(t, summary.HasErrors())
-	// TODO: Check specific errors
+	assert.Equal(t, 2, len(summary.Errors))
+	assert.True(t, util.StringListContains(summary.Errors, "Required file 'tagmanifest-md5.txt' is missing."))
+	assert.True(t, util.StringListContains(summary.Errors, "Tag 'Access' has illegal value 'hands off!'."))
 }
 
 func TestValidator_BadChecksums(t *testing.T) {
@@ -313,7 +360,12 @@ func TestValidator_BadChecksums(t *testing.T) {
 	assert.Nil(t, err)
 	assert.NotNil(t, summary)
 	require.True(t, summary.HasErrors())
-	// TODO: Check specific errors
+	assert.Equal(t, 5, len(summary.Errors))
+	assert.True(t, util.StringListContains(summary.Errors, "Required tag 'Access' is missing."))
+	assert.True(t, util.StringListContains(summary.Errors, "Bad md5 digest for 'data/datastream-DC': manifest says '44d85cf4810d6c6fe877BlahBlahBlah', file digest is '44d85cf4810d6c6fe87750117633e461'"))
+	assert.True(t, util.StringListContains(summary.Errors, "Bad md5 digest for 'data/datastream-MARC': manifest says '93e381dfa9ad0086dbe3BlahBlahBlah', file digest is '93e381dfa9ad0086dbe3b92e0324bae6'"))
+	assert.True(t, util.StringListContains(summary.Errors, "Bad md5 digest for 'data/datastream-RELS-EXT': manifest says 'ff731b9a1758618f6cc2BlahBlahBlah', file digest is 'ff731b9a1758618f6cc22538dede6174'"))
+	assert.True(t, util.StringListContains(summary.Errors, "Bad md5 digest for 'data/datastream-descMetadata': manifest says '4bd0ad5f85c00ce84a45BlahBlahBlah', file digest is '4bd0ad5f85c00ce84a455466b24c8960'"))
 }
 
 func TestValidator_BadFileNames(t *testing.T) {
@@ -323,9 +375,12 @@ func TestValidator_BadFileNames(t *testing.T) {
 	assert.Nil(t, err)
 	assert.NotNil(t, summary)
 	require.True(t, summary.HasErrors())
+	assert.Equal(t, 4, len(summary.Errors))
+	assert.True(t, util.StringListContains(summary.Errors, "Filename 'data/-starts-with-dash' is not valid according to APTrust validation rules"))
+	assert.True(t, util.StringListContains(summary.Errors, "Filename 'data/contains#hash' is not valid according to APTrust validation rules"))
+	assert.True(t, util.StringListContains(summary.Errors, "Filename 'data/contains*star' is not valid according to APTrust validation rules"))
+	assert.True(t, util.StringListContains(summary.Errors, "Filename 'data/contains+plus' is not valid according to APTrust validation rules"))
 
-	fmt.Println(summary.AllErrorsAsString())
-	// TODO: Check specific errors
 }
 
 func TestValidator_MissingDataFile(t *testing.T) {
@@ -335,7 +390,9 @@ func TestValidator_MissingDataFile(t *testing.T) {
 	assert.Nil(t, err)
 	assert.NotNil(t, summary)
 	require.True(t, summary.HasErrors())
-	// TODO: Check specific errors
+	assert.Equal(t, 2, len(summary.Errors))
+	assert.True(t, util.StringListContains(summary.Errors, "File 'data/datastream-DC' in manifest 'manifest-md5.txt' is missing from bag"))
+	assert.True(t, util.StringListContains(summary.Errors, "Required tag 'Access' is missing."))
 }
 
 func TestValidator_NoAPTrustInfo(t *testing.T) {
@@ -345,7 +402,11 @@ func TestValidator_NoAPTrustInfo(t *testing.T) {
 	assert.Nil(t, err)
 	assert.NotNil(t, summary)
 	require.True(t, summary.HasErrors())
-	// TODO: Check specific errors
+
+	assert.Equal(t, 3, len(summary.Errors))
+	assert.True(t, util.StringListContains(summary.Errors, "Required file 'aptrust-info.txt' is missing."))
+	assert.True(t, util.StringListContains(summary.Errors, "Required tag 'Title' is missing."))
+	assert.True(t, util.StringListContains(summary.Errors, "Required tag 'Access' is missing."))
 }
 
 func TestValidator_NoBagInfo(t *testing.T) {
@@ -355,7 +416,10 @@ func TestValidator_NoBagInfo(t *testing.T) {
 	assert.Nil(t, err)
 	assert.NotNil(t, summary)
 	require.True(t, summary.HasErrors())
-	// TODO: Check specific errors
+	assert.Equal(t, 2, len(summary.Errors))
+	assert.True(t, util.StringListContains(summary.Errors, "Required file 'bag-info.txt' is missing."))
+	assert.True(t, util.StringListContains(summary.Errors, "Required tag 'Access' is missing."))
+	fmt.Println(summary.AllErrorsAsString())
 }
 
 func TestValidator_NoDataDir(t *testing.T) {
@@ -365,9 +429,11 @@ func TestValidator_NoDataDir(t *testing.T) {
 	assert.Nil(t, err)
 	assert.NotNil(t, summary)
 	require.True(t, summary.HasErrors())
-
-	fmt.Println(summary.AllErrorsAsString())
-	// TODO: Check specific errors
+	assert.Equal(t, 4, len(summary.Errors))
+	assert.True(t, util.StringListContains(summary.Errors, "File 'data/datastream-DC' in manifest 'manifest-md5.txt' is missing from bag"))
+	assert.True(t, util.StringListContains(summary.Errors, "File 'data/datastream-descMetadata' in manifest 'manifest-md5.txt' is missing from bag"))
+	assert.True(t, util.StringListContains(summary.Errors, "File 'data/datastream-MARC' in manifest 'manifest-md5.txt' is missing from bag"))
+	assert.True(t, util.StringListContains(summary.Errors, "File 'data/datastream-RELS-EXT' in manifest 'manifest-md5.txt' is missing from bag"))
 }
 
 func TestValidator_NoMd5Manifest(t *testing.T) {
@@ -377,7 +443,13 @@ func TestValidator_NoMd5Manifest(t *testing.T) {
 	assert.Nil(t, err)
 	assert.NotNil(t, summary)
 	require.True(t, summary.HasErrors())
-	// TODO: Check specific errors
+	assert.Equal(t, 6, len(summary.Errors))
+	assert.True(t, util.StringListContains(summary.Errors, "Bag contains no payload manifest."))
+	assert.True(t, util.StringListContains(summary.Errors, "Required file 'manifest-md5.txt' is missing."))
+	assert.True(t, util.StringListContains(summary.Errors, "File 'data/datastream-DC' does not appear in any payload manifest (md5 or sha256)"))
+	assert.True(t, util.StringListContains(summary.Errors, "File 'data/datastream-MARC' does not appear in any payload manifest (md5 or sha256)"))
+	assert.True(t, util.StringListContains(summary.Errors, "File 'data/datastream-RELS-EXT' does not appear in any payload manifest (md5 or sha256)"))
+	assert.True(t, util.StringListContains(summary.Errors, "File 'data/datastream-descMetadata' does not appear in any payload manifest (md5 or sha256)"))
 }
 
 func TestValidator_NoTitle(t *testing.T) {
@@ -387,7 +459,8 @@ func TestValidator_NoTitle(t *testing.T) {
 	assert.Nil(t, err)
 	assert.NotNil(t, summary)
 	require.True(t, summary.HasErrors())
-	// TODO: Check specific errors
+	assert.Equal(t, 1, len(summary.Errors))
+	assert.True(t, util.StringListContains(summary.Errors, "Value for tag 'Title' is missing."))
 }
 
 func TestValidator_WrongFolderName(t *testing.T) {
@@ -397,5 +470,6 @@ func TestValidator_WrongFolderName(t *testing.T) {
 	assert.Nil(t, err)
 	assert.NotNil(t, summary)
 	require.True(t, summary.HasErrors())
-	// TODO: Check specific errors
+	assert.Equal(t, 1, len(summary.Errors))
+	assert.True(t, util.StringListContains(summary.Errors, "Tarred bag should untar to directory 'example.edu.sample_wrong_folder_name', not 'wrong_folder_name'"))
 }
