@@ -40,56 +40,56 @@ type GenericFile struct {
 
 	// The Rails/Database id for this generic file.
 	// If the Id is non-zero, it's been recorded in Pharos.
-	Id int `json:"id"`
+	Id int `json:"id,omitempty"`
 
 	// The human-readable identifier for this file. It consists of
 	// the object name, followed by a slash, followed by the path
 	// of the file within the bag. E.g. "virginia.edu/bag001/data/file1.pdf"
-	Identifier string `json:"identifier"`
+	Identifier string `json:"identifier,omitempty"`
 
 	// The id of the IntellectualObject to which this file belongs.
-	IntellectualObjectId int `json:"intellectual_object_id"`
+	IntellectualObjectId int `json:"intellectual_object_id,omitempty"`
 
 	// The identifier of the intellectual object to which this file belongs.
-	IntellectualObjectIdentifier string `json:"intellectual_object_identifier"`
+	IntellectualObjectIdentifier string `json:"intellectual_object_identifier,omitempty"`
 
 	// The file's mime type. E.g. "application/xml"
-	FileFormat string `json:"file_format"`
+	FileFormat string `json:"file_format,omitempty"`
 
 	// The location of this file in our primary s3 long-term storage bucket.
 	URI string `json:"uri,omitempty"`
 
 	// The size of the file, in bytes.
-	Size int64 `json:"size"`
+	Size int64 `json:"size,omitempty"`
 
 	// The date this file was created by the depositor. This date comes from
 	// the file record in the tarred bag.
-	FileCreated time.Time `json:"file_created"`
+	FileCreated time.Time `json:"file_created,omitempty"`
 
 	// The date this file was last modified by the depository. This date comes
 	// from the file record in the tarred bag.
-	FileModified time.Time `json:"file_modified"`
+	FileModified time.Time `json:"file_modified,omitempty"`
 
 	// A timestamp indicating when this GenericFile record was created in
 	// our repository.
-	CreatedAt time.Time `json:"created_at"`
+	CreatedAt time.Time `json:"created_at,omitempty"`
 
 	// UpdatedAt indicates when this GenericFile record was last updated in
 	// our repository.
-	UpdatedAt time.Time `json:"updated_at"`
+	UpdatedAt time.Time `json:"updated_at,omitempty"`
 
 	// Checksums is a list of checksums for this file.
-	Checksums []*Checksum `json:"checksums"`
+	Checksums []*Checksum `json:"checksums,omitempty"`
 
 	// PremisEvents is a list of PREMIS events for this file.
-	PremisEvents []*PremisEvent `json:"premis_events"`
+	PremisEvents []*PremisEvent `json:"premis_events,omitempty"`
 
 	// LastFixityCheck is the date and time we last verified
 	// the fixity digest for this file.
-	LastFixityCheck time.Time `json:"last_fixity_check"`
+	LastFixityCheck time.Time `json:"last_fixity_check,omitempty"`
 
 	// State will be "A" for active files, "D" for deleted files.
-	State string `json:"state"`
+	State string `json:"state,omitempty"`
 
 	// ----------------------------------------------------
 	// The fields below are for internal housekeeping

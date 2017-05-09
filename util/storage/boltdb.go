@@ -128,7 +128,7 @@ func (boltDB *BoltDB) GetGenericFile(key string) (*models.GenericFile, error) {
 // default bucket.
 func (boltDB *BoltDB) ForEach(fn func(k, v []byte) error) error {
 	var err error
-	boltDB.db.View(func(tx *bolt.Tx) error {
+	return boltDB.db.View(func(tx *bolt.Tx) error {
 		bucket := tx.Bucket([]byte(DEFAULT_BUCKET))
 		err = bucket.ForEach(fn)
 		if err != nil {
@@ -136,5 +136,4 @@ func (boltDB *BoltDB) ForEach(fn func(k, v []byte) error) error {
 		}
 		return nil
 	})
-	return err
 }

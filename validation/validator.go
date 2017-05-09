@@ -30,8 +30,8 @@ type Validator struct {
 	PathToBag                  string
 	BagValidationConfig        *BagValidationConfig
 	PreserveExtendedAttributes bool
+	ObjIdentifier              string
 	summary                    *models.WorkSummary
-	objIdentifier              string
 	intelObj                   *models.IntellectualObject
 	tagFilesToParse            []string
 	manifests                  []string
@@ -71,7 +71,7 @@ func NewValidator(pathToBag string, bagValidationConfig *BagValidationConfig, pr
 		BagValidationConfig:        bagValidationConfig,
 		PreserveExtendedAttributes: preserveExtendedAttributes,
 		summary:                    models.NewWorkSummary(),
-		objIdentifier:              util.CleanBagName(path.Base(pathToBag)),
+		ObjIdentifier:              util.CleanBagName(path.Base(pathToBag)),
 		manifests:                  make([]string, 0),
 		tagManifests:               make([]string, 0),
 		tagFilesToParse:            tagFilesToParse,
@@ -192,7 +192,7 @@ func (validator *Validator) getIntellectualObject() (*models.IntellectualObject,
 	if validator.intelObj != nil {
 		return validator.intelObj, nil
 	}
-	obj, err := validator.db.GetIntellectualObject(validator.objIdentifier)
+	obj, err := validator.db.GetIntellectualObject(validator.ObjIdentifier)
 	if err != nil {
 		return nil, err
 	}
@@ -205,7 +205,7 @@ func (validator *Validator) getIntellectualObject() (*models.IntellectualObject,
 // initIntellectualObject creates a barebones IntellectualObject.
 func (validator *Validator) initIntellectualObject() (*models.IntellectualObject, error) {
 	obj := models.NewIntellectualObject()
-	obj.Identifier = validator.objIdentifier
+	obj.Identifier = validator.ObjIdentifier
 	if strings.HasSuffix(validator.PathToBag, ".tar") {
 		obj.IngestTarFilePath = validator.PathToBag
 	} else {
@@ -243,10 +243,10 @@ func (validator *Validator) addFile(readIterator fileutil.ReadIterator) error {
 		return nil
 	}
 	gf := models.NewGenericFile()
-	gf.Identifier = fmt.Sprintf("%s/%s", validator.objIdentifier, fileSummary.RelPath)
+	gf.Identifier = fmt.Sprintf("%s/%s", validator.ObjIdentifier, fileSummary.RelPath)
 
 	// Unfortunately, we need this to compute gf.OriginalPath()
-	gf.IntellectualObjectIdentifier = validator.objIdentifier
+	gf.IntellectualObjectIdentifier = validator.ObjIdentifier
 
 	// Figure out whether this is a manifest, payload file, etc.
 	// This is not the same as setting the file's mime type.
@@ -388,7 +388,7 @@ func (validator *Validator) parseFiles() {
 
 		// At this point, we should have an open reader
 		// pointing to a legitimate file.
-		gfIdentifier := fmt.Sprintf("%s/%s", validator.objIdentifier, fileSummary.RelPath)
+		gfIdentifier := fmt.Sprintf("%s/%s", validator.ObjIdentifier, fileSummary.RelPath)
 		gf, err := validator.db.GetGenericFile(gfIdentifier)
 		if err != nil {
 			validator.summary.AddError("Error finding '%s' in validation db: %v", gfIdentifier, err)
@@ -439,7 +439,7 @@ func (validator *Validator) parseTags(reader io.Reader, relFilePath string) {
 		return
 	}
 	if obj == nil {
-		validator.summary.AddError("IntelObj '%s' is missing from validation db", validator.objIdentifier)
+		validator.summary.AddError("IntelObj '%s' is missing from validation db", validator.ObjIdentifier)
 		return
 	}
 	re := regexp.MustCompile(`^(\S*\:)?(\s.*)?$`)
@@ -475,7 +475,7 @@ func (validator *Validator) parseTags(reader io.Reader, relFilePath string) {
 		validator.summary.AddError("Error reading tag file '%s': %v",
 			relFilePath, scanner.Err().Error())
 	}
-	err = validator.db.Save(validator.objIdentifier, obj)
+	err = validator.db.Save(validator.ObjIdentifier, obj)
 	if err != nil {
 		validator.summary.AddError("Could not save IntelObj after parsing tags: %v", err)
 	}
@@ -533,7 +533,7 @@ func (validator *Validator) parseManifest(reader io.Reader, fileSummary *fileuti
 			digest := data[1]
 			filePath := data[2]
 
-			gfIdentifier := fmt.Sprintf("%s/%s", validator.objIdentifier, filePath)
+			gfIdentifier := fmt.Sprintf("%s/%s", validator.ObjIdentifier, filePath)
 			genericFile, err := validator.db.GetGenericFile(gfIdentifier)
 			if err != nil {
 				validator.summary.AddError("Error finding generic file '%s' in db: %v", gfIdentifier)
@@ -692,7 +692,7 @@ func (validator *Validator) verifyGenericFiles() {
 	// The function signature is "fn func(k, v []byte) error".
 	detail := validator.fileValidationDetail()
 	verificationFuction := func(key, value []byte) error {
-		if key == nil || string(key) == validator.objIdentifier || value == nil || len(value) == 0 {
+		if key == nil || string(key) == validator.ObjIdentifier || value == nil || len(value) == 0 {
 			// Ignore the key that points to the IntellectualObject.
 			// A nil value indicates a sub-bucket.
 			// An empty value cannot be deserialized.
