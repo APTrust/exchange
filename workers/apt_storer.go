@@ -349,7 +349,8 @@ func (storer *APTStorer) getExistingSha256(gfIdentifier string) (*models.Checksu
 	params := url.Values{}
 	params.Add("generic_file_identifier", gfIdentifier)
 	params.Add("algorithm", constants.AlgSha256)
-	params.Add("sort", "created_at DESC")
+	// PT #145151935: Sort by datetime, not created_at
+	params.Add("sort", "datetime DESC")
 	resp := storer.Context.PharosClient.ChecksumList(params)
 	if resp.Error != nil {
 		return nil, resp.Error
