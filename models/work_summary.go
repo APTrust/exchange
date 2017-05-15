@@ -92,48 +92,60 @@ func (summary *WorkSummary) RunTime() time.Duration {
 }
 
 func (summary *WorkSummary) Succeeded() bool {
-	summary.mutex.RLock()
+	summary.getMutex().RLock()
 	succeeded := summary.Finished() && len(summary.Errors) == 0
-	summary.mutex.RUnlock()
+	summary.getMutex().RUnlock()
 	return succeeded
 }
 
 func (summary *WorkSummary) AddError(format string, a ...interface{}) {
-	summary.mutex.Lock()
+	summary.getMutex().Lock()
 	summary.Errors = append(summary.Errors, fmt.Sprintf(format, a...))
-	summary.mutex.Unlock()
+	summary.getMutex().Unlock()
 }
 
 func (summary *WorkSummary) ClearErrors() {
-	summary.mutex.Lock()
+	summary.getMutex().Lock()
 	summary.Errors = nil
 	summary.ErrorIsFatal = false
 	summary.Errors = make([]string, 0)
-	summary.mutex.Unlock()
+	summary.getMutex().Unlock()
 }
 
 func (summary *WorkSummary) HasErrors() bool {
-	summary.mutex.RLock()
+	summary.getMutex().RLock()
 	hasErrors := len(summary.Errors) > 0
-	summary.mutex.RUnlock()
+	summary.getMutex().RUnlock()
 	return hasErrors
 }
 
 func (summary *WorkSummary) FirstError() string {
-	summary.mutex.RLock()
+	summary.getMutex().RLock()
 	firstError := ""
 	if len(summary.Errors) > 0 {
 		firstError = summary.Errors[0]
 	}
-	summary.mutex.RUnlock()
+	summary.getMutex().RUnlock()
 	return firstError
 }
 
 func (summary *WorkSummary) AllErrorsAsString() string {
-	summary.mutex.RLock()
-	defer summary.mutex.RUnlock()
+	summary.getMutex().RLock()
+	defer summary.getMutex().RUnlock()
 	if len(summary.Errors) > 0 {
 		return strings.Join(summary.Errors, "\n")
 	}
 	return ""
+}
+
+// getMutex returns the mutex that guards the Errors list.
+// When we're restoring a WorkSummary from JSON, we have
+// no guarantee the constructor is called, so this function
+// ensures the mutex is present before anything tries to
+// access it.
+func (summary *WorkSummary) getMutex() *sync.RWMutex {
+	if summary.mutex == nil {
+		summary.mutex = &sync.RWMutex{}
+	}
+	return summary.mutex
 }
