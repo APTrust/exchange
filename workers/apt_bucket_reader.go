@@ -187,7 +187,9 @@ func (reader *APTBucketReader) processBucket(bucketName string) {
 				continue
 			}
 			// Ok, it's not in a nested directory, so let's process it.
-			reader.stats.AddS3Item(fmt.Sprintf("%s/%s", bucketName, *s3Object.Key))
+			if reader.stats != nil {
+				reader.stats.AddS3Item(fmt.Sprintf("%s/%s", bucketName, *s3Object.Key))
+			}
 			reader.processS3Object(s3Object, bucketName)
 		}
 		keepFetching = *s3ObjList.Response.IsTruncated
