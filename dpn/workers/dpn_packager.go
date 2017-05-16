@@ -275,30 +275,22 @@ func (packager *DPNPackager) validate() {
 	for manifest := range packager.ValidationChannel {
 		packager.Context.MessageLog.Info("Validating %s", manifest.LocalTarFile)
 		manifest.NsqMessage.Touch()
-		manifest.ValidateSummary.Attempted = true
-		manifest.ValidateSummary.AttemptNumber += 1
-		manifest.ValidateSummary.Start()
-		var validationResult *validation.ValidationResult
-		validator, err := validation.NewBagValidator(manifest.LocalTarFile, packager.BagValidationConfig)
+		validator, err := validation.NewValidator(manifest.LocalTarFile, packager.BagValidationConfig, false)
 		if err != nil {
 			manifest.PackageSummary.AddError(err.Error())
 		} else {
 			// Validation can take a long time for large bags.
-			validationResult = validator.Validate()
-		}
-		if validationResult == nil {
-			// This should be impossible
-			manifest.PackageSummary.AddError("Bag validator returned nil result!")
-		} else if validationResult.ParseSummary.HasErrors() || validationResult.ValidationSummary.HasErrors() {
-			for _, errMsg := range validationResult.ParseSummary.Errors {
-				manifest.PackageSummary.AddError("Validator parse error: %s", errMsg)
-			}
-			for _, errMsg := range validationResult.ValidationSummary.Errors {
-				manifest.PackageSummary.AddError("Validation error: %s", errMsg)
+			summary, err := validator.Validate()
+			if err != nil {
+				manifest.PackageSummary.AddError(err.Error())
+			} else {
+				manifest.ValidateSummary = summary
 			}
 		}
-		manifest.ValidateSummary.Finish()
 		manifest.NsqMessage.Touch()
+		if fileutil.LooksSafeToDelete(validator.DBName(), 12, 3) {
+			os.Remove(validator.DBName())
+		}
 		packager.PostProcessChannel <- manifest
 	}
 }

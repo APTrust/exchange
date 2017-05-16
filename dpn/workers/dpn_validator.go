@@ -3,18 +3,21 @@ package workers
 import (
 	"fmt"
 	"github.com/APTrust/exchange/context"
-	"github.com/APTrust/exchange/dpn/models"
+	dpn_models "github.com/APTrust/exchange/dpn/models"
 	"github.com/APTrust/exchange/dpn/network"
+	apt_models "github.com/APTrust/exchange/models"
+	"github.com/APTrust/exchange/util/fileutil"
 	"github.com/APTrust/exchange/validation"
 	"github.com/nsqio/go-nsq"
 	"os"
+	"time"
 )
 
 // DPNValidator validates DPN bags (tar files) before we send them off
 // to long-term storage.
 type DPNValidator struct {
-	ValidationChannel   chan *models.ReplicationManifest
-	PostProcessChannel  chan *models.ReplicationManifest
+	ValidationChannel   chan *dpn_models.ReplicationManifest
+	PostProcessChannel  chan *dpn_models.ReplicationManifest
 	BagValidationConfig *validation.BagValidationConfig
 	Context             *context.Context
 	LocalClient         *network.DPNRestClient
@@ -43,8 +46,8 @@ func NewDPNValidator(_context *context.Context) (*DPNValidator, error) {
 	}
 	validator.BagValidationConfig = LoadDPNBagValidationConfig(validator.Context)
 	workerBufferSize := _context.Config.DPN.DPNValidationWorker.Workers * 4
-	validator.ValidationChannel = make(chan *models.ReplicationManifest, workerBufferSize)
-	validator.PostProcessChannel = make(chan *models.ReplicationManifest, workerBufferSize)
+	validator.ValidationChannel = make(chan *dpn_models.ReplicationManifest, workerBufferSize)
+	validator.PostProcessChannel = make(chan *dpn_models.ReplicationManifest, workerBufferSize)
 	for i := 0; i < _context.Config.DPN.DPNValidationWorker.Workers; i++ {
 		go validator.validate()
 		go validator.postProcess()
@@ -107,22 +110,30 @@ func (validator *DPNValidator) validate() {
 		SaveDPNWorkItemState(validator.Context, manifest, manifest.ValidateSummary)
 
 		// Set up a new validator to check this bag.
-		bagValidator, err := validation.NewBagValidator(manifest.LocalPath,
-			validator.BagValidationConfig)
+		bagValidator, err := validation.NewValidator(manifest.LocalPath,
+			validator.BagValidationConfig, true)
 		if err != nil {
 			// Could not create a BagValidator. Should this be fatal?
 			validator.Context.MessageLog.Error(err.Error())
 			manifest.ValidateSummary.AddError(err.Error())
 		} else {
 			// Validation can take hours for very large bags.
-			validationResult := bagValidator.Validate()
-
-			// The validator creates its own WorkSummary, complete with
-			// Start/Finish timestamps, error messages and everything.
-			// Just copy that into our IngestManifest.
-			manifest.ValidateSummary = validationResult.ValidationSummary
+			summary, err := bagValidator.Validate()
+			if err != nil {
+				now := time.Now().UTC()
+				manifest.ValidateSummary = apt_models.NewWorkSummary()
+				manifest.ValidateSummary.Attempted = true
+				manifest.ValidateSummary.StartedAt = now
+				manifest.ValidateSummary.FinishedAt = now
+				manifest.ValidateSummary.AddError(err.Error())
+			} else {
+				manifest.ValidateSummary = summary
+			}
 		}
 		manifest.NsqMessage.Touch()
+		if fileutil.LooksSafeToDelete(bagValidator.DBName(), 12, 3) {
+			os.Remove(bagValidator.DBName())
+		}
 		validator.PostProcessChannel <- manifest
 	}
 }
@@ -152,7 +163,7 @@ func (validator *DPNValidator) postProcess() {
 	}
 }
 
-func (validator *DPNValidator) finishWithError(manifest *models.ReplicationManifest) {
+func (validator *DPNValidator) finishWithError(manifest *dpn_models.ReplicationManifest) {
 	// Validate errors are fatal. We won't store an invalid bag.
 	manifest.ValidateSummary.ErrorIsFatal = true
 	manifest.ValidateSummary.Retry = false
@@ -199,7 +210,7 @@ func (validator *DPNValidator) finishWithError(manifest *models.ReplicationManif
 	manifest.NsqMessage.Finish()
 }
 
-func (validator *DPNValidator) finishWithSuccess(manifest *models.ReplicationManifest) {
+func (validator *DPNValidator) finishWithSuccess(manifest *dpn_models.ReplicationManifest) {
 	validator.Context.MessageLog.Info("Replication %s (bag %s) passed validation",
 		manifest.ReplicationTransfer.ReplicationId,
 		manifest.ReplicationTransfer.Bag)
