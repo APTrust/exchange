@@ -91,8 +91,28 @@ To run integration tests, you'll need the following:
 - Environment variables AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY set to values that can access APTrust's test buckets
 - Environment variables PHAROS_API_USER=system@aptrust.org and PHAROS_API_KEY=c3958c7b09e40af1d065020484dafa9b2a35cea0
 - A copy of the develop branch of the [dpn-server repo](https://github.com/dpn-admin/dpn-server) if you want to do DPN integration testing
+- A Postgres database (SQLite does not do well with the concurrent requests that the integration tests produce)
 
-Once you have all that, simply run `ruby ./scripts/test.rb --help` to see which integration tests are available and what they do. Note that integration tests are cumulative, with each test bringing the various services into the state that the next test needs to start. Currently, `./scripts/test.rb dpn_ingest` will run through all APTrust ingest and DPN ingest tests.
+Once you have all that, simply run `ruby ./scripts/test.rb --help` to see which integration tests are available and what they do. Note that integration tests are cumulative, with each test bringing the various services into the state that the next test needs to start. The three most common options for integration testing are:
+
+- `./scripts/tesh.sh apt_fixity` - This exercises all APTrust operations.
+- `./scripts/tesh.sh dpn_ingest` - This exercises most APTrust operations, along with DPN ingest. (Pushing items from APTrust into DPN.)
+- `./scripts/tesh.sh apt_fixity` - This exercises most APTrust operations, along with DPN replication. (Copying and storing items from other simulated DPN nodes.)
+
+## Setting up Postgres
+
+If you're on a Mac, get the Postgres app from https://postgresapp.com/.
+
+Open psql, either from a terminal, or if that doesn't work, from the Postgres Apps's elephant menu at the top of your screen. While you're up there, you might want to tell the Postgres app to always start on startup or login.
+
+In the psql shell, run the following commands:
+
+1. create user pharos with password 'pharos';
+2. create database pharos_integration;
+3. grant all privileges on pharos_integration to pharos;
+4. alter user pharos createdb;
+
+That last command is required for integration tests because the test scripts drop and recreate the pharos_integration database at the start of the test cycle.
 
 ## Building the Go applications and services
 
