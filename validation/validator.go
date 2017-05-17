@@ -2,12 +2,13 @@ package validation
 
 import (
 	"bufio"
+	"bytes"
 	"crypto/md5"
 	"crypto/sha256"
+	"encoding/gob"
 	"fmt"
 	"github.com/APTrust/exchange/constants"
 	"github.com/APTrust/exchange/models"
-	"github.com/APTrust/exchange/platform"
 	"github.com/APTrust/exchange/util"
 	"github.com/APTrust/exchange/util/fileutil"
 	"github.com/APTrust/exchange/util/storage"
@@ -29,11 +30,14 @@ type Validator struct {
 	PathToBag                  string
 	BagValidationConfig        *BagValidationConfig
 	PreserveExtendedAttributes bool
+	ObjIdentifier              string
 	summary                    *models.WorkSummary
-	objIdentifier              string
+	intelObj                   *models.IntellectualObject
 	tagFilesToParse            []string
 	manifests                  []string
 	tagManifests               []string
+	requiredFiles              []string
+	forbiddenFiles             []string
 	calculateMd5               bool
 	calculateSha256            bool
 	db                         *storage.BoltDB
@@ -67,10 +71,12 @@ func NewValidator(pathToBag string, bagValidationConfig *BagValidationConfig, pr
 		BagValidationConfig:        bagValidationConfig,
 		PreserveExtendedAttributes: preserveExtendedAttributes,
 		summary:                    models.NewWorkSummary(),
-		objIdentifier:              util.CleanBagName(path.Base(pathToBag)),
+		ObjIdentifier:              util.CleanBagName(path.Base(pathToBag)),
 		manifests:                  make([]string, 0),
 		tagManifests:               make([]string, 0),
 		tagFilesToParse:            tagFilesToParse,
+		requiredFiles:              make([]string, 0),
+		forbiddenFiles:             make([]string, 0),
 		calculateMd5:               calculateMd5,
 		calculateSha256:            calculateSha256,
 	}
@@ -114,6 +120,13 @@ func (validator *Validator) DBName() string {
 	return fmt.Sprintf("%s%s", bagPath, VALIDATION_DB_SUFFIX)
 }
 
+// DB returns the validator's Bolt database for querying.
+// Any operations you perform on this DB while validation is running
+// will affect the validator.
+func (validator *Validator) DB() *storage.BoltDB {
+	return validator.db
+}
+
 // getIterator returns either a tar file iterator or a filesystem
 // iterator, depending on whether we're reading a tarred bag or
 // an untarred one.
@@ -132,22 +145,15 @@ func (validator *Validator) Validate() (*models.WorkSummary, error) {
 		return nil, err
 	}
 	validator.db = db
-
 	validator.summary.Start()
 	validator.summary.Attempted = true
 	validator.summary.AttemptNumber += 1
-
 	validator.readBag()
-
-	if !validator.summary.HasErrors() {
-		// -------------- TODO: START HERE ------------------------
-		// validator.verifyManifestPresent(result)
-		// validator.verifyTopLevelFolder(result)
-		// validator.verifyFileSpecs(result)
-		// validator.verifyTagSpecs(result)
-		// validator.verifyGenericFiles(result)
-	}
-
+	validator.verifyManifestPresent()
+	validator.verifyTopLevelFolder()
+	validator.verifyFileSpecs()
+	validator.verifyTagSpecs()
+	validator.verifyGenericFiles()
 	validator.summary.Finish()
 	return validator.summary, nil
 }
@@ -159,16 +165,23 @@ func (validator *Validator) Validate() (*models.WorkSummary, error) {
 func (validator *Validator) readBag() {
 	// Call this for the side-effect of initializing the IntellectualObject
 	// if it doesn't already exist.
-	_, err := validator.getIntellectualObject()
+	obj, err := validator.getIntellectualObject()
 	if err != nil {
 		validator.summary.AddError("Could not init object: %v", err)
 		return
 	}
+	validator.intelObj = obj
+
+	// Add all files in the bag to the GenericFiles list
 	validator.addFiles()
-	if validator.summary.HasErrors() {
-		return
+
+	// Parse the files that can be parsed (manifests & plaintext tag files)
+	validator.parseFiles()
+
+	err = validator.db.Save(obj.Identifier, obj)
+	if err != nil {
+		validator.summary.AddError("Could not save intelObj metadata: %v", err)
 	}
-	validator.parseManifestsTagFilesAndMimeTypes()
 }
 
 // getIntellectualObject returns a lightweight representation of the
@@ -176,7 +189,10 @@ func (validator *Validator) readBag() {
 // will not include PremisEvents or GenericFiles. GenericFiles are
 // stored separately in the db.
 func (validator *Validator) getIntellectualObject() (*models.IntellectualObject, error) {
-	obj, err := validator.db.GetIntellectualObject(validator.objIdentifier)
+	if validator.intelObj != nil {
+		return validator.intelObj, nil
+	}
+	obj, err := validator.db.GetIntellectualObject(validator.ObjIdentifier)
 	if err != nil {
 		return nil, err
 	}
@@ -189,7 +205,7 @@ func (validator *Validator) getIntellectualObject() (*models.IntellectualObject,
 // initIntellectualObject creates a barebones IntellectualObject.
 func (validator *Validator) initIntellectualObject() (*models.IntellectualObject, error) {
 	obj := models.NewIntellectualObject()
-	obj.Identifier = validator.objIdentifier
+	obj.Identifier = validator.ObjIdentifier
 	if strings.HasSuffix(validator.PathToBag, ".tar") {
 		obj.IngestTarFilePath = validator.PathToBag
 	} else {
@@ -214,6 +230,7 @@ func (validator *Validator) addFiles() {
 			validator.summary.AddError(err.Error())
 		}
 	}
+	validator.intelObj.IngestTopLevelDirNames = iterator.GetTopLevelDirNames()
 }
 
 // addFile adds a record for a single file to our validation database.
@@ -226,7 +243,10 @@ func (validator *Validator) addFile(readIterator fileutil.ReadIterator) error {
 		return nil
 	}
 	gf := models.NewGenericFile()
-	gf.Identifier = fmt.Sprintf("%s/%s", validator.objIdentifier, fileSummary.RelPath)
+	gf.Identifier = fmt.Sprintf("%s/%s", validator.ObjIdentifier, fileSummary.RelPath)
+
+	// Unfortunately, we need this to compute gf.OriginalPath()
+	gf.IntellectualObjectIdentifier = validator.ObjIdentifier
 
 	// Figure out whether this is a manifest, payload file, etc.
 	// This is not the same as setting the file's mime type.
@@ -237,7 +257,6 @@ func (validator *Validator) addFile(readIterator fileutil.ReadIterator) error {
 	// the APTrust organization.
 	if validator.PreserveExtendedAttributes {
 		_uuid := uuid.NewV4()
-		gf.IntellectualObjectIdentifier = validator.objIdentifier
 		gf.Size = fileSummary.Size
 		gf.FileModified = fileSummary.ModTime
 		gf.IngestLocalPath = fileSummary.AbsPath // will be empty if bag is tarred
@@ -245,6 +264,17 @@ func (validator *Validator) addFile(readIterator fileutil.ReadIterator) error {
 		gf.IngestUUIDGeneratedAt = time.Now().UTC()
 		gf.IngestFileUid = fileSummary.Uid
 		gf.IngestFileGid = fileSummary.Gid
+		validator.setMimeType(gf)
+	}
+
+	// Keep track of which required/forbidden files we encounter.
+	fileSpec, isInSpec := validator.BagValidationConfig.FileSpecs[gf.OriginalPath()]
+	if isInSpec {
+		if fileSpec.Presence == REQUIRED {
+			validator.requiredFiles = append(validator.requiredFiles, gf.OriginalPath())
+		} else if fileSpec.Presence == FORBIDDEN {
+			validator.forbiddenFiles = append(validator.forbiddenFiles, gf.OriginalPath())
+		}
 	}
 
 	// We calculate checksums in all contexts, because that's part of
@@ -314,8 +344,9 @@ func (validator *Validator) setFileType(gf *models.GenericFile, fileSummary *fil
 	}
 }
 
-//
-func (validator *Validator) parseManifestsTagFilesAndMimeTypes() {
+// parseFiles parses files that the bagging config says to parse,
+// like manifests and certain tag files.
+func (validator *Validator) parseFiles() {
 	// We have to get a new iterator here, because if we're
 	// dealing with a TarFileIterator (which is likely), it's
 	// forward-only. We can't rewind it.
@@ -325,71 +356,82 @@ func (validator *Validator) parseManifestsTagFilesAndMimeTypes() {
 		return
 	}
 	for {
+		// Don't use "defer reader.Close()" because the readers
+		// won't be closed until we exit the enclosing funcion,
+		// and the for loop may have opened 100k+ files by then.
 		reader, fileSummary, err := readIterator.Next()
-		if reader != nil {
-			defer reader.Close()
-		}
+
+		// EOF means there are no more files to iterate through.
 		if err == io.EOF {
+			if reader != nil {
+				reader.Close()
+			}
 			return
 		}
+
+		// Non EOF error means something went wrong.
 		if err != nil {
+			if reader != nil {
+				reader.Close()
+			}
 			validator.summary.AddError(err.Error())
 			continue
 		}
-		// genericFile will sometimes be nil because the iterator
-		// returns directory names as well as file names
-		gfIdentifier := fmt.Sprintf("%s/%s", validator.objIdentifier, fileSummary.RelPath)
+
+		// If the iterator returns a directory, skip it.
+		if fileSummary.IsDir {
+			if reader != nil {
+				reader.Close()
+			}
+			continue
+		}
+
+		// At this point, we should have an open reader
+		// pointing to a legitimate file.
+		gfIdentifier := fmt.Sprintf("%s/%s", validator.ObjIdentifier, fileSummary.RelPath)
 		gf, err := validator.db.GetGenericFile(gfIdentifier)
 		if err != nil {
 			validator.summary.AddError("Error finding '%s' in validation db: %v", gfIdentifier, err)
+			if reader != nil {
+				reader.Close()
+			}
 			continue
 		}
 		if gf == nil {
 			validator.summary.AddError("Cannot find '%s' in validation db", gfIdentifier)
+			if reader != nil {
+				reader.Close()
+			}
 			continue
 		}
-		validator.parseOrSetMimeType(reader, gf, fileSummary)
+		validator.parseFile(reader, gf, fileSummary)
+		if reader != nil {
+			reader.Close()
+		}
 	}
 }
 
-// parseOrSetMimeType parses a file's contents if the file is a manifest,
-// tag manifest, or parsable plain-text tag file. It the file is none of
-// those, this will set its mime type (e.g. application/xml). We set mime
-// type only if we're tracking extended attributes. For general validation,
-// mime-type is irrelevant.
-func (validator *Validator) parseOrSetMimeType(reader io.ReadCloser, gf *models.GenericFile, fileSummary *fileutil.FileSummary) {
-
+// parseFile parses a file's contents if the file is a manifest,
+// tag manifest, or parsable plain-text tag file. If the file
+// doesn't match either of these cases, we skip it, and this is
+// a no-op.
+func (validator *Validator) parseFile(reader io.ReadCloser, gf *models.GenericFile, fileSummary *fileutil.FileSummary) {
 	parseAsTagFile := util.StringListContains(validator.tagFilesToParse, fileSummary.RelPath)
 	parseAsManifest := util.StringListContains(validator.manifests, fileSummary.RelPath) ||
 		util.StringListContains(validator.tagManifests, fileSummary.RelPath)
-	weCareAboutMimeTypes := (gf != nil && validator.PreserveExtendedAttributes)
 
 	if parseAsTagFile {
 		validator.parseTags(reader, fileSummary.RelPath)
-		if weCareAboutMimeTypes {
-			// We can only parse text files, so this
-			// should be a plain text file.
-			if strings.HasSuffix(gf.Identifier, ".txt") {
-				gf.FileFormat = "text/plain"
-			} else {
-				gf.FileFormat = "application/binary"
-			}
-		}
 	} else if parseAsManifest {
 		// Get the checksums out of the manifest.
 		validator.parseManifest(reader, fileSummary)
-	} else if weCareAboutMimeTypes {
-		// This is either a payload file, or some kind of tag
-		// file that we don't know how to parse, so just figure
-		// out its mime type for reporting and storage.
-		// APTrust tracks file mime types, but we don't need this for
-		// basic validation.
-		validator.setMimeType(reader, gf)
 	}
 }
 
 // parseTags parses the tags in a bagit-format tag file. That's a plain-text
 // file with names and values separated by a colon.
+//
+// TODO: Move this into a separate file and make it more generic.
 func (validator *Validator) parseTags(reader io.Reader, relFilePath string) {
 	obj, err := validator.getIntellectualObject()
 	if err != nil {
@@ -397,7 +439,7 @@ func (validator *Validator) parseTags(reader io.Reader, relFilePath string) {
 		return
 	}
 	if obj == nil {
-		validator.summary.AddError("IntelObj '%s' is missing from validation db", validator.objIdentifier)
+		validator.summary.AddError("IntelObj '%s' is missing from validation db", validator.ObjIdentifier)
 		return
 	}
 	re := regexp.MustCompile(`^(\S*\:)?(\s.*)?$`)
@@ -433,7 +475,7 @@ func (validator *Validator) parseTags(reader io.Reader, relFilePath string) {
 		validator.summary.AddError("Error reading tag file '%s': %v",
 			relFilePath, scanner.Err().Error())
 	}
-	err = validator.db.Save(validator.objIdentifier, obj)
+	err = validator.db.Save(validator.ObjIdentifier, obj)
 	if err != nil {
 		validator.summary.AddError("Could not save IntelObj after parsing tags: %v", err)
 	}
@@ -464,6 +506,8 @@ func (validator *Validator) setIntelObjTagValue(obj *models.IntellectualObject, 
 }
 
 // Parse the checksums in a manifest.
+//
+// TODO: Move this into a separate file and make it more generic.
 func (validator *Validator) parseManifest(reader io.Reader, fileSummary *fileutil.FileSummary) {
 	alg := ""
 	if strings.Contains(fileSummary.RelPath, constants.AlgSha256) {
@@ -489,8 +533,8 @@ func (validator *Validator) parseManifest(reader io.Reader, fileSummary *fileuti
 			digest := data[1]
 			filePath := data[2]
 
-			gfIdentifier := fmt.Sprintf("%s/%s", validator.objIdentifier, fileSummary.RelPath)
-			genericFile, err := validator.db.GetGenericFile(filePath)
+			gfIdentifier := fmt.Sprintf("%s/%s", validator.ObjIdentifier, filePath)
+			genericFile, err := validator.db.GetGenericFile(gfIdentifier)
 			if err != nil {
 				validator.summary.AddError("Error finding generic file '%s' in db: %v", gfIdentifier)
 			}
@@ -526,32 +570,208 @@ func (validator *Validator) parseManifest(reader io.Reader, fileSummary *fileuti
 	}
 }
 
-// setMimeType attempts to set the FileFormat attribute to the correct
-// mime type (e.g. image/jpeg). We do not run this function unless we're
-// PreserveExtendedAttributes is on. This function does nothing on Windows.
-// It only sets a meaningful file type on *nix platforms that have access
-// to the mime magic database.
-func (validator *Validator) setMimeType(reader io.Reader, gf *models.GenericFile) {
-	// on err, defaults to application/binary
-	bufLen := 128
-	if gf.Size < int64(bufLen) {
-		bufLen = int(gf.Size - 1)
-		if bufLen < 1 {
-			// We actually do permit zero-length files, and we can
-			// save them in S3. These files can be necessary in
-			// certain cases, such as __init__.py files for Python,
-			// PHP templates whose presence is required, ".keep" files, etc.
-			gf.FileFormat = "text/empty"
-			return
+// verifyManifestPresent checks to see if at least one payload manifest
+// is present in the bag. If not, it adds an error message to the
+// WorkSummary.
+func (validator *Validator) verifyManifestPresent() {
+	if len(validator.manifests) == 0 {
+		validator.summary.AddError("Bag contains no payload manifest.")
+	}
+}
+
+// verifyTopLevelFolder ensures the top-level folder inside a tar file
+// has the same name as the bag. There should be exactly one top-level
+// folder whose name is the same as the bag. Anything else is an error.
+func (validator *Validator) verifyTopLevelFolder() {
+	obj, err := validator.getIntellectualObject()
+	if err != nil {
+		validator.summary.AddError("Can't get object: %v", err)
+		return
+	}
+	if obj.IngestTarFilePath == "" {
+		return
+	}
+	re := regexp.MustCompile("\\.tar$")
+	baseName := path.Base(obj.IngestTarFilePath)
+	expectedDirName := re.ReplaceAllString(baseName, "")
+	dirNames := obj.IngestTopLevelDirNames
+	if dirNames != nil {
+		for _, dirName := range dirNames {
+			if dirName != expectedDirName {
+				validator.summary.AddError(
+					"Tarred bag should untar to directory '%s', not '%s'",
+					expectedDirName, dirName)
+			}
 		}
 	}
-	buf := make([]byte, bufLen)
-	_, err := reader.Read(buf)
-	if err != nil {
-		validator.summary.AddError(err.Error())
+}
+
+// verifyFileSpecs ensures required files are present and forbidden files
+// are not. This adds an error to the WorkSummary for any violations.
+func (validator *Validator) verifyFileSpecs() {
+	for gfPath, fileSpec := range validator.BagValidationConfig.FileSpecs {
+		if fileSpec.Presence == REQUIRED && !util.StringListContains(validator.requiredFiles, gfPath) {
+			validator.summary.AddError("Required file '%s' is missing.", gfPath)
+		} else if fileSpec.Presence == FORBIDDEN && util.StringListContains(validator.forbiddenFiles, gfPath) {
+			validator.summary.AddError("Bag contains forbidden file '%s'.", gfPath)
+		}
 	}
-	gf.FileFormat, err = platform.GuessMimeTypeByBuffer(buf)
+}
+
+// verifyTagSpecs ensures required tags are present and values are allowed.
+func (validator *Validator) verifyTagSpecs() {
+	obj, err := validator.getIntellectualObject()
 	if err != nil {
-		validator.summary.AddError(err.Error())
+		validator.summary.AddError("Cannot get object metadata from db: %v")
+		return
 	}
+	for tagName, tagSpec := range validator.BagValidationConfig.TagSpecs {
+		tags := obj.FindTag(tagName)
+		if tagSpec.Presence == FORBIDDEN {
+			validator.summary.AddError("Forbidden tag '%s' found in file '%s'.",
+				tagName, tags[0].SourceFile)
+			continue
+		}
+		if tagSpec.Presence == REQUIRED {
+			validator.checkRequiredTag(tagName, tags, tagSpec)
+		}
+		if tags != nil && tagSpec.AllowedValues != nil && len(tagSpec.AllowedValues) > 0 {
+			validator.checkAllowedTagValue(tagName, tags, tagSpec)
+		}
+	}
+}
+
+// checkRequiredTag ensures that a required tag is present.
+// It adds and error to the WorkSummary if not.
+func (validator *Validator) checkRequiredTag(tagName string, tags []*models.Tag, tagSpec TagSpec) {
+	if tags == nil {
+		validator.summary.AddError("Required tag '%s' is missing.", tagName)
+		return
+	}
+	if !tagSpec.EmptyOK {
+		tagHasValue := false
+		for _, tag := range tags {
+			if tag.Value != "" {
+				tagHasValue = true
+				break
+			}
+		}
+		if !tagHasValue {
+			validator.summary.AddError("Value for tag '%s' is missing.", tagName)
+		}
+	}
+}
+
+// checkAllowedTagValue ensures that the value of a tag is one of a
+// set of values enumerated in the BagValidationConfig. It adds an
+// error to the WorkSummary if not.
+func (validator *Validator) checkAllowedTagValue(tagName string, tags []*models.Tag, tagSpec TagSpec) {
+	valueOk := false
+	lastValue := ""
+	for _, value := range tagSpec.AllowedValues {
+		for _, tag := range tags {
+			lcValue := strings.TrimSpace(strings.ToLower(value))
+			tagValue := strings.TrimSpace(strings.ToLower(tag.Value))
+			lastValue = tagValue
+			if lcValue == tagValue {
+				valueOk = true
+			}
+		}
+	}
+	if !valueOk {
+		validator.summary.AddError("Tag '%s' has illegal value '%s'.", tagName, lastValue)
+	}
+}
+
+// verifyGenericFiles verifies a number of attributes related to generic files,
+// including their checksums, presence in payload manifests, and whether they
+// follow specified naming restrictions.
+func (validator *Validator) verifyGenericFiles() {
+
+	// We have to pass a verification function into the BoltDB key iterator.
+	// The function signature is "fn func(k, v []byte) error".
+	detail := validator.fileValidationDetail()
+	verificationFuction := func(key, value []byte) error {
+		if key == nil || string(key) == validator.ObjIdentifier || value == nil || len(value) == 0 {
+			// Ignore the key that points to the IntellectualObject.
+			// A nil value indicates a sub-bucket.
+			// An empty value cannot be deserialized.
+			return nil
+		}
+		// The value should be a GenericFile, since it's not the intellectual object.
+		// Turn the bytes back into an object, and then validate the properties of
+		// the object.
+		gf := &models.GenericFile{}
+		buf := bytes.NewBuffer(value)
+		decoder := gob.NewDecoder(buf)
+		err := decoder.Decode(gf)
+		if err != nil {
+			validator.summary.AddError("Could not get file metadata from db: %v", err)
+			return err
+		}
+		// Md5 digests
+		if gf.IngestManifestMd5 != "" && gf.IngestManifestMd5 != gf.IngestMd5 {
+			validator.summary.AddError(
+				"Bad md5 digest for '%s': manifest says '%s', file digest is '%s'",
+				gf.OriginalPath(), gf.IngestManifestMd5, gf.IngestMd5)
+		} else {
+			gf.IngestMd5VerifiedAt = time.Now().UTC()
+		}
+		// Sha256 digests
+		if gf.IngestManifestSha256 != "" && gf.IngestManifestSha256 != gf.IngestSha256 {
+			validator.summary.AddError(
+				"Bad sha256 digest for '%s': manifest says '%s', file digest is '%s'",
+				gf.OriginalPath(), gf.IngestManifestSha256, gf.IngestSha256)
+		} else {
+			gf.IngestSha256VerifiedAt = time.Now().UTC()
+		}
+		// No manifest entry?
+		if gf.IngestFileType == constants.PAYLOAD_FILE &&
+			gf.IngestManifestMd5 == "" && gf.IngestManifestSha256 == "" {
+			validator.summary.AddError(
+				"File '%s' does not appear in any payload manifest (md5 or sha256)",
+				gf.OriginalPath())
+		}
+		// Make sure name is valid
+		if validator.BagValidationConfig.FileNameRegex != nil {
+			for _, pathComponent := range strings.Split(gf.OriginalPath(), "/") {
+				if !validator.BagValidationConfig.FileNameRegex.MatchString(pathComponent) {
+					validator.summary.AddError(
+						"Filename '%s' is not valid according to %s",
+						gf.OriginalPath(), detail)
+				}
+			}
+		}
+		return nil
+	} // end of verification function
+
+	// Not run the verification fuction on each item in the db.
+	validator.db.ForEach(verificationFuction)
+
+}
+
+// fileValidationDetail returns a specific description of the file name
+// validation rules in effect.
+func (validator *Validator) fileValidationDetail() string {
+	detail := "validation pattern " + validator.BagValidationConfig.FileNamePattern
+	if strings.ToUpper(validator.BagValidationConfig.FileNamePattern) == "APTRUST" {
+		detail = "APTrust validation rules"
+	} else if strings.ToUpper(validator.BagValidationConfig.FileNamePattern) == "POSIX" {
+		detail = "POSIX validation rules"
+	}
+	return detail
+}
+
+// setMimeType sets the FileFormat attribute of a GenericFile, based
+// on the file's extension.
+func (validator *Validator) setMimeType(gf *models.GenericFile) {
+	mimeType := "application/binary"
+	ext := path.Ext(gf.Identifier)
+	if len(ext) > 1 {
+		ext = ext[1:] // get rid of leading dot
+		if t, ok := fileutil.MimeTypes[ext]; ok {
+			mimeType = t
+		}
+	}
+	gf.FileFormat = mimeType
 }
