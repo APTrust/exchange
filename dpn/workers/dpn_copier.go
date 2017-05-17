@@ -72,6 +72,16 @@ func (copier *DPNCopier) HandleMessage(message *nsq.Message) error {
 	manifest := SetupReplicationManifest(message, "copy", copier.Context,
 		copier.LocalClient, copier.RemoteClients)
 
+	if manifest.CopySummary.HasErrors() {
+		// We need a better test than this. And how did this case come up?
+		if strings.Contains(manifest.CopySummary.AllErrorsAsString(), "already marked as Stored") {
+			copier.Context.MessageLog.Info(manifest.CopySummary.AllErrorsAsString())
+			return nil
+		}
+		copier.PostProcessChannel <- manifest
+		return nil
+	}
+
 	// In some cases, we've actually managed to store the replication,
 	// but NSQ thinks the job timed out and sends a message to start
 	// the process again. Don't redo the work!
