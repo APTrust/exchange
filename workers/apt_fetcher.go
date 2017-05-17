@@ -94,23 +94,24 @@ func (fetcher *APTFetcher) HandleMessage(message *nsq.Message) error {
 		stat, err := os.Stat(ingestState.IngestManifest.Object.IngestTarFilePath)
 		if err == nil && stat != nil && stat.Size() == ingestState.WorkItem.Size {
 			fetcher.Context.MessageLog.Info("Bag %s is already on disk and appears "+
-				"to be complete.", ingestState.WorkItem.Bucket,
-				ingestState.WorkItem.Name)
+				"to be complete.", ingestState.WorkItem.Name)
 			if ingestState.IngestManifest.ValidateResult.Attempted == true &&
 				ingestState.IngestManifest.ValidateResult.FinishedAt.IsZero() == false &&
 				ingestState.IngestManifest.ValidateResult.HasErrors() == false &&
 				len(ingestState.IngestManifest.Object.GenericFiles) > 1 {
 				fetcher.Context.MessageLog.Info("Bag %s has already been validated. "+
 					"Now it's going to the cleanup channel.",
-					ingestState.WorkItem.Bucket, ingestState.WorkItem.Name)
+					ingestState.WorkItem.Name)
 				fetcher.CleanupChannel <- ingestState
 			} else {
 				fetcher.Context.MessageLog.Info("Bag %s is going to the validation channel.",
-					ingestState.WorkItem.Bucket, ingestState.WorkItem.Name)
+					ingestState.WorkItem.Name)
 				fetcher.ValidationChannel <- ingestState
 			}
+			return nil
 		}
-		return nil
+		// At this point, it may be on disk, but we can't verify it's correct,
+		// so download it again.
 	}
 
 	// In case we're loading a previously failed fetch attempt
@@ -150,6 +151,7 @@ func (fetcher *APTFetcher) HandleMessage(message *nsq.Message) error {
 		// Reserve disk space to download this item, or requeue it
 		// if we can't get the disk space.
 		if fetcher.Context.Config.UseVolumeService && !fetcher.reserveSpaceForDownload(ingestState) {
+
 			err = MarkWorkItemRequeued(ingestState, fetcher.Context)
 			if err != nil {
 				fetcher.Context.MessageLog.Error(
