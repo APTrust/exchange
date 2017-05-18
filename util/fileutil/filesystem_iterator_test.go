@@ -53,6 +53,7 @@ func TestFSINext(t *testing.T) {
 		if err == io.EOF {
 			break
 		}
+		require.NotNil(t, fileSummary)
 		assert.NotEmpty(t, fileSummary.RelPath)
 		assert.False(t, strings.HasPrefix(fileSummary.RelPath, string(os.PathSeparator)))
 		assert.NotEmpty(t, fileSummary.AbsPath)
