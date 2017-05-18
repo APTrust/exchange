@@ -109,7 +109,7 @@ In the psql shell, run the following commands:
 
 1. create user pharos with password 'pharos';
 2. create database pharos_integration;
-3. grant all privileges on pharos_integration to pharos;
+3. grant all privileges on database pharos_integration to pharos;
 4. alter user pharos createdb;
 
 That last command is required for integration tests because the test scripts drop and recreate the pharos_integration database at the start of the test cycle.
