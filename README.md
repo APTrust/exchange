@@ -111,8 +111,9 @@ In the psql shell, run the following commands:
 2. create database pharos_integration;
 3. grant all privileges on database pharos_integration to pharos;
 4. alter user pharos createdb;
+5. Change into the pharos repo directory and run `RAILS_ENV=integration rake db:schema:load`
 
-That last command is required for integration tests because the test scripts drop and recreate the pharos_integration database at the start of the test cycle.
+That 4th command is required for integration tests because the test scripts drop and recreate the pharos_integration database at the start of the test cycle.
 
 ## Building the Go applications and services
 
