@@ -913,7 +913,7 @@ func TestDPNWorkItemGet(t *testing.T) {
 
 	// Check the request URL and method
 	assert.Equal(t, "GET", response.Request.Method)
-	assert.Equal(t, "/api/v2/dpn_item/999/", response.Request.URL.Opaque)
+	assert.Equal(t, "/api/v2/dpn_items/999/", response.Request.URL.Opaque)
 
 	// Basic sanity check on response values
 	assert.Nil(t, response.Error)
@@ -941,7 +941,7 @@ func TestDPNWorkItemList(t *testing.T) {
 
 	// Check the request URL and method
 	assert.Equal(t, "GET", response.Request.Method)
-	assert.Equal(t, "/api/v2/dpn_item/?", response.Request.URL.Opaque)
+	assert.Equal(t, "/api/v2/dpn_items/?", response.Request.URL.Opaque)
 
 	// Basic sanity check on response values
 	assert.Nil(t, response.Error)
@@ -964,7 +964,7 @@ func TestDPNWorkItemList(t *testing.T) {
 	// Make sure params are added to URL
 	params := sampleParams()
 	response = client.DPNWorkItemList(params)
-	expectedUrl := fmt.Sprintf("/api/v2/dpn_item/?%s", params.Encode())
+	expectedUrl := fmt.Sprintf("/api/v2/dpn_items/?%s", params.Encode())
 	assert.Equal(t, expectedUrl, response.Request.URL.Opaque)
 }
 
@@ -987,7 +987,7 @@ func TestDPNWorkItemSave(t *testing.T) {
 
 	// Check the request URL and method
 	assert.Equal(t, "POST", response.Request.Method)
-	assert.Equal(t, "/api/v2/dpn_item/", response.Request.URL.Opaque)
+	assert.Equal(t, "/api/v2/dpn_items/", response.Request.URL.Opaque)
 
 	// Basic sanity check on response values
 	assert.Nil(t, response.Error)
@@ -1012,7 +1012,7 @@ func TestDPNWorkItemSave(t *testing.T) {
 	response = client.DPNWorkItemSave(obj)
 
 	// Check the request URL and method
-	expectedUrl := fmt.Sprintf("/api/v2/dpn_item/%d/", obj.Id)
+	expectedUrl := fmt.Sprintf("/api/v2/dpn_items/%d/", obj.Id)
 	assert.Equal(t, "PUT", response.Request.Method)
 	assert.Equal(t, expectedUrl, response.Request.URL.Opaque)
 
