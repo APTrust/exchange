@@ -3,8 +3,19 @@ package models_test
 import (
 	"github.com/APTrust/exchange/models"
 	"github.com/stretchr/testify/assert"
+	"path"
+	"path/filepath"
+	"runtime"
 	"testing"
 )
+
+// getPath returns the absolute path to a tar file in our unit test dir.
+func getPath(file string) (string, error) {
+	_, filename, _, _ := runtime.Caller(0)
+	dir := filepath.Dir(filename)
+	relDir := path.Join(dir, "..", "testdata", "unit_test_bags", file)
+	return filepath.Abs(relDir)
+}
 
 func TestNewIngestManifest(t *testing.T) {
 	manifest := models.NewIngestManifest()
@@ -99,4 +110,48 @@ func TestIngestManifest_AllErrorsAsString(t *testing.T) {
 
 	expected := "error 1\nerror 2\nerror 3\nerror 4\nerror 5\nerror 6\n"
 	assert.Equal(t, expected, manifest.AllErrorsAsString())
+}
+
+func TestIngestManifest_BagIsOnDisk(t *testing.T) {
+	goodPath, _ := getPath("example.edu.tagsample_good.tar")
+	badPath, _ := getPath("i_do_not_exist.tar")
+	manifest := models.NewIngestManifest()
+	manifest.BagPath = ""
+	assert.False(t, manifest.BagIsOnDisk())
+	manifest.BagPath = goodPath
+	assert.True(t, manifest.BagIsOnDisk())
+	manifest.BagPath = badPath
+	assert.False(t, manifest.BagIsOnDisk())
+}
+
+func TestIngestManifest_DBExists(t *testing.T) {
+	goodPath, _ := getPath("example.edu.tagsample_good.tar")
+	badPath, _ := getPath("i_do_not_exist.tar")
+	manifest := models.NewIngestManifest()
+	manifest.DBPath = ""
+	assert.False(t, manifest.DBExists())
+	manifest.DBPath = goodPath
+	assert.True(t, manifest.DBExists())
+	manifest.DBPath = badPath
+	assert.False(t, manifest.DBExists())
+}
+
+func TestIngestManifest_SizeOfBagOnDisk(t *testing.T) {
+	goodPath, _ := getPath("example.edu.tagsample_good.tar")
+	badPath, _ := getPath("i_do_not_exist.tar")
+	manifest := models.NewIngestManifest()
+	manifest.BagPath = ""
+	size, err := manifest.SizeOfBagOnDisk()
+	assert.NotNil(t, err)
+	assert.Equal(t, int64(-1), size)
+
+	manifest.BagPath = badPath
+	size, err = manifest.SizeOfBagOnDisk()
+	assert.NotNil(t, err)
+	assert.Equal(t, int64(-1), size)
+
+	manifest.BagPath = goodPath
+	size, err = manifest.SizeOfBagOnDisk()
+	assert.Nil(t, err)
+	assert.Equal(t, int64(40960), size)
 }

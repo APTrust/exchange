@@ -1,10 +1,17 @@
 package models
 
+import (
+	"github.com/APTrust/exchange/util/fileutil"
+	"os"
+)
+
 type IngestManifest struct {
 	WorkItemId     int
 	S3Bucket       string
 	S3Key          string
 	ETag           string
+	BagPath        string
+	DBPath         string
 	FetchResult    *WorkSummary
 	UntarResult    *WorkSummary
 	ValidateResult *WorkSummary
@@ -62,4 +69,25 @@ func (manifest *IngestManifest) AllErrorsAsString() string {
 		}
 	}
 	return allErrors
+}
+
+// BagIsOnDisk returns true if the bag (tar file) exists on disk.
+func (manifest *IngestManifest) BagIsOnDisk() bool {
+	return manifest.BagPath != "" && fileutil.FileExists(manifest.BagPath)
+}
+
+// DBExists returns true if the Bolt DB (.valdb file) exists on disk.
+func (manifest *IngestManifest) DBExists() bool {
+	return manifest.DBPath != "" && fileutil.FileExists(manifest.DBPath)
+}
+
+// SizeOfBagOnDisk returns the size, in bytes, of the bag on disk.
+// This will return an error if the bag does not exist, or if it is
+// a directory or is inaccessible.
+func (manifest *IngestManifest) SizeOfBagOnDisk() (int64, error) {
+	stat, err := os.Stat(manifest.BagPath)
+	if err != nil {
+		return int64(-1), err
+	}
+	return stat.Size(), nil
 }
