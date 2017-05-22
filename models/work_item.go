@@ -2,6 +2,7 @@ package models
 
 import (
 	"encoding/json"
+	"fmt"
 	"github.com/APTrust/exchange/constants"
 	"os"
 	"time"
@@ -247,4 +248,36 @@ func (item *WorkItem) BelongsToAnotherWorker() bool {
 	}
 	hostname, _ := os.Hostname()
 	return item.Node != hostname || item.Pid != os.Getpid()
+}
+
+// IsInProgress returns true if any worker is currently
+// working on this item.
+func (item *WorkItem) IsInProgress() bool {
+	return item.Node != "" && item.Pid != 0
+}
+
+// IsPastIngest returns true if this item has already passed
+// the ingest stage.
+func (item *WorkItem) IsPastIngest() bool {
+	return (item.Stage != constants.StageReceive &&
+		item.Stage != constants.StageFetch &&
+		item.Stage != constants.StageUnpack &&
+		item.Stage != constants.StageValidate)
+}
+
+// MsgSkippingInProgress returns a message saying that a worker
+// is skipping this item because it's already being processed.
+func (item *WorkItem) MsgSkippingInProgress() string {
+	return fmt.Sprintf("Marking NSQ message for WorkItem %d (%s) as finished "+
+		"without doing any work, because this item is currently in process by "+
+		"node %s, pid %d. WorkItem was last updated at %s.",
+		item.Id, item.Name, item.Node, item.Pid, item.UpdatedAt)
+}
+
+// MsqPastIngest returns a message saying that a worker is skipping
+// this item because it's past the ingest stage.
+func (item *WorkItem) MsgPastIngest() string {
+	return fmt.Sprintf("Marking NSQ Message for WorkItem %d (%s) as finished "+
+		"without doing any work, because this item is already past the "+
+		"ingest phase.", item.Id, item.Name)
 }

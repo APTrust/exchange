@@ -64,28 +64,16 @@ func (fetcher *APTFetcher) HandleMessage(message *nsq.Message) error {
 	}
 	ingestState.NSQMessage = message
 
-	// If this item was queued more than once, and this process or any
-	// other is currently working on it, just finish the message and
-	// assume that the in-progress worker will take care of the original.
-	if ingestState.WorkItem.Node != "" && ingestState.WorkItem.Pid != 0 {
-		fetcher.Context.MessageLog.Info("Marking WorkItem %d (%s/%s) as finished "+
-			"without doing any work, because this item is currently in process by "+
-			"node %s, pid %d. WorkItem was last updated at %s.",
-			ingestState.WorkItem.Id, ingestState.WorkItem.Bucket,
-			ingestState.WorkItem.Name, ingestState.WorkItem.Node,
-			ingestState.WorkItem.Pid, ingestState.WorkItem.UpdatedAt)
+	// Skip this if it's already being worked on.
+	if ingestState.WorkItem.IsInProgress() {
+		fetcher.Context.MessageLog.Info(ingestState.WorkItem.MsgSkippingInProgress())
 		message.Finish()
 		return nil
 	}
 
-	stage := ingestState.WorkItem.Stage
-	if stage != constants.StageReceive && stage != constants.StageFetch &&
-		stage != constants.StageUnpack && stage != constants.StageValidate {
-		fetcher.Context.MessageLog.Info("Marking WorkItem %d (%s/%s) as finished "+
-			"without doing any work, because this item is already past the "+
-			"ingest phase.",
-			ingestState.WorkItem.Id, ingestState.WorkItem.Bucket,
-			ingestState.WorkItem.Name)
+	// Skip if it's already been ingested.
+	if ingestState.WorkItem.IsPastIngest() {
+		fetcher.Context.MessageLog.Info(ingestState.WorkItem.MsgPastIngest())
 		message.Finish()
 		return nil
 	}

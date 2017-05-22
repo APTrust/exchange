@@ -221,3 +221,51 @@ func TestBelogsToOtherWorker(t *testing.T) {
 	item.Node = "some.other.host.kom"
 	assert.True(t, item.BelongsToAnotherWorker())
 }
+
+func TestIsInProgress(t *testing.T) {
+	item := SampleWorkItem()
+	item.Node = ""
+	item.Pid = 0
+	assert.False(t, item.IsInProgress())
+	item.SetNodeAndPid()
+	assert.True(t, item.IsInProgress())
+}
+
+func TestIsPastIngest(t *testing.T) {
+	item := SampleWorkItem()
+	item.Stage = constants.StageReceive
+	assert.False(t, item.IsPastIngest())
+	item.Stage = constants.StageFetch
+	assert.False(t, item.IsPastIngest())
+	item.Stage = constants.StageUnpack
+	assert.False(t, item.IsPastIngest())
+	item.Stage = constants.StageValidate
+	assert.False(t, item.IsPastIngest())
+
+	item.Stage = constants.StageStore
+	assert.True(t, item.IsPastIngest())
+	item.Stage = constants.StageRecord
+	assert.True(t, item.IsPastIngest())
+	item.Stage = constants.StageCleanup
+	assert.True(t, item.IsPastIngest())
+}
+
+func TestMsgSkippingInProgress(t *testing.T) {
+	item := SampleWorkItem()
+	item.Id = 999
+	item.Name = "bag1.tar"
+	item.Node = "node1"
+	item.Pid = 1234
+	timestamp, _ := time.Parse(time.RFC3339, "2017-05-22T17:10:00Z")
+	item.UpdatedAt = timestamp
+	expected := "Marking NSQ message for WorkItem 999 (bag1.tar) as finished without doing any work, because this item is currently in process by node node1, pid 1234. WorkItem was last updated at 2017-05-22 17:10:00 +0000 UTC."
+	assert.Equal(t, expected, item.MsgSkippingInProgress())
+}
+
+func TestMsgPastIngest(t *testing.T) {
+	item := SampleWorkItem()
+	item.Id = 999
+	item.Name = "bag1.tar"
+	expected := "Marking NSQ Message for WorkItem 999 (bag1.tar) as finished without doing any work, because this item is already past the ingest phase."
+	assert.Equal(t, expected, item.MsgPastIngest())
+}
