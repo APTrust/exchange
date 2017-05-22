@@ -438,7 +438,7 @@ func LogJson(ingestState *models.IngestState, jsonLog *log.Logger) {
 // the reserved storage from the volume manager. This deletes both the tarred
 // and untarred version of the bag, if they both exist.
 func DeleteBagFromStaging(ingestState *models.IngestState, _context *context.Context, activeResult *models.WorkSummary) {
-	tarFile := ingestState.IngestManifest.Object.IngestTarFilePath
+	tarFile := ingestState.IngestManifest.BagPath
 	if tarFile != "" && fileutil.FileExists(tarFile) {
 		_context.MessageLog.Info("Deleting %s", tarFile)
 		err := os.Remove(tarFile)
@@ -455,24 +455,24 @@ func DeleteBagFromStaging(ingestState *models.IngestState, _context *context.Con
 		_context.MessageLog.Info("Skipping deletion of %s: file does not exist", tarFile)
 	}
 
-	untarredBagPath := ingestState.IngestManifest.Object.IngestUntarredPath
-	looksSafeToDelete := fileutil.LooksSafeToDelete(untarredBagPath, 12, 3)
-	if fileutil.FileExists(untarredBagPath) && looksSafeToDelete {
-		_context.MessageLog.Info("Deleting untarred bag at %s", untarredBagPath)
-		err := os.RemoveAll(untarredBagPath)
-		if err != nil {
-			_context.MessageLog.Warning(err.Error())
-		}
-		if _context.Config.UseVolumeService {
-			err = _context.VolumeClient.Release(untarredBagPath)
-			if err != nil {
-				_context.MessageLog.Warning(err.Error())
-			}
-		}
-	} else {
-		_context.MessageLog.Info("Skipping deletion of untarred bag dir at %s: "+
-			"Directory does not exist, or is unsafe to delete.", untarredBagPath)
-	}
+	// untarredBagPath := ingestState.IngestManifest.Object.IngestUntarredPath
+	// looksSafeToDelete := fileutil.LooksSafeToDelete(untarredBagPath, 12, 3)
+	// if fileutil.FileExists(untarredBagPath) && looksSafeToDelete {
+	// 	_context.MessageLog.Info("Deleting untarred bag at %s", untarredBagPath)
+	// 	err := os.RemoveAll(untarredBagPath)
+	// 	if err != nil {
+	// 		_context.MessageLog.Warning(err.Error())
+	// 	}
+	// 	if _context.Config.UseVolumeService {
+	// 		err = _context.VolumeClient.Release(untarredBagPath)
+	// 		if err != nil {
+	// 			_context.MessageLog.Warning(err.Error())
+	// 		}
+	// 	}
+	// } else {
+	// 	_context.MessageLog.Info("Skipping deletion of untarred bag dir at %s: "+
+	// 		"Directory does not exist, or is unsafe to delete.", untarredBagPath)
+	// }
 
 }
 

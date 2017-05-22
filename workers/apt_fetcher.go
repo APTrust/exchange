@@ -246,9 +246,14 @@ func (fetcher *APTFetcher) cleanup() {
 			ingestState.IngestManifest.ValidateResult.HasErrors())
 		if hasErrors && fileutil.FileExists(tarFile) {
 			// Most likely bad md5 digest, but perhaps also a partial download.
-			fetcher.Context.MessageLog.Info("Deleting due to download error: %s",
-				tarFile)
+			fetcher.Context.MessageLog.Info("Deleting %s due to download error: %s",
+				tarFile, ingestState.IngestManifest.AllErrorsAsString())
 			DeleteBagFromStaging(ingestState, fetcher.Context, ingestState.IngestManifest.FetchResult)
+
+			// ------------------------------------------------------
+			// TODO: Delete valdb file as well, since this bag is bad
+			// ------------------------------------------------------
+
 		}
 		fetcher.RecordChannel <- ingestState
 	}
@@ -338,8 +343,8 @@ func (fetcher *APTFetcher) downloadFile(ingestState *models.IngestState) (*model
 	// Return now if we failed.
 	if downloader.ErrorMessage != "" {
 		return nil, fmt.Errorf("Error fetching %s/%s: %v",
-			ingestState.IngestManifest.S3Bucket,
-			ingestState.IngestManifest.S3Key,
+			ingestState.WorkItem.Bucket,
+			ingestState.WorkItem.Name,
 			downloader.ErrorMessage)
 	}
 
@@ -351,8 +356,8 @@ func (fetcher *APTFetcher) getDownloader(ingestState *models.IngestState) *netwo
 		os.Getenv("AWS_ACCESS_KEY_ID"),
 		os.Getenv("AWS_SECRET_ACCESS_KEY"),
 		constants.AWSVirginia,
-		ingestState.IngestManifest.S3Bucket,
-		ingestState.IngestManifest.S3Key,
+		ingestState.WorkItem.Bucket,
+		ingestState.WorkItem.Name,
 		ingestState.IngestManifest.BagPath,
 		true,  // calculate md5 checksum on the entire tar file
 		false, // calculate sha256 checksum on the entire tar file
@@ -366,8 +371,8 @@ func (fetcher *APTFetcher) tryDownload(downloader *network.S3Download, ingestSta
 	downloader.Fetch()
 	if downloader.ErrorMessage == "" {
 		fetcher.Context.MessageLog.Info("Fetched %s/%s after %d attempts",
-			ingestState.IngestManifest.S3Bucket,
-			ingestState.IngestManifest.S3Key,
+			ingestState.WorkItem.Bucket,
+			ingestState.WorkItem.Name,
 			attemptNumber+1)
 		succeeded = true
 	} else {
@@ -376,8 +381,8 @@ func (fetcher *APTFetcher) tryDownload(downloader *network.S3Download, ingestSta
 			retryMessage = "will not retry - too many failed attempts"
 		}
 		fetcher.Context.MessageLog.Warning("Error fetching %s/%s: %s - %s",
-			ingestState.IngestManifest.S3Bucket,
-			ingestState.IngestManifest.S3Key,
+			ingestState.WorkItem.Bucket,
+			ingestState.WorkItem.Name,
 			downloader.ErrorMessage,
 			retryMessage)
 		if strings.Contains(downloader.ErrorMessage, "NoSuchKey") {
@@ -390,12 +395,13 @@ func (fetcher *APTFetcher) tryDownload(downloader *network.S3Download, ingestSta
 
 func (fetcher *APTFetcher) buildObject(downloader *network.S3Download, ingestState *models.IngestState) *models.IntellectualObject {
 	obj := &models.IntellectualObject{}
-	instIdentifier := util.OwnerOf(ingestState.IngestManifest.S3Bucket)
-	obj.BagName = util.CleanBagName(ingestState.IngestManifest.S3Key)
+	instIdentifier := util.OwnerOf(ingestState.WorkItem.Bucket)
+	obj.BagName = util.CleanBagName(ingestState.WorkItem.Name)
 	obj.Institution = instIdentifier
+	obj.Identifier = fmt.Sprintf("%s/%s", instIdentifier, obj.BagName)
 	obj.InstitutionId = ingestState.WorkItem.InstitutionId
-	obj.IngestS3Bucket = ingestState.IngestManifest.S3Bucket
-	obj.IngestS3Key = ingestState.IngestManifest.S3Key
+	obj.IngestS3Bucket = ingestState.WorkItem.Bucket
+	obj.IngestS3Key = ingestState.WorkItem.Name
 	obj.IngestTarFilePath = ingestState.IngestManifest.BagPath
 	obj.ETag = ingestState.WorkItem.ETag
 	obj.IngestSize = downloader.BytesCopied
