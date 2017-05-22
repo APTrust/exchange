@@ -280,13 +280,20 @@ func TestMsgAlreadyOnDisk(t *testing.T) {
 func TestMsgAlreadyValidated(t *testing.T) {
 	item := SampleWorkItem()
 	item.Name = "bag1.tar"
-	expected := "Bag bag1.tar has already been validated. Now it's going to the cleanup channel."
+	expected := "Bag bag1.tar has already been validated. Now it's going to the record channel."
 	assert.Equal(t, expected, item.MsgAlreadyValidated())
 }
 
 func TestMsgGoingToValidation(t *testing.T) {
 	item := SampleWorkItem()
 	item.Name = "bag1.tar"
-	expected := "Bag bag1.tar is going to the validation channel."
+	expected := "Bag bag1.tar is going into the validation channel."
 	assert.Equal(t, expected, item.MsgGoingToValidation())
+}
+
+func TestMsgGoingToFetch(t *testing.T) {
+	item := SampleWorkItem()
+	item.Name = "bag1.tar"
+	expected := "Bag bag1.tar is going into the fetch channel."
+	assert.Equal(t, expected, item.MsgGoingToFetch())
 }

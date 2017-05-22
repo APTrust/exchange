@@ -292,11 +292,17 @@ func (item *WorkItem) MsgAlreadyOnDisk() string {
 // been validated.
 func (item *WorkItem) MsgAlreadyValidated() string {
 	return fmt.Sprintf("Bag %s has already been validated. "+
-		"Now it's going to the cleanup channel.", item.Name)
+		"Now it's going to the record channel.", item.Name)
 }
 
 // MsgGoingToValidation returns a message saying this item is being
 // put into the validation channel.
 func (item *WorkItem) MsgGoingToValidation() string {
-	return fmt.Sprintf("Bag %s is going to the validation channel.", item.Name)
+	return fmt.Sprintf("Bag %s is going into the validation channel.", item.Name)
+}
+
+// MsgGoingToFetch returns a message saying this item is being
+// put into the fetch channel.
+func (item *WorkItem) MsgGoingToFetch() string {
+	return fmt.Sprintf("Bag %s is going into the fetch channel.", item.Name)
 }

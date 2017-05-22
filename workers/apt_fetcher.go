@@ -87,7 +87,7 @@ func (fetcher *APTFetcher) HandleMessage(message *nsq.Message) error {
 		log.Info(ingestState.WorkItem.MsgAlreadyOnDisk())
 		if ingestState.IngestManifest.BagHasBeenValidated() {
 			log.Info(ingestState.WorkItem.MsgAlreadyValidated())
-			fetcher.CleanupChannel <- ingestState
+			fetcher.RecordChannel <- ingestState
 		} else {
 			log.Info(ingestState.WorkItem.MsgGoingToValidation())
 			fetcher.ValidationChannel <- ingestState
@@ -96,13 +96,6 @@ func (fetcher *APTFetcher) HandleMessage(message *nsq.Message) error {
 
 	// In case we're loading a previously failed fetch attempt
 	ingestState.IngestManifest.ClearAllErrors()
-
-	// -------------------------------
-	// --------- START HERE ----------
-	// -------------------------------
-
-	// Save the state of this item in Pharos.
-	RecordWorkItemState(ingestState, fetcher.Context, ingestState.IngestManifest.FetchResult)
 
 	// Tell Pharos that we've started to fetch this item.
 	err = MarkWorkItemStarted(ingestState, fetcher.Context, constants.StageFetch,
@@ -121,37 +114,22 @@ func (fetcher *APTFetcher) HandleMessage(message *nsq.Message) error {
 	// the message to a new worker.
 	message.DisableAutoResponse()
 
-	if fetcher.canSkipFetchAndValidate(ingestState) {
-		fetcher.Context.MessageLog.Info("Sending %s/%s straight to record queue",
-			ingestState.IngestManifest.S3Bucket, ingestState.IngestManifest.S3Key)
-		fetcher.RecordChannel <- ingestState
-	} else {
-
-		// Reserve disk space to download this item, or requeue it
-		// if we can't get the disk space.
-		if fetcher.Context.Config.UseVolumeService && !fetcher.reserveSpaceForDownload(ingestState) {
-
-			err = MarkWorkItemRequeued(ingestState, fetcher.Context)
-			if err != nil {
-				fetcher.Context.MessageLog.Error(
-					"Error telling Pharos this item is being requeued: %v",
-					err.Error())
-			}
-			message.Requeue(1 * time.Minute)
-			return nil
+	// Reserve disk space to download this item, or requeue it
+	// if we can't get the disk space.
+	if fetcher.Context.Config.UseVolumeService && !fetcher.reserveSpaceForDownload(ingestState) {
+		err = MarkWorkItemRequeued(ingestState, fetcher.Context)
+		if err != nil {
+			fetcher.Context.MessageLog.Error(
+				"Error telling Pharos this item is being requeued: %v",
+				err.Error())
 		}
-
-		// Start at fetch, which is the very beginning.
-		// This may be the second or third attempt to ingest this bag.
-		// If so, clear out old error message from previous attempts.
-		ingestState.IngestManifest.FetchResult.ClearErrors()
-		ingestState.IngestManifest.ValidateResult.ClearErrors()
-
-		fetcher.Context.MessageLog.Info("Putting %s/%s straight to fetch queue",
-			ingestState.IngestManifest.S3Bucket, ingestState.IngestManifest.S3Key)
-
-		fetcher.FetchChannel <- ingestState
+		message.Requeue(1 * time.Minute)
+		return nil
 	}
+
+	log.Info(ingestState.WorkItem.MsgGoingToFetch())
+
+	fetcher.FetchChannel <- ingestState
 
 	// Return no error, so NSQ knows we're OK.
 	return nil
