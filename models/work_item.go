@@ -292,7 +292,7 @@ func (item *WorkItem) MsgAlreadyOnDisk() string {
 // been validated.
 func (item *WorkItem) MsgAlreadyValidated() string {
 	return fmt.Sprintf("Bag %s has already been validated. "+
-		"Now it's going to the record channel.", item.Name)
+		"Now it's going to the cleanup channel.", item.Name)
 }
 
 // MsgGoingToValidation returns a message saying this item is being

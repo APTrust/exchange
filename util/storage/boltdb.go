@@ -25,8 +25,9 @@ type BoltDB struct {
 	filePath string
 }
 
-// NewBoltDB creates a new bolt database, which is a key-value store
-// that resides in a single file on disk.
+// NewBoltDB opens a bolt database, creating the DB file if it doesn't
+// already exist. The DB file is a key-value store that resides in a
+// single file on disk.
 func NewBoltDB(filePath string) (boltDB *BoltDB, err error) {
 	db, err := bolt.Open(filePath, 0644, nil)
 	if err == nil {

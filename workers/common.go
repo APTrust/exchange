@@ -33,6 +33,9 @@ func CreateNsqConsumer(config *models.Config, workerConfig *models.WorkerConfig)
 	return nsq.NewConsumer(workerConfig.NsqTopic, workerConfig.NsqChannel, nsqConfig)
 }
 
+// --------------------------------------------------------------------------------
+// TODO - Remove this
+// --------------------------------------------------------------------------------
 // GetIngestState sets up the basic pieces of data we'll need to process a
 // request. Param initIfEmpty says we should initialize an IntellectualObject
 // if we can't find one in the IngestManifest. That should only happen
@@ -186,6 +189,9 @@ func InitWorkItemState(workItem *models.WorkItem) (*models.WorkItemState, error)
 	return workItemState, nil
 }
 
+// --------------------------------------------------------------------------------
+// TODO - Remove this
+// --------------------------------------------------------------------------------
 // SetBasicObjectInfo sets initial essential properties on the
 // IntellectualObject associated with an ingestState
 // (ingestState.IngestManifest.Object). This is only used by

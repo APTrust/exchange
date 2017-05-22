@@ -40,7 +40,12 @@ type Validator struct {
 	forbiddenFiles             []string
 	calculateMd5               bool
 	calculateSha256            bool
-	db                         *storage.BoltDB
+
+	// Note that we can have only one open reference to the BoltDB
+	// at a time. If some other piece of code has this DB open,
+	// the validator will not be able to open it. If the validator
+	// has it open, others will not be able to open it.
+	db *storage.BoltDB
 }
 
 // NewValidator creates a new Validator. Param pathToBag

@@ -106,6 +106,6 @@ func (manifest *IngestManifest) SizeOfBagOnDisk() (int64, error) {
 // BagHasBeenValidated returns true if the bag has already been validated.
 func (manifest *IngestManifest) BagHasBeenValidated() bool {
 	return (manifest.ValidateResult.Attempted == true &&
-		manifest.ValidateResult.FinishedAt.IsZero() == false &&
+		manifest.ValidateResult.Finished() == true &&
 		manifest.ValidateResult.HasErrors() == false)
 }

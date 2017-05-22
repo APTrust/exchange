@@ -6,7 +6,9 @@ import (
 	"github.com/APTrust/exchange/context"
 	"github.com/APTrust/exchange/models"
 	"github.com/APTrust/exchange/network"
+	"github.com/APTrust/exchange/util"
 	"github.com/APTrust/exchange/util/fileutil"
+	"github.com/APTrust/exchange/util/storage"
 	"github.com/APTrust/exchange/validation"
 	"github.com/nsqio/go-nsq"
 	"os"
@@ -87,7 +89,7 @@ func (fetcher *APTFetcher) HandleMessage(message *nsq.Message) error {
 		log.Info(ingestState.WorkItem.MsgAlreadyOnDisk())
 		if ingestState.IngestManifest.BagHasBeenValidated() {
 			log.Info(ingestState.WorkItem.MsgAlreadyValidated())
-			fetcher.RecordChannel <- ingestState
+			fetcher.CleanupChannel <- ingestState
 		} else {
 			log.Info(ingestState.WorkItem.MsgGoingToValidation())
 			fetcher.ValidationChannel <- ingestState
@@ -140,7 +142,7 @@ func (fetcher *APTFetcher) HandleMessage(message *nsq.Message) error {
 //
 // fetch copies the file from S3 to our local staging area.
 // If all goes well, the file will wind up in
-// ingestState.IngestManifest.Object.IngestTarFilePath
+// ingestState.IngestManifest.BagPath
 // -------------------------------------------------------------------------
 func (fetcher *APTFetcher) fetch() {
 	for ingestState := range fetcher.FetchChannel {
@@ -151,13 +153,16 @@ func (fetcher *APTFetcher) fetch() {
 		ingestState.IngestManifest.FetchResult.Attempted = true
 		ingestState.IngestManifest.FetchResult.AttemptNumber += 1
 
-		err := fetcher.downloadFile(ingestState)
+		obj, err := fetcher.downloadFile(ingestState)
 
 		// Download may have taken 1 second or 3 hours.
 		// Remind NSQ that we're still on this.
 		ingestState.TouchNSQ()
 
 		if err != nil {
+			ingestState.IngestManifest.FetchResult.AddError(err.Error())
+		} else {
+			err = fetcher.initObjectInDB(ingestState, obj)
 			ingestState.IngestManifest.FetchResult.AddError(err.Error())
 		}
 		ingestState.IngestManifest.FetchResult.Finish()
@@ -182,11 +187,11 @@ func (fetcher *APTFetcher) validate() {
 		MarkWorkItemStarted(ingestState, fetcher.Context, constants.StageValidate,
 			"Validating bag.")
 
-		// Set up a new validator to check this bag.
-		var validationResult *validation.ValidationResult
-		validator, err := validation.NewBagValidator(
-			ingestState.IngestManifest.Object.IngestTarFilePath,
-			fetcher.BagValidationConfig)
+		// Validate the bag.
+		validator, err := validation.NewValidator(
+			ingestState.IngestManifest.BagPath,
+			fetcher.BagValidationConfig,
+			true) // true means preserver ingest attributes in db
 		if err != nil {
 			// Could not create a BagValidator. Should this be fatal?
 			ingestState.IngestManifest.ValidateResult.AddError(err.Error())
@@ -197,27 +202,29 @@ func (fetcher *APTFetcher) validate() {
 			// to several hours to complete, depending on the size of the bag.
 			// The most time-consuming part of the validation process is
 			// calculating md5 and sha256 checksums on every file in the bag.
-			// If the bag is 100GB+ in size, that takes a long time.
-			validationResult = validator.Validate()
+			// If the bag is 100GB+ in size, that takes a long time. Also
+			// note that the validator dumps a lot of info into a Bolt DB file
+			// in the same directory as the bag's tar file. The Bolt DB file
+			// has the extension .valdb instead of .tar.
+			summary, err := validator.Validate()
 
-			// The validator creates its own WorkSummary, complete with
-			// Start/Finish timestamps, error messages and everything.
-			// Just copy that into our IngestManifest.
-			ingestState.IngestManifest.ValidateResult = validationResult.ValidationSummary
-
-			// NOTE that we are OVERWRITING the IntellectualObject here
-			// with the much more complete version returned by the validator,
-			// but we have to reset some basic data that's only available
-			// in the current context.
-			ingestState.IngestManifest.Object = validationResult.IntellectualObject
-			SetBasicObjectInfo(ingestState, fetcher.Context)
+			// Error will be a problem opening the Bolt DB, which means some
+			// other worker or goroutine already has it open.
+			if err != nil {
+				summary := models.NewWorkSummary()
+				summary.Attempted = true
+				summary.StartedAt = time.Now().UTC()
+				summary.AddError(err.Error())
+				summary.FinishedAt = time.Now().UTC()
+			}
 
 			// If the bag is invalid, that's a fatal error. We should not do
 			// any further processing on it.
-			if validationResult.HasErrors() {
-				ingestState.IngestManifest.ValidateResult.ErrorIsFatal = true
-				ingestState.IngestManifest.ValidateResult.Retry = false
+			if summary.HasErrors() {
+				summary.ErrorIsFatal = true
+				summary.Retry = false
 			}
+			ingestState.IngestManifest.ValidateResult = summary
 		}
 		ingestState.TouchNSQ()
 		fetcher.CleanupChannel <- ingestState
@@ -234,7 +241,7 @@ func (fetcher *APTFetcher) validate() {
 // -------------------------------------------------------------------------
 func (fetcher *APTFetcher) cleanup() {
 	for ingestState := range fetcher.CleanupChannel {
-		tarFile := ingestState.IngestManifest.Object.IngestTarFilePath
+		tarFile := ingestState.IngestManifest.BagPath
 		hasErrors := (ingestState.IngestManifest.FetchResult.HasErrors() ||
 			ingestState.IngestManifest.ValidateResult.HasErrors())
 		if hasErrors && fileutil.FileExists(tarFile) {
@@ -256,10 +263,6 @@ func (fetcher *APTFetcher) cleanup() {
 // -------------------------------------------------------------------------
 func (fetcher *APTFetcher) record() {
 	for ingestState := range fetcher.RecordChannel {
-
-		// Copy JSON representation of the IngestManifest to Pharos
-		// and to the JSON log.
-		RecordWorkItemState(ingestState, fetcher.Context, ingestState.IngestManifest.FetchResult)
 
 		// Fatal errors, or too many recurring transient errors
 		attemptNumber := ingestState.IngestManifest.FetchResult.AttemptNumber
@@ -286,7 +289,7 @@ func (fetcher *APTFetcher) reserveSpaceForDownload(ingestState *models.IngestSta
 	okToDownload := false
 	err := fetcher.Context.VolumeClient.Ping(500)
 	if err == nil {
-		path := ingestState.IngestManifest.Object.IngestTarFilePath
+		path := ingestState.IngestManifest.BagPath
 		ok, err := fetcher.Context.VolumeClient.Reserve(path, uint64(ingestState.WorkItem.Size))
 		if err != nil {
 			fetcher.Context.MessageLog.Warning("Volume service returned an error. "+
@@ -314,60 +317,87 @@ func (fetcher *APTFetcher) canSkipFetchAndValidate(ingestState *models.IngestSta
 	return (ingestState.WorkItem.Stage == constants.StageValidate &&
 		ingestState.IngestManifest.ValidateResult.Finished() &&
 		!ingestState.IngestManifest.HasFatalErrors() &&
-		fileutil.FileExists(ingestState.IngestManifest.Object.IngestTarFilePath))
+		fileutil.FileExists(ingestState.IngestManifest.BagPath))
 }
 
 // Download the file, and update the IngestManifest while we're at it.
-func (fetcher *APTFetcher) downloadFile(ingestState *models.IngestState) error {
-	downloader := network.NewS3Download(
-		os.Getenv("AWS_ACCESS_KEY_ID"),
-		os.Getenv("AWS_SECRET_ACCESS_KEY"),
-		constants.AWSVirginia,
-		ingestState.IngestManifest.S3Bucket,
-		ingestState.IngestManifest.S3Key,
-		ingestState.IngestManifest.Object.IngestTarFilePath,
-		true,  // calculate md5 checksum on the entire tar file
-		false, // calculate sha256 checksum on the entire tar file
-	)
+func (fetcher *APTFetcher) downloadFile(ingestState *models.IngestState) (*models.IntellectualObject, error) {
+
+	downloader := fetcher.getDownloader(ingestState)
 
 	// It's fairly common for very large bags to fail more than
 	// once on transient network errors (e.g. "Connection reset by peer")
 	// So we give this several tries.
 	for i := 0; i < 10; i++ {
-		downloader.ErrorMessage = "" // clear before each attempt
-		downloader.Fetch()
-		if downloader.ErrorMessage == "" {
-			fetcher.Context.MessageLog.Info("Fetched %s/%s after %d attempts",
-				ingestState.IngestManifest.S3Bucket,
-				ingestState.IngestManifest.S3Key,
-				i+1)
+		succeeded, errorIsFatal := fetcher.tryDownload(downloader, ingestState, i)
+		if succeeded || errorIsFatal {
 			break
-		} else {
-			retryMessage := "will retry"
-			if i >= 9 {
-				retryMessage = "will not retry - too many failed attempts"
-			}
-			fetcher.Context.MessageLog.Warning("Error fetching %s/%s: %s - %s",
-				ingestState.IngestManifest.S3Bucket,
-				ingestState.IngestManifest.S3Key,
-				downloader.ErrorMessage,
-				retryMessage)
-			if strings.Contains(downloader.ErrorMessage, "NoSuchKey") {
-				ingestState.IngestManifest.FetchResult.ErrorIsFatal = true
-				break
-			}
 		}
 	}
 
 	// Return now if we failed.
 	if downloader.ErrorMessage != "" {
-		return fmt.Errorf("Error fetching %s/%s: %v",
+		return nil, fmt.Errorf("Error fetching %s/%s: %v",
 			ingestState.IngestManifest.S3Bucket,
 			ingestState.IngestManifest.S3Key,
 			downloader.ErrorMessage)
 	}
 
-	obj := ingestState.IngestManifest.Object
+	return fetcher.buildObject(downloader, ingestState), nil
+}
+
+func (fetcher *APTFetcher) getDownloader(ingestState *models.IngestState) *network.S3Download {
+	return network.NewS3Download(
+		os.Getenv("AWS_ACCESS_KEY_ID"),
+		os.Getenv("AWS_SECRET_ACCESS_KEY"),
+		constants.AWSVirginia,
+		ingestState.IngestManifest.S3Bucket,
+		ingestState.IngestManifest.S3Key,
+		ingestState.IngestManifest.BagPath,
+		true,  // calculate md5 checksum on the entire tar file
+		false, // calculate sha256 checksum on the entire tar file
+	)
+}
+
+func (fetcher *APTFetcher) tryDownload(downloader *network.S3Download, ingestState *models.IngestState, attemptNumber int) (bool, bool) {
+	succeeded := false
+	errorIsFatal := false
+	downloader.ErrorMessage = "" // clear before each attempt
+	downloader.Fetch()
+	if downloader.ErrorMessage == "" {
+		fetcher.Context.MessageLog.Info("Fetched %s/%s after %d attempts",
+			ingestState.IngestManifest.S3Bucket,
+			ingestState.IngestManifest.S3Key,
+			attemptNumber+1)
+		succeeded = true
+	} else {
+		retryMessage := "will retry"
+		if attemptNumber >= 9 {
+			retryMessage = "will not retry - too many failed attempts"
+		}
+		fetcher.Context.MessageLog.Warning("Error fetching %s/%s: %s - %s",
+			ingestState.IngestManifest.S3Bucket,
+			ingestState.IngestManifest.S3Key,
+			downloader.ErrorMessage,
+			retryMessage)
+		if strings.Contains(downloader.ErrorMessage, "NoSuchKey") {
+			ingestState.IngestManifest.FetchResult.ErrorIsFatal = true
+			errorIsFatal = true
+		}
+	}
+	return succeeded, errorIsFatal
+}
+
+func (fetcher *APTFetcher) buildObject(downloader *network.S3Download, ingestState *models.IngestState) *models.IntellectualObject {
+	obj := &models.IntellectualObject{}
+	instIdentifier := util.OwnerOf(ingestState.IngestManifest.S3Bucket)
+	obj.BagName = util.CleanBagName(ingestState.IngestManifest.S3Key)
+	obj.Institution = instIdentifier
+	obj.InstitutionId = ingestState.WorkItem.InstitutionId
+	obj.IngestS3Bucket = ingestState.IngestManifest.S3Bucket
+	obj.IngestS3Key = ingestState.IngestManifest.S3Key
+	obj.IngestTarFilePath = ingestState.IngestManifest.BagPath
+	obj.ETag = ingestState.WorkItem.ETag
 	obj.IngestSize = downloader.BytesCopied
 	obj.IngestRemoteMd5 = *downloader.Response.ETag
 	obj.IngestLocalMd5 = downloader.Md5Digest
@@ -390,5 +420,19 @@ func (fetcher *APTFetcher) downloadFile(ingestState *models.IngestState) error {
 		ingestState.IngestManifest.FetchResult.ErrorIsFatal = true
 	}
 
+	return obj
+}
+
+func (fetcher *APTFetcher) initObjectInDB(ingestState *models.IngestState, obj *models.IntellectualObject) error {
+	db, err := storage.NewBoltDB(ingestState.IngestManifest.DBPath)
+	if err != nil {
+		return err
+	} else {
+		defer db.Close()
+		err = db.Save(obj.Identifier, obj)
+		if err != nil {
+			return err
+		}
+	}
 	return nil
 }
