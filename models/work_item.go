@@ -281,3 +281,22 @@ func (item *WorkItem) MsgPastIngest() string {
 		"without doing any work, because this item is already past the "+
 		"ingest phase.", item.Id, item.Name)
 }
+
+// MsgAlreadyOnDisk returns a message saying the bag has already
+// been downloaded to the local disk.
+func (item *WorkItem) MsgAlreadyOnDisk() string {
+	return fmt.Sprintf("Bag %s is already on disk and appears to be complete.", item.Name)
+}
+
+// MsgAlreadyValidated returns a message saying the bag has already
+// been validated.
+func (item *WorkItem) MsgAlreadyValidated() string {
+	return fmt.Sprintf("Bag %s has already been validated. "+
+		"Now it's going to the cleanup channel.", item.Name)
+}
+
+// MsgGoingToValidation returns a message saying this item is being
+// put into the validation channel.
+func (item *WorkItem) MsgGoingToValidation() string {
+	return fmt.Sprintf("Bag %s is going to the validation channel.", item.Name)
+}

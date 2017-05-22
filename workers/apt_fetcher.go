@@ -55,60 +55,51 @@ func NewAPTFetcher(_context *context.Context) *APTFetcher {
 
 // This is the callback that NSQ workers use to handle messages from NSQ.
 func (fetcher *APTFetcher) HandleMessage(message *nsq.Message) error {
+
+	log := fetcher.Context.MessageLog
+
 	// Set up our IngestState. Most of this comes from Pharos;
 	// some of it we have to build fresh.
-	ingestState, err := GetIngestState(message, fetcher.Context, true)
+	ingestState, err := SetupIngestState(message, fetcher.Context)
 	if err != nil {
 		fetcher.Context.MessageLog.Error(err.Error())
 		return err
 	}
-	ingestState.NSQMessage = message
 
 	// Skip this if it's already being worked on.
 	if ingestState.WorkItem.IsInProgress() {
-		fetcher.Context.MessageLog.Info(ingestState.WorkItem.MsgSkippingInProgress())
+		log.Info(ingestState.WorkItem.MsgSkippingInProgress())
 		message.Finish()
 		return nil
 	}
 
 	// Skip if it's already been ingested.
 	if ingestState.WorkItem.IsPastIngest() {
-		fetcher.Context.MessageLog.Info(ingestState.WorkItem.MsgPastIngest())
+		log.Info(ingestState.WorkItem.MsgPastIngest())
 		message.Finish()
 		return nil
 	}
 
-	if fileutil.FileExists(ingestState.IngestManifest.Object.IngestTarFilePath) {
-		stat, err := os.Stat(ingestState.IngestManifest.Object.IngestTarFilePath)
-		if err == nil && stat != nil && stat.Size() == ingestState.WorkItem.Size {
-			fetcher.Context.MessageLog.Info("Bag %s is already on disk and appears "+
-				"to be complete.", ingestState.WorkItem.Name)
-			if ingestState.IngestManifest.ValidateResult.Attempted == true &&
-				ingestState.IngestManifest.ValidateResult.FinishedAt.IsZero() == false &&
-				ingestState.IngestManifest.ValidateResult.HasErrors() == false &&
-				len(ingestState.IngestManifest.Object.GenericFiles) > 1 {
-				fetcher.Context.MessageLog.Info("Bag %s has already been validated. "+
-					"Now it's going to the cleanup channel.",
-					ingestState.WorkItem.Name)
-				fetcher.CleanupChannel <- ingestState
-			} else {
-				fetcher.Context.MessageLog.Info("Bag %s is going to the validation channel.",
-					ingestState.WorkItem.Name)
-				fetcher.ValidationChannel <- ingestState
-			}
-			return nil
+	// If we've already downloaded and/or validated the bag, don't
+	// bother fetching it again. Just push it into the next channel.
+	bagSizeOnDisk, _ := ingestState.IngestManifest.SizeOfBagOnDisk()
+	if bagSizeOnDisk == ingestState.WorkItem.Size {
+		log.Info(ingestState.WorkItem.MsgAlreadyOnDisk())
+		if ingestState.IngestManifest.BagHasBeenValidated() {
+			log.Info(ingestState.WorkItem.MsgAlreadyValidated())
+			fetcher.CleanupChannel <- ingestState
+		} else {
+			log.Info(ingestState.WorkItem.MsgGoingToValidation())
+			fetcher.ValidationChannel <- ingestState
 		}
-		// At this point, it may be on disk, but we can't verify it's correct,
-		// so download it again.
 	}
 
 	// In case we're loading a previously failed fetch attempt
-	ingestState.IngestManifest.FetchResult.ClearErrors()
-	ingestState.IngestManifest.UntarResult.ClearErrors()
-	ingestState.IngestManifest.ValidateResult.ClearErrors()
-	ingestState.IngestManifest.StoreResult.ClearErrors()
-	ingestState.IngestManifest.RecordResult.ClearErrors()
-	ingestState.IngestManifest.CleanupResult.ClearErrors()
+	ingestState.IngestManifest.ClearAllErrors()
+
+	// -------------------------------
+	// --------- START HERE ----------
+	// -------------------------------
 
 	// Save the state of this item in Pharos.
 	RecordWorkItemState(ingestState, fetcher.Context, ingestState.IngestManifest.FetchResult)

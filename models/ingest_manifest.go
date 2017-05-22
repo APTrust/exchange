@@ -6,7 +6,8 @@ import (
 )
 
 type IngestManifest struct {
-	WorkItemId     int
+	WorkItemId int
+	// TODO: Get rid of bucket, key, and etag, since they're in WorkItem
 	S3Bucket       string
 	S3Key          string
 	ETag           string
@@ -71,6 +72,16 @@ func (manifest *IngestManifest) AllErrorsAsString() string {
 	return allErrors
 }
 
+// ClearAllErrors clears all of the errors on all of the WorkSummaries.
+func (manifest *IngestManifest) ClearAllErrors() {
+	manifest.FetchResult.ClearErrors()
+	manifest.UntarResult.ClearErrors()
+	manifest.ValidateResult.ClearErrors()
+	manifest.StoreResult.ClearErrors()
+	manifest.RecordResult.ClearErrors()
+	manifest.CleanupResult.ClearErrors()
+}
+
 // BagIsOnDisk returns true if the bag (tar file) exists on disk.
 func (manifest *IngestManifest) BagIsOnDisk() bool {
 	return manifest.BagPath != "" && fileutil.FileExists(manifest.BagPath)
@@ -90,4 +101,11 @@ func (manifest *IngestManifest) SizeOfBagOnDisk() (int64, error) {
 		return int64(-1), err
 	}
 	return stat.Size(), nil
+}
+
+// BagHasBeenValidated returns true if the bag has already been validated.
+func (manifest *IngestManifest) BagHasBeenValidated() bool {
+	return (manifest.ValidateResult.Attempted == true &&
+		manifest.ValidateResult.FinishedAt.IsZero() == false &&
+		manifest.ValidateResult.HasErrors() == false)
 }

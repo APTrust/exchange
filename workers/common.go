@@ -13,10 +13,13 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
 )
+
+var TAR_SUFFIX = regexp.MustCompile("\\.tar$")
 
 // CreateNSQConsumer creates and returns an NSQ consumer for a worker process.
 func CreateNsqConsumer(config *models.Config, workerConfig *models.WorkerConfig) (*nsq.Consumer, error) {
@@ -465,4 +468,39 @@ func DeleteBagFromStaging(ingestState *models.IngestState, _context *context.Con
 			"Directory does not exist, or is unsafe to delete.", untarredBagPath)
 	}
 
+}
+
+// SetupIngestState sets up the IngestState object that the
+// workers use during the ingest process.
+func SetupIngestState(message *nsq.Message, _context *context.Context) (*models.IngestState, error) {
+	workItem, err := GetWorkItem(message, _context)
+	if err != nil {
+		return nil, err
+	}
+	_context.MessageLog.Info("Loaded WorkItem %d (%s/%s)",
+		workItem.Id, workItem.Bucket, workItem.Name)
+
+	manifest := models.NewIngestManifest()
+	manifest.WorkItemId = workItem.Id
+
+	// -----------------------------------
+	// TODO: get rid of these
+	manifest.S3Bucket = workItem.Bucket
+	manifest.S3Key = workItem.Name
+	manifest.ETag = workItem.ETag
+	//
+	// -----------------------------------
+
+	instIdentifier := util.OwnerOf(workItem.Bucket)
+
+	manifest.BagPath = filepath.Join(_context.Config.TarDirectory,
+		instIdentifier, workItem.Name)
+	manifest.DBPath = TAR_SUFFIX.ReplaceAllString(manifest.BagPath, ".valdb")
+
+	ingestState := &models.IngestState{}
+	ingestState.NSQMessage = message
+	ingestState.WorkItem = workItem
+	ingestState.IngestManifest = manifest
+
+	return ingestState, nil
 }

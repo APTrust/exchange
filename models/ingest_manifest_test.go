@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"testing"
+	"time"
 )
 
 // getPath returns the absolute path to a tar file in our unit test dir.
@@ -154,4 +155,30 @@ func TestIngestManifest_SizeOfBagOnDisk(t *testing.T) {
 	size, err = manifest.SizeOfBagOnDisk()
 	assert.Nil(t, err)
 	assert.Equal(t, int64(40960), size)
+}
+
+func TestIngestManifest_ClearAllErrors(t *testing.T) {
+	manifest := models.NewIngestManifest()
+	manifest.FetchResult.AddError("1")
+	manifest.UntarResult.AddError("2")
+	manifest.ValidateResult.AddError("3")
+	manifest.StoreResult.AddError("4")
+	manifest.RecordResult.AddError("5")
+	manifest.CleanupResult.AddError("6")
+	assert.True(t, manifest.HasErrors())
+
+	manifest.ClearAllErrors()
+	assert.False(t, manifest.HasErrors())
+}
+
+func TestIngestManifest_BagHasBeenValidated(t *testing.T) {
+	manifest := models.NewIngestManifest()
+	assert.False(t, manifest.BagHasBeenValidated())
+	manifest.ValidateResult.Attempted = true
+	assert.False(t, manifest.BagHasBeenValidated())
+	manifest.ValidateResult.FinishedAt = time.Now().UTC()
+	manifest.ValidateResult.AddError("Not valid")
+	assert.False(t, manifest.BagHasBeenValidated())
+	manifest.ValidateResult.ClearErrors()
+	assert.True(t, manifest.BagHasBeenValidated())
 }

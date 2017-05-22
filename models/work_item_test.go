@@ -269,3 +269,24 @@ func TestMsgPastIngest(t *testing.T) {
 	expected := "Marking NSQ Message for WorkItem 999 (bag1.tar) as finished without doing any work, because this item is already past the ingest phase."
 	assert.Equal(t, expected, item.MsgPastIngest())
 }
+
+func TestMsgAlreadyOnDisk(t *testing.T) {
+	item := SampleWorkItem()
+	item.Name = "bag1.tar"
+	expected := "Bag bag1.tar is already on disk and appears to be complete."
+	assert.Equal(t, expected, item.MsgAlreadyOnDisk())
+}
+
+func TestMsgAlreadyValidated(t *testing.T) {
+	item := SampleWorkItem()
+	item.Name = "bag1.tar"
+	expected := "Bag bag1.tar has already been validated. Now it's going to the cleanup channel."
+	assert.Equal(t, expected, item.MsgAlreadyValidated())
+}
+
+func TestMsgGoingToValidation(t *testing.T) {
+	item := SampleWorkItem()
+	item.Name = "bag1.tar"
+	expected := "Bag bag1.tar is going to the validation channel."
+	assert.Equal(t, expected, item.MsgGoingToValidation())
+}
