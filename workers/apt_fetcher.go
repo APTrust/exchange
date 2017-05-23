@@ -90,9 +90,11 @@ func (fetcher *APTFetcher) HandleMessage(message *nsq.Message) error {
 		if ingestState.IngestManifest.BagHasBeenValidated() {
 			log.Info(ingestState.WorkItem.MsgAlreadyValidated())
 			fetcher.CleanupChannel <- ingestState
+			return nil
 		} else {
 			log.Info(ingestState.WorkItem.MsgGoingToValidation())
 			fetcher.ValidationChannel <- ingestState
+			return nil
 		}
 	}
 

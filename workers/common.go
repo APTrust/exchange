@@ -425,7 +425,7 @@ func PushToQueue(ingestState *models.IngestState, _context *context.Context, que
 func LogJson(ingestState *models.IngestState, jsonLog *log.Logger) {
 	timestamp := time.Now().UTC().Format(time.RFC3339)
 	jsonString := `{"ErrorMessage": "Cannot mashal Json for this item."}`
-	jsonBytes, err := json.MarshalIndent(ingestState, "", "  ")
+	jsonBytes, err := json.MarshalIndent(ingestState.IngestManifest, "", "  ")
 	if err == nil {
 		jsonString = string(jsonBytes)
 	}

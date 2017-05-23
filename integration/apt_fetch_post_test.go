@@ -4,6 +4,7 @@ import (
 	"github.com/APTrust/exchange/models"
 	"github.com/APTrust/exchange/util"
 	"github.com/APTrust/exchange/util/fileutil"
+	"github.com/APTrust/exchange/util/storage"
 	"github.com/APTrust/exchange/util/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -158,7 +159,12 @@ func fetcherTestCommon(t *testing.T, bagName string, ingestManifest *models.Inge
 }
 
 func fetcherTestSpecifics(t *testing.T, ingestManifest *models.IngestManifest) {
-	obj := ingestManifest.Object
+	//obj := ingestManifest.Object
+	db, err := storage.NewBoltDB(ingestManifest.DBPath)
+	require.Nil(t, err)
+	defer db.Close()
+	obj, err := db.GetIntellectualObject("test.edu/example.edu.tagsample_good")
+	require.Nil(t, err)
 	assert.Equal(t, "test.edu/example.edu.tagsample_good", obj.Identifier)
 	assert.Equal(t, "example.edu.tagsample_good", obj.BagName)
 	assert.Equal(t, "test.edu", obj.Institution)
@@ -169,6 +175,11 @@ func fetcherTestSpecifics(t *testing.T, ingestManifest *models.IngestManifest) {
 	assert.Equal(t, "uva-internal-id-0001", obj.AltIdentifier)
 	assert.Equal(t, "aptrust.receiving.test.test.edu", obj.IngestS3Bucket)
 	assert.Equal(t, "example.edu.tagsample_good.tar", obj.IngestS3Key)
+
+	// -----------------------------------------------------------------------
+	// Iterate through keys...
+	// -----------------------------------------------------------------------
+
 	assert.Equal(t, "manifest-md5.txt", obj.IngestManifests[0])
 	assert.Equal(t, "manifest-sha256.txt", obj.IngestManifests[1])
 	assert.Equal(t, "tagmanifest-md5.txt", obj.IngestTagManifests[0])
