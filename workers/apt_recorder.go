@@ -129,7 +129,11 @@ func (recorder *APTRecorder) cleanup() {
 			MarkWorkItemStarted(ingestState, recorder.Context, constants.StageCleanup,
 				"Bag has been stored and recorded. Deleting files from receiving bucket "+
 					"and staging area.")
-			DeleteBagFromStaging(ingestState, recorder.Context, ingestState.IngestManifest.RecordResult)
+
+			// Remove both the bag and the validation DB
+			DeleteFileFromStaging(ingestState.IngestManifest.BagPath, recorder.Context)
+			DeleteFileFromStaging(ingestState.IngestManifest.DBPath, recorder.Context)
+
 			recorder.deleteBagFromReceivingBucket(ingestState)
 			MarkWorkItemSucceeded(ingestState, recorder.Context, constants.StageCleanup)
 			ingestState.FinishNSQ()

@@ -1,6 +1,7 @@
 package workers
 
 import (
+	"encoding/json"
 	"fmt"
 	"github.com/APTrust/exchange/constants"
 	"github.com/APTrust/exchange/context"
@@ -423,57 +424,40 @@ func PushToQueue(ingestState *models.IngestState, _context *context.Context, que
 // markers that make it easy to find. This log gets big.
 func LogJson(ingestState *models.IngestState, jsonLog *log.Logger) {
 	timestamp := time.Now().UTC().Format(time.RFC3339)
+	jsonString := `{"ErrorMessage": "Cannot mashal Json for this item."}`
+	jsonBytes, err := json.MarshalIndent(ingestState, "", "  ")
+	if err == nil {
+		jsonString = string(jsonBytes)
+	}
 	startMessage := fmt.Sprintf("-------- BEGIN %s/%s | Etag: %s | Time: %s --------",
 		ingestState.WorkItem.Bucket, ingestState.WorkItem.Name, ingestState.WorkItem.ETag,
 		timestamp)
 	endMessage := fmt.Sprintf("-------- END %s/%s | Etag: %s | Time: %s --------",
 		ingestState.WorkItem.Bucket, ingestState.WorkItem.Name, ingestState.WorkItem.ETag,
 		timestamp)
-	jsonLog.Println(startMessage, "\n",
-		ingestState.WorkItemState.State, "\n",
-		endMessage)
+	jsonLog.Println(startMessage, "\n", jsonString, "\n", endMessage)
 }
 
-// DeleteBagFromStaging deletes the bag from the staging area, and releases
+// DeleteFileFromStaging deletes the bag from the staging area, and releases
 // the reserved storage from the volume manager. This deletes both the tarred
 // and untarred version of the bag, if they both exist.
-func DeleteBagFromStaging(ingestState *models.IngestState, _context *context.Context, activeResult *models.WorkSummary) {
-	tarFile := ingestState.IngestManifest.BagPath
-	if tarFile != "" && fileutil.FileExists(tarFile) {
-		_context.MessageLog.Info("Deleting %s", tarFile)
-		err := os.Remove(tarFile)
+func DeleteFileFromStaging(pathToFile string, _context *context.Context) {
+	looksSafeToDelete := fileutil.LooksSafeToDelete(pathToFile, 12, 3)
+	if pathToFile != "" && fileutil.FileExists(pathToFile) && looksSafeToDelete {
+		_context.MessageLog.Info("Deleting %s", pathToFile)
+		err := os.Remove(pathToFile)
 		if err != nil {
 			_context.MessageLog.Warning(err.Error())
 		}
-		if _context.Config.UseVolumeService {
-			err = _context.VolumeClient.Release(tarFile)
+		if _context.Config.UseVolumeService && strings.HasSuffix(pathToFile, ".tar") {
+			err = _context.VolumeClient.Release(pathToFile)
 			if err != nil {
 				_context.MessageLog.Warning(err.Error())
 			}
 		}
 	} else {
-		_context.MessageLog.Info("Skipping deletion of %s: file does not exist", tarFile)
+		_context.MessageLog.Info("Skipping deletion of %s: file does not exist or deletion is unsafe", pathToFile)
 	}
-
-	// untarredBagPath := ingestState.IngestManifest.Object.IngestUntarredPath
-	// looksSafeToDelete := fileutil.LooksSafeToDelete(untarredBagPath, 12, 3)
-	// if fileutil.FileExists(untarredBagPath) && looksSafeToDelete {
-	// 	_context.MessageLog.Info("Deleting untarred bag at %s", untarredBagPath)
-	// 	err := os.RemoveAll(untarredBagPath)
-	// 	if err != nil {
-	// 		_context.MessageLog.Warning(err.Error())
-	// 	}
-	// 	if _context.Config.UseVolumeService {
-	// 		err = _context.VolumeClient.Release(untarredBagPath)
-	// 		if err != nil {
-	// 			_context.MessageLog.Warning(err.Error())
-	// 		}
-	// 	}
-	// } else {
-	// 	_context.MessageLog.Info("Skipping deletion of untarred bag dir at %s: "+
-	// 		"Directory does not exist, or is unsafe to delete.", untarredBagPath)
-	// }
-
 }
 
 // SetupIngestState sets up the IngestState object that the

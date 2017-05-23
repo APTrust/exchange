@@ -14,7 +14,7 @@ import (
 // resumed, and whether there's anything (like partial files) that need to be
 // cleaned up.
 type IngestState struct {
-	NSQMessage     *nsq.Message
+	NSQMessage     *nsq.Message `json:"-"`
 	WorkItem       *WorkItem
 	WorkItemState  *WorkItemState
 	IngestManifest *IngestManifest

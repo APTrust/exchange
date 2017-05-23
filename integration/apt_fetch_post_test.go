@@ -3,6 +3,7 @@ package integration_test
 import (
 	"github.com/APTrust/exchange/models"
 	"github.com/APTrust/exchange/util"
+	"github.com/APTrust/exchange/util/fileutil"
 	"github.com/APTrust/exchange/util/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -34,23 +35,20 @@ func TestFetchResults(t *testing.T) {
 	pathToJsonLog := filepath.Join(config.LogDirectory, "apt_fetch.json")
 	for _, bagName := range testutil.INTEGRATION_GOOD_BAGS {
 		ingestManifest, err := testutil.FindIngestManifestInLog(pathToJsonLog, bagName)
-		assert.Nil(t, err)
-		if err != nil {
-			continue
-		}
+		require.Nil(t, err, bagName)
+		require.NotNil(t, ingestManifest, bagName)
 		fetcherTestCommon(t, bagName, ingestManifest)
 		// TODO: Test WorkItem (stage, status, etc.) below
 		fetcherTestGoodBagResult(t, bagName, ingestManifest)
 		if bagName == "aptrust.receiving.test.test.edu/example.edu.tagsample_good.tar" {
 			fetcherTestSpecifics(t, ingestManifest)
 		}
+		// TODO: Validate the IntelObj record in valdb.
 	}
 	for _, bagName := range testutil.INTEGRATION_BAD_BAGS {
 		ingestManifest, err := testutil.FindIngestManifestInLog(pathToJsonLog, bagName)
-		assert.Nil(t, err)
-		if err != nil {
-			continue
-		}
+		require.Nil(t, err, bagName)
+		require.NotNil(t, ingestManifest, bagName)
 		fetcherTestCommon(t, bagName, ingestManifest)
 		// TODO: Test WorkItem (stage, status, etc.) below
 		fetcherTestBadBagResult(t, bagName, ingestManifest)
@@ -123,6 +121,7 @@ func fetcherTestCommon(t *testing.T, bagName string, ingestManifest *models.Inge
 	assert.NotEmpty(t, ingestManifest.S3Key, "S3Key should not be empty for %s", bagName)
 	assert.NotEmpty(t, ingestManifest.ETag, "ETag should not be empty for %s", bagName)
 
+	require.NotNil(t, ingestManifest.FetchResult, bagName)
 	assert.True(t, ingestManifest.FetchResult.Attempted,
 		"FetchResult.Attempted should be true for %s", bagName)
 	assert.True(t, ingestManifest.FetchResult.AttemptNumber > 0,
@@ -132,6 +131,7 @@ func fetcherTestCommon(t *testing.T, bagName string, ingestManifest *models.Inge
 	assert.NotEmpty(t, ingestManifest.FetchResult.FinishedAt,
 		"FetchResult.FinishedAt should not be empty for %s", bagName)
 
+	require.NotNil(t, ingestManifest.ValidateResult, bagName)
 	assert.True(t, ingestManifest.ValidateResult.Attempted,
 		"ValidateResult.Attempted should be true for %s", bagName)
 	assert.True(t, ingestManifest.ValidateResult.AttemptNumber > 0,
@@ -141,20 +141,20 @@ func fetcherTestCommon(t *testing.T, bagName string, ingestManifest *models.Inge
 	assert.NotEmpty(t, ingestManifest.ValidateResult.FinishedAt,
 		"ValidateResult.FinishedAt should not be empty for %s", bagName)
 
-	assert.NotEmpty(t, ingestManifest.Object.Identifier,
-		"Object.Identifier should not be empty for %s", bagName)
-	assert.NotEmpty(t, ingestManifest.Object.BagName,
-		"Object.BagName should not be empty for %s", bagName)
-	assert.NotEmpty(t, ingestManifest.Object.Institution,
-		"Object.Institution should not be empty for %s", bagName)
-	assert.NotEmpty(t, ingestManifest.Object.InstitutionId,
-		"Object.InstitutionId should not be empty for %s", bagName)
-	assert.NotEmpty(t, ingestManifest.Object.IngestS3Bucket,
-		"Object.IngestS3Bucket should not be empty for %s", bagName)
-	assert.NotEmpty(t, ingestManifest.Object.IngestS3Key,
-		"Object.IngestS3Key should not be empty for %s", bagName)
-	assert.NotEmpty(t, ingestManifest.Object.IngestTarFilePath,
-		"Object.IngestTarFilePath should not be empty for %s", bagName)
+	assert.NotEmpty(t, ingestManifest.BagPath,
+		"BagPath should not be empty for %s", bagName)
+	assert.NotEmpty(t, ingestManifest.DBPath,
+		"DBPath should not be empty for %s", bagName)
+
+	// For good bags, both the tar file and the .valdb file should
+	// remain on disk after fetch. For bad bags, both should be gone.
+	if util.StringListContains(testutil.INTEGRATION_GOOD_BAGS, bagName) {
+		assert.True(t, fileutil.FileExists(ingestManifest.BagPath), bagName)
+		assert.True(t, fileutil.FileExists(ingestManifest.DBPath), bagName)
+	} else {
+		assert.False(t, fileutil.FileExists(ingestManifest.BagPath), bagName)
+		assert.False(t, fileutil.FileExists(ingestManifest.DBPath), bagName)
+	}
 }
 
 func fetcherTestSpecifics(t *testing.T, ingestManifest *models.IngestManifest) {

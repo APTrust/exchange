@@ -178,8 +178,10 @@ func (storer *APTStorer) cleanup() {
 				ingestState.IngestManifest.Object.IngestTarFilePath,
 				ingestState.IngestManifest.Object.IngestS3Bucket,
 				ingestState.IngestManifest.Object.IngestS3Key)
-			DeleteBagFromStaging(ingestState, storer.Context,
-				ingestState.IngestManifest.StoreResult)
+			// Delete the bag (the .tar file) but not the .valdb, because
+			// .valdb contains information about the object, generic files,
+			// and premis events that will be recorded by apt_recorder.
+			DeleteFileFromStaging(ingestState.IngestManifest.BagPath, storer.Context)
 		}
 		storer.RecordChannel <- ingestState
 	}

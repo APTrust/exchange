@@ -163,7 +163,9 @@ func (fetcher *APTFetcher) fetch() {
 			ingestState.IngestManifest.FetchResult.AddError(err.Error())
 		} else {
 			err = fetcher.initObjectInDB(ingestState, obj)
-			ingestState.IngestManifest.FetchResult.AddError(err.Error())
+			if err != nil {
+				ingestState.IngestManifest.FetchResult.AddError(err.Error())
+			}
 		}
 		ingestState.IngestManifest.FetchResult.Finish()
 		fetcher.ValidationChannel <- ingestState
@@ -206,7 +208,9 @@ func (fetcher *APTFetcher) validate() {
 			// note that the validator dumps a lot of info into a Bolt DB file
 			// in the same directory as the bag's tar file. The Bolt DB file
 			// has the extension .valdb instead of .tar.
+			fetcher.Context.MessageLog.Info("Validating %s", ingestState.IngestManifest.BagPath)
 			summary, err := validator.Validate()
+			fetcher.Context.MessageLog.Info("Finished validating %s", ingestState.IngestManifest.BagPath)
 
 			// Error will be a problem opening the Bolt DB, which means some
 			// other worker or goroutine already has it open.
@@ -248,12 +252,8 @@ func (fetcher *APTFetcher) cleanup() {
 			// Most likely bad md5 digest, but perhaps also a partial download.
 			fetcher.Context.MessageLog.Info("Deleting %s due to download error: %s",
 				tarFile, ingestState.IngestManifest.AllErrorsAsString())
-			DeleteBagFromStaging(ingestState, fetcher.Context, ingestState.IngestManifest.FetchResult)
-
-			// ------------------------------------------------------
-			// TODO: Delete valdb file as well, since this bag is bad
-			// ------------------------------------------------------
-
+			DeleteFileFromStaging(ingestState.IngestManifest.BagPath, fetcher.Context)
+			DeleteFileFromStaging(ingestState.IngestManifest.DBPath, fetcher.Context)
 		}
 		fetcher.RecordChannel <- ingestState
 	}
@@ -286,6 +286,9 @@ func (fetcher *APTFetcher) record() {
 			MarkWorkItemSucceeded(ingestState, fetcher.Context, constants.StageStore)
 			PushToQueue(ingestState, fetcher.Context, fetcher.Context.Config.StoreWorker.NsqTopic)
 		}
+
+		// Dump out a JSON record of this item to the local JSON log.
+		LogJson(ingestState, fetcher.Context.JsonLog)
 	}
 }
 
@@ -426,6 +429,7 @@ func (fetcher *APTFetcher) buildObject(downloader *network.S3Download, ingestSta
 		ingestState.IngestManifest.FetchResult.ErrorIsFatal = true
 	}
 
+	fetcher.Context.MessageLog.Info("Built object %s", obj.Identifier)
 	return obj
 }
 
@@ -440,5 +444,6 @@ func (fetcher *APTFetcher) initObjectInDB(ingestState *models.IngestState, obj *
 			return err
 		}
 	}
+	fetcher.Context.MessageLog.Info("Saved %s to valdb", obj.Identifier)
 	return nil
 }
