@@ -131,6 +131,12 @@ func (recorder *DPNIngestRecorder) saveDPNBagRecord(manifest *models.DPNIngestMa
 		return
 	}
 	if resp.Bag() == nil {
+		// PT #146014293: Include ourselves as replicating node when creating a bag
+		if len(manifest.DPNBag.ReplicatingNodes) == 0 {
+			manifest.DPNBag.ReplicatingNodes = append(
+				manifest.DPNBag.ReplicatingNodes,
+				recorder.Context.Config.DPN.LocalNode)
+		}
 		resp = recorder.LocalClient.DPNBagCreate(manifest.DPNBag)
 		if resp.Error != nil {
 			data, _ := resp.RawResponseData()
