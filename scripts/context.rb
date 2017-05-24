@@ -14,6 +14,7 @@ class Context
     @pharos_root = ENV['PHAROS_ROOT'] || abort("Set env var PHAROS_ROOT")
     @log_dir = "#{ENV['HOME']}/tmp/logs"
     @staging_dir = "#{ENV['HOME']}/tmp/dpn_staging"
+    @tar_dir = "#{ENV['HOME']}/tmp/tar"
     @restore_dir = "#{ENV['HOME']}/tmp/restore"
     @nsq_data_dir = "#{ENV['HOME']}/tmp/nsq"
     @go_bin_dir = "#{ENV['HOME']}/tmp/bin"
@@ -70,6 +71,7 @@ class Context
   def make_test_dirs
     FileUtils.mkdir_p @log_dir
     FileUtils.mkdir_p @staging_dir
+    FileUtils.mkdir_p @tar_dir
     FileUtils.mkdir_p @go_bin_dir
     FileUtils.mkdir_p @nsq_data_dir
   end
@@ -79,14 +81,17 @@ class Context
     FileUtils.remove(Dir.glob("#{@log_dir}/*"))
   end
 
+  # Some tests use tar dir and some use staging dir
+  # for temporary processing. Clear both before tests.
   def clear_staging
     puts "Deleting temporary staging"
-    FileUtils.remove_dir(staging_dir, force: true)
+    FileUtils.remove_dir(@staging_dir, force: true)
+    FileUtils.remove_dir(@tar_dir, force: true)
   end
 
   def clear_restore
     puts "Deleting temporary restore area"
-    FileUtils.remove_dir(restore_dir, force: true)
+    FileUtils.remove_dir(@restore_dir, force: true)
   end
 
   def clear_binaries
