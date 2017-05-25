@@ -192,6 +192,7 @@ func (fetcher *APTFetcher) validate() {
 			"Validating bag.")
 
 		// Validate the bag.
+		objIdentifier, _ := ingestState.IngestManifest.ObjectIdentifier()
 		validator, err := validation.NewValidator(
 			ingestState.IngestManifest.BagPath,
 			fetcher.BagValidationConfig,
@@ -211,6 +212,7 @@ func (fetcher *APTFetcher) validate() {
 			// in the same directory as the bag's tar file. The Bolt DB file
 			// has the extension .valdb instead of .tar.
 			fetcher.Context.MessageLog.Info("Validating %s", ingestState.IngestManifest.BagPath)
+			validator.ObjIdentifier = objIdentifier
 			summary, err := validator.Validate()
 			fetcher.Context.MessageLog.Info("Finished validating %s", ingestState.IngestManifest.BagPath)
 

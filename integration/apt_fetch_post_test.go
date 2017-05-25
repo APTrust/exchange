@@ -174,7 +174,10 @@ func fetcherTestSpecifics(t *testing.T, ingestManifest *models.IngestManifest) {
 	require.Nil(t, err)
 	assert.Equal(t, "test.edu/example.edu.tagsample_good", obj.Identifier)
 	assert.Equal(t, "example.edu.tagsample_good", obj.BagName)
-	assert.Equal(t, "test.edu", obj.Institution)
+
+	// The institution tag inside this bag actually says virginia.edu.
+	assert.Equal(t, "virginia.edu", obj.Institution)
+
 	assert.NotEqual(t, 0, obj.InstitutionId)
 	assert.Equal(t, "Tag Sample (Good)", obj.Title)
 	assert.Equal(t, "Bag of goodies", obj.Description)

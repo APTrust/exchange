@@ -447,7 +447,7 @@ func (validator *Validator) parseTags(reader io.Reader, relFilePath string) {
 		validator.summary.AddError("IntelObj '%s' is missing from validation db", validator.ObjIdentifier)
 		return
 	}
-	re := regexp.MustCompile(`^(\S*\:)?(\s.*)?$`)
+	re := regexp.MustCompile(`^(\S*\:)?(\s*.*)?$`)
 	scanner := bufio.NewScanner(reader)
 	var tag *models.Tag
 	for scanner.Scan() {
@@ -457,16 +457,17 @@ func (validator *Validator) parseTags(reader io.Reader, relFilePath string) {
 		}
 		if re.MatchString(line) {
 			data := re.FindStringSubmatch(line)
+			data[1] = strings.TrimSpace(data[1])
 			data[1] = strings.Replace(data[1], ":", "", 1)
 			if data[1] != "" {
 				if tag != nil && tag.Label != "" {
 					obj.IngestTags = append(obj.IngestTags, tag)
 				}
-				tag = models.NewTag(relFilePath, data[1], strings.Trim(data[2], " "))
+				tag = models.NewTag(relFilePath, data[1], strings.TrimSpace(data[2]))
 				validator.setIntelObjTagValue(obj, tag)
 				continue
 			}
-			value := strings.Trim(data[2], " ")
+			value := strings.TrimSpace(data[2])
 			tag.Value = strings.Join([]string{tag.Value, value}, " ")
 			validator.setIntelObjTagValue(obj, tag)
 		} else {
