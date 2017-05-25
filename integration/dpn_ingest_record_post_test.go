@@ -6,6 +6,7 @@ import (
 	"github.com/APTrust/exchange/constants"
 	"github.com/APTrust/exchange/context"
 	"github.com/APTrust/exchange/dpn/models"
+	"github.com/APTrust/exchange/dpn/network"
 	dpn_testutil "github.com/APTrust/exchange/dpn/util/testutil"
 	"github.com/APTrust/exchange/util"
 	apt_testutil "github.com/APTrust/exchange/util/testutil"
@@ -164,4 +165,45 @@ func testIngestRecordManifest(t *testing.T, _context *context.Context, dpnIngest
 		_context.Config.DPN.DPNPreservationBucket,
 		dpnIngestManifest.DPNBag.UUID)
 	assert.Equal(t, expectedURL, dpnIngestManifest.StorageURL, detail)
+}
+
+func TestIngestRecordNodeAndDigest(t *testing.T) {
+	if !apt_testutil.ShouldRunIntegrationTests() {
+		t.Skip("Skipping integration test. Set ENV var RUN_EXCHANGE_INTEGRATION=true if you want to run them.")
+	}
+
+	// Calling this just to get the _context.
+	_context, _, err := dpn_testutil.GetDPNWorkItems()
+	require.Nil(t, err)
+
+	dpnClient, err := network.NewDPNRestClient(
+		_context.Config.DPN.RestClient.LocalServiceURL,
+		_context.Config.DPN.RestClient.LocalAPIRoot,
+		_context.Config.DPN.RestClient.LocalAuthToken,
+		_context.Config.DPN.LocalNode,
+		_context.Config.DPN)
+	require.Nil(t, err)
+	require.NotNil(t, dpnClient)
+
+	for _, s3Key := range apt_testutil.INTEGRATION_GOOD_BAGS[0:7] {
+		tar := strings.Replace(s3Key, "aptrust.receiving.test.", "", 1)
+		objIdentifier := strings.Replace(tar, ".tar", "", 1)
+		resp := _context.PharosClient.IntellectualObjectGet(objIdentifier, false, false)
+		require.Nil(t, resp.Error)
+		obj := resp.IntellectualObject()
+		require.NotNil(t, obj)
+		// DPNUUID is null in fixture data. It should be set after DPN ingest.
+		require.True(t, util.LooksLikeUUID(obj.DPNUUID))
+
+		bagResp := dpnClient.DPNBagGet(obj.DPNUUID)
+		require.Nil(t, bagResp.Error)
+		bag := bagResp.Bag()
+		require.NotNil(t, bag)
+		require.NotEmpty(t, bag.ReplicatingNodes)
+		assert.Equal(t, "aptrust", bag.ReplicatingNodes[0])
+
+		digestResp := dpnClient.DigestGet(obj.DPNUUID, "sha256")
+		require.Nil(t, digestResp.Error)
+		require.NotNil(t, digestResp.Digest())
+	}
 }

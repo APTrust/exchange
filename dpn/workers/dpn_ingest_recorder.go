@@ -131,6 +131,12 @@ func (recorder *DPNIngestRecorder) saveDPNBagRecord(manifest *models.DPNIngestMa
 		return
 	}
 	if resp.Bag() == nil {
+		// PT #146011919: Include ourselves as replicating node when creating a bag
+		if len(manifest.DPNBag.ReplicatingNodes) == 0 {
+			manifest.DPNBag.ReplicatingNodes = append(
+				manifest.DPNBag.ReplicatingNodes,
+				recorder.Context.Config.DPN.LocalNode)
+		}
 		resp = recorder.LocalClient.DPNBagCreate(manifest.DPNBag)
 		if resp.Error != nil {
 			data, _ := resp.RawResponseData()
@@ -143,6 +149,8 @@ func (recorder *DPNIngestRecorder) saveDPNBagRecord(manifest *models.DPNIngestMa
 			manifest.RecordSummary.AddError("After creating bag %s in local DPN Node, "+
 				"server returned no ReplicationTransfer object. Server response: %s",
 				manifest.DPNBag.UUID, string(data))
+		} else {
+			recorder.Context.MessageLog.Info("Saved bag %s in local registry", manifest.DPNBag.UUID)
 		}
 		// For other objects, we may set <object> = resp.<object>()
 		// However, the DPN server does not return the bag's message digests,
@@ -150,6 +158,26 @@ func (recorder *DPNIngestRecorder) saveDPNBagRecord(manifest *models.DPNIngestMa
 		// bag we have in manifest.DPNBag. DPN server doesn't change anything
 		// else on the DPNBag object when we save it, so our copy will be
 		// in line with what's on the server.
+
+		// PT #146014293: Send initial tag manifest fixity when creating bag.
+		// Message digest is created in dpn_packager.go
+		if manifest.DPNBag.MessageDigests == nil || len(manifest.DPNBag.MessageDigests) == 0 {
+			manifest.RecordSummary.AddError("After creating bag %s in local DPN Node, "+
+				"cannot create MessageDigest, because it's missing from our local copy of the bag",
+				manifest.DPNBag.UUID)
+		} else {
+			resp = recorder.LocalClient.DigestCreate(manifest.DPNBag.MessageDigests[0])
+			if resp.Error != nil {
+				data, _ := resp.RawResponseData()
+				manifest.RecordSummary.AddError("Error creating MessageDigest for bag %s "+
+					"in local DPN Node: %v. Server response: %s",
+					manifest.DPNBag.UUID, resp.Error, string(data))
+			} else {
+				recorder.Context.MessageLog.Info("Saved digest %s for bag %s in local registry",
+					manifest.DPNBag.MessageDigests[0], manifest.DPNBag.UUID)
+			}
+		}
+
 	} else {
 		recorder.Context.MessageLog.Info("DPN Bag %s is already in the registry",
 			manifest.DPNBag.UUID)
