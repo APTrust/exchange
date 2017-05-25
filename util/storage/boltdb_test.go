@@ -1,6 +1,7 @@
 package storage_test
 
 import (
+	"github.com/APTrust/exchange/util"
 	"github.com/APTrust/exchange/util/storage"
 	"github.com/APTrust/exchange/util/testutil"
 	"github.com/stretchr/testify/assert"
@@ -48,4 +49,10 @@ func TestBoltDB(t *testing.T) {
 	nilFile, err := bolt.GetGenericFile("Nil File")
 	require.Nil(t, err)
 	require.Nil(t, nilFile)
+
+	// Get a list of keys
+	keys := bolt.Keys()
+	require.Equal(t, 2, len(keys))
+	assert.True(t, util.StringListContains(keys, "Test Object"))
+	assert.True(t, util.StringListContains(keys, gf.Identifier))
 }

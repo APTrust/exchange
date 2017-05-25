@@ -138,3 +138,17 @@ func (boltDB *BoltDB) ForEach(fn func(k, v []byte) error) error {
 		return nil
 	})
 }
+
+// Keys returns a list of all keys in the database.
+func (boltDB *BoltDB) Keys() []string {
+	keys := make([]string, 0)
+	boltDB.db.View(func(tx *bolt.Tx) error {
+		b := tx.Bucket([]byte(DEFAULT_BUCKET))
+		c := b.Cursor()
+		for k, _ := c.First(); k != nil; k, _ = c.Next() {
+			keys = append(keys, string(k))
+		}
+		return nil
+	})
+	return keys
+}
