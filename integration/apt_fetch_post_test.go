@@ -10,7 +10,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"path/filepath"
 	"testing"
-	// "time"
+	"time"
 )
 
 /*
@@ -203,31 +203,36 @@ func fetcherTestSpecifics(t *testing.T, ingestManifest *models.IngestManifest) {
 	// Iterate through keys...
 	// -----------------------------------------------------------------------
 
-	// assert.Equal(t, 16, len(obj.GenericFiles))
+	// We should have 17 keys. One is for the IntellectualObject,
+	// and the other 16 are for GenericFiles.
+	gfIdentifiers := db.Keys()
+	assert.Equal(t, 17, len(gfIdentifiers))
 
-	// gf := obj.GenericFiles[0]
-	// assert.Equal(t, 0, gf.Id)
-	// assert.Equal(t, "test.edu/example.edu.tagsample_good/aptrust-info.txt", gf.Identifier)
-	// assert.Equal(t, 0, gf.IntellectualObjectId)
-	// assert.Equal(t, "test.edu/example.edu.tagsample_good", gf.IntellectualObjectIdentifier)
-	// assert.Equal(t, "text/plain", gf.FileFormat)
-	// assert.EqualValues(t, 45, gf.Size)
-	// assert.EqualValues(t, "0001-01-01T00:00:00Z", gf.FileCreated.Format(time.RFC3339))
-	// assert.Equal(t, "2016-03-21T11:01:51-04:00", gf.FileModified.Format(time.RFC3339))
-	// assert.Empty(t, gf.Checksums)
-	// assert.Empty(t, gf.PremisEvents)
-	// assert.Equal(t, "tag_file", gf.IngestFileType)
-	// assert.Equal(t, "bd8be664c790a9175e9d2fe90b40d502", gf.IngestMd5)
-	// assert.False(t, gf.IngestMd5GeneratedAt.IsZero())
-	// assert.False(t, gf.IngestMd5VerifiedAt.IsZero())
-	// assert.Equal(t, "49dd23cdaf644e60629f01d6ebea770cd1c6229ff89f14a6c030a50c48b6ba27", gf.IngestSha256)
-	// assert.False(t, gf.IngestSha256GeneratedAt.IsZero())
-	// assert.False(t, gf.IngestSha256VerifiedAt.IsZero())
-	// assert.True(t, util.LooksLikeUUID(gf.IngestUUID))
-	// assert.False(t, gf.IngestUUIDGeneratedAt.IsZero())
-	// assert.True(t, gf.IngestStoredAt.IsZero())
-	// assert.True(t, gf.IngestReplicatedAt.IsZero())
-	// assert.True(t, gf.IngestNeedsSave)
-	// assert.EqualValues(t, 502, gf.IngestFileUid)
-	// assert.EqualValues(t, 20, gf.IngestFileGid)
+	gf, err := db.GetGenericFile("test.edu/example.edu.tagsample_good/aptrust-info.txt")
+	require.Nil(t, err)
+	require.NotNil(t, gf)
+	assert.Equal(t, 0, gf.Id)
+	assert.Equal(t, "test.edu/example.edu.tagsample_good/aptrust-info.txt", gf.Identifier)
+	assert.Equal(t, 0, gf.IntellectualObjectId)
+	assert.Equal(t, "test.edu/example.edu.tagsample_good", gf.IntellectualObjectIdentifier)
+	assert.Equal(t, "text/plain", gf.FileFormat)
+	assert.EqualValues(t, 45, gf.Size)
+	assert.EqualValues(t, "0001-01-01T00:00:00Z", gf.FileCreated.Format(time.RFC3339))
+	assert.Equal(t, "2016-03-21T11:01:51-04:00", gf.FileModified.Format(time.RFC3339))
+	assert.Empty(t, gf.Checksums)
+	assert.Empty(t, gf.PremisEvents)
+	assert.Equal(t, "tag_file", gf.IngestFileType)
+	assert.Equal(t, "bd8be664c790a9175e9d2fe90b40d502", gf.IngestMd5)
+	assert.False(t, gf.IngestMd5GeneratedAt.IsZero())
+	assert.False(t, gf.IngestMd5VerifiedAt.IsZero())
+	assert.Equal(t, "49dd23cdaf644e60629f01d6ebea770cd1c6229ff89f14a6c030a50c48b6ba27", gf.IngestSha256)
+	assert.False(t, gf.IngestSha256GeneratedAt.IsZero())
+	assert.False(t, gf.IngestSha256VerifiedAt.IsZero())
+	assert.True(t, util.LooksLikeUUID(gf.IngestUUID))
+	assert.False(t, gf.IngestUUIDGeneratedAt.IsZero())
+	assert.True(t, gf.IngestStoredAt.IsZero())
+	assert.True(t, gf.IngestReplicatedAt.IsZero())
+	assert.True(t, gf.IngestNeedsSave)
+	assert.EqualValues(t, 502, gf.IngestFileUid)
+	assert.EqualValues(t, 20, gf.IngestFileGid)
 }

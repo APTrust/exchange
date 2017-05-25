@@ -2,10 +2,8 @@ package validation
 
 import (
 	"bufio"
-	"bytes"
 	"crypto/md5"
 	"crypto/sha256"
-	"encoding/gob"
 	"fmt"
 	"github.com/APTrust/exchange/constants"
 	"github.com/APTrust/exchange/models"
@@ -695,28 +693,14 @@ func (validator *Validator) checkAllowedTagValue(tagName string, tags []*models.
 // including their checksums, presence in payload manifests, and whether they
 // follow specified naming restrictions.
 func (validator *Validator) verifyGenericFiles() {
-
-	// We have to pass a verification function into the BoltDB key iterator.
-	// The function signature is "fn func(k, v []byte) error".
 	detail := validator.fileValidationDetail()
-	verificationFuction := func(key, value []byte) error {
-		if key == nil || string(key) == validator.ObjIdentifier || value == nil || len(value) == 0 {
-			// Ignore the key that points to the IntellectualObject.
-			// A nil value indicates a sub-bucket.
-			// An empty value cannot be deserialized.
-			return nil
+	keys := validator.db.Keys()
+	for _, key := range keys {
+		if key == validator.ObjIdentifier {
+			continue
 		}
-		// The value should be a GenericFile, since it's not the intellectual object.
-		// Turn the bytes back into an object, and then validate the properties of
-		// the object.
-		gf := &models.GenericFile{}
-		buf := bytes.NewBuffer(value)
-		decoder := gob.NewDecoder(buf)
-		err := decoder.Decode(gf)
-		if err != nil {
-			validator.summary.AddError("Could not get file metadata from db: %v", err)
-			return err
-		}
+		gf, err := validator.db.GetGenericFile(key)
+
 		// Md5 digests
 		if gf.IngestManifestMd5 != "" && gf.IngestManifestMd5 != gf.IngestMd5 {
 			validator.summary.AddError(
@@ -750,12 +734,12 @@ func (validator *Validator) verifyGenericFiles() {
 				}
 			}
 		}
-		return nil
-	} // end of verification function
-
-	// Not run the verification fuction on each item in the db.
-	validator.db.ForEach(verificationFuction)
-
+		err = validator.db.Save(gf.Identifier, gf)
+		if err != nil {
+			validator.summary.AddError("Cannot save GenericFile %s to db after comparing checksums",
+				gf.Identifier)
+		}
+	}
 }
 
 // fileValidationDetail returns a specific description of the file name
