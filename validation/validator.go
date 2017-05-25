@@ -236,6 +236,8 @@ func (validator *Validator) addFiles() {
 		}
 	}
 	validator.intelObj.IngestTopLevelDirNames = iterator.GetTopLevelDirNames()
+	validator.intelObj.IngestManifests = validator.manifests
+	validator.intelObj.IngestTagManifests = validator.tagManifests
 }
 
 // addFile adds a record for a single file to our validation database.

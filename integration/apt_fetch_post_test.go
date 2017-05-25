@@ -66,7 +66,6 @@ func fetcherTestGoodBagResult(t *testing.T, bagName string, ingestManifest *mode
 		"ValidateResult.Retry should be true for %s", bagName)
 
 	// We should have a valid IntellectualObject and files.
-	//obj := ingestManifest.Object
 	objIdentifier, err := ingestManifest.ObjectIdentifier()
 	require.Nil(t, err)
 	db, err := storage.NewBoltDB(ingestManifest.DBPath)
@@ -166,7 +165,6 @@ func fetcherTestCommon(t *testing.T, bagName string, ingestManifest *models.Inge
 }
 
 func fetcherTestSpecifics(t *testing.T, ingestManifest *models.IngestManifest) {
-	//obj := ingestManifest.Object
 	db, err := storage.NewBoltDB(ingestManifest.DBPath)
 	require.Nil(t, err)
 	defer db.Close()
@@ -186,24 +184,24 @@ func fetcherTestSpecifics(t *testing.T, ingestManifest *models.IngestManifest) {
 	assert.Equal(t, "aptrust.receiving.test.test.edu", obj.IngestS3Bucket)
 	assert.Equal(t, "example.edu.tagsample_good.tar", obj.IngestS3Key)
 
+	assert.Equal(t, "manifest-md5.txt", obj.IngestManifests[0])
+	assert.Equal(t, "manifest-sha256.txt", obj.IngestManifests[1])
+	assert.Equal(t, "tagmanifest-md5.txt", obj.IngestTagManifests[0])
+	assert.Equal(t, "tagmanifest-sha256.txt", obj.IngestTagManifests[1])
+	assert.Empty(t, obj.IngestFilesIgnored)
+	assert.Equal(t, "example.edu.tagsample_good", obj.IngestTopLevelDirNames[0])
+	assert.Empty(t, obj.IngestErrorMessage)
+
+	assert.Equal(t, 10, len(obj.IngestTags))
+	assert.Equal(t, "bag-info.txt", obj.IngestTags[5].SourceFile)
+	assert.Equal(t, "Bag-Group-Identifier", obj.IngestTags[5].Label)
+	assert.Equal(t, "Charley Horse", obj.IngestTags[5].Value)
+
+	assert.Empty(t, obj.PremisEvents)
+
 	// -----------------------------------------------------------------------
 	// Iterate through keys...
 	// -----------------------------------------------------------------------
-
-	// assert.Equal(t, "manifest-md5.txt", obj.IngestManifests[0])
-	// assert.Equal(t, "manifest-sha256.txt", obj.IngestManifests[1])
-	// assert.Equal(t, "tagmanifest-md5.txt", obj.IngestTagManifests[0])
-	// assert.Equal(t, "tagmanifest-sha256.txt", obj.IngestTagManifests[1])
-	// assert.Empty(t, obj.IngestFilesIgnored)
-	// assert.Equal(t, "example.edu.tagsample_good", obj.IngestTopLevelDirNames[0])
-	// assert.Empty(t, obj.IngestErrorMessage)
-
-	// assert.Equal(t, 10, len(obj.IngestTags))
-	// assert.Equal(t, "bag-info.txt", obj.IngestTags[5].SourceFile)
-	// assert.Equal(t, "Bag-Group-Identifier", obj.IngestTags[5].Label)
-	// assert.Equal(t, "Charley Horse", obj.IngestTags[5].Value)
-
-	// assert.Empty(t, obj.PremisEvents)
 
 	// assert.Equal(t, 16, len(obj.GenericFiles))
 
