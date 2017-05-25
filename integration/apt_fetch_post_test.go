@@ -44,7 +44,6 @@ func TestFetchResults(t *testing.T) {
 		if bagName == "aptrust.receiving.test.test.edu/example.edu.tagsample_good.tar" {
 			fetcherTestSpecifics(t, ingestManifest)
 		}
-		// TODO: Validate the IntelObj record in valdb.
 	}
 	for _, bagName := range testutil.INTEGRATION_BAD_BAGS {
 		ingestManifest, err := testutil.FindIngestManifestInLog(pathToJsonLog, bagName)
@@ -91,24 +90,32 @@ func fetcherTestGoodBagResult(t *testing.T, bagName string, ingestManifest *mode
 	}
 
 	// Check the GenericFiles
-	// assert.True(t, len(obj.GenericFiles) > 0, "obj.GenericFiles should not be empty for %s", bagName)
-	// for i, gf := range obj.GenericFiles {
-	// 	assert.NotEmpty(t, gf.Identifier, "Bag %s file %s Identifier is missing", bagName, i)
-	// 	assert.NotEmpty(t, gf.IntellectualObjectIdentifier,
-	// 		"Bag %s file %s IntellectualObjectIdentifier is missing", bagName, i)
-	// 	assert.NotEmpty(t, gf.FileFormat, "Bag %s file %s FileFormat is missing", bagName, i)
-	// 	assert.True(t, gf.Size > 0, "Bag %s file %s Size is missing", bagName, i)
-	// 	assert.NotEmpty(t, gf.IngestFileType, "Bag %s file %s IngestFileType is missing", bagName, i)
-	// 	assert.NotEmpty(t, gf.IngestMd5, "Bag %s file %s IngestMd5 is missing", bagName, i)
-	// 	assert.NotEmpty(t, gf.IngestMd5GeneratedAt, "Bag %s file %s IngestMd5GeneratedAt is missing", bagName, i)
-	// 	assert.NotEmpty(t, gf.IngestMd5VerifiedAt, "Bag %s file %s IngestMd5VerifiedAt is missing", bagName, i)
-	// 	assert.NotEmpty(t, gf.IngestSha256, "Bag %s file %s IngestSha256 is missing", bagName, i)
-	// 	assert.NotEmpty(t, gf.IngestSha256GeneratedAt, "Bag %s file %s IngestSha256GeneratedAt is missing", bagName, i)
-	// 	assert.NotEmpty(t, gf.IngestSha256VerifiedAt, "Bag %s file %s IngestSha256VerifiedAt is missing", bagName)
-	// 	assert.NotEmpty(t, gf.IngestUUID, "Bag %s file %s UUID is missing", bagName, i)
-	// 	assert.NotEmpty(t, gf.IngestUUIDGeneratedAt, "Bag %s file %s UUIDGeneratedAt is missing", bagName, i)
-	// 	assert.True(t, gf.IngestNeedsSave, "Bag %s file %s IngestNeedsSave should be true", bagName, i)
-	// }
+	// One key in the db is for the Intellectual Object,
+	// all the rest are for GenericFiles.
+	keys := db.Keys()
+	assert.True(t, len(keys) > 1, "obj.GenericFiles should not be empty for %s", bagName)
+	for i, gfIdentifier := range keys {
+		if gfIdentifier == objIdentifier {
+			continue
+		}
+		gf, err := db.GetGenericFile(gfIdentifier)
+		require.Nil(t, err, gfIdentifier)
+		assert.NotEmpty(t, gf.Identifier, "Bag %s file %s Identifier is missing", bagName, i)
+		assert.NotEmpty(t, gf.IntellectualObjectIdentifier,
+			"Bag %s file %s IntellectualObjectIdentifier is missing", bagName, i)
+		assert.NotEmpty(t, gf.FileFormat, "Bag %s file %s FileFormat is missing", bagName, i)
+		assert.True(t, gf.Size > 0, "Bag %s file %s Size is missing", bagName, i)
+		assert.NotEmpty(t, gf.IngestFileType, "Bag %s file %s IngestFileType is missing", bagName, i)
+		assert.NotEmpty(t, gf.IngestMd5, "Bag %s file %s IngestMd5 is missing", bagName, i)
+		assert.NotEmpty(t, gf.IngestMd5GeneratedAt, "Bag %s file %s IngestMd5GeneratedAt is missing", bagName, i)
+		assert.NotEmpty(t, gf.IngestMd5VerifiedAt, "Bag %s file %s IngestMd5VerifiedAt is missing", bagName, i)
+		assert.NotEmpty(t, gf.IngestSha256, "Bag %s file %s IngestSha256 is missing", bagName, i)
+		assert.NotEmpty(t, gf.IngestSha256GeneratedAt, "Bag %s file %s IngestSha256GeneratedAt is missing", bagName, i)
+		assert.NotEmpty(t, gf.IngestSha256VerifiedAt, "Bag %s file %s IngestSha256VerifiedAt is missing", bagName)
+		assert.NotEmpty(t, gf.IngestUUID, "Bag %s file %s UUID is missing", bagName, i)
+		assert.NotEmpty(t, gf.IngestUUIDGeneratedAt, "Bag %s file %s UUIDGeneratedAt is missing", bagName, i)
+		assert.True(t, gf.IngestNeedsSave, "Bag %s file %s IngestNeedsSave should be true", bagName, i)
+	}
 }
 
 func fetcherTestBadBagResult(t *testing.T, bagName string, ingestManifest *models.IngestManifest) {
