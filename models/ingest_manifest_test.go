@@ -182,3 +182,28 @@ func TestIngestManifest_BagHasBeenValidated(t *testing.T) {
 	manifest.ValidateResult.ClearErrors()
 	assert.True(t, manifest.BagHasBeenValidated())
 }
+
+func TestIngestManifest_ObjectIdentifier(t *testing.T) {
+	manifest := models.NewIngestManifest()
+	manifest.S3Bucket = "aptrust.receiving.test.test.edu"
+	manifest.S3Key = "test_bag.tar"
+	objIdentifier, err := manifest.ObjectIdentifier()
+	assert.Nil(t, err)
+	assert.Equal(t, "test.edu/test_bag", objIdentifier)
+
+	manifest.S3Bucket = "aptrust.receiving.virginia.edu"
+	manifest.S3Key = "test_bag.b002.of014.tar"
+	objIdentifier, err = manifest.ObjectIdentifier()
+	assert.Nil(t, err)
+	assert.Equal(t, "virginia.edu/test_bag", objIdentifier)
+
+	manifest.S3Bucket = "xxx"
+	manifest.S3Key = "test_bag.b002.of014.tar"
+	objIdentifier, err = manifest.ObjectIdentifier()
+	assert.NotNil(t, err)
+
+	manifest.S3Bucket = "aptrust.receiving.virginia.edu"
+	manifest.S3Key = ""
+	objIdentifier, err = manifest.ObjectIdentifier()
+	assert.NotNil(t, err)
+}

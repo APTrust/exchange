@@ -1,6 +1,8 @@
 package models
 
 import (
+	"fmt"
+	"github.com/APTrust/exchange/util"
 	"github.com/APTrust/exchange/util/fileutil"
 	"os"
 )
@@ -108,4 +110,20 @@ func (manifest *IngestManifest) BagHasBeenValidated() bool {
 	return (manifest.ValidateResult.Attempted == true &&
 		manifest.ValidateResult.Finished() == true &&
 		manifest.ValidateResult.HasErrors() == false)
+}
+
+// ObjectIdentifier returns the IntellectualObject.Identifier for
+// the object being ingested. If this is a new ingest, the identifier
+// will not yet exist in Pharos. If it's a re-ingest, the object
+// will exist.
+func (manifest *IngestManifest) ObjectIdentifier() (string, error) {
+	instIdentifier := util.OwnerOf(manifest.S3Bucket)
+	if instIdentifier == "" || instIdentifier == manifest.S3Bucket {
+		return "", fmt.Errorf("Can't determine insitution from invalid bucket '%s'", manifest.S3Bucket)
+	}
+	bagName := util.CleanBagName(manifest.S3Key)
+	if bagName == "" || bagName == manifest.S3Key {
+		return "", fmt.Errorf("Can't determine bag name from S3 key '%s'", manifest.S3Key)
+	}
+	return fmt.Sprintf("%s/%s", instIdentifier, bagName), nil
 }
