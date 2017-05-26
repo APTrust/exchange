@@ -21,8 +21,9 @@ const DEFAULT_BUCKET = "default"
 // 8-9 kilobytes of data per file. Multiply that by 100k or even
 // 1 million files in a bag, and that's too much to keep in memory.
 type BoltDB struct {
-	db       *bolt.DB
-	filePath string
+	db            *bolt.DB
+	filePath      string
+	objIdentifier string
 }
 
 // NewBoltDB opens a bolt database, creating the DB file if it doesn't
@@ -64,6 +65,12 @@ func (boltDB *BoltDB) Close() {
 	boltDB.db.Close()
 }
 
+// ObjectIdentifier returns the IntellectualObject.Identifier
+// for the object stored in this DB file.
+func (boltDB *BoltDB) ObjectIdentifier() string {
+	return boltDB.objIdentifier
+}
+
 // Save saves a value to the bolt database.
 func (boltDB *BoltDB) Save(key string, value interface{}) error {
 	var byteSlice []byte
@@ -74,6 +81,10 @@ func (boltDB *BoltDB) Save(key string, value interface{}) error {
 		err = boltDB.db.Update(func(tx *bolt.Tx) error {
 			bucket := tx.Bucket([]byte(DEFAULT_BUCKET))
 			err := bucket.Put([]byte(key), buf.Bytes())
+			_, isIntelObj := value.(*models.IntellectualObject)
+			if err == nil && isIntelObj {
+				boltDB.objIdentifier = key
+			}
 			return err
 		})
 	}
@@ -147,6 +158,23 @@ func (boltDB *BoltDB) Keys() []string {
 		c := b.Cursor()
 		for k, _ := c.First(); k != nil; k, _ = c.Next() {
 			keys = append(keys, string(k))
+		}
+		return nil
+	})
+	return keys
+}
+
+// FileIdentifiers returns a list of all GenericFile
+// identifiers in the database.
+func (boltDB *BoltDB) FileIdentifiers() []string {
+	keys := make([]string, 0)
+	boltDB.db.View(func(tx *bolt.Tx) error {
+		b := tx.Bucket([]byte(DEFAULT_BUCKET))
+		c := b.Cursor()
+		for k, _ := c.First(); k != nil; k, _ = c.Next() {
+			if boltDB.objIdentifier != "" && string(k) != boltDB.objIdentifier {
+				keys = append(keys, string(k))
+			}
 		}
 		return nil
 	})
