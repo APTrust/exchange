@@ -3,7 +3,7 @@ package integration_test
 import (
 	"github.com/APTrust/exchange/models"
 	"github.com/APTrust/exchange/util"
-	"github.com/APTrust/exchange/util/fileutil"
+	//	"github.com/APTrust/exchange/util/fileutil"
 	"github.com/APTrust/exchange/util/storage"
 	"github.com/APTrust/exchange/util/testutil"
 	"github.com/stretchr/testify/assert"
@@ -94,27 +94,30 @@ func fetcherTestGoodBagResult(t *testing.T, bagName string, ingestManifest *mode
 	// all the rest are for GenericFiles.
 	keys := db.Keys()
 	assert.True(t, len(keys) > 1, "obj.GenericFiles should not be empty for %s", bagName)
-	for i, gfIdentifier := range keys {
+	for _, gfIdentifier := range keys {
 		if gfIdentifier == objIdentifier {
 			continue
 		}
 		gf, err := db.GetGenericFile(gfIdentifier)
 		require.Nil(t, err, gfIdentifier)
-		assert.NotEmpty(t, gf.Identifier, "Bag %s file %s Identifier is missing", bagName, i)
+		assert.NotEmpty(t, gf.Identifier, "Bag %s file %s Identifier is missing", bagName, gfIdentifier)
 		assert.NotEmpty(t, gf.IntellectualObjectIdentifier,
-			"Bag %s file %s IntellectualObjectIdentifier is missing", bagName, i)
-		assert.NotEmpty(t, gf.FileFormat, "Bag %s file %s FileFormat is missing", bagName, i)
-		assert.True(t, gf.Size > 0, "Bag %s file %s Size is missing", bagName, i)
-		assert.NotEmpty(t, gf.IngestFileType, "Bag %s file %s IngestFileType is missing", bagName, i)
-		assert.NotEmpty(t, gf.IngestMd5, "Bag %s file %s IngestMd5 is missing", bagName, i)
-		assert.NotEmpty(t, gf.IngestMd5GeneratedAt, "Bag %s file %s IngestMd5GeneratedAt is missing", bagName, i)
-		assert.NotEmpty(t, gf.IngestMd5VerifiedAt, "Bag %s file %s IngestMd5VerifiedAt is missing", bagName, i)
-		assert.NotEmpty(t, gf.IngestSha256, "Bag %s file %s IngestSha256 is missing", bagName, i)
-		assert.NotEmpty(t, gf.IngestSha256GeneratedAt, "Bag %s file %s IngestSha256GeneratedAt is missing", bagName, i)
+			"Bag %s file %s IntellectualObjectIdentifier is missing", bagName, gfIdentifier)
+		assert.NotEmpty(t, gf.FileFormat, "Bag %s file %s FileFormat is missing", bagName, gfIdentifier)
+		assert.True(t, gf.Size > 0, "Bag %s file %s Size is missing", bagName, gfIdentifier)
+		assert.NotEmpty(t, gf.IngestFileType, "Bag %s file %s IngestFileType is missing", bagName, gfIdentifier)
+		assert.NotEmpty(t, gf.IngestMd5, "Bag %s file %s IngestMd5 is missing", bagName, gfIdentifier)
+		assert.NotEmpty(t, gf.IngestMd5GeneratedAt, "Bag %s file %s IngestMd5GeneratedAt is missing", bagName, gfIdentifier)
+		assert.NotEmpty(t, gf.IngestMd5VerifiedAt, "Bag %s file %s IngestMd5VerifiedAt is missing", bagName, gfIdentifier)
+		assert.NotEmpty(t, gf.IngestSha256, "Bag %s file %s IngestSha256 is missing", bagName, gfIdentifier)
+		assert.NotEmpty(t, gf.IngestSha256GeneratedAt, "Bag %s file %s IngestSha256GeneratedAt is missing", bagName, gfIdentifier)
 		assert.NotEmpty(t, gf.IngestSha256VerifiedAt, "Bag %s file %s IngestSha256VerifiedAt is missing", bagName)
-		assert.NotEmpty(t, gf.IngestUUID, "Bag %s file %s UUID is missing", bagName, i)
-		assert.NotEmpty(t, gf.IngestUUIDGeneratedAt, "Bag %s file %s UUIDGeneratedAt is missing", bagName, i)
-		assert.True(t, gf.IngestNeedsSave, "Bag %s file %s IngestNeedsSave should be true", bagName, i)
+		assert.NotEmpty(t, gf.IngestUUID, "Bag %s file %s UUID is missing", bagName, gfIdentifier)
+		assert.NotEmpty(t, gf.IngestUUIDGeneratedAt, "Bag %s file %s UUIDGeneratedAt is missing", bagName, gfIdentifier)
+		// IngestNeedsSave will be true after apt_fetch, but not after apt_store,
+		// because by then, the item has been saved. This test runs after apt_store
+		// has completed.
+		//assert.True(t, gf.IngestNeedsSave, "Bag %s file %s IngestNeedsSave should be true", bagName, gfIdentifier)
 	}
 }
 
@@ -160,15 +163,17 @@ func fetcherTestCommon(t *testing.T, bagName string, ingestManifest *models.Inge
 	assert.NotEmpty(t, ingestManifest.DBPath,
 		"DBPath should not be empty for %s", bagName)
 
+	// *** Post tests run after apt_record, which deletes these files.
+	// -----------------------------------------------------------------------
 	// For good bags, both the tar file and the .valdb file should
 	// remain on disk after fetch. For bad bags, both should be gone.
-	if util.StringListContains(testutil.INTEGRATION_GOOD_BAGS, bagName) {
-		assert.True(t, fileutil.FileExists(ingestManifest.BagPath), bagName)
-		assert.True(t, fileutil.FileExists(ingestManifest.DBPath), bagName)
-	} else {
-		assert.False(t, fileutil.FileExists(ingestManifest.BagPath), bagName)
-		assert.False(t, fileutil.FileExists(ingestManifest.DBPath), bagName)
-	}
+	// if util.StringListContains(testutil.INTEGRATION_GOOD_BAGS, bagName) {
+	// 	assert.True(t, fileutil.FileExists(ingestManifest.BagPath), bagName)
+	// 	assert.True(t, fileutil.FileExists(ingestManifest.DBPath), bagName)
+	// } else {
+	// 	assert.False(t, fileutil.FileExists(ingestManifest.BagPath), bagName)
+	// 	assert.False(t, fileutil.FileExists(ingestManifest.DBPath), bagName)
+	// }
 }
 
 func fetcherTestSpecifics(t *testing.T, ingestManifest *models.IngestManifest) {
