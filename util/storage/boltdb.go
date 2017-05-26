@@ -180,3 +180,32 @@ func (boltDB *BoltDB) FileIdentifiers() []string {
 	})
 	return keys
 }
+
+// FileIdentifierBatch returns a list of GenericFile
+// identifiers from offset (zero-based) up to limit,
+// or end of list.
+func (boltDB *BoltDB) FileIdentifierBatch(offset, limit int) []string {
+	if offset < 0 {
+		offset = 0
+	}
+	if limit < 0 {
+		limit = 0
+	}
+	index := 0
+	end := offset + limit
+	keys := make([]string, 0)
+	boltDB.db.View(func(tx *bolt.Tx) error {
+		b := tx.Bucket([]byte(DEFAULT_BUCKET))
+		c := b.Cursor()
+		for k, _ := c.First(); k != nil; k, _ = c.Next() {
+			if boltDB.objIdentifier != "" && string(k) != boltDB.objIdentifier {
+				if index >= offset && index < end {
+					keys = append(keys, string(k))
+				}
+				index++
+			}
+		}
+		return nil
+	})
+	return keys
+}
