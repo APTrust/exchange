@@ -107,8 +107,7 @@ func (storer *APTStorer) store() {
 		start := 0
 		limit := storer.Context.Config.StoreWorker.NetworkConnections
 		db, err := storage.NewBoltDB(ingestState.IngestManifest.DBPath)
-		objIdentifier := db.ObjectIdentifier()
-
+		objIdentifier, err := ingestState.IngestManifest.ObjectIdentifier()
 		if err != nil {
 			ingestState.IngestManifest.StoreResult.AddError(err.Error())
 			ingestState.IngestManifest.StoreResult.Finish()
@@ -117,7 +116,7 @@ func (storer *APTStorer) store() {
 
 		for {
 			// Get a batch of files to save...
-			storageSummaries, hasMoreFiles, err := storer.getStorageSummaryBatch(db, start, limit)
+			storageSummaries, hasMoreFiles, err := storer.getStorageSummaryBatch(db, objIdentifier, start, limit)
 			if err != nil {
 				ingestState.IngestManifest.StoreResult.AddError(err.Error())
 				ingestState.IngestManifest.StoreResult.ErrorIsFatal = true
@@ -178,9 +177,9 @@ func (storer *APTStorer) cleanup() {
 			ingestState.IngestManifest.Object.AllFilesSaved() {
 			storer.Context.MessageLog.Info("Deleting tar file %s (%s/%s) "+
 				"because all files were stored successfully",
-				ingestState.IngestManifest.Object.IngestTarFilePath,
-				ingestState.IngestManifest.Object.IngestS3Bucket,
-				ingestState.IngestManifest.Object.IngestS3Key)
+				ingestState.IngestManifest.BagPath,
+				ingestState.IngestManifest.S3Bucket,
+				ingestState.IngestManifest.S3Key)
 			// Delete the bag (the .tar file) but not the .valdb, because
 			// .valdb contains information about the object, generic files,
 			// and premis events that will be recorded by apt_recorder.
@@ -201,7 +200,6 @@ func (storer *APTStorer) record() {
 		// Copy JSON representation of the IngestManifest to Pharos
 		// and to the JSON log.
 		ingestState.IngestManifest.StoreResult.Finish()
-		RecordWorkItemState(ingestState, storer.Context, ingestState.IngestManifest.FetchResult)
 
 		// See if we have fatal errors, or too many recurring transient errors
 		attemptNumber := ingestState.IngestManifest.StoreResult.AttemptNumber
@@ -230,20 +228,25 @@ func (storer *APTStorer) record() {
 			MarkWorkItemSucceeded(ingestState, storer.Context, constants.StageRecord)
 			PushToQueue(ingestState, storer.Context, storer.Context.Config.RecordWorker.NsqTopic)
 		}
+
+		LogJson(ingestState, storer.Context.JsonLog)
+		RecordWorkItemState(ingestState, storer.Context, ingestState.IngestManifest.FetchResult)
 	}
 }
 
 // getStorageSummaryBatch returns a batch of storage summary objects
 // and boolean indicating whether the object has more files to get.
-func (storer *APTStorer) getStorageSummaryBatch(db *storage.BoltDB, start, limit int) (storageSummaries []*models.StorageSummary, hasMoreFiles bool, err error) {
-	obj, err := db.GetIntellectualObject(db.ObjectIdentifier())
+func (storer *APTStorer) getStorageSummaryBatch(db *storage.BoltDB, objIdentifier string, start, limit int) (storageSummaries []*models.StorageSummary, hasMoreFiles bool, err error) {
+	obj, err := db.GetIntellectualObject(objIdentifier)
 	if err != nil {
 		return nil, false, err
 	}
+	storer.Context.MessageLog.Info("Getting batch of %d files for %s, starting at %d",
+		limit, objIdentifier, start)
 	identifiers := db.FileIdentifierBatch(start, limit)
 	hasMoreFiles = len(identifiers) == limit
 	storageSummaries = make([]*models.StorageSummary, len(identifiers))
-	for _, gfIdentifier := range identifiers {
+	for i, gfIdentifier := range identifiers {
 		gf, err := db.GetGenericFile(gfIdentifier)
 		if err != nil {
 			return nil, false, err
@@ -252,7 +255,8 @@ func (storer *APTStorer) getStorageSummaryBatch(db *storage.BoltDB, start, limit
 		if err != nil {
 			return nil, false, err
 		}
-		storageSummaries = append(storageSummaries, summary)
+		storer.Context.MessageLog.Info("Adding %s to batch", gf.Identifier)
+		storageSummaries[i] = summary
 	}
 	return storageSummaries, hasMoreFiles, nil
 }
