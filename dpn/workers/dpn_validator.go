@@ -67,6 +67,10 @@ func (validator *DPNValidator) HandleMessage(message *nsq.Message) error {
 	manifest := SetupReplicationManifest(message, "validate", validator.Context,
 		validator.LocalClient, validator.RemoteClients)
 
+	// TODO: Check DPNWorkItem in Pharos to see if this item is complete.
+	// In some cases, it is, but the remote node doesn't know yet, so we
+	// wind up reprocessing it.
+
 	// Stop processing if item has already been stored.
 	// Item will go into the dpn_replication_store queue,
 	// and the storer will delete the tar file.
@@ -131,7 +135,7 @@ func (validator *DPNValidator) validate() {
 			}
 		}
 		manifest.NsqMessage.Touch()
-		if fileutil.LooksSafeToDelete(bagValidator.DBName(), 12, 3) {
+		if bagValidator != nil && fileutil.LooksSafeToDelete(bagValidator.DBName(), 12, 3) {
 			os.Remove(bagValidator.DBName())
 		}
 		validator.PostProcessChannel <- manifest
