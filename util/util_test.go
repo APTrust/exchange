@@ -3,6 +3,7 @@ package util_test
 import (
 	"github.com/APTrust/exchange/util"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"testing"
 )
 
@@ -195,4 +196,15 @@ func TestPointerToString(t *testing.T) {
 	var nilPointer *string
 	assert.Equal(t, str, util.PointerToString(strPointer))
 	assert.Equal(t, "", util.PointerToString(nilPointer))
+}
+
+func TestDeleteFromStringList(t *testing.T) {
+	list := []string{"apple", "orange", "banana"}
+	newList := util.DeleteFromStringList(list, "orange")
+	require.Equal(t, 2, len(newList))
+	assert.Equal(t, "apple", newList[0])
+	assert.Equal(t, "banana", newList[1])
+
+	anotherList := util.DeleteFromStringList(list, "item_does_not_exist")
+	assert.Equal(t, 3, len(anotherList))
 }

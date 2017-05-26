@@ -202,3 +202,16 @@ func PointerToString(strPointer *string) string {
 	}
 	return *strPointer
 }
+
+// DeleteFromStringList deletes item from list and returns a new slice.
+func DeleteFromStringList(list []string, item string) []string {
+	newList := make([]string, 0)
+	if list != nil {
+		for i := range list {
+			if list[i] != item {
+				newList = append(newList, list[i])
+			}
+		}
+	}
+	return newList
+}
