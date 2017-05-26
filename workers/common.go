@@ -257,7 +257,7 @@ func RecordWorkItemState(ingestState *models.IngestState, _context *context.Cont
 		// file system for backup and troubleshooting, and send a copy
 		// over to Pharos, so the next worker in the chain (the save worker)
 		// can access it.
-		LogJson(ingestState, _context.JsonLog)
+		// LogJson(ingestState, _context.JsonLog)
 		resp := _context.PharosClient.WorkItemStateSave(ingestState.WorkItemState)
 		if resp.Error != nil {
 			// Could not send a copy of the WorkItemState to Pharos.
@@ -487,10 +487,13 @@ func SetupIngestState(message *nsq.Message, _context *context.Context) (*models.
 		instIdentifier, workItem.Name)
 	manifest.DBPath = TAR_SUFFIX.ReplaceAllString(manifest.BagPath, ".valdb")
 
+	workItemState := models.NewWorkItemState(workItem.Id, workItem.Action, "")
+
 	ingestState := &models.IngestState{}
 	ingestState.NSQMessage = message
 	ingestState.WorkItem = workItem
 	ingestState.IngestManifest = manifest
+	ingestState.WorkItemState = workItemState
 
 	return ingestState, nil
 }
