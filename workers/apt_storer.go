@@ -8,6 +8,7 @@ import (
 	"github.com/APTrust/exchange/network"
 	"github.com/APTrust/exchange/util"
 	"github.com/APTrust/exchange/util/fileutil"
+	"github.com/APTrust/exchange/util/storage"
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/nsqio/go-nsq"
 	"io"
@@ -105,11 +106,18 @@ func (storer *APTStorer) store() {
 
 		start := 0
 		limit := storer.Context.Config.StoreWorker.NetworkConnections
-		obj := ingestState.IngestManifest.Object
+		db, err := storage.NewBoltDB(ingestState.IngestManifest.DBPath)
+		objIdentifier := db.ObjectIdentifier()
+
+		if err != nil {
+			ingestState.IngestManifest.StoreResult.AddError(err.Error())
+			ingestState.IngestManifest.StoreResult.Finish()
+			storer.CleanupChannel <- ingestState
+		}
 
 		for {
 			// Get a batch of files to save...
-			storageSummaries, hasMoreFiles, err := storer.getStorageSummaryBatch(obj, start, limit)
+			storageSummaries, hasMoreFiles, err := storer.getStorageSummaryBatch(db, start, limit)
 			if err != nil {
 				ingestState.IngestManifest.StoreResult.AddError(err.Error())
 				ingestState.IngestManifest.StoreResult.ErrorIsFatal = true
@@ -118,17 +126,17 @@ func (storer *APTStorer) store() {
 			fileCount := len(storageSummaries)
 
 			// Save them concurrently...
-			storer.Context.MessageLog.Info("Saving batch of %d files for %s", fileCount, obj.Identifier)
+			storer.Context.MessageLog.Info("Saving batch of %d files for %s", fileCount, objIdentifier)
 			wg := sync.WaitGroup{}
 			wg.Add(fileCount)
 			for i := 0; i < fileCount; i++ {
 				go func(storageSummary *models.StorageSummary) {
 					defer wg.Done()
-					storer.saveFile(storageSummary)
+					storer.saveFile(db, storageSummary)
 				}(storageSummaries[i])
 			}
 			wg.Wait()
-			storer.Context.MessageLog.Info("Finished batch of %d files for %s", fileCount, obj.Identifier)
+			storer.Context.MessageLog.Info("Finished batch of %d files for %s", fileCount, objIdentifier)
 
 			// Tell NSQ we're still on this. Very large files take a long time
 			// to copy, and if NSQ doesn't hear from us, it'll assume we timed out.
@@ -155,6 +163,7 @@ func (storer *APTStorer) store() {
 			}
 		}
 
+		db.Close()
 		storer.CleanupChannel <- ingestState
 	}
 }
@@ -226,25 +235,29 @@ func (storer *APTStorer) record() {
 
 // getStorageSummaryBatch returns a batch of storage summary objects
 // and boolean indicating whether the object has more files to get.
-func (storer *APTStorer) getStorageSummaryBatch(obj *models.IntellectualObject, start, limit int) (storageSummaries []*models.StorageSummary, hasMoreFiles bool, err error) {
-	end := start + limit
-	if end > len(obj.GenericFiles) {
-		end = len(obj.GenericFiles)
+func (storer *APTStorer) getStorageSummaryBatch(db *storage.BoltDB, start, limit int) (storageSummaries []*models.StorageSummary, hasMoreFiles bool, err error) {
+	obj, err := db.GetIntellectualObject(db.ObjectIdentifier())
+	if err != nil {
+		return nil, false, err
 	}
-	fileCount := end - start
-	storageSummaries = make([]*models.StorageSummary, fileCount)
-	for i := 0; i < fileCount; i++ {
-		summary, err := obj.GetStorageSummary(start + i)
+	identifiers := db.FileIdentifierBatch(start, limit)
+	hasMoreFiles = len(identifiers) == limit
+	storageSummaries = make([]*models.StorageSummary, len(identifiers))
+	for _, gfIdentifier := range identifiers {
+		gf, err := db.GetGenericFile(gfIdentifier)
 		if err != nil {
 			return nil, false, err
 		}
-		storageSummaries[i] = summary
+		summary, err := models.NewStorageSummary(gf, obj.IngestTarFilePath, obj.IngestUntarredPath)
+		if err != nil {
+			return nil, false, err
+		}
+		storageSummaries = append(storageSummaries, summary)
 	}
-	hasMoreFiles = end < len(obj.GenericFiles)
 	return storageSummaries, hasMoreFiles, nil
 }
 
-func (storer *APTStorer) saveFile(storageSummary *models.StorageSummary) {
+func (storer *APTStorer) saveFile(db *storage.BoltDB, storageSummary *models.StorageSummary) {
 	gf := storageSummary.GenericFile
 	if !util.HasSavableName(gf.OriginalPath()) {
 		// We don't need to save bagit.txt, or certain manifests.
@@ -283,6 +296,12 @@ func (storer *APTStorer) saveFile(storageSummary *models.StorageSummary) {
 		} else {
 			storer.Context.MessageLog.Info("Skipping %s: unchanged since previous save", gf.Identifier)
 		}
+	}
+	err := db.Save(gf.Identifier, gf)
+	if err != nil {
+		msg := fmt.Sprintf("Error saving %s to db %s: %v", gf.Identifier, db.FilePath(), err)
+		storageSummary.StoreResult.AddError(msg)
+		storer.Context.MessageLog.Error(msg)
 	}
 }
 
