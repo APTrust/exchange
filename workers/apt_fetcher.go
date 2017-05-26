@@ -291,8 +291,10 @@ func (fetcher *APTFetcher) record() {
 			PushToQueue(ingestState, fetcher.Context, fetcher.Context.Config.StoreWorker.NsqTopic)
 		}
 
-		// Dump out a JSON record of this item to the local JSON log.
+		// Record WorkItemState and dump out a JSON record
+		// of this item to the local JSON log.
 		LogJson(ingestState, fetcher.Context.JsonLog)
+		RecordWorkItemState(ingestState, fetcher.Context, ingestState.IngestManifest.FetchResult)
 	}
 }
 
