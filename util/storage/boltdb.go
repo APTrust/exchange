@@ -9,6 +9,8 @@ import (
 )
 
 const DEFAULT_BUCKET = "default"
+const SPECIAL_BUCKET = "special"
+const OBJ_IDENTIFIER = "object identifier"
 
 // BoltDB represents a bolt database, which is a single-file key-value
 // store. Our validator uses this to track information about the files
@@ -21,9 +23,8 @@ const DEFAULT_BUCKET = "default"
 // 8-9 kilobytes of data per file. Multiply that by 100k or even
 // 1 million files in a bag, and that's too much to keep in memory.
 type BoltDB struct {
-	db            *bolt.DB
-	filePath      string
-	objIdentifier string
+	db       *bolt.DB
+	filePath string
 }
 
 // NewBoltDB opens a bolt database, creating the DB file if it doesn't
@@ -36,7 +37,7 @@ func NewBoltDB(filePath string) (boltDB *BoltDB, err error) {
 			db:       db,
 			filePath: filePath,
 		}
-		err = boltDB.initDefaultBucket()
+		err = boltDB.initBuckets()
 	}
 	return boltDB, err
 }
@@ -44,11 +45,15 @@ func NewBoltDB(filePath string) (boltDB *BoltDB, err error) {
 // Initialize a default bucket for the bolt DB. Since we're creating
 // the DB for just one bag, and we know GenericFile identifiers within
 // the bag will be unique, we can put everything in one bucket.
-func (boltDB *BoltDB) initDefaultBucket() error {
+func (boltDB *BoltDB) initBuckets() error {
 	err := boltDB.db.Update(func(tx *bolt.Tx) error {
 		_, err := tx.CreateBucketIfNotExists([]byte(DEFAULT_BUCKET))
 		if err != nil {
-			return fmt.Errorf("Error creating bucket: %s", err)
+			return fmt.Errorf("Error creating default bucket: %s", err)
+		}
+		_, err = tx.CreateBucketIfNotExists([]byte(SPECIAL_BUCKET))
+		if err != nil {
+			return fmt.Errorf("Error creating special bucket: %s", err)
 		}
 		return nil
 	})
@@ -68,12 +73,13 @@ func (boltDB *BoltDB) Close() {
 // ObjectIdentifier returns the IntellectualObject.Identifier
 // for the object stored in this DB file.
 func (boltDB *BoltDB) ObjectIdentifier() string {
-	return boltDB.objIdentifier
+	return boltDB.getSpecial(OBJ_IDENTIFIER)
 }
 
 // Save saves a value to the bolt database.
 func (boltDB *BoltDB) Save(key string, value interface{}) error {
 	var byteSlice []byte
+	saveObjIdentifier := false
 	buf := bytes.NewBuffer(byteSlice)
 	encoder := gob.NewEncoder(buf)
 	err := encoder.Encode(value)
@@ -83,10 +89,13 @@ func (boltDB *BoltDB) Save(key string, value interface{}) error {
 			err := bucket.Put([]byte(key), buf.Bytes())
 			_, isIntelObj := value.(*models.IntellectualObject)
 			if err == nil && isIntelObj {
-				boltDB.objIdentifier = key
+				saveObjIdentifier = true
 			}
 			return err
 		})
+	}
+	if saveObjIdentifier {
+		boltDB.saveSpecial(OBJ_IDENTIFIER, key)
 	}
 	return err
 }
@@ -167,12 +176,13 @@ func (boltDB *BoltDB) Keys() []string {
 // FileIdentifiers returns a list of all GenericFile
 // identifiers in the database.
 func (boltDB *BoltDB) FileIdentifiers() []string {
+	objIdentifier := boltDB.ObjectIdentifier()
 	keys := make([]string, 0)
 	boltDB.db.View(func(tx *bolt.Tx) error {
 		b := tx.Bucket([]byte(DEFAULT_BUCKET))
 		c := b.Cursor()
 		for k, _ := c.First(); k != nil; k, _ = c.Next() {
-			if boltDB.objIdentifier != "" && string(k) != boltDB.objIdentifier {
+			if objIdentifier != "" && string(k) != objIdentifier {
 				keys = append(keys, string(k))
 			}
 		}
@@ -193,12 +203,13 @@ func (boltDB *BoltDB) FileIdentifierBatch(offset, limit int) []string {
 	}
 	index := 0
 	end := offset + limit
+	objIdentifier := boltDB.ObjectIdentifier()
 	keys := make([]string, 0)
 	boltDB.db.View(func(tx *bolt.Tx) error {
 		b := tx.Bucket([]byte(DEFAULT_BUCKET))
 		c := b.Cursor()
 		for k, _ := c.First(); k != nil; k, _ = c.Next() {
-			if boltDB.objIdentifier != "" && string(k) != boltDB.objIdentifier {
+			if objIdentifier != "" && string(k) != objIdentifier {
 				if index >= offset && index < end {
 					keys = append(keys, string(k))
 				}
@@ -208,4 +219,27 @@ func (boltDB *BoltDB) FileIdentifierBatch(offset, limit int) []string {
 		return nil
 	})
 	return keys
+}
+
+// saveSpecial is for internal use, to save special keys, like the
+// objectIdentifier key.
+func (boltDB *BoltDB) saveSpecial(key string, value string) error {
+	err := boltDB.db.Update(func(tx *bolt.Tx) error {
+		bucket := tx.Bucket([]byte(SPECIAL_BUCKET))
+		err := bucket.Put([]byte(key), []byte(value))
+		return err
+	})
+	return err
+}
+
+// getSpecial is for internal use, to retrieve special keys, like the
+// objectIdentifier key.
+func (boltDB *BoltDB) getSpecial(key string) string {
+	value := make([]byte, 0)
+	_ = boltDB.db.View(func(tx *bolt.Tx) error {
+		bucket := tx.Bucket([]byte(SPECIAL_BUCKET))
+		value = bucket.Get([]byte(key))
+		return nil
+	})
+	return string(value)
 }
