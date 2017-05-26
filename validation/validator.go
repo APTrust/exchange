@@ -265,6 +265,7 @@ func (validator *Validator) addFile(readIterator fileutil.ReadIterator) error {
 		gf.Size = fileSummary.Size
 		gf.FileModified = fileSummary.ModTime
 		gf.IngestLocalPath = fileSummary.AbsPath // will be empty if bag is tarred
+		gf.IngestNeedsSave = true                // default until proven otherwise
 		gf.IngestUUID = _uuid.String()
 		gf.IngestUUIDGeneratedAt = time.Now().UTC()
 		gf.IngestFileUid = fileSummary.Uid
