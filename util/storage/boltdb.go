@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/APTrust/exchange/models"
 	"github.com/boltdb/bolt"
+	"time"
 )
 
 const DEFAULT_BUCKET = "default"
@@ -31,7 +32,7 @@ type BoltDB struct {
 // already exist. The DB file is a key-value store that resides in a
 // single file on disk.
 func NewBoltDB(filePath string) (boltDB *BoltDB, err error) {
-	db, err := bolt.Open(filePath, 0644, nil)
+	db, err := bolt.Open(filePath, 0644, &bolt.Options{Timeout: 2 * time.Second})
 	if err == nil {
 		boltDB = &BoltDB{
 			db:       db,
