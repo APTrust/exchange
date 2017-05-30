@@ -441,10 +441,12 @@ func (fetcher *APTFetcher) buildObject(downloader *network.S3Download, ingestSta
 
 func (fetcher *APTFetcher) initObjectInDB(ingestState *models.IngestState, obj *models.IntellectualObject) error {
 	db, err := storage.NewBoltDB(ingestState.IngestManifest.DBPath)
+	if db != nil {
+		defer db.Close()
+	}
 	if err != nil {
 		return err
 	} else {
-		defer db.Close()
 		err = db.Save(obj.Identifier, obj)
 		if err != nil {
 			return err
