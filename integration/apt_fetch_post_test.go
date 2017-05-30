@@ -242,8 +242,11 @@ func fetcherTestSpecifics(t *testing.T, ingestManifest *models.IngestManifest) {
 	assert.False(t, gf.IngestSha256VerifiedAt.IsZero())
 	assert.True(t, util.LooksLikeUUID(gf.IngestUUID))
 	assert.False(t, gf.IngestUUIDGeneratedAt.IsZero())
-	assert.True(t, gf.IngestStoredAt.IsZero())
-	assert.True(t, gf.IngestReplicatedAt.IsZero())
+	// After fetch, the following two timestamps should be empty.
+	// However, apt_fetch_post_test runs after fetch, store,
+	// and record are complete.
+	assert.False(t, gf.IngestStoredAt.IsZero(), gf.Identifier)
+	assert.False(t, gf.IngestReplicatedAt.IsZero(), gf.Identifier)
 	assert.True(t, gf.IngestNeedsSave)
 	assert.EqualValues(t, 502, gf.IngestFileUid)
 	assert.EqualValues(t, 20, gf.IngestFileGid)
