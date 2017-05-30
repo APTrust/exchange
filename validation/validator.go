@@ -123,13 +123,6 @@ func (validator *Validator) DBName() string {
 	return fmt.Sprintf("%s%s", bagPath, VALIDATION_DB_SUFFIX)
 }
 
-// DB returns the validator's Bolt database for querying.
-// Any operations you perform on this DB while validation is running
-// will affect the validator.
-func (validator *Validator) DB() *storage.BoltDB {
-	return validator.db
-}
-
 // getIterator returns either a tar file iterator or a filesystem
 // iterator, depending on whether we're reading a tarred bag or
 // an untarred one.
@@ -147,6 +140,7 @@ func (validator *Validator) Validate() (*models.WorkSummary, error) {
 	if err != nil {
 		return nil, err
 	}
+	defer db.Close()
 	validator.db = db
 	validator.summary.Start()
 	validator.summary.Attempted = true

@@ -5,6 +5,7 @@ import (
 	"github.com/APTrust/exchange/testhelper"
 	"github.com/APTrust/exchange/util"
 	"github.com/APTrust/exchange/util/fileutil"
+	"github.com/APTrust/exchange/util/storage"
 	"github.com/APTrust/exchange/validation"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -499,7 +500,8 @@ func TestValidator_SavesMinimumMetadata(t *testing.T) {
 	defer deleteFile(validator.DBName())
 	_, err := validator.Validate()
 	require.Nil(t, err)
-	boltDB := validator.DB()
+	boltDB, err := storage.NewBoltDB(validator.DBName())
+	require.Nil(t, err)
 	require.NotNil(t, boltDB)
 	obj, err := boltDB.GetIntellectualObject("example.edu.tagsample_good")
 	require.Nil(t, err)
@@ -558,7 +560,8 @@ func TestValidator_SavesExtendedMetadata(t *testing.T) {
 	defer deleteFile(validator.DBName())
 	_, err := validator.Validate()
 	require.Nil(t, err)
-	boltDB := validator.DB()
+	boltDB, err := storage.NewBoltDB(validator.DBName())
+	require.Nil(t, err)
 	require.NotNil(t, boltDB)
 	obj, err := boltDB.GetIntellectualObject("example.edu.tagsample_good")
 	require.Nil(t, err)

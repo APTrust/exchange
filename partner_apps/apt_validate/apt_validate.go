@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"github.com/APTrust/exchange/models"
 	"github.com/APTrust/exchange/util/fileutil"
+	"github.com/APTrust/exchange/util/storage"
 	"github.com/APTrust/exchange/validation"
 	"os"
 	"path/filepath"
@@ -65,7 +66,11 @@ func printOutput(validator *validation.Validator, pathToOutFile string) {
 	}
 	defer file.Close()
 
-	db := validator.DB()
+	db, err := storage.NewBoltDB(validator.DBName())
+	if err != nil {
+		fmt.Println(os.Stderr, "Can't open db: %v", err)
+		return
+	}
 	obj, err := db.GetIntellectualObject(validator.ObjIdentifier)
 	if err != nil {
 		fmt.Println(os.Stderr, "Can't get object from db: %v", err)
