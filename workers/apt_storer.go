@@ -107,6 +107,13 @@ func (storer *APTStorer) store() {
 		start := 0
 		limit := storer.Context.Config.StoreWorker.NetworkConnections
 		db, err := storage.NewBoltDB(ingestState.IngestManifest.DBPath)
+		if err != nil {
+			ingestState.IngestManifest.StoreResult.AddError(
+				"In store(), error opening db %s: %v",
+				ingestState.IngestManifest.DBPath, err.Error())
+			ingestState.IngestManifest.StoreResult.Finish()
+			storer.CleanupChannel <- ingestState
+		}
 		objIdentifier, err := ingestState.IngestManifest.ObjectIdentifier()
 		if err != nil {
 			ingestState.IngestManifest.StoreResult.AddError(err.Error())
@@ -158,6 +165,7 @@ func (storer *APTStorer) store() {
 			// Update for the next batch, or stop if there are no more files.
 			start += len(storageSummaries)
 			if hasMoreFiles == false {
+				storer.Context.MessageLog.Info("No more files for %s", objIdentifier)
 				break
 			}
 		}
