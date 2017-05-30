@@ -59,7 +59,7 @@ class Service
 		puts "Don't know what to do with #{app.name}, run_as #{app.run_as}, so waiting..."
 		Process.wait pid
 	  end
-	  puts "Started #{app.name} with command '#{cmd}' and pid #{pid}"
+	  puts "[#{Time.now.strftime('%T.%L')}] Started #{app.name} with command '#{cmd}' and pid #{pid}"
 	  @pids[app.name] = pid
 	end
   end
@@ -127,7 +127,7 @@ class Service
 	if @dpn_cluster_pid != 0
 	  begin
 		Process.kill('TERM', @dpn_cluster_pid)
-		puts "Stopped DPN cluster (pid #{@dpn_cluster_pid})"
+		puts "[#{Time.now.strftime('%T.%L')}] Stopped DPN cluster (pid #{@dpn_cluster_pid})"
 	  rescue
 		# DPN cluster wasn't running.
 	  end
@@ -154,7 +154,7 @@ class Service
 	if @nsq_pid != 0
 	  begin
 		Process.kill('TERM', @nsq_pid)
-		puts "Stopped NSQ service (pid #{@nsq_pid})"
+		puts "[#{Time.now.strftime('%T.%L')}] Stopped NSQ service (pid #{@nsq_pid})"
 	  rescue
 		# nsqd wasn't running.
 	  end
@@ -201,7 +201,7 @@ class Service
 	if @pharos_pid != 0
 	  begin
 		Process.kill('TERM', @pharos_pid)
-		puts "Stopped Pharos (pid #{@pharos_pid})"
+		puts "[#{Time.now.strftime('%T.%L')}] Stopped Pharos (pid #{@pharos_pid})"
 	  rescue
 		# Service wasn't running
 	  end
@@ -224,7 +224,7 @@ class Service
 	  begin
 		if !pid.nil? && pid > 0
 		  Process.kill('TERM', pid)
-		  puts "Stopped #{app_name}"
+		  puts "[#{Time.now.strftime('%T.%L')}] Stopped #{app_name}"
 		end
 	  rescue
 		# Process wasn't running

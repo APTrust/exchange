@@ -184,7 +184,7 @@ class IntegrationTest
 	  @service.app_start(@context.apps['apt_store'])
 	  sleep 20  # let nsq record topic fill before client connects
 	  @service.app_start(@context.apps['apt_record'])
-	  sleep 50  # allow fetch/store/record time to finish
+	  sleep 40  # allow fetch/store/record time to finish
 	  @service.stop_everything unless more_tests_follow
 	  sleep 5
 
