@@ -182,9 +182,6 @@ func fetcherTestSpecifics(t *testing.T, ingestManifest *models.IngestManifest) {
 	assert.Equal(t, "test.edu/example.edu.tagsample_good", obj.Identifier)
 	assert.Equal(t, "example.edu.tagsample_good", obj.BagName)
 
-	// The institution tag inside this bag actually says virginia.edu.
-	assert.Equal(t, "virginia.edu", obj.Institution)
-
 	assert.NotEqual(t, 0, obj.InstitutionId)
 	assert.Equal(t, "Tag Sample (Good)", obj.Title)
 	assert.Equal(t, "Bag of goodies", obj.Description)
@@ -192,7 +189,7 @@ func fetcherTestSpecifics(t *testing.T, ingestManifest *models.IngestManifest) {
 	assert.Equal(t, "uva-internal-id-0001", obj.AltIdentifier)
 	assert.Equal(t, "aptrust.receiving.test.test.edu", obj.IngestS3Bucket)
 	assert.Equal(t, "example.edu.tagsample_good.tar", obj.IngestS3Key)
-
+	assert.Equal(t, "test.edu", obj.Institution)
 	assert.Equal(t, "manifest-md5.txt", obj.IngestManifests[0])
 	assert.Equal(t, "manifest-sha256.txt", obj.IngestManifests[1])
 	assert.Equal(t, "tagmanifest-md5.txt", obj.IngestTagManifests[0])
@@ -220,14 +217,14 @@ func fetcherTestSpecifics(t *testing.T, ingestManifest *models.IngestManifest) {
 	require.NotNil(t, gf)
 	assert.Equal(t, 0, gf.Id)
 	assert.Equal(t, "test.edu/example.edu.tagsample_good/aptrust-info.txt", gf.Identifier)
-	assert.Equal(t, 0, gf.IntellectualObjectId)
+	assert.NotEqual(t, 0, gf.IntellectualObjectId)
 	assert.Equal(t, "test.edu/example.edu.tagsample_good", gf.IntellectualObjectIdentifier)
 	assert.Equal(t, "text/plain", gf.FileFormat)
 	assert.EqualValues(t, 45, gf.Size)
 	assert.EqualValues(t, "0001-01-01T00:00:00Z", gf.FileCreated.Format(time.RFC3339))
 	assert.Equal(t, "2016-03-21T11:01:51-04:00", gf.FileModified.Format(time.RFC3339))
-	assert.Empty(t, gf.Checksums)
-	assert.Empty(t, gf.PremisEvents)
+	assert.Equal(t, 2, len(gf.Checksums))
+	assert.Equal(t, 6, len(gf.PremisEvents))
 	assert.Equal(t, "tag_file", gf.IngestFileType)
 	assert.Equal(t, "bd8be664c790a9175e9d2fe90b40d502", gf.IngestMd5)
 	assert.False(t, gf.IngestMd5GeneratedAt.IsZero())
