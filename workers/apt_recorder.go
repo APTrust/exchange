@@ -125,9 +125,11 @@ func (recorder *APTRecorder) cleanup() {
 				"Bag has been stored and recorded. Deleting files from receiving bucket "+
 					"and staging area.")
 
-			// Remove both the bag and the validation DB
+			// Remove both the bag and the validation DB (unless we're running integration tests)
 			DeleteFileFromStaging(ingestState.IngestManifest.BagPath, recorder.Context)
-			DeleteFileFromStaging(ingestState.IngestManifest.DBPath, recorder.Context)
+			if os.Getenv("EXCHANGE_TEST_ENV") != "integration" {
+				DeleteFileFromStaging(ingestState.IngestManifest.DBPath, recorder.Context)
+			}
 
 			recorder.deleteBagFromReceivingBucket(ingestState)
 			MarkWorkItemSucceeded(ingestState, recorder.Context, constants.StageCleanup)
@@ -359,6 +361,10 @@ func (recorder *APTRecorder) createGenericFiles(ingestState *models.IngestState,
 	if len(files) == 0 {
 		return
 	}
+	fileMap := make(map[string]*models.GenericFile, len(files))
+	for _, gf := range files {
+		fileMap[gf.Identifier] = gf
+	}
 	resp := recorder.Context.PharosClient.GenericFileSaveBatch(files)
 	if resp.Error != nil {
 		body, _ := resp.RawResponseData()
@@ -370,10 +376,10 @@ func (recorder *APTRecorder) createGenericFiles(ingestState *models.IngestState,
 	// We may have managed to save some files despite the error.
 	// If so, record what was saved.
 	for _, savedFile := range resp.GenericFiles() {
-		gf := ingestState.IngestManifest.Object.FindGenericFile(savedFile.OriginalPath())
+		gf := fileMap[savedFile.Identifier]
 		if gf == nil {
 			ingestState.IngestManifest.RecordResult.AddError("After save, could not find file '%s' "+
-				"in IntellectualObject.", savedFile.OriginalPath())
+				"in batch.", savedFile.Identifier)
 			continue
 		}
 		// Merge attributes set by Pharos into our GenericFile record.

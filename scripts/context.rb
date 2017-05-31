@@ -65,6 +65,7 @@ class Context
     # Are APTrust and DPN on the same ruby verson?
     env['RBENV_VERSION'] = `cat #{@pharos_root}/.ruby-version`.chomp
     env['RAILS_ENV'] = 'integration'
+    env['EXCHANGE_TEST_ENV'] = 'integration'
     env
   end
 

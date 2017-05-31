@@ -71,6 +71,8 @@ func fetcherTestGoodBagResult(t *testing.T, bagName string, ingestManifest *mode
 	require.Nil(t, err)
 	defer db.Close()
 	obj, err := db.GetIntellectualObject(objIdentifier)
+	require.Nil(t, err, objIdentifier)
+	require.NotNil(t, obj, objIdentifier)
 
 	assert.NotEmpty(t, obj.Identifier, "obj.Identifier should not be empty for %s", bagName)
 	assert.NotEmpty(t, obj.BagName, "obj.BagName should not be empty for %s", bagName)
@@ -215,7 +217,7 @@ func fetcherTestSpecifics(t *testing.T, ingestManifest *models.IngestManifest) {
 	gf, err := db.GetGenericFile("test.edu/example.edu.tagsample_good/aptrust-info.txt")
 	require.Nil(t, err)
 	require.NotNil(t, gf)
-	assert.Equal(t, 0, gf.Id)
+	assert.NotEqual(t, 0, gf.Id)
 	assert.Equal(t, "test.edu/example.edu.tagsample_good/aptrust-info.txt", gf.Identifier)
 	assert.NotEqual(t, 0, gf.IntellectualObjectId)
 	assert.Equal(t, "test.edu/example.edu.tagsample_good", gf.IntellectualObjectIdentifier)
