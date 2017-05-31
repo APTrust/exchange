@@ -9,9 +9,8 @@ import (
 	"time"
 )
 
-const DEFAULT_BUCKET = "default"
-const SPECIAL_BUCKET = "special"
-const OBJ_IDENTIFIER = "object identifier"
+const FILE_BUCKET = "files"
+const OBJ_BUCKET = "objects"
 
 // BoltDB represents a bolt database, which is a single-file key-value
 // store. Our validator uses this to track information about the files
@@ -48,13 +47,13 @@ func NewBoltDB(filePath string) (boltDB *BoltDB, err error) {
 // the bag will be unique, we can put everything in one bucket.
 func (boltDB *BoltDB) initBuckets() error {
 	err := boltDB.db.Update(func(tx *bolt.Tx) error {
-		_, err := tx.CreateBucketIfNotExists([]byte(DEFAULT_BUCKET))
+		_, err := tx.CreateBucketIfNotExists([]byte(FILE_BUCKET))
 		if err != nil {
-			return fmt.Errorf("Error creating default bucket: %s", err)
+			return fmt.Errorf("Error creating file bucket: %s", err)
 		}
-		_, err = tx.CreateBucketIfNotExists([]byte(SPECIAL_BUCKET))
+		_, err = tx.CreateBucketIfNotExists([]byte(OBJ_BUCKET))
 		if err != nil {
-			return fmt.Errorf("Error creating special bucket: %s", err)
+			return fmt.Errorf("Error creating object bucket: %s", err)
 		}
 		return nil
 	})
@@ -74,29 +73,33 @@ func (boltDB *BoltDB) Close() {
 // ObjectIdentifier returns the IntellectualObject.Identifier
 // for the object stored in this DB file.
 func (boltDB *BoltDB) ObjectIdentifier() string {
-	return boltDB.getSpecial(OBJ_IDENTIFIER)
+	key := make([]byte, 0)
+	boltDB.db.View(func(tx *bolt.Tx) error {
+		b := tx.Bucket([]byte(OBJ_BUCKET))
+		c := b.Cursor()
+		key, _ = c.First()
+		return nil
+	})
+	return string(key)
 }
 
 // Save saves a value to the bolt database.
 func (boltDB *BoltDB) Save(key string, value interface{}) error {
+	_, isIntelObj := value.(*models.IntellectualObject)
+	bucketName := FILE_BUCKET
+	if isIntelObj {
+		bucketName = OBJ_BUCKET
+	}
 	var byteSlice []byte
-	saveObjIdentifier := false
 	buf := bytes.NewBuffer(byteSlice)
 	encoder := gob.NewEncoder(buf)
 	err := encoder.Encode(value)
 	if err == nil {
 		err = boltDB.db.Update(func(tx *bolt.Tx) error {
-			bucket := tx.Bucket([]byte(DEFAULT_BUCKET))
+			bucket := tx.Bucket([]byte(bucketName))
 			err := bucket.Put([]byte(key), buf.Bytes())
-			_, isIntelObj := value.(*models.IntellectualObject)
-			if err == nil && isIntelObj {
-				saveObjIdentifier = true
-			}
 			return err
 		})
-	}
-	if saveObjIdentifier {
-		boltDB.saveSpecial(OBJ_IDENTIFIER, key)
 	}
 	return err
 }
@@ -110,7 +113,7 @@ func (boltDB *BoltDB) GetIntellectualObject(key string) (*models.IntellectualObj
 	var err error
 	obj := &models.IntellectualObject{}
 	err = boltDB.db.View(func(tx *bolt.Tx) error {
-		bucket := tx.Bucket([]byte(DEFAULT_BUCKET))
+		bucket := tx.Bucket([]byte(OBJ_BUCKET))
 		value := bucket.Get([]byte(key))
 		if len(value) > 0 {
 			buf := bytes.NewBuffer(value)
@@ -132,7 +135,7 @@ func (boltDB *BoltDB) GetGenericFile(key string) (*models.GenericFile, error) {
 	var err error
 	gf := &models.GenericFile{}
 	err = boltDB.db.View(func(tx *bolt.Tx) error {
-		bucket := tx.Bucket([]byte(DEFAULT_BUCKET))
+		bucket := tx.Bucket([]byte(FILE_BUCKET))
 		value := bucket.Get([]byte(key))
 		if len(value) > 0 {
 			buf := bytes.NewBuffer(value)
@@ -147,11 +150,11 @@ func (boltDB *BoltDB) GetGenericFile(key string) (*models.GenericFile, error) {
 }
 
 // ForEach calls the specified function for each key in the database's
-// default bucket.
+// file bucket.
 func (boltDB *BoltDB) ForEach(fn func(k, v []byte) error) error {
 	var err error
 	return boltDB.db.View(func(tx *bolt.Tx) error {
-		bucket := tx.Bucket([]byte(DEFAULT_BUCKET))
+		bucket := tx.Bucket([]byte(FILE_BUCKET))
 		err = bucket.ForEach(fn)
 		if err != nil {
 			return err
@@ -160,32 +163,14 @@ func (boltDB *BoltDB) ForEach(fn func(k, v []byte) error) error {
 	})
 }
 
-// Keys returns a list of all keys in the database.
-func (boltDB *BoltDB) Keys() []string {
+// FileIdentifiers returns a list of all keys in the database.
+func (boltDB *BoltDB) FileIdentifiers() []string {
 	keys := make([]string, 0)
 	boltDB.db.View(func(tx *bolt.Tx) error {
-		b := tx.Bucket([]byte(DEFAULT_BUCKET))
+		b := tx.Bucket([]byte(FILE_BUCKET))
 		c := b.Cursor()
 		for k, _ := c.First(); k != nil; k, _ = c.Next() {
 			keys = append(keys, string(k))
-		}
-		return nil
-	})
-	return keys
-}
-
-// FileIdentifiers returns a list of all GenericFile
-// identifiers in the database.
-func (boltDB *BoltDB) FileIdentifiers() []string {
-	objIdentifier := boltDB.ObjectIdentifier()
-	keys := make([]string, 0)
-	boltDB.db.View(func(tx *bolt.Tx) error {
-		b := tx.Bucket([]byte(DEFAULT_BUCKET))
-		c := b.Cursor()
-		for k, _ := c.First(); k != nil; k, _ = c.Next() {
-			if objIdentifier != "" && string(k) != objIdentifier {
-				keys = append(keys, string(k))
-			}
 		}
 		return nil
 	})
@@ -204,43 +189,17 @@ func (boltDB *BoltDB) FileIdentifierBatch(offset, limit int) []string {
 	}
 	index := 0
 	end := offset + limit
-	objIdentifier := boltDB.ObjectIdentifier()
 	keys := make([]string, 0)
 	boltDB.db.View(func(tx *bolt.Tx) error {
-		b := tx.Bucket([]byte(DEFAULT_BUCKET))
+		b := tx.Bucket([]byte(FILE_BUCKET))
 		c := b.Cursor()
 		for k, _ := c.First(); k != nil; k, _ = c.Next() {
-			if objIdentifier != "" && string(k) != objIdentifier {
-				if index >= offset && index < end {
-					keys = append(keys, string(k))
-				}
-				index++
+			if index >= offset && index < end {
+				keys = append(keys, string(k))
 			}
+			index++
 		}
 		return nil
 	})
 	return keys
-}
-
-// saveSpecial is for internal use, to save special keys, like the
-// objectIdentifier key.
-func (boltDB *BoltDB) saveSpecial(key string, value string) error {
-	err := boltDB.db.Update(func(tx *bolt.Tx) error {
-		bucket := tx.Bucket([]byte(SPECIAL_BUCKET))
-		err := bucket.Put([]byte(key), []byte(value))
-		return err
-	})
-	return err
-}
-
-// getSpecial is for internal use, to retrieve special keys, like the
-// objectIdentifier key.
-func (boltDB *BoltDB) getSpecial(key string) string {
-	value := make([]byte, 0)
-	_ = boltDB.db.View(func(tx *bolt.Tx) error {
-		bucket := tx.Bucket([]byte(SPECIAL_BUCKET))
-		value = bucket.Get([]byte(key))
-		return nil
-	})
-	return string(value)
 }

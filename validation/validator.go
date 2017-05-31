@@ -689,12 +689,9 @@ func (validator *Validator) checkAllowedTagValue(tagName string, tags []*models.
 // follow specified naming restrictions.
 func (validator *Validator) verifyGenericFiles() {
 	detail := validator.fileValidationDetail()
-	keys := validator.db.Keys()
-	for _, key := range keys {
-		if key == validator.ObjIdentifier {
-			continue
-		}
-		gf, err := validator.db.GetGenericFile(key)
+	gfIdentifiers := validator.db.FileIdentifiers()
+	for _, gfIdentifier := range gfIdentifiers {
+		gf, err := validator.db.GetGenericFile(gfIdentifier)
 
 		// Md5 digests
 		if gf.IngestManifestMd5 != "" && gf.IngestManifestMd5 != gf.IngestMd5 {

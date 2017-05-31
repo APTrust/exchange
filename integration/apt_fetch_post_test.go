@@ -92,12 +92,9 @@ func fetcherTestGoodBagResult(t *testing.T, bagName string, ingestManifest *mode
 	// Check the GenericFiles
 	// One key in the db is for the Intellectual Object,
 	// all the rest are for GenericFiles.
-	keys := db.Keys()
-	assert.True(t, len(keys) > 1, "obj.GenericFiles should not be empty for %s", bagName)
-	for _, gfIdentifier := range keys {
-		if gfIdentifier == objIdentifier {
-			continue
-		}
+	gfIdentifiers := db.FileIdentifiers()
+	assert.True(t, len(gfIdentifiers) > 1, "obj.GenericFiles should not be empty for %s", bagName)
+	for _, gfIdentifier := range gfIdentifiers {
 		gf, err := db.GetGenericFile(gfIdentifier)
 		require.Nil(t, err, gfIdentifier)
 		assert.NotEmpty(t, gf.Identifier, "Bag %s file %s Identifier is missing", bagName, gfIdentifier)
@@ -215,10 +212,8 @@ func fetcherTestSpecifics(t *testing.T, ingestManifest *models.IngestManifest) {
 	// Iterate through keys...
 	// -----------------------------------------------------------------------
 
-	// We should have 17 keys. One is for the IntellectualObject,
-	// and the other 16 are for GenericFiles.
-	gfIdentifiers := db.Keys()
-	assert.Equal(t, 17, len(gfIdentifiers))
+	gfIdentifiers := db.FileIdentifiers()
+	assert.Equal(t, 16, len(gfIdentifiers))
 
 	gf, err := db.GetGenericFile("test.edu/example.edu.tagsample_good/aptrust-info.txt")
 	require.Nil(t, err)

@@ -2,7 +2,6 @@ package storage_test
 
 import (
 	"fmt"
-	"github.com/APTrust/exchange/util"
 	"github.com/APTrust/exchange/util/storage"
 	"github.com/APTrust/exchange/util/testutil"
 	"github.com/stretchr/testify/assert"
@@ -51,16 +50,9 @@ func TestBoltDB(t *testing.T) {
 	require.Nil(t, err)
 	require.Nil(t, nilFile)
 
-	// Get a list of keys
-	keys := bolt.Keys()
-	require.Equal(t, 2, len(keys))
-	assert.True(t, util.StringListContains(keys, "Test Object"))
-	assert.True(t, util.StringListContains(keys, gf.Identifier))
-
 	// Get a list of GenericFile keys. Should not return obj identifier
 	gfIds := bolt.FileIdentifiers()
 	require.Equal(t, 1, len(gfIds))
-	assert.True(t, util.StringListContains(keys, gf.Identifier))
 
 	assert.Equal(t, "Test Object", bolt.ObjectIdentifier())
 }
