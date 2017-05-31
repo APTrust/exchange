@@ -166,7 +166,7 @@ func TestObjBuildIngestEvents(t *testing.T) {
 	assert.Equal(t, 5, len(obj.GenericFiles))
 	assert.Equal(t, 0, len(obj.PremisEvents))
 
-	err := obj.BuildIngestEvents()
+	err := obj.BuildIngestEvents(len(obj.GenericFiles))
 	assert.Nil(t, err)
 
 	// Expecting four PREMIS events total for IntelObj, each with
@@ -202,7 +202,7 @@ func TestObjBuildIngestEvents(t *testing.T) {
 
 	// Calling this function again should not generate new events
 	// if all the events are there.
-	err = obj.BuildIngestEvents()
+	err = obj.BuildIngestEvents(len(obj.GenericFiles))
 	assert.Nil(t, err)
 	assert.Equal(t, 4, len(obj.PremisEvents))
 	for _, gf := range obj.GenericFiles {

@@ -353,6 +353,11 @@ func (obj *IntellectualObject) FindEventsByType(eventType string) []PremisEvent 
 // along to apt_store and apt_record. That fully-fleshed object
 // is preserved in JSON format in WorkItemState.State.
 //
+// Param numberOfFiles is the number of GenericFiles received
+// in the ingested tar file. Not all of these will be saved to
+// long-term storage (e.g. bagit.txt and any files that have not
+// changed since the last ingest).
+//
 // We want to build all of the ingest PremisEvents before saving
 // them to avoid a problem that showed up in the old system. In
 // that system, we created PremisEvents when we were ready to
@@ -366,7 +371,7 @@ func (obj *IntellectualObject) FindEventsByType(eventType string) []PremisEvent 
 //
 // This call is idempotent, so calling it multiple times will
 // not mess up our data.
-func (obj *IntellectualObject) BuildIngestEvents() error {
+func (obj *IntellectualObject) BuildIngestEvents(numberOfFiles int) error {
 
 	err := obj.buildEventCreation()
 	if err != nil {
@@ -383,7 +388,7 @@ func (obj *IntellectualObject) BuildIngestEvents() error {
 		return err
 	}
 
-	err = obj.buildEventIngest()
+	err = obj.buildEventIngest(numberOfFiles)
 	if err != nil {
 		return err
 	}
@@ -449,10 +454,10 @@ func (obj *IntellectualObject) buildEventAccessAssignment() error {
 
 // Builds the event (if it doesn't already exist) describing when
 // this object was fully ingested.
-func (obj *IntellectualObject) buildEventIngest() error {
+func (obj *IntellectualObject) buildEventIngest(numberOfFiles int) error {
 	events := obj.FindEventsByType(constants.EventIngestion)
 	if len(events) == 0 {
-		event, err := NewEventObjectIngest(len(obj.GenericFiles))
+		event, err := NewEventObjectIngest(numberOfFiles)
 		if err != nil {
 			return err
 		}
