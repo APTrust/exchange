@@ -508,7 +508,6 @@ func TestValidator_SavesMinimumMetadata(t *testing.T) {
 	require.NotNil(t, obj)
 	// Make sure we have basic obj info
 	assert.NotEmpty(t, obj.Identifier)
-	assert.NotEmpty(t, obj.Institution)
 	assert.NotEmpty(t, obj.Title)
 	assert.NotEmpty(t, obj.Description)
 	assert.NotEmpty(t, obj.Access)
@@ -568,7 +567,6 @@ func TestValidator_SavesExtendedMetadata(t *testing.T) {
 	require.NotNil(t, obj)
 	// Make sure we have basic obj info
 	assert.NotEmpty(t, obj.Identifier)
-	assert.NotEmpty(t, obj.Institution)
 	assert.NotEmpty(t, obj.Title)
 	assert.NotEmpty(t, obj.Description)
 	assert.NotEmpty(t, obj.Access)

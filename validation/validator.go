@@ -483,7 +483,12 @@ func (validator *Validator) parseTags(reader io.Reader, relFilePath string) {
 }
 
 // Copy certain values from the aptrust-info.txt file into
-// properties of the IntellectualObject.
+// properties of the IntellectualObject. Although the
+// institution name generally appears in the tag "Source-Organization",
+// we don't want to set that here, because our ingest code needs
+// the institution's identifier (domain name), not it's actual
+// name. "Source-Organization" usually has something like
+// "University of Virginia". We want "virginia.edu".
 func (validator *Validator) setIntelObjTagValue(obj *models.IntellectualObject, tag *models.Tag) {
 	if tag.SourceFile == "aptrust-info.txt" {
 		label := strings.ToLower(tag.Label)
@@ -496,8 +501,6 @@ func (validator *Validator) setIntelObjTagValue(obj *models.IntellectualObject, 
 	} else if tag.SourceFile == "bag-info.txt" {
 		label := strings.ToLower(tag.Label)
 		switch label {
-		case "source-organization":
-			obj.Institution = tag.Value
 		case "internal-sender-description":
 			obj.Description = tag.Value
 		case "internal-sender-identifier":
