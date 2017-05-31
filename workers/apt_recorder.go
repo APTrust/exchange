@@ -7,6 +7,7 @@ import (
 	"github.com/APTrust/exchange/models"
 	"github.com/APTrust/exchange/network"
 	"github.com/APTrust/exchange/util"
+	"github.com/APTrust/exchange/util/storage"
 	"github.com/nsqio/go-nsq"
 	"os"
 	"time"
@@ -44,22 +45,16 @@ func NewAPTRecorder(_context *context.Context) *APTRecorder {
 
 // This is the callback that NSQ workers use to handle messages from NSQ.
 func (recorder *APTRecorder) HandleMessage(message *nsq.Message) error {
+	log := recorder.Context.MessageLog
 	ingestState, err := GetIngestState(message, recorder.Context, false)
 	if err != nil {
 		recorder.Context.MessageLog.Error(err.Error())
 		return err
 	}
 
-	// If this item was queued more than once, and this process or any
-	// other is currently working on it, just finish the message and
-	// assume that the in-progress worker will take care of the original.
-	if ingestState.WorkItem.Node != "" && ingestState.WorkItem.Pid != 0 {
-		recorder.Context.MessageLog.Info("Marking WorkItem %d (%s/%s) as finished "+
-			"without doing any work, because this item is currently in process by "+
-			"node %s, pid %s. WorkItem was last updated at %s.",
-			ingestState.WorkItem.Id, ingestState.WorkItem.Bucket,
-			ingestState.WorkItem.Name, ingestState.WorkItem.Node,
-			ingestState.WorkItem.Pid, ingestState.WorkItem.UpdatedAt)
+	// Skip this if it's already being worked on.
+	if ingestState.WorkItem.IsInProgress() {
+		log.Info(ingestState.WorkItem.MsgSkippingInProgress())
 		message.Finish()
 		return nil
 	}
@@ -96,9 +91,9 @@ func (recorder *APTRecorder) record() {
 		ingestState.IngestManifest.RecordResult.Attempted = true
 		ingestState.IngestManifest.RecordResult.AttemptNumber += 1
 		recorder.buildEventsAndChecksums(ingestState)
-		if !ingestState.IngestManifest.RecordResult.HasErrors() {
-			recorder.saveAllPharosData(ingestState)
-		}
+		//if !ingestState.IngestManifest.RecordResult.HasErrors() {
+		//	recorder.saveAllPharosData(ingestState)
+		//}
 		recorder.CleanupChannel <- ingestState
 	}
 }
@@ -154,22 +149,35 @@ func (recorder *APTRecorder) cleanup() {
 // system, where record failured were common, and PREMIS events
 // often wound up being recorded twice.
 func (recorder *APTRecorder) buildEventsAndChecksums(ingestState *models.IngestState) {
-	obj := ingestState.IngestManifest.Object
-	err := obj.BuildIngestEvents()
+	objIdentifier, err := ingestState.IngestManifest.ObjectIdentifier()
 	if err != nil {
 		ingestState.IngestManifest.RecordResult.AddError(err.Error())
-		ingestState.IngestManifest.RecordResult.ErrorIsFatal = true
+		return
 	}
-	err = obj.BuildIngestChecksums()
-	if err != nil {
-		ingestState.IngestManifest.RecordResult.AddError(err.Error())
-		ingestState.IngestManifest.RecordResult.ErrorIsFatal = true
-	}
-}
 
-func (recorder *APTRecorder) saveAllPharosData(ingestState *models.IngestState) {
+	db, err := storage.NewBoltDB(ingestState.IngestManifest.DBPath)
+	if db != nil {
+		defer db.Close()
+	}
+	if err != nil {
+		ingestState.IngestManifest.RecordResult.AddError(err.Error())
+		return
+	}
+	obj, err := db.GetIntellectualObject(objIdentifier)
+	if err != nil {
+		ingestState.IngestManifest.RecordResult.AddError(err.Error())
+		return
+	}
+	err = obj.BuildIngestEvents(db.FileCount())
+	if err != nil {
+		ingestState.IngestManifest.RecordResult.AddError(err.Error())
+		ingestState.IngestManifest.RecordResult.ErrorIsFatal = true
+		return
+	}
+
+	// Save the IntellectualObject
 	if ingestState.IngestManifest.Object.Id == 0 {
-		recorder.saveIntellectualObject(ingestState)
+		recorder.saveIntellectualObject(ingestState, obj)
 		if ingestState.IngestManifest.RecordResult.HasErrors() {
 			recorder.Context.MessageLog.Error("Error saving IntellectualObject %s/%s: %v",
 				ingestState.WorkItem.Bucket, ingestState.WorkItem.Name,
@@ -186,19 +194,94 @@ func (recorder *APTRecorder) saveAllPharosData(ingestState *models.IngestState) 
 			ingestState.WorkItem.Bucket, ingestState.WorkItem.Name,
 			ingestState.IngestManifest.Object.Id)
 	}
-	recorder.saveGenericFiles(ingestState)
-	if ingestState.IngestManifest.RecordResult.HasErrors() {
-		recorder.Context.MessageLog.Error("Error saving one or more GenericFiles for "+
-			"IntellectualObject %s/%s: %v",
-			ingestState.WorkItem.Bucket, ingestState.WorkItem.Name,
-			ingestState.IngestManifest.RecordResult.AllErrorsAsString())
-		return
+
+	offset := 0
+	for {
+		batch := db.FileIdentifierBatch(offset, GENERIC_FILE_BATCH_SIZE)
+		newFiles := make([]*models.GenericFile, 0)
+		existingFiles := make([]*models.GenericFile, 0)
+		for _, gfIdentifier := range batch {
+			gf, err := db.GetGenericFile(gfIdentifier)
+			if err != nil {
+				ingestState.IngestManifest.RecordResult.AddError(err.Error())
+				ingestState.IngestManifest.RecordResult.ErrorIsFatal = true
+			}
+			gf.IntellectualObjectId = obj.Id
+			if gf.IngestNeedsSave == false {
+				continue
+			}
+			err = gf.BuildIngestChecksums()
+			if err != nil {
+				ingestState.IngestManifest.RecordResult.AddError(err.Error())
+				ingestState.IngestManifest.RecordResult.ErrorIsFatal = true
+			}
+			err = gf.BuildIngestEvents()
+			if err != nil {
+				ingestState.IngestManifest.RecordResult.AddError(err.Error())
+				ingestState.IngestManifest.RecordResult.ErrorIsFatal = true
+			}
+			if !util.HasSavableName(gf.OriginalPath()) {
+				recorder.Context.MessageLog.Info("Will not save %s: does not match savable name pattern.",
+					gf.Identifier)
+				gf.IngestNeedsSave = false
+			}
+
+			if gf.IngestNeedsSave {
+				if gf.IngestPreviousVersionExists {
+					if gf.Id > 0 {
+						existingFiles = append(existingFiles, gf)
+					} else {
+						msg := fmt.Sprintf("GenericFile %s has a previous version, but its Id is missing.",
+							gf.Identifier)
+						recorder.Context.MessageLog.Error(msg)
+						ingestState.IngestManifest.RecordResult.AddError(msg)
+					}
+				} else if gf.IngestNeedsSave && gf.Id == 0 {
+					newFiles = append(newFiles, gf)
+				}
+			}
+		}
+
+		// Save this batch of files
+		recorder.createGenericFiles(ingestState, newFiles)
+		recorder.updateGenericFiles(ingestState, existingFiles)
+
+		for _, gf := range newFiles {
+			err := db.Save(gf.Identifier, gf)
+			if err != nil {
+				ingestState.IngestManifest.RecordResult.AddError(
+					"After post to Pharos, error saving %s to valdb: %v",
+					gf.Identifier, err.Error())
+			}
+		}
+		for _, gf := range existingFiles {
+			err := db.Save(gf.Identifier, gf)
+			if err != nil {
+				ingestState.IngestManifest.RecordResult.AddError(
+					"After post to Pharos, error saving %s to valdb: %v",
+					gf.Identifier, err.Error())
+			}
+		}
+
+		offset += len(batch)
+		if len(batch) < GENERIC_FILE_BATCH_SIZE {
+			break
+		}
 	}
 }
 
-func (recorder *APTRecorder) saveIntellectualObject(ingestState *models.IngestState) {
-	obj := ingestState.IngestManifest.Object
+// func (recorder *APTRecorder) saveAllPharosData(ingestState *models.IngestState) {
+// 	recorder.saveGenericFiles(ingestState)
+// 	if ingestState.IngestManifest.RecordResult.HasErrors() {
+// 		recorder.Context.MessageLog.Error("Error saving one or more GenericFiles for "+
+// 			"IntellectualObject %s/%s: %v",
+// 			ingestState.WorkItem.Bucket, ingestState.WorkItem.Name,
+// 			ingestState.IngestManifest.RecordResult.AllErrorsAsString())
+// 		return
+// 	}
+// }
 
+func (recorder *APTRecorder) saveIntellectualObject(ingestState *models.IngestState, obj *models.IntellectualObject) {
 	// If we're ingesting a new version of a previously ingested bag,
 	// we'll want to update the old record. Otherwise, we'll create a
 	// new one. 99.99% of the time, Pharos will return a 404 here, because
@@ -225,53 +308,52 @@ func (recorder *APTRecorder) saveIntellectualObject(ingestState *models.IngestSt
 	obj.Id = savedObject.Id
 	obj.CreatedAt = savedObject.CreatedAt
 	obj.UpdatedAt = savedObject.UpdatedAt
-	obj.PropagateIdsToChildren()
 	recorder.savePremisEventsForObject(ingestState)
 }
 
-func (recorder *APTRecorder) saveGenericFiles(ingestState *models.IngestState) {
-	filesToCreate := make([]*models.GenericFile, 0)
-	filesToUpdate := make([]*models.GenericFile, 0)
-	for i, gf := range ingestState.IngestManifest.Object.GenericFiles {
-		// We run this check here, rather than in the validator,
-		// because this is an APTrust-specific policy.
-		if !util.HasSavableName(gf.OriginalPath()) {
-			recorder.Context.MessageLog.Info("Will not save %s: does not match savable name pattern.",
-				gf.Identifier)
-			gf.IngestNeedsSave = false
-		}
-		if i%GENERIC_FILE_BATCH_SIZE == 0 {
-			recorder.createGenericFiles(ingestState, filesToCreate)
-			if ingestState.IngestManifest.RecordResult.HasErrors() {
-				break
-			}
-			recorder.updateGenericFiles(ingestState, filesToUpdate)
-			if ingestState.IngestManifest.RecordResult.HasErrors() {
-				break
-			}
-			filesToCreate = make([]*models.GenericFile, 0)
-			filesToUpdate = make([]*models.GenericFile, 0)
-		}
-		if gf.IngestNeedsSave {
-			if gf.IngestPreviousVersionExists {
-				if gf.Id > 0 {
-					filesToUpdate = append(filesToUpdate, gf)
-				} else {
-					msg := fmt.Sprintf("GenericFile %s has a previous version, but its Id is missing.",
-						gf.Identifier)
-					recorder.Context.MessageLog.Error(msg)
-					ingestState.IngestManifest.RecordResult.AddError(msg)
-				}
-			} else if gf.IngestNeedsSave && gf.Id == 0 {
-				filesToCreate = append(filesToCreate, gf)
-			}
-		}
-	}
-	if !ingestState.IngestManifest.RecordResult.HasErrors() {
-		recorder.createGenericFiles(ingestState, filesToCreate)
-		recorder.updateGenericFiles(ingestState, filesToUpdate)
-	}
-}
+// func (recorder *APTRecorder) saveGenericFiles(ingestState *models.IngestState) {
+// 	filesToCreate := make([]*models.GenericFile, 0)
+// 	filesToUpdate := make([]*models.GenericFile, 0)
+// 	for i, gf := range ingestState.IngestManifest.Object.GenericFiles {
+// 		// We run this check here, rather than in the validator,
+// 		// because this is an APTrust-specific policy.
+// 		if !util.HasSavableName(gf.OriginalPath()) {
+// 			recorder.Context.MessageLog.Info("Will not save %s: does not match savable name pattern.",
+// 				gf.Identifier)
+// 			gf.IngestNeedsSave = false
+// 		}
+// 		if i%GENERIC_FILE_BATCH_SIZE == 0 {
+// 			recorder.createGenericFiles(ingestState, filesToCreate)
+// 			if ingestState.IngestManifest.RecordResult.HasErrors() {
+// 				break
+// 			}
+// 			recorder.updateGenericFiles(ingestState, filesToUpdate)
+// 			if ingestState.IngestManifest.RecordResult.HasErrors() {
+// 				break
+// 			}
+// 			filesToCreate = make([]*models.GenericFile, 0)
+// 			filesToUpdate = make([]*models.GenericFile, 0)
+// 		}
+// 		if gf.IngestNeedsSave {
+// 			if gf.IngestPreviousVersionExists {
+// 				if gf.Id > 0 {
+// 					filesToUpdate = append(filesToUpdate, gf)
+// 				} else {
+// 					msg := fmt.Sprintf("GenericFile %s has a previous version, but its Id is missing.",
+// 						gf.Identifier)
+// 					recorder.Context.MessageLog.Error(msg)
+// 					ingestState.IngestManifest.RecordResult.AddError(msg)
+// 				}
+// 			} else if gf.IngestNeedsSave && gf.Id == 0 {
+// 				filesToCreate = append(filesToCreate, gf)
+// 			}
+// 		}
+// 	}
+// 	if !ingestState.IngestManifest.RecordResult.HasErrors() {
+// 		recorder.createGenericFiles(ingestState, filesToCreate)
+// 		recorder.updateGenericFiles(ingestState, filesToUpdate)
+// 	}
+// }
 
 func (recorder *APTRecorder) createGenericFiles(ingestState *models.IngestState, files []*models.GenericFile) {
 	if len(files) == 0 {
