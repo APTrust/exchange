@@ -138,6 +138,7 @@ func (recorder *APTRecorder) cleanup() {
 
 		// Save our WorkItemState
 		ingestState.IngestManifest.RecordResult.Finish()
+		LogJson(ingestState, recorder.Context.JsonLog)
 		RecordWorkItemState(ingestState, recorder.Context, ingestState.IngestManifest.RecordResult)
 	}
 }
@@ -195,6 +196,13 @@ func (recorder *APTRecorder) buildEventsAndChecksums(ingestState *models.IngestS
 			"No need to save %s/%s already has id %d",
 			ingestState.WorkItem.Bucket, ingestState.WorkItem.Name,
 			ingestState.IngestManifest.Object.Id)
+	}
+
+	// Save the object in our local db
+	err = db.Save(obj.Identifier, obj)
+	if err != nil {
+		ingestState.IngestManifest.RecordResult.AddError(err.Error())
+		return
 	}
 
 	offset := 0
@@ -310,7 +318,7 @@ func (recorder *APTRecorder) saveIntellectualObject(ingestState *models.IngestSt
 	obj.Id = savedObject.Id
 	obj.CreatedAt = savedObject.CreatedAt
 	obj.UpdatedAt = savedObject.UpdatedAt
-	recorder.savePremisEventsForObject(ingestState)
+	recorder.savePremisEventsForObject(ingestState, obj)
 }
 
 // func (recorder *APTRecorder) saveGenericFiles(ingestState *models.IngestState) {
@@ -410,9 +418,9 @@ func (recorder *APTRecorder) updateGenericFiles(ingestState *models.IngestState,
 	}
 }
 
-func (recorder *APTRecorder) savePremisEventsForObject(ingestState *models.IngestState) {
-	obj := ingestState.IngestManifest.Object
+func (recorder *APTRecorder) savePremisEventsForObject(ingestState *models.IngestState, obj *models.IntellectualObject) {
 	for i, event := range obj.PremisEvents {
+		event.IntellectualObjectId = obj.Id
 		resp := recorder.Context.PharosClient.PremisEventSave(event)
 		if resp.Error != nil {
 			ingestState.IngestManifest.RecordResult.AddError(
@@ -425,6 +433,22 @@ func (recorder *APTRecorder) savePremisEventsForObject(ingestState *models.Inges
 }
 
 func (recorder *APTRecorder) deleteBagFromReceivingBucket(ingestState *models.IngestState) {
+	var obj *models.IntellectualObject
+	db, err := storage.NewBoltDB(ingestState.IngestManifest.DBPath)
+	if err != nil {
+		recorder.Context.MessageLog.Warning("Can't open valdb: %v", err)
+	}
+	if db != nil {
+		obj, err = db.GetIntellectualObject(db.ObjectIdentifier())
+		if err != nil {
+			recorder.Context.MessageLog.Warning("Can't get %s from valdb: %v", db.ObjectIdentifier(), err)
+		}
+		if obj == nil {
+			recorder.Context.MessageLog.Warning("Get %s from valdb returned nil", db.ObjectIdentifier())
+		}
+		defer db.Close()
+	}
+
 	ingestState.IngestManifest.CleanupResult.Start()
 	ingestState.IngestManifest.CleanupResult.Attempted = true
 	ingestState.IngestManifest.CleanupResult.AttemptNumber += 1
@@ -433,7 +457,10 @@ func (recorder *APTRecorder) deleteBagFromReceivingBucket(ingestState *models.In
 		// We don't actually delete files if config is dev, test, or integration.
 		recorder.Context.MessageLog.Info("Skipping deletion step because config.DeleteOnSuccess == false")
 		// Set deletion timestamp, so we know this method was called.
-		ingestState.IngestManifest.Object.IngestDeletedFromReceivingAt = time.Now().UTC()
+		if obj != nil {
+			obj.IngestDeletedFromReceivingAt = time.Now().UTC()
+			db.Save(obj.Identifier, obj)
+		}
 		ingestState.IngestManifest.CleanupResult.Finish()
 		return
 	}
@@ -454,7 +481,10 @@ func (recorder *APTRecorder) deleteBagFromReceivingBucket(ingestState *models.In
 		message := fmt.Sprintf("Deleted S3 item %s/%s",
 			ingestState.IngestManifest.S3Bucket, ingestState.IngestManifest.S3Key)
 		recorder.Context.MessageLog.Info(message)
-		ingestState.IngestManifest.Object.IngestDeletedFromReceivingAt = time.Now().UTC()
+		if obj != nil {
+			obj.IngestDeletedFromReceivingAt = time.Now().UTC()
+			db.Save(obj.Identifier, obj)
+		}
 	}
 	ingestState.IngestManifest.CleanupResult.Finish()
 }

@@ -205,7 +205,7 @@ func fetcherTestSpecifics(t *testing.T, ingestManifest *models.IngestManifest) {
 	assert.Equal(t, "Bag-Group-Identifier", obj.IngestTags[5].Label)
 	assert.Equal(t, "Charley Horse", obj.IngestTags[5].Value)
 
-	assert.Empty(t, obj.PremisEvents)
+	assert.NotEmpty(t, obj.PremisEvents)
 
 	// -----------------------------------------------------------------------
 	// Iterate through keys...

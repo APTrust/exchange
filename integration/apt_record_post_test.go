@@ -4,6 +4,7 @@ import (
 	"github.com/APTrust/exchange/constants"
 	"github.com/APTrust/exchange/models"
 	"github.com/APTrust/exchange/util"
+	"github.com/APTrust/exchange/util/storage"
 	"github.com/APTrust/exchange/util/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -79,7 +80,11 @@ func recordTestCommon(t *testing.T, bagName string, ingestManifest *models.Inges
 		"CleanupResult.Retry should be true for %s", bagName)
 
 	// Make sure our IntellectualObject got all of its PremisEvents
-	obj := ingestManifest.Object
+	//obj := ingestManifest.Object
+	db, err := storage.NewBoltDB(ingestManifest.DBPath)
+	require.Nil(t, err)
+	obj, err := db.GetIntellectualObject(db.ObjectIdentifier())
+	require.Nil(t, err)
 	require.Equal(t, 4, len(obj.PremisEvents))
 
 	// Make sure this item was deleted from the receiving bucket
@@ -124,7 +129,10 @@ func recordTestCommon(t *testing.T, bagName string, ingestManifest *models.Inges
 			"IntellectualObjectIdentifier is wrong for %s %s", event.EventType, obj.Identifier)
 	}
 
-	for _, gf := range obj.GenericFiles {
+	for _, gfIdentifier := range db.FileIdentifiers() {
+		gf, err := db.GetGenericFile(gfIdentifier)
+		require.Nil(t, err, gfIdentifier)
+
 		// Skip these checks for files that didn't need to be saved.
 		// Reasons for not needing to be saved:
 		// 1. File has a non-savable name, according to util.HasSavableName
