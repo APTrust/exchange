@@ -177,6 +177,20 @@ func (boltDB *BoltDB) FileIdentifiers() []string {
 	return keys
 }
 
+// FileCount returns the number of GenericFiles stored in the database.
+func (boltDB *BoltDB) FileCount() int {
+	count := 0
+	boltDB.db.View(func(tx *bolt.Tx) error {
+		b := tx.Bucket([]byte(FILE_BUCKET))
+		c := b.Cursor()
+		for k, _ := c.First(); k != nil; k, _ = c.Next() {
+			count += 1
+		}
+		return nil
+	})
+	return count
+}
+
 // FileIdentifierBatch returns a list of GenericFile
 // identifiers from offset (zero-based) up to limit,
 // or end of list.

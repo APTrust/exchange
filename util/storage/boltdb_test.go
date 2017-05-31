@@ -36,15 +36,18 @@ func TestBoltDB(t *testing.T) {
 	require.Nil(t, nilObj)
 
 	// Save and retrieve a generic file
-	gf := testutil.MakeGenericFile(2, 2, "uc.edu/bag/data/file.json")
+	gfIdentifier := ""
+	for i := 0; i < 10; i++ {
+		gf := testutil.MakeGenericFile(2, 2, gfIdentifier)
+		err = bolt.Save(gf.Identifier, gf)
+		require.Nil(t, err)
+		gfIdentifier = gf.Identifier
+	}
 
-	err = bolt.Save(gf.Identifier, gf)
-	require.Nil(t, err)
-
-	restoredFile, err := bolt.GetGenericFile(gf.Identifier)
+	restoredFile, err := bolt.GetGenericFile(gfIdentifier)
 	require.Nil(t, err)
 	require.NotNil(t, restoredFile)
-	assert.Equal(t, gf.Identifier, restoredFile.Identifier)
+	assert.Equal(t, gfIdentifier, restoredFile.Identifier)
 
 	nilFile, err := bolt.GetGenericFile("Nil File")
 	require.Nil(t, err)
@@ -52,7 +55,9 @@ func TestBoltDB(t *testing.T) {
 
 	// Get a list of GenericFile keys. Should not return obj identifier
 	gfIds := bolt.FileIdentifiers()
-	require.Equal(t, 1, len(gfIds))
+	require.Equal(t, 10, len(gfIds))
+
+	assert.Equal(t, 10, bolt.FileCount())
 
 	assert.Equal(t, "Test Object", bolt.ObjectIdentifier())
 }
