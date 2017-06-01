@@ -183,6 +183,10 @@ func (recorder *APTRecorder) saveAllPharosData(ingestState *models.IngestState) 
 		return
 	}
 
+	recorder.saveFiles(ingestState, obj, db)
+}
+
+func (recorder *APTRecorder) saveFiles(ingestState *models.IngestState, obj *models.IntellectualObject, db *storage.BoltDB) {
 	offset := 0
 	for {
 		batch := db.FileIdentifierBatch(offset, GENERIC_FILE_BATCH_SIZE)
@@ -220,28 +224,12 @@ func (recorder *APTRecorder) saveAllPharosData(ingestState *models.IngestState) 
 		recorder.saveGenericFilesInBoltDB(ingestState, db, newFiles)
 		recorder.saveGenericFilesInBoltDB(ingestState, db, existingFiles)
 
-		// for _, gf := range newFiles {
-		//	err := db.Save(gf.Identifier, gf)
-		//	if err != nil {
-		//		ingestState.IngestManifest.RecordResult.AddError(
-		//			"After post to Pharos, error saving %s to valdb: %v",
-		//			gf.Identifier, err.Error())
-		//	}
-		// }
-		// for _, gf := range existingFiles {
-		//	err := db.Save(gf.Identifier, gf)
-		//	if err != nil {
-		//		ingestState.IngestManifest.RecordResult.AddError(
-		//			"After post to Pharos, error saving %s to valdb: %v",
-		//			gf.Identifier, err.Error())
-		//	}
-		// }
-
 		offset += len(batch)
 		if len(batch) < GENERIC_FILE_BATCH_SIZE {
 			break
 		}
 	}
+
 }
 
 func (recorder *APTRecorder) saveIntellectualObject(ingestState *models.IngestState, obj *models.IntellectualObject) {
