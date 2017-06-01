@@ -180,9 +180,9 @@ class IntegrationTest
 	  @service.app_start(@context.apps['apt_volume_service'])
 	  sleep 5
 	  @service.app_start(@context.apps['apt_fetch'])
-	  sleep 20  # let nsq store topic fill before client connects
+	  sleep 60  # let nsq store topic fill before client connects
 	  @service.app_start(@context.apps['apt_store'])
-	  sleep 20  # let nsq record topic fill before client connects
+	  sleep 60  # let nsq record topic fill before client connects
 	  @service.app_start(@context.apps['apt_record'])
 	  sleep 40  # allow fetch/store/record time to finish
 	  @service.stop_everything unless more_tests_follow
@@ -523,12 +523,12 @@ class IntegrationTest
 	  @service.app_start(@context.apps['dpn_ingest_record'])
 	  sleep 30
 
-      # Run cleanup. No need to sleep. This exits when it's done.
-      # This won't actually delete any files, because the remote
-      # nodes don't replicate our files in this test suite.
-      # However, you should see in logs/dpn_cleanup.log that it
-      # checked each file in the staging area and decided not to
-      # delete it.
+	  # Run cleanup. No need to sleep. This exits when it's done.
+	  # This won't actually delete any files, because the remote
+	  # nodes don't replicate our files in this test suite.
+	  # However, you should see in logs/dpn_cleanup.log that it
+	  # checked each file in the staging area and decided not to
+	  # delete it.
 	  @service.app_start(@context.apps['dpn_cleanup'])
 
 	  # Run the post test
