@@ -90,10 +90,7 @@ func (recorder *APTRecorder) record() {
 		ingestState.IngestManifest.RecordResult.Start()
 		ingestState.IngestManifest.RecordResult.Attempted = true
 		ingestState.IngestManifest.RecordResult.AttemptNumber += 1
-		recorder.buildEventsAndChecksums(ingestState)
-		//if !ingestState.IngestManifest.RecordResult.HasErrors() {
-		//	recorder.saveAllPharosData(ingestState)
-		//}
+		recorder.saveAllPharosData(ingestState)
 		recorder.CleanupChannel <- ingestState
 	}
 }
@@ -108,16 +105,11 @@ func (recorder *APTRecorder) cleanup() {
 			(ingestState.IngestManifest.HasErrors() && attemptNumber >= maxAttempts))
 
 		if itsTimeToGiveUp {
-			recorder.Context.MessageLog.Error("Failed to record %s/%s. Errors: %s.",
-				ingestState.WorkItem.Bucket, ingestState.WorkItem.Name,
-				ingestState.IngestManifest.AllErrorsAsString())
+			recorder.logFailure(ingestState)
 			ingestState.FinishNSQ()
 			MarkWorkItemFailed(ingestState, recorder.Context)
 		} else if ingestState.IngestManifest.RecordResult.HasErrors() {
-			recorder.Context.MessageLog.Info("Requeueing WorkItem %d (%s/%s) due to transient errors. %s",
-				ingestState.WorkItem.Id, ingestState.WorkItem.Bucket,
-				ingestState.WorkItem.Name,
-				ingestState.IngestManifest.AllErrorsAsString())
+			recorder.logRequeue(ingestState)
 			ingestState.RequeueNSQ(1000)
 			MarkWorkItemRequeued(ingestState, recorder.Context)
 		} else {
@@ -151,13 +143,7 @@ func (recorder *APTRecorder) cleanup() {
 // in Pharos and which were not. This was a problem in the old
 // system, where record failured were common, and PREMIS events
 // often wound up being recorded twice.
-func (recorder *APTRecorder) buildEventsAndChecksums(ingestState *models.IngestState) {
-	objIdentifier, err := ingestState.IngestManifest.ObjectIdentifier()
-	if err != nil {
-		ingestState.IngestManifest.RecordResult.AddError(err.Error())
-		return
-	}
-
+func (recorder *APTRecorder) saveAllPharosData(ingestState *models.IngestState) {
 	db, err := storage.NewBoltDB(ingestState.IngestManifest.DBPath)
 	if db != nil {
 		defer db.Close()
@@ -166,7 +152,7 @@ func (recorder *APTRecorder) buildEventsAndChecksums(ingestState *models.IngestS
 		ingestState.IngestManifest.RecordResult.AddError(err.Error())
 		return
 	}
-	obj, err := db.GetIntellectualObject(objIdentifier)
+	obj, err := db.GetIntellectualObject(db.ObjectIdentifier())
 	if err != nil {
 		ingestState.IngestManifest.RecordResult.AddError(err.Error())
 		return
@@ -182,20 +168,13 @@ func (recorder *APTRecorder) buildEventsAndChecksums(ingestState *models.IngestS
 	if ingestState.IngestManifest.Object.Id == 0 {
 		recorder.saveIntellectualObject(ingestState, obj)
 		if ingestState.IngestManifest.RecordResult.HasErrors() {
-			recorder.Context.MessageLog.Error("Error saving IntellectualObject %s/%s: %v",
-				ingestState.WorkItem.Bucket, ingestState.WorkItem.Name,
-				ingestState.IngestManifest.RecordResult.AllErrorsAsString())
+			recorder.logSaveError(ingestState)
 			return
 		} else {
-			recorder.Context.MessageLog.Info("Saved %s/%s with id %d",
-				ingestState.WorkItem.Bucket, ingestState.WorkItem.Name,
-				ingestState.IngestManifest.Object.Id)
+			recorder.logSaveSuccess(ingestState)
 		}
 	} else {
-		recorder.Context.MessageLog.Info(
-			"No need to save %s/%s already has id %d",
-			ingestState.WorkItem.Bucket, ingestState.WorkItem.Name,
-			ingestState.IngestManifest.Object.Id)
+		recorder.logNoNeedToSave(ingestState)
 	}
 
 	// Save the object in our local db
@@ -280,17 +259,6 @@ func (recorder *APTRecorder) buildEventsAndChecksums(ingestState *models.IngestS
 	}
 }
 
-// func (recorder *APTRecorder) saveAllPharosData(ingestState *models.IngestState) {
-// 	recorder.saveGenericFiles(ingestState)
-// 	if ingestState.IngestManifest.RecordResult.HasErrors() {
-// 		recorder.Context.MessageLog.Error("Error saving one or more GenericFiles for "+
-// 			"IntellectualObject %s/%s: %v",
-// 			ingestState.WorkItem.Bucket, ingestState.WorkItem.Name,
-// 			ingestState.IngestManifest.RecordResult.AllErrorsAsString())
-// 		return
-// 	}
-// }
-
 func (recorder *APTRecorder) saveIntellectualObject(ingestState *models.IngestState, obj *models.IntellectualObject) {
 	// If we're ingesting a new version of a previously ingested bag,
 	// we'll want to update the old record. Otherwise, we'll create a
@@ -321,50 +289,7 @@ func (recorder *APTRecorder) saveIntellectualObject(ingestState *models.IngestSt
 	recorder.savePremisEventsForObject(ingestState, obj)
 }
 
-// func (recorder *APTRecorder) saveGenericFiles(ingestState *models.IngestState) {
-// 	filesToCreate := make([]*models.GenericFile, 0)
-// 	filesToUpdate := make([]*models.GenericFile, 0)
-// 	for i, gf := range ingestState.IngestManifest.Object.GenericFiles {
-// 		// We run this check here, rather than in the validator,
-// 		// because this is an APTrust-specific policy.
-// 		if !util.HasSavableName(gf.OriginalPath()) {
-// 			recorder.Context.MessageLog.Info("Will not save %s: does not match savable name pattern.",
-// 				gf.Identifier)
-// 			gf.IngestNeedsSave = false
-// 		}
-// 		if i%GENERIC_FILE_BATCH_SIZE == 0 {
-// 			recorder.createGenericFiles(ingestState, filesToCreate)
-// 			if ingestState.IngestManifest.RecordResult.HasErrors() {
-// 				break
-// 			}
-// 			recorder.updateGenericFiles(ingestState, filesToUpdate)
-// 			if ingestState.IngestManifest.RecordResult.HasErrors() {
-// 				break
-// 			}
-// 			filesToCreate = make([]*models.GenericFile, 0)
-// 			filesToUpdate = make([]*models.GenericFile, 0)
-// 		}
-// 		if gf.IngestNeedsSave {
-// 			if gf.IngestPreviousVersionExists {
-// 				if gf.Id > 0 {
-// 					filesToUpdate = append(filesToUpdate, gf)
-// 				} else {
-// 					msg := fmt.Sprintf("GenericFile %s has a previous version, but its Id is missing.",
-// 						gf.Identifier)
-// 					recorder.Context.MessageLog.Error(msg)
-// 					ingestState.IngestManifest.RecordResult.AddError(msg)
-// 				}
-// 			} else if gf.IngestNeedsSave && gf.Id == 0 {
-// 				filesToCreate = append(filesToCreate, gf)
-// 			}
-// 		}
-// 	}
-// 	if !ingestState.IngestManifest.RecordResult.HasErrors() {
-// 		recorder.createGenericFiles(ingestState, filesToCreate)
-// 		recorder.updateGenericFiles(ingestState, filesToUpdate)
-// 	}
-// }
-
+// createGenericFiles creates new GenericFile records in Pharos
 func (recorder *APTRecorder) createGenericFiles(ingestState *models.IngestState, files []*models.GenericFile) {
 	if len(files) == 0 {
 		return
@@ -402,6 +327,7 @@ func (recorder *APTRecorder) createGenericFiles(ingestState *models.IngestState,
 	}
 }
 
+// updateGenericFiles updates existing GenericFile records in Pharos
 func (recorder *APTRecorder) updateGenericFiles(ingestState *models.IngestState, files []*models.GenericFile) {
 	if len(files) == 0 {
 		return
@@ -418,6 +344,7 @@ func (recorder *APTRecorder) updateGenericFiles(ingestState *models.IngestState,
 	}
 }
 
+// savePremisEventsForObject saves the object-level Premis events.
 func (recorder *APTRecorder) savePremisEventsForObject(ingestState *models.IngestState, obj *models.IntellectualObject) {
 	for i, event := range obj.PremisEvents {
 		event.IntellectualObjectId = obj.Id
@@ -432,6 +359,8 @@ func (recorder *APTRecorder) savePremisEventsForObject(ingestState *models.Inges
 	}
 }
 
+// deleteBagFromReceivingBucket deletes the original tar file from the
+// depositor's receiving bucket.
 func (recorder *APTRecorder) deleteBagFromReceivingBucket(ingestState *models.IngestState) {
 	var obj *models.IntellectualObject
 	db, err := storage.NewBoltDB(ingestState.IngestManifest.DBPath)
@@ -487,4 +416,38 @@ func (recorder *APTRecorder) deleteBagFromReceivingBucket(ingestState *models.In
 		}
 	}
 	ingestState.IngestManifest.CleanupResult.Finish()
+}
+
+// --------- Messages --------------
+
+func (recorder *APTRecorder) logFailure(ingestState *models.IngestState) {
+	recorder.Context.MessageLog.Error("Failed to record %s/%s. Errors: %s.",
+		ingestState.WorkItem.Bucket, ingestState.WorkItem.Name,
+		ingestState.IngestManifest.AllErrorsAsString())
+}
+
+func (recorder *APTRecorder) logRequeue(ingestState *models.IngestState) {
+	recorder.Context.MessageLog.Info("Requeueing WorkItem %d (%s/%s) due to transient errors. %s",
+		ingestState.WorkItem.Id, ingestState.WorkItem.Bucket,
+		ingestState.WorkItem.Name,
+		ingestState.IngestManifest.AllErrorsAsString())
+}
+
+func (recorder *APTRecorder) logSaveError(ingestState *models.IngestState) {
+	recorder.Context.MessageLog.Error("Error saving IntellectualObject %s/%s: %v",
+		ingestState.WorkItem.Bucket, ingestState.WorkItem.Name,
+		ingestState.IngestManifest.RecordResult.AllErrorsAsString())
+}
+
+func (recorder *APTRecorder) logSaveSuccess(ingestState *models.IngestState) {
+	recorder.Context.MessageLog.Info("Saved %s/%s with id %d",
+		ingestState.WorkItem.Bucket, ingestState.WorkItem.Name,
+		ingestState.IngestManifest.Object.Id)
+}
+
+func (recorder *APTRecorder) logNoNeedToSave(ingestState *models.IngestState) {
+	recorder.Context.MessageLog.Info(
+		"No need to save %s/%s already has id %d",
+		ingestState.WorkItem.Bucket, ingestState.WorkItem.Name,
+		ingestState.IngestManifest.Object.Id)
 }
