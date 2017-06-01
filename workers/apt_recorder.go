@@ -6,7 +6,6 @@ import (
 	"github.com/APTrust/exchange/context"
 	"github.com/APTrust/exchange/models"
 	"github.com/APTrust/exchange/network"
-	"github.com/APTrust/exchange/util"
 	"github.com/APTrust/exchange/util/storage"
 	"github.com/nsqio/go-nsq"
 	"os"
@@ -199,58 +198,44 @@ func (recorder *APTRecorder) saveAllPharosData(ingestState *models.IngestState) 
 			if gf.IngestNeedsSave == false {
 				continue
 			}
-			err = gf.BuildIngestChecksums()
-			if err != nil {
-				ingestState.IngestManifest.RecordResult.AddError(err.Error())
-				ingestState.IngestManifest.RecordResult.ErrorIsFatal = true
-			}
-			err = gf.BuildIngestEvents()
-			if err != nil {
-				ingestState.IngestManifest.RecordResult.AddError(err.Error())
-				ingestState.IngestManifest.RecordResult.ErrorIsFatal = true
-			}
-			if !util.HasSavableName(gf.OriginalPath()) {
-				recorder.Context.MessageLog.Info("Will not save %s: does not match savable name pattern.",
-					gf.Identifier)
-				gf.IngestNeedsSave = false
-			}
+			recorder.buildGenericFileChecksums(gf, ingestState)
+			recorder.buildGenericFileEvents(gf, ingestState)
 
-			if gf.IngestNeedsSave {
-				if gf.IngestPreviousVersionExists {
-					if gf.Id > 0 {
-						existingFiles = append(existingFiles, gf)
-					} else {
-						msg := fmt.Sprintf("GenericFile %s has a previous version, but its Id is missing.",
-							gf.Identifier)
-						recorder.Context.MessageLog.Error(msg)
-						ingestState.IngestManifest.RecordResult.AddError(msg)
-					}
-				} else if gf.IngestNeedsSave && gf.Id == 0 {
-					newFiles = append(newFiles, gf)
+			if gf.IngestPreviousVersionExists {
+				if gf.Id > 0 {
+					existingFiles = append(existingFiles, gf)
+				} else {
+					recorder.logMissingId(ingestState, gf)
 				}
+			} else if gf.Id == 0 {
+				newFiles = append(newFiles, gf)
 			}
 		}
 
-		// Save this batch of files
+		// Save this batch of files in Pharos
 		recorder.createGenericFiles(ingestState, newFiles)
 		recorder.updateGenericFiles(ingestState, existingFiles)
 
-		for _, gf := range newFiles {
-			err := db.Save(gf.Identifier, gf)
-			if err != nil {
-				ingestState.IngestManifest.RecordResult.AddError(
-					"After post to Pharos, error saving %s to valdb: %v",
-					gf.Identifier, err.Error())
-			}
-		}
-		for _, gf := range existingFiles {
-			err := db.Save(gf.Identifier, gf)
-			if err != nil {
-				ingestState.IngestManifest.RecordResult.AddError(
-					"After post to Pharos, error saving %s to valdb: %v",
-					gf.Identifier, err.Error())
-			}
-		}
+		// Update the GenericFile records in BoltDB
+		recorder.saveGenericFilesInBoltDB(ingestState, db, newFiles)
+		recorder.saveGenericFilesInBoltDB(ingestState, db, existingFiles)
+
+		// for _, gf := range newFiles {
+		//	err := db.Save(gf.Identifier, gf)
+		//	if err != nil {
+		//		ingestState.IngestManifest.RecordResult.AddError(
+		//			"After post to Pharos, error saving %s to valdb: %v",
+		//			gf.Identifier, err.Error())
+		//	}
+		// }
+		// for _, gf := range existingFiles {
+		//	err := db.Save(gf.Identifier, gf)
+		//	if err != nil {
+		//		ingestState.IngestManifest.RecordResult.AddError(
+		//			"After post to Pharos, error saving %s to valdb: %v",
+		//			gf.Identifier, err.Error())
+		//	}
+		// }
 
 		offset += len(batch)
 		if len(batch) < GENERIC_FILE_BATCH_SIZE {
@@ -418,6 +403,33 @@ func (recorder *APTRecorder) deleteBagFromReceivingBucket(ingestState *models.In
 	ingestState.IngestManifest.CleanupResult.Finish()
 }
 
+func (recorder *APTRecorder) buildGenericFileChecksums(gf *models.GenericFile, ingestState *models.IngestState) {
+	err := gf.BuildIngestChecksums()
+	if err != nil {
+		ingestState.IngestManifest.RecordResult.AddError(err.Error())
+		ingestState.IngestManifest.RecordResult.ErrorIsFatal = true
+	}
+}
+
+func (recorder *APTRecorder) buildGenericFileEvents(gf *models.GenericFile, ingestState *models.IngestState) {
+	err := gf.BuildIngestEvents()
+	if err != nil {
+		ingestState.IngestManifest.RecordResult.AddError(err.Error())
+		ingestState.IngestManifest.RecordResult.ErrorIsFatal = true
+	}
+}
+
+func (recorder *APTRecorder) saveGenericFilesInBoltDB(ingestState *models.IngestState, db *storage.BoltDB, genericFiles []*models.GenericFile) {
+	for _, gf := range genericFiles {
+		err := db.Save(gf.Identifier, gf)
+		if err != nil {
+			ingestState.IngestManifest.RecordResult.AddError(
+				"After post to Pharos, error saving %s to valdb: %v",
+				gf.Identifier, err.Error())
+		}
+	}
+}
+
 // --------- Messages --------------
 
 func (recorder *APTRecorder) logFailure(ingestState *models.IngestState) {
@@ -450,4 +462,11 @@ func (recorder *APTRecorder) logNoNeedToSave(ingestState *models.IngestState) {
 		"No need to save %s/%s already has id %d",
 		ingestState.WorkItem.Bucket, ingestState.WorkItem.Name,
 		ingestState.IngestManifest.Object.Id)
+}
+
+func (recorder *APTRecorder) logMissingId(ingestState *models.IngestState, gf *models.GenericFile) {
+	msg := fmt.Sprintf("GenericFile %s has a previous version, but its Id is missing.",
+		gf.Identifier)
+	recorder.Context.MessageLog.Error(msg)
+	ingestState.IngestManifest.RecordResult.AddError(msg)
 }
