@@ -1,11 +1,14 @@
 package storage_test
 
 import (
+	"encoding/json"
 	"fmt"
+	"github.com/APTrust/exchange/models"
 	"github.com/APTrust/exchange/util/storage"
 	"github.com/APTrust/exchange/util/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"io"
 	"io/ioutil"
 	"os"
 	"testing"
@@ -110,4 +113,55 @@ func TestBoltDB_FileIdentifierBatch(t *testing.T) {
 
 	batch = bolt.FileIdentifierBatch(-100, -20)
 	assert.Equal(t, 0, len(batch))
+}
+
+func TestBoltDB_DumpJson(t *testing.T) {
+	tempFile, err := ioutil.TempFile("", "boltdb_test")
+	require.Nil(t, err)
+	defer tempFile.Close()
+	defer os.Remove(tempFile.Name())
+
+	bolt, err := storage.NewBoltDB(tempFile.Name())
+	require.Nil(t, err)
+	defer bolt.Close()
+
+	// Save an object
+	obj := testutil.MakeIntellectualObject(1, 1, 1, 10)
+	err = bolt.Save("Test Object", obj)
+	require.Nil(t, err)
+
+	// Add some files
+	for i := 0; i < 20; i++ {
+		gfId := fmt.Sprintf("uc.edu/bag/data/file_%02d.json", i)
+		gf := testutil.MakeGenericFile(2, 2, gfId)
+		err = bolt.Save(gfId, gf)
+		require.Nil(t, err)
+	}
+
+	// Dump Json into a file
+	jsonFile, err := ioutil.TempFile("", "boltdb_test_json")
+	if jsonFile != nil {
+		defer jsonFile.Close()
+	}
+	require.Nil(t, err)
+	err = bolt.DumpJson(jsonFile)
+	require.Nil(t, err)
+
+	// Rewind and read the file
+	_, err = jsonFile.Seek(0, io.SeekStart)
+	require.Nil(t, err)
+	jsonBytes, err := ioutil.ReadAll(jsonFile)
+	require.Nil(t, err)
+
+	newObj := &models.IntellectualObject{}
+	err = json.Unmarshal(jsonBytes, newObj)
+	require.Nil(t, err)
+
+	assert.Equal(t, obj.Identifier, newObj.Identifier)
+	assert.Equal(t, 20, len(newObj.GenericFiles))
+	for _, gf := range newObj.GenericFiles {
+		assert.NotEmpty(t, gf.Identifier)
+		assert.Equal(t, 2, len(gf.PremisEvents))
+		assert.Equal(t, 2, len(gf.Checksums))
+	}
 }

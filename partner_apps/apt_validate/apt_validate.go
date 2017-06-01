@@ -1,18 +1,13 @@
 package main
 
 import (
-	"bytes"
-	"encoding/gob"
-	"encoding/json"
 	"flag"
 	"fmt"
-	"github.com/APTrust/exchange/models"
 	"github.com/APTrust/exchange/util/fileutil"
 	"github.com/APTrust/exchange/util/storage"
 	"github.com/APTrust/exchange/validation"
 	"os"
 	"path/filepath"
-	"strings"
 )
 
 func main() {
@@ -71,58 +66,8 @@ func printOutput(validator *validation.Validator, pathToOutFile string) {
 		fmt.Println(os.Stderr, "Can't open db: %v", err)
 		return
 	}
-	obj, err := db.GetIntellectualObject(validator.ObjIdentifier)
-	if err != nil {
-		fmt.Println(os.Stderr, "Can't get object from db: %v", err)
-		return
-	}
-	objBytes, err := json.MarshalIndent(obj, "", "  ")
-	if err != nil {
-		fmt.Println(os.Stderr, "Can't convert object to JSON: %v", err)
-		return
-	}
-	objJson := strings.TrimSpace(string(objBytes))
 
-	// Normally, we'd just add the generic files to the object
-	// and serialize the whole thing, but when we have 200k files,
-	// that causes an out-of-memory exception. So this hack...
-	// Cut off the closing curly bracket, dump in the GenericFiles
-	// one by one, and then re-add the curly bracket.
-	objJson = objJson[:len(objJson)-2] + ",\n"
-	objJson += `  "generic_files": [`
-	_, err = file.WriteString(objJson)
-	if err != nil {
-		fmt.Println(os.Stderr, "Error printing to output file: %v", err)
-		return
-	}
-
-	// Write out the GenericFiles one by one, without reading them
-	// all into memory.
-	count := 0
-	err = db.ForEach(func(k, v []byte) error {
-		if string(k) != validator.ObjIdentifier {
-			gf := &models.GenericFile{}
-			buf := bytes.NewBuffer(v)
-			decoder := gob.NewDecoder(buf)
-			err = decoder.Decode(gf)
-			if err != nil {
-				return fmt.Errorf("Error reading GenericFile from DB: %v", err)
-			}
-			gfBytes, err := json.MarshalIndent(gf, "    ", "  ")
-			if err != nil {
-				return fmt.Errorf("Can't convert generic file to JSON: %v", err)
-			}
-			if count > 0 {
-				file.WriteString(",\n    ")
-			}
-			file.WriteString(string(gfBytes))
-			count++
-		}
-		return nil
-	})
-
-	// Close up the JSON
-	file.WriteString("\n  ]\n}\n")
+	db.DumpJson(file)
 }
 
 func cleanup(filePath string) {
@@ -155,9 +100,9 @@ apt_validate validates bags according to the specified config file.
 Usage:
 
 apt_validate --config=<config_file> \
-             --attrs=<true|false> \
-             --outfile=<path_to_output_file> \
-             path_to_bag
+			 --attrs=<true|false> \
+			 --outfile=<path_to_output_file> \
+			 path_to_bag
 
 The path_to_bag parameter is required. It should be the absolute path
 to the directory containing the untarred bag, or to a tarred bag file.
@@ -181,7 +126,7 @@ Exit codes:
 
 0 - Bag is valid
 1 - Validation could not be completed, typically because of a problem
-    finding or reading the config file, or finding or reading the bag.
+	finding or reading the config file, or finding or reading the bag.
 2 - Validation completed and bag is invalid.
 
 `

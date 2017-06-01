@@ -3,9 +3,12 @@ package storage
 import (
 	"bytes"
 	"encoding/gob"
+	"encoding/json"
 	"fmt"
 	"github.com/APTrust/exchange/models"
 	"github.com/boltdb/bolt"
+	"io"
+	"strings"
 	"time"
 )
 
@@ -216,4 +219,63 @@ func (boltDB *BoltDB) FileIdentifierBatch(offset, limit int) []string {
 		return nil
 	})
 	return keys
+}
+
+// DumpJson writes all the records from the db into a single
+// JSON string. The output is the JSON representation of an
+// IntellectualObject with all of its GenericFiles (and Checksums
+// and PremisEvents, if there are any).
+func (boltDB *BoltDB) DumpJson(writer io.Writer) error {
+	objIdentifier := boltDB.ObjectIdentifier()
+	obj, err := boltDB.GetIntellectualObject(objIdentifier)
+	if err != nil {
+		return fmt.Errorf("Can't get object from db: %v", err)
+	}
+	objBytes, err := json.MarshalIndent(obj, "", "  ")
+	if err != nil {
+		return fmt.Errorf("Can't convert object to JSON: %v", err)
+	}
+	objJson := strings.TrimSpace(string(objBytes))
+
+	// Normally, we'd just add the generic files to the object
+	// and serialize the whole thing, but when we have 200k files,
+	// that causes an out-of-memory exception. So this hack...
+	// Cut off the closing curly bracket, dump in the GenericFiles
+	// one by one, and then re-add the curly bracket.
+	objJson = objJson[:len(objJson)-2] + ",\n"
+	objJson += `  "generic_files": [`
+	_, err = writer.Write([]byte(objJson))
+	if err != nil {
+		return fmt.Errorf("Error writing output: %v", err)
+	}
+
+	// Write out the GenericFiles one by one, without reading them
+	// all into memory.
+	count := 0
+	err = boltDB.ForEach(func(k, v []byte) error {
+		if string(k) != objIdentifier {
+			gf := &models.GenericFile{}
+			buf := bytes.NewBuffer(v)
+			decoder := gob.NewDecoder(buf)
+			err = decoder.Decode(gf)
+			if err != nil {
+				return fmt.Errorf("Error reading GenericFile from DB: %v", err)
+			}
+			gfBytes, err := json.MarshalIndent(gf, "    ", "  ")
+			if err != nil {
+				return fmt.Errorf("Can't convert generic file to JSON: %v", err)
+			}
+			if count > 0 {
+				writer.Write([]byte(",\n    "))
+			}
+			writer.Write(gfBytes)
+			count++
+		}
+		return nil
+	})
+
+	// Close up the JSON
+	writer.Write([]byte("\n  ]\n}\n"))
+
+	return err
 }
