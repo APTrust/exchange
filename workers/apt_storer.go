@@ -183,11 +183,7 @@ func (storer *APTStorer) cleanup() {
 	for ingestState := range storer.CleanupChannel {
 		if ingestState.IngestManifest.StoreResult.HasErrors() == false &&
 			ingestState.IngestManifest.Object.AllFilesSaved() {
-			storer.Context.MessageLog.Info("Deleting tar file %s (%s/%s) "+
-				"because all files were stored successfully",
-				ingestState.IngestManifest.BagPath,
-				ingestState.IngestManifest.S3Bucket,
-				ingestState.IngestManifest.S3Key)
+			storer.logDeletingTarFile(ingestState)
 			// Delete the bag (the .tar file) but not the .valdb, because
 			// .valdb contains information about the object, generic files,
 			// and premis events that will be recorded by apt_recorder.
@@ -216,22 +212,15 @@ func (storer *APTStorer) record() {
 			(ingestState.IngestManifest.HasErrors() && attemptNumber >= maxAttempts))
 
 		if itsTimeToGiveUp {
-			storer.Context.MessageLog.Error("Failed to store WorkItem %d (%s/%s).",
-				ingestState.WorkItem.Id, ingestState.WorkItem.Bucket,
-				ingestState.WorkItem.Name)
+			storer.logFailedToStore(ingestState)
 			ingestState.FinishNSQ()
 			MarkWorkItemFailed(ingestState, storer.Context)
 		} else if ingestState.IngestManifest.HasErrors() {
-			storer.Context.MessageLog.Info("Requeueing WorkItem %d (%s/%s) due to transient errors. %s",
-				ingestState.WorkItem.Id, ingestState.WorkItem.Bucket,
-				ingestState.WorkItem.Name,
-				ingestState.IngestManifest.AllErrorsAsString())
+			storer.logRequeued(ingestState)
 			ingestState.RequeueNSQ(1000)
 			MarkWorkItemRequeued(ingestState, storer.Context)
 		} else {
-			storer.Context.MessageLog.Info("Finished storing WorkItem %d (%s/%s).",
-				ingestState.WorkItem.Id, ingestState.WorkItem.Bucket,
-				ingestState.WorkItem.Name)
+			storer.logFinishedStoring(ingestState)
 			ingestState.FinishNSQ()
 			MarkWorkItemSucceeded(ingestState, storer.Context, constants.StageRecord)
 			PushToQueue(ingestState, storer.Context, storer.Context.Config.RecordWorker.NsqTopic)
@@ -783,4 +772,33 @@ func (storer *APTStorer) getS3FileDetail(fileUUID string) *s3.Object {
 		return s3Client.Response.Contents[0]
 	}
 	return nil
+}
+
+// ----------- Messages ----------------
+
+func (storer *APTStorer) logDeletingTarFile(ingestState *models.IngestState) {
+	storer.Context.MessageLog.Info("Deleting tar file %s (%s/%s) "+
+		"because all files were stored successfully",
+		ingestState.IngestManifest.BagPath,
+		ingestState.IngestManifest.S3Bucket,
+		ingestState.IngestManifest.S3Key)
+}
+
+func (storer *APTStorer) logFailedToStore(ingestState *models.IngestState) {
+	storer.Context.MessageLog.Error("Failed to store WorkItem %d (%s/%s).",
+		ingestState.WorkItem.Id, ingestState.WorkItem.Bucket,
+		ingestState.WorkItem.Name)
+}
+
+func (storer *APTStorer) logRequeued(ingestState *models.IngestState) {
+	storer.Context.MessageLog.Info("Requeueing WorkItem %d (%s/%s) due to transient errors. %s",
+		ingestState.WorkItem.Id, ingestState.WorkItem.Bucket,
+		ingestState.WorkItem.Name,
+		ingestState.IngestManifest.AllErrorsAsString())
+}
+
+func (storer *APTStorer) logFinishedStoring(ingestState *models.IngestState) {
+	storer.Context.MessageLog.Info("Finished storing WorkItem %d (%s/%s).",
+		ingestState.WorkItem.Id, ingestState.WorkItem.Bucket,
+		ingestState.WorkItem.Name)
 }

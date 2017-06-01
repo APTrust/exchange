@@ -118,7 +118,7 @@ func (recorder *APTRecorder) cleanup() {
 
 			// Remove both the bag and the validation DB (unless we're running integration tests)
 			DeleteFileFromStaging(ingestState.IngestManifest.BagPath, recorder.Context)
-			if os.Getenv("EXCHANGE_TEST_ENV") != "integration" {
+			if recorder.Context.Config.DeleteOnSuccess == true {
 				DeleteFileFromStaging(ingestState.IngestManifest.DBPath, recorder.Context)
 			}
 
