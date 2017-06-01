@@ -255,8 +255,8 @@ func (restorer *APTRestorer) finishWithError(restoreState *models.RestoreState) 
 		mostRecentSummary.ErrorIsFatal = true
 	}
 
-	// Delete the tar file no matter what...
-	restorer.deleteTarFile(restoreState)
+	// Delete the tar file & valdb no matter what...
+	restorer.deleteFiles(restoreState)
 
 	// ...but delete the bag directory only if this is a fatal error.
 	// We may have cases where we've downloaded 99,000 of a bag's 100,000
@@ -334,7 +334,7 @@ func (restorer *APTRestorer) finishWithSuccess(restoreState *models.RestoreState
 	restoreState.WorkItem.Node = ""
 	restoreState.WorkItem.Pid = 0
 
-	restorer.deleteTarFile(restoreState)
+	restorer.deleteFiles(restoreState)
 	restorer.deleteBagDir(restoreState)
 	restoreState.RecordSummary.Finish()
 	restorer.saveWorkItem(restoreState)
@@ -344,16 +344,23 @@ func (restorer *APTRestorer) finishWithSuccess(restoreState *models.RestoreState
 	restoreState.NSQMessage.Finish()
 }
 
-func (restorer *APTRestorer) deleteTarFile(restoreState *models.RestoreState) {
-	if fileutil.FileExists(restoreState.LocalTarFile) &&
-		fileutil.LooksSafeToDelete(restoreState.LocalTarFile, 12, 3) {
-		err := os.Remove(restoreState.LocalTarFile)
+func (restorer *APTRestorer) deleteFiles(restoreState *models.RestoreState) {
+	dbPath := TAR_SUFFIX.ReplaceAllString(restoreState.LocalTarFile, ".valdb")
+	restorer.deleteFile(restoreState, restoreState.LocalTarFile)
+	restorer.deleteFile(restoreState, dbPath)
+}
+
+func (restorer *APTRestorer) deleteFile(restoreState *models.RestoreState, filename string) {
+	if fileutil.FileExists(filename) &&
+		fileutil.LooksSafeToDelete(filename, 12, 3) {
+		err := os.Remove(filename)
 		if err != nil && !os.IsNotExist(err) {
-			message := fmt.Sprintf("Failed to delete %s", restoreState.LocalTarFile)
-			//restoreState.MostRecentSummary().AddError(message)
+			message := fmt.Sprintf("Failed to delete %s", filename)
 			restorer.Context.MessageLog.Error(message)
 		} else {
-			restoreState.TarFileDeletedAt = time.Now().UTC()
+			if filename == restoreState.LocalTarFile {
+				restoreState.TarFileDeletedAt = time.Now().UTC()
+			}
 		}
 	}
 }
