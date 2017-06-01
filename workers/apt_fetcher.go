@@ -196,7 +196,7 @@ func (fetcher *APTFetcher) validate() {
 		validator, err := validation.NewValidator(
 			ingestState.IngestManifest.BagPath,
 			fetcher.BagValidationConfig,
-			true) // true means preserver ingest attributes in db
+			true) // true means preserve ingest attributes in db
 		if err != nil {
 			// Could not create a BagValidator. Should this be fatal?
 			ingestState.IngestManifest.ValidateResult.AddError(err.Error())
