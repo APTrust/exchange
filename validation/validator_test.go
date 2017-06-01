@@ -29,14 +29,14 @@ var err_5 = "Bad sha256 digest for 'data/datastream-descMetadata': manifest says
 var err_6 = "Bad md5 digest for 'custom_tags/tracked_tag_file.txt': manifest says '00000000000000000000000000000000', file digest is 'dafbffffc3ed28ef18363394935a2651'"
 var err_7 = "Bad sha256 digest for 'custom_tags/tracked_tag_file.txt': manifest says '0000000000000000000000000000000000000000000000000000000000000000', file digest is '3f2f50c5bde87b58d6132faee14d1a295d115338643c658df7fa147e2296ccdd'"
 
-// func getValidationConfig() (*validation.BagValidationConfig, error) {
-// 	configFilePath := path.Join("testdata", "json_objects", "bag_validation_config.json")
-// 	conf, errors := validation.LoadBagValidationConfig(configFilePath)
-// 	if errors != nil && len(errors) > 0 {
-// 		return nil, errors[0]
-// 	}
-// 	return conf, nil
-// }
+func getValidationConfig() (*validation.BagValidationConfig, error) {
+	configFilePath := path.Join("testdata", "json_objects", "bag_validation_config.json")
+	conf, errors := validation.LoadBagValidationConfig(configFilePath)
+	if errors != nil && len(errors) > 0 {
+		return nil, errors[0]
+	}
+	return conf, nil
+}
 
 func deleteFile(filePath string) {
 	if fileutil.LooksSafeToDelete(filePath, 12, 3) {
