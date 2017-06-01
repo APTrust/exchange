@@ -181,32 +181,29 @@ func (restorer *APTRestorer) validateBag() {
 		restoreState.ValidateSummary.Attempted = true
 		restoreState.ValidateSummary.AttemptNumber += 1
 		restoreState.ValidateSummary.Start()
-		var validationResult *validation.ValidationResult
-		validator, err := validation.NewBagValidator(restoreState.LocalTarFile, restorer.BagValidationConfig)
+		validator, err := validation.NewValidator(
+			restoreState.LocalTarFile,
+			restorer.BagValidationConfig,
+			false) // false means don't preserve ingest attributes in db
 		if err != nil {
 			restoreState.ValidateSummary.AddError(err.Error())
 		} else {
 			// Validation can take a long time for large bags.
-			validationResult = validator.Validate()
-		}
-		if validationResult == nil {
-			// This should be impossible
-			restoreState.ValidateSummary.AddError("Bag validator returned nil result!")
-		} else if validationResult.ParseSummary.HasErrors() || validationResult.ValidationSummary.HasErrors() {
-			for _, errMsg := range validationResult.ParseSummary.Errors {
-				// We did not validate tag file contents in APTrust 1.0, so
-				// some older bags have tag files with invalid tag names
-				// (usually tag names that contain spaces). We don't want restoration
-				// to fail just because our parser can't read the tags. Give the
-				// depositor their bag!
-				if !strings.HasPrefix(errMsg, "Unable to parse tag data") {
-					restoreState.ValidateSummary.AddError("Validator parse error: %s", errMsg)
-				}
-			}
-			for _, errMsg := range validationResult.ValidationSummary.Errors {
-				if !strings.HasPrefix(errMsg, "Unable to parse tag data") {
+			restorer.Context.MessageLog.Info("Validating %s", restoreState.LocalTarFile)
+			validator.ObjIdentifier = restoreState.WorkItem.ObjectIdentifier
+			summary, err := validator.Validate()
+			restorer.Context.MessageLog.Info("Finished validating %s", restoreState.LocalTarFile)
+			if err != nil {
+				summary := models.NewWorkSummary()
+				summary.Attempted = true
+				summary.StartedAt = time.Now().UTC()
+				summary.AddError(err.Error())
+				summary.FinishedAt = time.Now().UTC()
+			} else if summary != nil && summary.HasErrors() {
+				for _, errMsg := range summary.Errors {
 					restoreState.ValidateSummary.AddError("Validation error: %s", errMsg)
 				}
+				restoreState.ValidateSummary = summary
 			}
 		}
 		restoreState.ValidateSummary.Finish()
