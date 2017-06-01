@@ -237,6 +237,12 @@ func (boltDB *BoltDB) DumpJson(writer io.Writer) error {
 	}
 	objJson := strings.TrimSpace(string(objBytes))
 
+	// Catch case of null object. This happens if the bag was not
+	// parsable.
+	if objJson == "null" {
+		objJson = `{ "identifier": "The bag could not be parsed"  `
+	}
+
 	// Normally, we'd just add the generic files to the object
 	// and serialize the whole thing, but when we have 200k files,
 	// that causes an out-of-memory exception. So this hack...
