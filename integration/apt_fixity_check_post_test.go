@@ -2,7 +2,6 @@ package integration_test
 
 import (
 	"github.com/APTrust/exchange/constants"
-	"github.com/APTrust/exchange/context"
 	"github.com/APTrust/exchange/models"
 	"github.com/APTrust/exchange/util/testutil"
 	"github.com/stretchr/testify/assert"
@@ -25,12 +24,9 @@ func TestFixityCheckResults(t *testing.T) {
 	if !testutil.ShouldRunIntegrationTests() {
 		t.Skip("Skipping integration test. Set ENV var RUN_EXCHANGE_INTEGRATION=true if you want to run them.")
 	}
-	// Load config
-	configFile := filepath.Join("config", "integration.json")
-	config, err := models.LoadConfigFile(configFile)
+
+	_context, err := testutil.GetContext("integration.json")
 	require.Nil(t, err)
-	config.ExpandFilePaths()
-	_context := context.NewContext(config)
 
 	expectedFiles := []string{
 		"test.edu/ncsu.1840.16-1004/data/metadata.xml",
