@@ -44,17 +44,12 @@ func TestIngestedItemsInPharos(t *testing.T) {
 }
 
 func testObject(t *testing.T, _context *context.Context, objIdentifier string) {
-	// Make sure the object is present.
-	// Make sure its attributes are correct
-	// Make sure the object-level ingest events are present.
-	// Make sure the right number of generic files were preserved.
-	// Test all of the object's generic files.
 	resp := _context.PharosClient.IntellectualObjectGet(objIdentifier, true, true)
 	require.Nil(t, resp.Error, objIdentifier)
 	obj := resp.IntellectualObject()
 	require.NotNil(t, obj, objIdentifier)
 
-	// TODO ... test attributes ...
+	// TODO: Test object attributes
 
 	require.NotEmpty(t, obj.GenericFiles, objIdentifier)
 	for _, gf := range obj.GenericFiles {
@@ -67,49 +62,47 @@ func testObject(t *testing.T, _context *context.Context, objIdentifier string) {
 }
 
 func testFile(t *testing.T, _context *context.Context, gf *models.GenericFile) {
-	// Test file properties.
-	// Make sure all ingest events are present.
-	// Make sure checksums are present.
-	// Call testFileIsInStore for S3 and Glacier
+	// TODO: Test file properties.
 	assert.Equal(t, 6, len(gf.PremisEvents))
 	assert.Equal(t, 2, len(gf.Checksums))
 	testFileIsInStorage(t, _context, gf)
 }
 
 func testFileIsInStorage(t *testing.T, _context *context.Context, gf *models.GenericFile) {
-	s3Url := gf.URI
-	glacierUrl := strings.Replace(s3Url, _context.Config.PreservationBucket,
-		_context.Config.ReplicationBucket, 1)
-
 	// Set up an S3 client to look at the S3 bucket, and a Glacier client
 	// to look at the Glacier bucket.
-	urls := make(map[string]*network.S3Head)
-	urls[s3Url] = network.NewS3Head(
+	clients := make(map[string]*network.S3Head)
+	clients["s3"] = network.NewS3Head(
 		os.Getenv("AWS_ACCESS_KEY_ID"),
 		os.Getenv("AWS_SECRET_ACCESS_KEY"),
 		_context.Config.APTrustS3Region,
 		_context.Config.PreservationBucket)
-	urls[glacierUrl] = network.NewS3Head(
+	clients["glacier"] = network.NewS3Head(
 		os.Getenv("AWS_ACCESS_KEY_ID"),
 		os.Getenv("AWS_SECRET_ACCESS_KEY"),
 		_context.Config.APTrustGlacierRegion,
 		_context.Config.ReplicationBucket)
 
+	// This is the name of the file in S3/Glacier
+	uuid, err := gf.PreservationStorageFileName()
+	require.Nil(t, err, gf.Identifier)
+
 	// Make sure file is present and all metadata is set correctly.
-	for url, client := range urls {
-		idAndUrl := fmt.Sprintf("%s (%s)", gf.Identifier, url)
-		client.Head(url)
-		require.Empty(t, client.ErrorMessage, idAndUrl)
+	for _, client := range clients {
+		idAndUuid := fmt.Sprintf("%s (%s)", gf.Identifier, uuid)
+		client.Head(uuid)
+		require.Empty(t, client.ErrorMessage, idAndUuid)
 		storedFile := client.StoredFile()
-		require.NotNil(t, storedFile, idAndUrl)
+		require.NotNil(t, storedFile, idAndUuid)
 
 		institution, _ := gf.InstitutionIdentifier()
-		assert.InDelta(t, time.Now().UTC(), storedFile.LastModified, float64(10*time.Minute), idAndUrl)
-		assert.EqualValues(t, gf.Size, storedFile.Size, idAndUrl)
-		assert.Equal(t, institution, storedFile.Institution, idAndUrl)
-		assert.Equal(t, gf.IntellectualObjectIdentifier, storedFile.BagName, idAndUrl)
-		assert.Equal(t, gf.OriginalPath(), storedFile.PathInBag, idAndUrl)
-		assert.Equal(t, gf.GetChecksumByAlgorithm(constants.AlgMd5), storedFile.Md5, idAndUrl)
-		assert.Equal(t, gf.GetChecksumByAlgorithm(constants.AlgSha256), storedFile.Sha256, idAndUrl)
+		timeSinceLastModified := time.Since(storedFile.LastModified)
+		assert.True(t, timeSinceLastModified < (10*time.Minute))
+		assert.EqualValues(t, gf.Size, storedFile.Size, idAndUuid)
+		assert.Equal(t, institution, storedFile.Institution, idAndUuid)
+		assert.Equal(t, gf.IntellectualObjectIdentifier, storedFile.BagName, idAndUuid)
+		assert.Equal(t, gf.OriginalPath(), storedFile.PathInBag, idAndUuid)
+		assert.Equal(t, gf.GetChecksumByAlgorithm(constants.AlgMd5).Digest, storedFile.Md5, idAndUuid)
+		assert.Equal(t, gf.GetChecksumByAlgorithm(constants.AlgSha256).Digest, storedFile.Sha256, idAndUuid)
 	}
 }
