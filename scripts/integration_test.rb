@@ -185,8 +185,6 @@ class IntegrationTest
 	  sleep 60  # let nsq record topic fill before client connects
 	  @service.app_start(@context.apps['apt_record'])
 	  sleep 40  # allow fetch/store/record time to finish
-	  @service.stop_everything unless more_tests_follow
-	  sleep 5
 
 	  # Run the post tests. This is where we check to see if the
 	  # ingest services (fetch, store, record) correctly performed
@@ -194,6 +192,16 @@ class IntegrationTest
 	  @results['apt_fetch_test'] = run('apt_fetch_post_test.go')
 	  @results['apt_store_test'] = run('apt_store_post_test.go')
 	  @results['apt_record_test'] = run('apt_record_post_test.go')
+	  @results['apt_ingest_test'] = run('apt_ingest_post_test.go')
+
+	  @service.stop_everything unless more_tests_follow
+	  sleep 5
+
+	  # Return value should say whether any tests failed
+	  return (@results['apt_fetch_test'] &&
+			  @results['apt_store_test'] &&
+			  @results['apt_record_test'] &&
+			  @results['apt_ingest_test'])
 	end
   end
 
