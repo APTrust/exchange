@@ -224,7 +224,9 @@ func (validator *Validator) addFiles() {
 		if err != nil && (err == io.EOF || err.Error() == "EOF") {
 			break // readIterator hit the end of the list
 		} else if err != nil {
-			validator.summary.AddError(err.Error())
+			validator.summary.AddError("Error reading bag: %s", err.Error())
+			validator.summary.ErrorIsFatal = true
+			break // PT #146289839: Stop on error, or memory usage explodes.
 		}
 	}
 	validator.intelObj.IngestTopLevelDirNames = iterator.GetTopLevelDirNames()
