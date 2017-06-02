@@ -76,7 +76,7 @@ type IntellectualObject struct {
 	// IntellectualObject. That includes events such as ingest and
 	// identifier assignment. Note that most PREMIS events are associated
 	// with GenericFiles, so see GenericFile.PremisEvents as well.
-	PremisEvents []*PremisEvent `json:"events,omitempty"`
+	PremisEvents []*PremisEvent `json:"premis_events,omitempty"`
 
 	// CreatedAt is the Pharos timestamp describing when this
 	// IntellectualObject was first recorded in our database.
