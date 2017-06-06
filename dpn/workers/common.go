@@ -725,11 +725,32 @@ func PushToQueue(_context *context.Context, manifest *models.DPNIngestManifest, 
 // result of a message timeout or restarting a service.
 func EnsureItemIsMarkedComplete(_context *context.Context, manifest *models.ReplicationManifest) {
 	if manifest.ReplicationTransfer.Stored == false {
-		panic("Don't call HandleCompletedReplication unless the bag has been stored!")
+		panic("Don't call EnsureItemIsMarkedComplete unless the bag has been stored!")
 	}
 	if manifest.DPNWorkItem.CompletedAt.IsZero() {
+		note := "Bag copied to long-term storage"
 		now := time.Now().UTC()
 		manifest.DPNWorkItem.CompletedAt = &now
+		manifest.DPNWorkItem.Note = &note
+		SaveDPNWorkItemState(_context, manifest, manifest.CopySummary)
+	}
+	_context.MessageLog.Info("Message %s: replication %s (bag %s) was "+
+		"already stored on a prior attempt.", string(manifest.NsqMessage.Body),
+		manifest.ReplicationTransfer.ReplicationId,
+		manifest.ReplicationTransfer.Bag)
+}
+
+// EnsureItemIsMarkedCancelled makes sure a stored replication is marked
+// as cancelled in the DPNWorkItems table.
+func EnsureItemIsMarkedCancelled(_context *context.Context, manifest *models.ReplicationManifest) {
+	if manifest.ReplicationTransfer.Cancelled == false {
+		panic("Don't call EnsureItemIsMarkedCancelled unless the replication has been cancelled!")
+	}
+	if manifest.DPNWorkItem.CompletedAt.IsZero() {
+		note := "Replication was cancelled"
+		now := time.Now().UTC()
+		manifest.DPNWorkItem.CompletedAt = &now
+		manifest.DPNWorkItem.Note = &note
 		SaveDPNWorkItemState(_context, manifest, manifest.CopySummary)
 	}
 	_context.MessageLog.Info("Message %s: replication %s (bag %s) was "+

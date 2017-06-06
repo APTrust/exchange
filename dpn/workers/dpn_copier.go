@@ -72,34 +72,8 @@ func (copier *DPNCopier) HandleMessage(message *nsq.Message) error {
 	manifest := SetupReplicationManifest(message, "copy", copier.Context,
 		copier.LocalClient, copier.RemoteClients)
 
-	if manifest.CopySummary.HasErrors() {
-		// We need a better test than this. And how did this case come up?
-		if strings.Contains(manifest.CopySummary.AllErrorsAsString(), "already marked as Stored") {
-			copier.Context.MessageLog.Info(manifest.CopySummary.AllErrorsAsString())
-			return nil
-		}
-		copier.PostProcessChannel <- manifest
-		return nil
-	}
-
-	// In some cases, we've actually managed to store the replication,
-	// but NSQ thinks the job timed out and sends a message to start
-	// the process again. Don't redo the work!
-	if manifest.ReplicationTransfer.Stored == true {
-		EnsureItemIsMarkedComplete(copier.Context, manifest)
+	if !copier.copyShouldProceed(message, manifest) {
 		message.Finish()
-		return nil
-	}
-
-	// Sometimes completed copies get requeued because NSQ thinks they timed out.
-	// Don't recopy the file. The big ones take many hours.
-	if fileutil.FileExists(manifest.LocalPath) {
-		stat, err := os.Stat(manifest.LocalPath)
-		if err == nil && stat != nil && manifest.DPNBag != nil && uint64(stat.Size()) == manifest.DPNBag.Size {
-			copier.Context.MessageLog.Info("Message %s: Bag %s for replication %s is already on disk",
-				string(message.Body), manifest.DPNBag.UUID, manifest.ReplicationTransfer.ReplicationId)
-		}
-		copier.PostProcessChannel <- manifest
 		return nil
 	}
 
@@ -107,10 +81,10 @@ func (copier *DPNCopier) HandleMessage(message *nsq.Message) error {
 	manifest.CopySummary.Attempted = true
 	manifest.CopySummary.AttemptNumber += 1
 
-	if manifest.CopySummary.HasErrors() {
-		copier.PostProcessChannel <- manifest
-		return nil
-	}
+	// if manifest.CopySummary.HasErrors() {
+	// 	copier.PostProcessChannel <- manifest
+	// 	return nil
+	// }
 
 	// TODO: Where is the corresponding Release for this Reserve?
 	if copier.Context.Config.UseVolumeService && !ReserveSpaceOnVolume(copier.Context, manifest) {
@@ -366,4 +340,40 @@ func GetRsyncCommand(copyFrom, copyTo string, useSSH bool) *exec.Cmd {
 		return exec.Command("rsync", "-avzW", "-e", "ssh", copyFrom, copyTo, "--inplace")
 	}
 	return exec.Command("rsync", "-avzW", "--inplace", copyFrom, copyTo)
+}
+
+func (copier *DPNCopier) copyShouldProceed(message *nsq.Message, manifest *models.ReplicationManifest) bool {
+	shouldProceed := true
+	if manifest.ReplicationTransfer.Stored {
+		EnsureItemIsMarkedComplete(copier.Context, manifest)
+		copier.logReplicationStored(manifest)
+		shouldProceed = false
+	} else if manifest.ReplicationTransfer.Cancelled {
+		EnsureItemIsMarkedCancelled(copier.Context, manifest)
+		copier.logReplicationCancelled(manifest)
+		shouldProceed = false
+	} else if fileutil.FileExists(manifest.LocalPath) {
+		// It's fairly common for NSQ to think the copy timed out,
+		// even though we're still working on it. We don't want to
+		// overwrite the file that's already on disk. That causes
+		// problems with the tar file reader, among other things.
+		copier.logThatFileIsOnDisk(message, manifest)
+		shouldProceed = false
+	}
+	return shouldProceed
+}
+
+func (copier *DPNCopier) logThatFileIsOnDisk(message *nsq.Message, manifest *models.ReplicationManifest) {
+	copier.Context.MessageLog.Info("Message %s: Bag %s for replication %s is already on disk",
+		string(message.Body), manifest.DPNBag.UUID, manifest.ReplicationTransfer.ReplicationId)
+}
+
+func (copier *DPNCopier) logReplicationStored(manifest *models.ReplicationManifest) {
+	copier.Context.MessageLog.Info("Replication %s for bag %s has already been stored",
+		manifest.ReplicationTransfer.ReplicationId, manifest.DPNBag.UUID)
+}
+
+func (copier *DPNCopier) logReplicationCancelled(manifest *models.ReplicationManifest) {
+	copier.Context.MessageLog.Info("Replication %s for bag %s was cancelled",
+		manifest.ReplicationTransfer.ReplicationId, manifest.DPNBag.UUID)
 }
