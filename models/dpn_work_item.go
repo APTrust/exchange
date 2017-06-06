@@ -30,3 +30,15 @@ func (item *DPNWorkItem) SerializeForPharos() ([]byte, error) {
 	data["dpn_work_item"] = NewDPNWorkItemForPharos(item)
 	return json.Marshal(data)
 }
+
+// IsBeingProcessed returns true if this item is currently being
+// processed by any node.
+func (item *DPNWorkItem) IsBeingProcessed() bool {
+	return item.ProcessingNode != nil && item.Pid != 0
+}
+
+// IsBeingProcessedByMe returns true if this item is currently
+// being processed by the specified hostname under the specified pid.
+func (item *DPNWorkItem) IsBeingProcessedByMe(hostname string, pid int) bool {
+	return item.ProcessingNode != nil && *item.ProcessingNode == hostname && item.Pid == pid
+}

@@ -29,3 +29,24 @@ func TestSerializeDPNWorkItemForPharos(t *testing.T) {
 	expected := `{"dpn_work_item":{"remote_node":"chron","task":"Replication","identifier":"1234-5678","queued_at":"2016-11-15T15:33:00Z","completed_at":"2016-11-15T15:33:00Z","processing_node":null,"pid":0,"note":"All done","state":"Nebraska"}}`
 	assert.Equal(t, expected, string(data))
 }
+
+func TestDPNWorkItemIsBeingProcessed(t *testing.T) {
+	item := models.DPNWorkItem{}
+	assert.False(t, item.IsBeingProcessed())
+
+	processingNode := "example.com"
+	item.ProcessingNode = &processingNode
+	item.Pid = 900
+	assert.True(t, item.IsBeingProcessed())
+}
+
+func TestDPNWorkItemIsBeingProcessedByMe(t *testing.T) {
+	item := models.DPNWorkItem{}
+	assert.False(t, item.IsBeingProcessedByMe("aptrust.org", 1234))
+
+	processingNode := "example.com"
+	item.ProcessingNode = &processingNode
+	item.Pid = 900
+	assert.False(t, item.IsBeingProcessedByMe("aptrust.org", 1234))
+	assert.True(t, item.IsBeingProcessedByMe("example.com", 900))
+}
