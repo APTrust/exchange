@@ -96,8 +96,11 @@ func (storer *DPNReplicationStorer) store() {
 		manifest.NsqMessage.Touch()
 
 		// Tell Pharos that we've started to validate item.
+		hostname, _ := os.Hostname()
 		note := "Storing bag"
 		manifest.DPNWorkItem.Note = &note
+		manifest.DPNWorkItem.ProcessingNode = &hostname
+		manifest.DPNWorkItem.Pid = os.Getpid()
 		SaveDPNWorkItemState(storer.Context, manifest, manifest.StoreSummary)
 
 		// Upload to Glacier.
@@ -200,6 +203,8 @@ func (storer *DPNReplicationStorer) finishWithError(manifest *models.Replication
 
 	manifest.StoreSummary.Finish()
 	manifest.DPNWorkItem.Note = &note
+	manifest.DPNWorkItem.ProcessingNode = nil
+	manifest.DPNWorkItem.Pid = 0
 	SaveDPNWorkItemState(storer.Context, manifest, manifest.StoreSummary)
 	storer.Context.MessageLog.Error(manifest.StoreSummary.AllErrorsAsString())
 
@@ -239,6 +244,8 @@ func (storer *DPNReplicationStorer) finishWithSuccess(manifest *models.Replicati
 		manifest.DPNWorkItem.CompletedAt = &manifest.StoreSummary.FinishedAt
 	}
 	manifest.DPNWorkItem.Note = &note
+	manifest.DPNWorkItem.ProcessingNode = nil
+	manifest.DPNWorkItem.Pid = 0
 	SaveDPNWorkItemState(storer.Context, manifest, manifest.StoreSummary)
 
 	// Dump the JSON info about this validation attempt,

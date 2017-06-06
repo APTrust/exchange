@@ -72,7 +72,7 @@ func (copier *DPNCopier) HandleMessage(message *nsq.Message) error {
 	manifest := SetupReplicationManifest(message, "copy", copier.Context,
 		copier.LocalClient, copier.RemoteClients)
 
-	if !copier.copyShouldProceed(message, manifest) {
+	if !copier.copyShouldProceed(manifest, message) {
 		message.Finish()
 		return nil
 	}
@@ -252,6 +252,8 @@ func (copier *DPNCopier) finishWithError(manifest *models.ReplicationManifest) {
 
 	// Tell Pharos what happened, and then dump the JSON to a log file.
 	*manifest.DPNWorkItem.Note = "Copy failed."
+	manifest.DPNWorkItem.ProcessingNode = nil
+	manifest.DPNWorkItem.Pid = 0
 	SaveDPNWorkItemState(copier.Context, manifest, manifest.CopySummary)
 	LogReplicationJson(manifest, copier.Context.JsonLog)
 }
@@ -260,6 +262,8 @@ func (copier *DPNCopier) finishWithSuccess(manifest *models.ReplicationManifest)
 	manifest.CopySummary.Finish()
 	note := "Copy succeeded."
 	manifest.DPNWorkItem.Note = &note
+	manifest.DPNWorkItem.ProcessingNode = nil
+	manifest.DPNWorkItem.Pid = 0
 	copier.Context.MessageLog.Info("Copy succeeded for Replication %s",
 		manifest.ReplicationTransfer.ReplicationId)
 
@@ -328,7 +332,7 @@ func GetRsyncCommand(copyFrom, copyTo string, useSSH bool) *exec.Cmd {
 	return exec.Command("rsync", "-avzW", "--inplace", copyFrom, copyTo)
 }
 
-func (copier *DPNCopier) copyShouldProceed(message *nsq.Message, manifest *models.ReplicationManifest) bool {
+func (copier *DPNCopier) copyShouldProceed(manifest *models.ReplicationManifest, message *nsq.Message) bool {
 	shouldProceed := true
 	if manifest.ReplicationTransfer.Stored {
 		EnsureItemIsMarkedComplete(copier.Context, manifest)

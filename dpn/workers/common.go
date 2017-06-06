@@ -732,6 +732,8 @@ func EnsureItemIsMarkedComplete(_context *context.Context, manifest *models.Repl
 		now := time.Now().UTC()
 		manifest.DPNWorkItem.CompletedAt = &now
 		manifest.DPNWorkItem.Note = &note
+		manifest.DPNWorkItem.ProcessingNode = nil
+		manifest.DPNWorkItem.Pid = 0
 		SaveDPNWorkItemState(_context, manifest, manifest.CopySummary)
 	}
 	_context.MessageLog.Info("Message %s: replication %s (bag %s) was "+
@@ -751,6 +753,8 @@ func EnsureItemIsMarkedCancelled(_context *context.Context, manifest *models.Rep
 		now := time.Now().UTC()
 		manifest.DPNWorkItem.CompletedAt = &now
 		manifest.DPNWorkItem.Note = &note
+		manifest.DPNWorkItem.ProcessingNode = nil
+		manifest.DPNWorkItem.Pid = 0
 		SaveDPNWorkItemState(_context, manifest, manifest.CopySummary)
 	}
 	_context.MessageLog.Info("Message %s: replication %s (bag %s) was "+
