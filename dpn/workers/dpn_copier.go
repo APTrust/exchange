@@ -81,11 +81,6 @@ func (copier *DPNCopier) HandleMessage(message *nsq.Message) error {
 	manifest.CopySummary.Attempted = true
 	manifest.CopySummary.AttemptNumber += 1
 
-	// if manifest.CopySummary.HasErrors() {
-	// 	copier.PostProcessChannel <- manifest
-	// 	return nil
-	// }
-
 	// TODO: Where is the corresponding Release for this Reserve?
 	if copier.Context.Config.UseVolumeService && !ReserveSpaceOnVolume(copier.Context, manifest) {
 		manifest.CopySummary.AddError("Cannot reserve disk space to process this bag.")
@@ -106,9 +101,7 @@ func (copier *DPNCopier) doCopy() {
 	for manifest := range copier.CopyChannel {
 		rsyncCommand := GetRsyncCommand(manifest.ReplicationTransfer.Link,
 			manifest.LocalPath, copier.Context.Config.DPN.UseSSHWithRsync)
-		copier.Context.MessageLog.Info("Starting copy of ReplicationTransfer %s "+
-			"with command %s %s", manifest.ReplicationTransfer.ReplicationId,
-			rsyncCommand.Path, strings.Join(rsyncCommand.Args, " "))
+		copier.logStartOfCopy(manifest, rsyncCommand)
 
 		// Touch message on both sides of rsync, so NSQ doesn't time out.
 		// The copy process may take a few hours, depending on the size
@@ -125,9 +118,7 @@ func (copier *DPNCopier) doCopy() {
 		if err != nil {
 			// Copy failed. Don't cancel replication on rsync error.
 			// This is usually a network problem or a config problem.
-			msg := fmt.Sprintf("ReplicationTransfer %s failed with rsync error '%s'",
-				manifest.ReplicationTransfer.ReplicationId, err.Error())
-			manifest.CopySummary.AddError(msg)
+			copier.errCopyFailure(manifest, err)
 			copier.PostProcessChannel <- manifest
 		} else {
 			// Copy succeeded.
@@ -183,18 +174,15 @@ func (copier *DPNCopier) calculateTagManifestDigest(manifest *models.Replication
 		defer readCloser.Close()
 	}
 	if err != nil {
-		manifest.CopySummary.AddError("Can't get tagmanifest from bag: %v",
-			err.Error)
+		manifest.CopySummary.AddError("Can't get tagmanifest from bag: %v", err.Error)
 		return
 	}
 	nonce := ""
 	if manifest.ReplicationTransfer.FixityNonce != nil && *manifest.ReplicationTransfer.FixityNonce != "" {
 		nonce = *manifest.ReplicationTransfer.FixityNonce
-		copier.Context.MessageLog.Info("FixityNonce for replication %s is %s",
-			manifest.ReplicationTransfer.ReplicationId, nonce)
+		copier.logFixityNonce(manifest, nonce)
 	} else {
-		copier.Context.MessageLog.Info("No FixityNonce for replication %s",
-			manifest.ReplicationTransfer.ReplicationId)
+		copier.logNoNonce(manifest)
 	}
 	digest, err := copier.calculateSha256(readCloser, nonce)
 	if err != nil {
@@ -203,9 +191,7 @@ func (copier *DPNCopier) calculateTagManifestDigest(manifest *models.Replication
 		return
 	}
 	manifest.ReplicationTransfer.FixityValue = digest
-	copier.Context.MessageLog.Info("Xfer %s has digest %s",
-		manifest.ReplicationTransfer.ReplicationId,
-		*manifest.ReplicationTransfer.FixityValue)
+	copier.logDigest(manifest)
 }
 
 // calculateSha256 calculates the sha256 digest of the contents of the
@@ -357,13 +343,13 @@ func (copier *DPNCopier) copyShouldProceed(message *nsq.Message, manifest *model
 		// even though we're still working on it. We don't want to
 		// overwrite the file that's already on disk. That causes
 		// problems with the tar file reader, among other things.
-		copier.logThatFileIsOnDisk(message, manifest)
+		copier.logThatFileIsOnDisk(manifest, message)
 		shouldProceed = false
 	}
 	return shouldProceed
 }
 
-func (copier *DPNCopier) logThatFileIsOnDisk(message *nsq.Message, manifest *models.ReplicationManifest) {
+func (copier *DPNCopier) logThatFileIsOnDisk(manifest *models.ReplicationManifest, message *nsq.Message) {
 	copier.Context.MessageLog.Info("Message %s: Bag %s for replication %s is already on disk",
 		string(message.Body), manifest.DPNBag.UUID, manifest.ReplicationTransfer.ReplicationId)
 }
@@ -376,4 +362,32 @@ func (copier *DPNCopier) logReplicationStored(manifest *models.ReplicationManife
 func (copier *DPNCopier) logReplicationCancelled(manifest *models.ReplicationManifest) {
 	copier.Context.MessageLog.Info("Replication %s for bag %s was cancelled",
 		manifest.ReplicationTransfer.ReplicationId, manifest.DPNBag.UUID)
+}
+
+func (copier *DPNCopier) logStartOfCopy(manifest *models.ReplicationManifest, cmd *exec.Cmd) {
+	copier.Context.MessageLog.Info("Starting copy of ReplicationTransfer %s "+
+		"with command %s %s", manifest.ReplicationTransfer.ReplicationId,
+		cmd.Path, strings.Join(cmd.Args, " "))
+}
+
+func (copier *DPNCopier) errCopyFailure(manifest *models.ReplicationManifest, err error) {
+	msg := fmt.Sprintf("ReplicationTransfer %s failed with rsync error '%s'",
+		manifest.ReplicationTransfer.ReplicationId, err.Error())
+	manifest.CopySummary.AddError(msg)
+}
+
+func (copier *DPNCopier) logFixityNonce(manifest *models.ReplicationManifest, nonce string) {
+	copier.Context.MessageLog.Info("FixityNonce for replication %s is %s",
+		manifest.ReplicationTransfer.ReplicationId, nonce)
+}
+
+func (copier *DPNCopier) logNoNonce(manifest *models.ReplicationManifest) {
+	copier.Context.MessageLog.Info("No FixityNonce for replication %s",
+		manifest.ReplicationTransfer.ReplicationId)
+}
+
+func (copier *DPNCopier) logDigest(manifest *models.ReplicationManifest) {
+	copier.Context.MessageLog.Info("Xfer %s has digest %s",
+		manifest.ReplicationTransfer.ReplicationId,
+		*manifest.ReplicationTransfer.FixityValue)
 }
