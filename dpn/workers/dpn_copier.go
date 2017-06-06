@@ -334,7 +334,10 @@ func GetRsyncCommand(copyFrom, copyTo string, useSSH bool) *exec.Cmd {
 
 func (copier *DPNCopier) copyShouldProceed(manifest *models.ReplicationManifest, message *nsq.Message) bool {
 	shouldProceed := true
-	if manifest.ReplicationTransfer.Stored {
+	if manifest.DPNWorkItem.IsBeingProcessed() {
+		copier.logItemAlreadyInProcess(manifest)
+		shouldProceed = false
+	} else if manifest.ReplicationTransfer.Stored {
 		EnsureItemIsMarkedComplete(copier.Context, manifest)
 		copier.logReplicationStored(manifest)
 		shouldProceed = false
@@ -394,4 +397,11 @@ func (copier *DPNCopier) logDigest(manifest *models.ReplicationManifest) {
 	copier.Context.MessageLog.Info("Xfer %s has digest %s",
 		manifest.ReplicationTransfer.ReplicationId,
 		*manifest.ReplicationTransfer.FixityValue)
+}
+
+func (copier *DPNCopier) logItemAlreadyInProcess(manifest *models.ReplicationManifest) {
+	copier.Context.MessageLog.Info("Skipping xfer request %s (bag %s): item is already "+
+		" being processed by node %s, pid %d.", manifest.ReplicationTransfer.ReplicationId,
+		manifest.ReplicationTransfer.Bag, manifest.DPNWorkItem.ProcessingNode,
+		manifest.DPNWorkItem.Pid)
 }

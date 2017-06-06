@@ -246,7 +246,10 @@ func (validator *DPNValidator) finishWithSuccess(manifest *dpn_models.Replicatio
 
 func (validator *DPNValidator) validationShouldProceed(manifest *dpn_models.ReplicationManifest, message *nsq.Message) bool {
 	shouldProceed := true
-	if manifest.ReplicationTransfer.Stored {
+	if manifest.DPNWorkItem.IsBeingProcessed() {
+		validator.logItemAlreadyInProcess(manifest)
+		shouldProceed = false
+	} else if manifest.ReplicationTransfer.Stored {
 		EnsureItemIsMarkedComplete(validator.Context, manifest)
 		validator.logReplicationStored(manifest)
 		shouldProceed = false
@@ -290,4 +293,11 @@ func (validator *DPNValidator) logStartingValidation(manifest *dpn_models.Replic
 	validator.Context.MessageLog.Info("Putting xfer request %s (bag %s) from %s "+
 		" into the validation channel", manifest.ReplicationTransfer.ReplicationId,
 		manifest.ReplicationTransfer.Bag, manifest.ReplicationTransfer.FromNode)
+}
+
+func (validator *DPNValidator) logItemAlreadyInProcess(manifest *dpn_models.ReplicationManifest) {
+	validator.Context.MessageLog.Info("Skipping xfer request %s (bag %s): item is already "+
+		" being processed by node %s, pid %d.", manifest.ReplicationTransfer.ReplicationId,
+		manifest.ReplicationTransfer.Bag, manifest.DPNWorkItem.ProcessingNode,
+		manifest.DPNWorkItem.Pid)
 }
