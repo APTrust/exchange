@@ -67,15 +67,17 @@ func (validator *DPNValidator) HandleMessage(message *nsq.Message) error {
 	manifest := SetupReplicationManifest(message, "validate", validator.Context,
 		validator.LocalClient, validator.RemoteClients)
 
-	// TODO: Check DPNWorkItem in Pharos to see if this item is complete.
-	// In some cases, it is, but the remote node doesn't know yet, so we
-	// wind up reprocessing it.
+	// If there were any errors setting up the replication manifest,
+	// quit now. Most likely issue is that we couldn't get the
+	// DPNWorkItem from Pharos.
+	if manifest.ValidateSummary.HasErrors() {
+		validator.Context.MessageLog.Info("Aargh! Into the bitbucket with NSQ message %s", string(message.Body))
+		validator.PostProcessChannel <- manifest
+		return nil
+	}
 
-	// Stop processing if item has already been stored.
-	// Item will go into the dpn_replication_store queue,
-	// and the storer will delete the tar file.
-	if manifest.ReplicationTransfer.Stored == true {
-		EnsureItemIsMarkedComplete(validator.Context, manifest)
+	// If there's any other reason we should not proceed, stop here.
+	if !validator.validationShouldProceed(manifest, message) {
 		message.Finish()
 		return nil
 	}
@@ -84,18 +86,8 @@ func (validator *DPNValidator) HandleMessage(message *nsq.Message) error {
 	manifest.ValidateSummary.Attempted = true
 	manifest.ValidateSummary.AttemptNumber += 1
 
-	// Handle the case where we cannot get the WorkItem whose id
-	// is specified in the NSQ message.
-	if manifest.ValidateSummary.HasErrors() {
-		validator.Context.MessageLog.Info("Aargh! Into the bitbucket with NSQ message %s", string(message.Body))
-		validator.PostProcessChannel <- manifest
-		return nil
-	}
-
 	// Start processing.
-	validator.Context.MessageLog.Info("Putting xfer request %s (bag %s) from %s "+
-		" into the validation channel", manifest.ReplicationTransfer.ReplicationId,
-		manifest.ReplicationTransfer.Bag, manifest.ReplicationTransfer.FromNode)
+	validator.logStartingValidation(manifest)
 	validator.ValidationChannel <- manifest
 	return nil
 }
@@ -109,8 +101,11 @@ func (validator *DPNValidator) validate() {
 		manifest.NsqMessage.Touch()
 
 		// Tell Pharos that we've started to validate item.
+		hostname, _ := os.Hostname()
 		note := "Validating bag"
 		manifest.DPNWorkItem.Note = &note
+		manifest.DPNWorkItem.ProcessingNode = &hostname
+		manifest.DPNWorkItem.Pid = os.Getpid()
 		SaveDPNWorkItemState(validator.Context, manifest, manifest.ValidateSummary)
 
 		// Set up a new validator to check this bag.
@@ -195,11 +190,15 @@ func (validator *DPNValidator) finishWithError(manifest *dpn_models.ReplicationM
 	manifest.ValidateSummary.Finish()
 
 	// Tell Pharos that this DPNWorkItem failed.
+	now := time.Now().UTC()
 	note := "Bag failed validation"
 	if manifest.Cancelled {
 		note = manifest.ValidateSummary.Errors[0]
 	}
 	manifest.DPNWorkItem.Note = &note
+	manifest.DPNWorkItem.CompletedAt = &now
+	manifest.DPNWorkItem.ProcessingNode = nil
+	manifest.DPNWorkItem.Pid = 0
 	SaveDPNWorkItemState(validator.Context, manifest, manifest.ValidateSummary)
 	validator.Context.MessageLog.Error(manifest.ValidateSummary.AllErrorsAsString())
 
@@ -222,6 +221,8 @@ func (validator *DPNValidator) finishWithSuccess(manifest *dpn_models.Replicatio
 	// Tell Pharos we're done working on this.
 	note := "Bag passed validation"
 	manifest.DPNWorkItem.Note = &note
+	manifest.DPNWorkItem.ProcessingNode = nil
+	manifest.DPNWorkItem.Pid = 0
 	SaveDPNWorkItemState(validator.Context, manifest, manifest.ValidateSummary)
 
 	// Push this DPNWorkItem Id into the next queue, so it can be stored.
@@ -241,4 +242,52 @@ func (validator *DPNValidator) finishWithSuccess(manifest *dpn_models.Replicatio
 	// and tell NSQ we're done.
 	LogReplicationJson(manifest, validator.Context.JsonLog)
 	manifest.NsqMessage.Finish()
+}
+
+func (validator *DPNValidator) validationShouldProceed(manifest *dpn_models.ReplicationManifest, message *nsq.Message) bool {
+	shouldProceed := true
+	if manifest.ReplicationTransfer.Stored {
+		EnsureItemIsMarkedComplete(validator.Context, manifest)
+		validator.logReplicationStored(manifest)
+		shouldProceed = false
+	} else if manifest.ReplicationTransfer.Cancelled {
+		EnsureItemIsMarkedCancelled(validator.Context, manifest)
+		validator.logReplicationCancelled(manifest)
+		shouldProceed = false
+	} else if manifest.ValidateSummary.Finished() {
+		validator.logValidationAlreadyComplete(manifest)
+		shouldProceed = false
+	} else if !fileutil.FileExists(manifest.LocalPath) {
+		validator.logThatFileIsMissing(manifest, message)
+		manifest.ValidateSummary.AddError("Tar file %s is not on disk", manifest.LocalPath)
+		manifest.ValidateSummary.ErrorIsFatal = true
+		shouldProceed = false
+	}
+	return shouldProceed
+}
+
+func (validator *DPNValidator) logThatFileIsMissing(manifest *dpn_models.ReplicationManifest, message *nsq.Message) {
+	validator.Context.MessageLog.Info("Message %s: Bag %s for replication %s is missing from disk",
+		string(message.Body), manifest.DPNBag.UUID, manifest.ReplicationTransfer.ReplicationId)
+}
+
+func (validator *DPNValidator) logReplicationStored(manifest *dpn_models.ReplicationManifest) {
+	validator.Context.MessageLog.Info("Replication %s for bag %s has already been stored",
+		manifest.ReplicationTransfer.ReplicationId, manifest.DPNBag.UUID)
+}
+
+func (validator *DPNValidator) logReplicationCancelled(manifest *dpn_models.ReplicationManifest) {
+	validator.Context.MessageLog.Info("Replication %s for bag %s was cancelled",
+		manifest.ReplicationTransfer.ReplicationId, manifest.DPNBag.UUID)
+}
+
+func (validator *DPNValidator) logValidationAlreadyComplete(manifest *dpn_models.ReplicationManifest) {
+	validator.Context.MessageLog.Info("Validation of %s (bag %s) has already been completed",
+		manifest.ReplicationTransfer.ReplicationId, manifest.DPNBag.UUID)
+}
+
+func (validator *DPNValidator) logStartingValidation(manifest *dpn_models.ReplicationManifest) {
+	validator.Context.MessageLog.Info("Putting xfer request %s (bag %s) from %s "+
+		" into the validation channel", manifest.ReplicationTransfer.ReplicationId,
+		manifest.ReplicationTransfer.Bag, manifest.ReplicationTransfer.FromNode)
 }
