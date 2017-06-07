@@ -64,11 +64,18 @@ func (storer *DPNReplicationStorer) HandleMessage(message *nsq.Message) error {
 	manifest := SetupReplicationManifest(message, "store", storer.Context,
 		storer.LocalClient, storer.RemoteClients)
 
-	// Stop processing if item has already been stored.
-	if manifest.ReplicationTransfer.Stored == true {
-		EnsureItemIsMarkedComplete(storer.Context, manifest)
-		storer.Context.MessageLog.Info("Deleting %s", manifest.LocalPath)
-		os.Remove(manifest.LocalPath)
+	// If there were any problems setting getting the work item,
+	// the replication transfer request, or other essential info,
+	// bail now.
+	if manifest.StoreSummary.HasErrors() {
+		storer.Context.MessageLog.Info("Aargh! Into the bitbucket with NSQ message %s", string(message.Body))
+		storer.PostProcessChannel <- manifest
+		return nil
+	}
+
+	// Stop processing if item is already stored, or cancelled, or if
+	// it's already in process by one of our service workers.
+	if !storer.storeShouldProceed(manifest, message) {
 		message.Finish()
 		return nil
 	}
@@ -76,16 +83,9 @@ func (storer *DPNReplicationStorer) HandleMessage(message *nsq.Message) error {
 	manifest.StoreSummary.Start()
 	manifest.StoreSummary.Attempted = true
 	manifest.StoreSummary.AttemptNumber += 1
-	if manifest.StoreSummary.HasErrors() {
-		storer.Context.MessageLog.Info("Aargh! Into the bitbucket with NSQ message %s", string(message.Body))
-		storer.PostProcessChannel <- manifest
-		return nil
-	}
 
 	// Start processing.
-	storer.Context.MessageLog.Info("Putting xfer request %s (bag %s) from %s "+
-		" into the storage channel", manifest.ReplicationTransfer.ReplicationId,
-		manifest.ReplicationTransfer.Bag, manifest.ReplicationTransfer.FromNode)
+	storer.logStartingStorage(manifest)
 	storer.StoreChannel <- manifest
 	return nil
 }
@@ -263,4 +263,44 @@ func (storer *DPNReplicationStorer) finishWithSuccess(manifest *models.Replicati
 	storer.Context.MessageLog.Info(note)
 	storer.Context.MessageLog.Info("Deleting %s", manifest.LocalPath)
 	os.Remove(manifest.LocalPath)
+}
+
+func (storer *DPNReplicationStorer) storeShouldProceed(manifest *models.ReplicationManifest, message *nsq.Message) bool {
+	shouldProceed := true
+	if manifest.DPNWorkItem.IsBeingProcessed() {
+		storer.logItemAlreadyInProcess(manifest)
+		shouldProceed = false
+	} else if manifest.ReplicationTransfer.Stored {
+		EnsureItemIsMarkedComplete(storer.Context, manifest)
+		storer.logReplicationStored(manifest)
+		shouldProceed = false
+	} else if manifest.ReplicationTransfer.Cancelled {
+		EnsureItemIsMarkedCancelled(storer.Context, manifest)
+		storer.logReplicationCancelled(manifest)
+		shouldProceed = false
+	}
+	return shouldProceed
+}
+
+func (storer *DPNReplicationStorer) logReplicationStored(manifest *models.ReplicationManifest) {
+	storer.Context.MessageLog.Info("Replication %s for bag %s has already been stored",
+		manifest.ReplicationTransfer.ReplicationId, manifest.DPNBag.UUID)
+}
+
+func (storer *DPNReplicationStorer) logReplicationCancelled(manifest *models.ReplicationManifest) {
+	storer.Context.MessageLog.Info("Replication %s for bag %s was cancelled",
+		manifest.ReplicationTransfer.ReplicationId, manifest.DPNBag.UUID)
+}
+
+func (storer *DPNReplicationStorer) logStartingStorage(manifest *models.ReplicationManifest) {
+	storer.Context.MessageLog.Info("Putting xfer request %s (bag %s) from %s "+
+		" into the storage channel", manifest.ReplicationTransfer.ReplicationId,
+		manifest.ReplicationTransfer.Bag, manifest.ReplicationTransfer.FromNode)
+}
+
+func (storer *DPNReplicationStorer) logItemAlreadyInProcess(manifest *models.ReplicationManifest) {
+	storer.Context.MessageLog.Info("Skipping xfer request %s (bag %s): item is already "+
+		" being processed by node %s, pid %d.", manifest.ReplicationTransfer.ReplicationId,
+		manifest.ReplicationTransfer.Bag, manifest.DPNWorkItem.ProcessingNode,
+		manifest.DPNWorkItem.Pid)
 }
