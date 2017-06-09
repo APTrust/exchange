@@ -126,6 +126,9 @@ class Service
   def dpn_cluster_stop
 	if @dpn_cluster_pid != 0
 	  begin
+        if RUBY_PLATFORM =~ /linux/
+          linux_kill_process_tree(@dpn_cluster_pid) rescue nil
+        end
 		Process.kill('TERM', @dpn_cluster_pid)
 		puts "[#{Time.now.strftime('%T.%L')}] Stopped DPN cluster (pid #{@dpn_cluster_pid})"
 	  rescue
@@ -231,6 +234,14 @@ class Service
 	  end
 	  @pids[app_name] = 0
 	end
+  end
+
+  def linux_kill_process_tree(pid)
+    child_pids = `pgrep -P #{pid}`.split("\n")
+    child_pids.each do |child_pid|
+      linux_kill_process_tree(child_pid.strip)
+    end
+    Process.kill('TERM', pid.to_i) rescue puts "No process #{pid}"
   end
 
 end
