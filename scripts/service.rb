@@ -165,7 +165,7 @@ class Service
   def pharos_reset_db
 	puts "Resetting Pharos DB"
 	env = @context.env_hash
-	cmd = 'rbenv exec rake pharos:empty_db'
+	cmd = 'rbenv exec rake db:reset'
 	log_file = "#{@context.log_dir}/pharos.log"
 	pid = Process.spawn(env, cmd, chdir: @context.pharos_root)
 	Process.wait pid
