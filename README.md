@@ -92,6 +92,13 @@ To run integration tests, you'll need the following:
 - Environment variables PHAROS_API_USER=system@aptrust.org and PHAROS_API_KEY=c3958c7b09e40af1d065020484dafa9b2a35cea0
 - A copy of the develop branch of the [dpn-server repo](https://github.com/dpn-admin/dpn-server) if you want to do DPN integration testing
 - A Postgres database (SQLite does not do well with the concurrent requests that the integration tests produce)
+- The Postgres user 'pharos' must own the pharos_integration database and must have the CREATEDB privilege.
+
+Hints for correctly configuring the Postgres DB for integration tests:
+
+`grant all privileges on database pharos_integration to pharos;`
+`alter database pharos_integration owner to pharos;`
+`alter user pharos createdb;`
 
 Once you have all that, simply run `ruby ./scripts/test.rb --help` to see which integration tests are available and what they do. Note that integration tests are cumulative, with each test bringing the various services into the state that the next test needs to start. The three most common options for integration testing are:
 
