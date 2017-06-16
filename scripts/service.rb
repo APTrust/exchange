@@ -64,6 +64,22 @@ class Service
 	end
   end
 
+  # Run a special bucket reader command to update a single bag.
+  # This uses a different config file to check for bags in
+  # a different bucket
+  def run_bucket_reader_for_update()
+    env = @context.env_hash
+    cmd = "./apt_bucket_reader -config #{@context.exchange_root}/config/integration_update.json"
+    cmd += " -stats=#{@context.log_dir}/bucket_reader_update_stats.json"
+    if @context.verbose
+      pid = Process.spawn(env, cmd, chdir: @context.go_bin_dir)
+    else
+      pid = Process.spawn(env, cmd, chdir: @context.go_bin_dir, out: '/dev/null', err: '/dev/null')
+    end
+    Process.wait pid
+    puts "[#{Time.now.strftime('%T.%L')}] Started apt_bucket reader (for update) with command '#{cmd}' and pid #{pid}"
+  end
+
   def app_stop(app)
 	if app.run_as == 'special'
 	  raise "Cannot stop special app #{app.name}. There should be a custom method for that."

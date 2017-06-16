@@ -180,11 +180,16 @@ class IntegrationTest
 	  @service.app_start(@context.apps['apt_volume_service'])
 	  sleep 5
 	  @service.app_start(@context.apps['apt_fetch'])
-	  sleep 60  # let nsq store topic fill before client connects
+	  sleep 50  # let nsq store topic fill before client connects
 	  @service.app_start(@context.apps['apt_store'])
-	  sleep 60  # let nsq record topic fill before client connects
+	  sleep 50  # let nsq record topic fill before client connects
 	  @service.app_start(@context.apps['apt_record'])
 	  sleep 40  # allow fetch/store/record time to finish
+
+      # Now get an updated bag from the special bucket and
+      # ingest that so we can run our update integration tests.
+      @service.run_bucket_reader_for_update()
+      sleep 40
 
 	  # Run the post tests. This is where we check to see if the
 	  # ingest services (fetch, store, record) correctly performed

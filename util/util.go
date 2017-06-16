@@ -24,6 +24,9 @@ func OwnerOf(bucketName string) (institution string) {
 		institution = strings.Replace(bucketName, constants.ReceiveBucketPrefix, "", 1)
 	} else if strings.HasPrefix(bucketName, constants.RestoreBucketPrefix) {
 		institution = strings.Replace(bucketName, constants.RestoreBucketPrefix, "", 1)
+	} else if bucketName == "aptrust.test.receiving" {
+		// Special case for integration tests
+		institution = "test.edu"
 	}
 	return institution
 }
