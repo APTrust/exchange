@@ -186,11 +186,6 @@ class IntegrationTest
 	  @service.app_start(@context.apps['apt_record'])
 	  sleep 40  # allow fetch/store/record time to finish
 
-      # Now get an updated bag from the special bucket and
-      # ingest that so we can run our update integration tests.
-      @service.run_bucket_reader_for_update()
-      sleep 40
-
 	  # Run the post tests. This is where we check to see if the
 	  # ingest services (fetch, store, record) correctly performed
 	  # all of the expected work.
@@ -198,6 +193,11 @@ class IntegrationTest
 	  @results['apt_store_test'] = run('apt_store_post_test.go')
 	  @results['apt_record_test'] = run('apt_record_post_test.go')
 	  @results['apt_ingest_test'] = run('apt_ingest_post_test.go')
+
+	  # Now get an updated bag from the special bucket and
+	  # ingest that so we can run our update integration tests.
+	  @service.run_bucket_reader_for_update()
+	  sleep 40
 
 	  @service.stop_everything unless more_tests_follow
 	  sleep 5
