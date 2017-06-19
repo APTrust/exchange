@@ -199,6 +199,8 @@ class IntegrationTest
 	  @service.run_bucket_reader_for_update()
 	  sleep 40
 
+	  @results['apt_update_test'] = run('apt_update_post_test.go')
+
 	  @service.stop_everything unless more_tests_follow
 	  sleep 5
 
