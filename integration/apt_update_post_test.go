@@ -11,7 +11,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"net/url"
 	//"os"
-	//"strings"
+	"strings"
 	"testing"
 	//"time"
 )
@@ -65,7 +65,7 @@ func testUpdatedWorkItem(t *testing.T, workItem *models.WorkItem) {
 	assert.Equal(t, constants.StatusSuccess, workItem.Status)
 	assert.Equal(t, constants.StageCleanup, workItem.Stage)
 	assert.Equal(t, "Item was successfully ingested", workItem.Note)
-	assert.Nil(t, workItem.Node)
+	assert.Empty(t, workItem.Node)
 	assert.Equal(t, 0, workItem.Pid)
 }
 
@@ -81,11 +81,13 @@ func testUpdatedObject(t *testing.T, obj *models.IntellectualObject) {
 		}
 	}
 	assert.Equal(t, 2, objectLevelEventCount)
-	assert.Equal(t, 2, fileLevelEventCount)
+	assert.Equal(t, 15, fileLevelEventCount)
 
 	require.NotEmpty(t, obj.GenericFiles)
 	//for _, gf := range obj.GenericFiles {
 	//	testFile(t, _context, gf)
 	//}
+
+	// test.edu/example.edu.tagsample_good/data/datastream-DC
 
 }
