@@ -264,17 +264,18 @@ func (gf *GenericFile) InstitutionIdentifier() (string, error) {
 	return parts[0], nil
 }
 
-// Returns the checksum digest for the given algorithm for this file.
+// Returns the LAST checksum digest for the given algorithm for this file.
 func (gf *GenericFile) GetChecksumByAlgorithm(algorithm string) *Checksum {
+	var checksum *Checksum
 	for _, cs := range gf.Checksums {
 		if cs != nil && cs.Algorithm == algorithm {
-			return cs
+			checksum = cs
 		}
 	}
-	return nil
+	return checksum
 }
 
-// Returns the checksum with the given digest for this file.
+// Returns the LAST checksum with the given digest for this file.
 func (gf *GenericFile) GetChecksumByDigest(digest string) *Checksum {
 	for _, cs := range gf.Checksums {
 		if cs != nil && cs.Digest == digest {

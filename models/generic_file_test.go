@@ -9,6 +9,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"path/filepath"
 	"testing"
+	"time"
 )
 
 func TestNewGenericFile(t *testing.T) {
@@ -87,6 +88,20 @@ func TestGetChecksumByAlgorithm(t *testing.T) {
 	// MD5
 	md5Checksum := genericFile.GetChecksumByAlgorithm("md5")
 	assert.Equal(t, "c6d8080a39a0622f299750e13aa9c200", md5Checksum.Digest)
+
+	// Make sure we get the LAST checksum with the specified algorithm
+	newMd5 := &models.Checksum{
+		Id:            54321,
+		GenericFileId: genericFile.Id,
+		Algorithm:     constants.AlgMd5,
+		DateTime:      time.Now().UTC(),
+		Digest:        "0123456789",
+		CreatedAt:     time.Now().UTC(),
+		UpdatedAt:     time.Now().UTC(),
+	}
+	genericFile.Checksums = append(genericFile.Checksums, newMd5)
+	md5 := genericFile.GetChecksumByAlgorithm("md5")
+	assert.Equal(t, newMd5.Digest, md5.Digest)
 
 	// SHA256
 	sha256Checksum := genericFile.GetChecksumByAlgorithm("sha256")
