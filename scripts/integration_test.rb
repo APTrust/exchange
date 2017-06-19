@@ -198,7 +198,6 @@ class IntegrationTest
 	  # ingest that so we can run our update integration tests.
 	  @service.run_bucket_reader_for_update()
 	  sleep 40
-
 	  @results['apt_update_test'] = run('apt_update_post_test.go')
 
 	  @service.stop_everything unless more_tests_follow
@@ -208,7 +207,8 @@ class IntegrationTest
 	  return (@results['apt_fetch_test'] &&
 			  @results['apt_store_test'] &&
 			  @results['apt_record_test'] &&
-			  @results['apt_ingest_test'])
+			  @results['apt_ingest_test'] &&
+			  @results['apt_update_test'])
 	end
   end
 
