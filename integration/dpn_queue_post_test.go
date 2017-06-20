@@ -65,18 +65,22 @@ func TestWorkItemsCreatedAndQueued(t *testing.T) {
 	foundRecordTopic := false
 	for _, topic := range stats.Data.Topics {
 		if topic.TopicName == _context.Config.FetchWorker.NsqTopic {
-			// We fetch 16 bags in our integration tests.
-			// They're not all valid, but we should have that many in the queue.
+			// We fetch 16 bags in our integration tests, plus one that gets
+			// updated (ingested a second time) and an invalid README file
+			// from one of the test buckets.
+			// They're not all valid, but we should have 18 items in the queue.
 			foundFetchTopic = true
-			assert.EqualValues(t, uint64(16), topic.MessageCount)
+			assert.EqualValues(t, uint64(18), topic.MessageCount)
 		} else if topic.TopicName == _context.Config.StoreWorker.NsqTopic {
 			// All of the 11 valid bags should have made it into the store topic.
+			// The updated (reingested) bag goes in a second time, giving us 12.
 			foundStoreTopic = true
-			assert.EqualValues(t, uint64(11), topic.MessageCount)
+			assert.EqualValues(t, uint64(12), topic.MessageCount)
 		} else if topic.TopicName == _context.Config.RecordWorker.NsqTopic {
 			// All of the 11 valid bags should have made it into the record topic.
+			// The updated (reingested) bag goes in a second time, giving us 12.
 			foundRecordTopic = true
-			assert.EqualValues(t, uint64(11), topic.MessageCount)
+			assert.EqualValues(t, uint64(12), topic.MessageCount)
 		}
 	}
 	assert.True(t, foundFetchTopic, "Nothing was queued in %s",
