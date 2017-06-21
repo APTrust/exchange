@@ -58,7 +58,7 @@ func (client *PharosClient) InstitutionGet(identifier string) *PharosResponse {
 	resp.institutions = make([]*models.Institution, 1)
 
 	// Build the url and the request object
-	relativeUrl := fmt.Sprintf("/api/%s/institutions/%s/", client.apiVersion, escapeSlashes(identifier))
+	relativeUrl := fmt.Sprintf("/api/%s/institutions/%s/", client.apiVersion, escapeForURL(identifier))
 	absoluteUrl := client.BuildUrl(relativeUrl)
 
 	// Run the request
@@ -113,7 +113,7 @@ func (client *PharosClient) IntellectualObjectGet(identifier string, includeFile
 	resp.objects = make([]*models.IntellectualObject, 1)
 
 	// Build the url and the request object
-	relativeUrl := fmt.Sprintf("/api/%s/objects/%s", client.apiVersion, escapeSlashes(identifier))
+	relativeUrl := fmt.Sprintf("/api/%s/objects/%s", client.apiVersion, escapeForURL(identifier))
 	if includeFiles && includeEvents {
 		relativeUrl += "?include_all_relations=true"
 	} else if includeFiles {
@@ -184,7 +184,7 @@ func (client *PharosClient) IntellectualObjectSave(obj *models.IntellectualObjec
 	httpMethod := "POST"
 	if obj.Id > 0 {
 		// PUT URL looks like /api/v2/objects/college.edu%2Fobject_name
-		relativeUrl = fmt.Sprintf("/api/%s/objects/%s", client.apiVersion, escapeSlashes(obj.Identifier))
+		relativeUrl = fmt.Sprintf("/api/%s/objects/%s", client.apiVersion, escapeForURL(obj.Identifier))
 		httpMethod = "PUT"
 	}
 	absoluteUrl := client.BuildUrl(relativeUrl)
@@ -220,7 +220,7 @@ func (client *PharosClient) IntellectualObjectPushToDPN(identifier string) *Phar
 	resp.workItems = make([]*models.WorkItem, 1)
 
 	// Build the url and the request object
-	relativeUrl := fmt.Sprintf("/api/%s/objects/%s/dpn", client.apiVersion, escapeSlashes(identifier))
+	relativeUrl := fmt.Sprintf("/api/%s/objects/%s/dpn", client.apiVersion, escapeForURL(identifier))
 	absoluteUrl := client.BuildUrl(relativeUrl)
 
 	// Run the request
@@ -247,7 +247,7 @@ func (client *PharosClient) IntellectualObjectRequestRestore(identifier string) 
 	resp.workItems = make([]*models.WorkItem, 1)
 
 	// Build the url and the request object
-	relativeUrl := fmt.Sprintf("/api/%s/objects/%s/restore", client.apiVersion, escapeSlashes(identifier))
+	relativeUrl := fmt.Sprintf("/api/%s/objects/%s/restore", client.apiVersion, escapeForURL(identifier))
 	absoluteUrl := client.BuildUrl(relativeUrl)
 
 	// Run the request.
@@ -276,7 +276,7 @@ func (client *PharosClient) IntellectualObjectRequestDelete(identifier string) *
 	resp.objects = make([]*models.IntellectualObject, 0)
 
 	// Build the url and the request object
-	relativeUrl := fmt.Sprintf("/api/%s/objects/%s/delete", client.apiVersion, escapeSlashes(identifier))
+	relativeUrl := fmt.Sprintf("/api/%s/objects/%s/delete", client.apiVersion, escapeForURL(identifier))
 	absoluteUrl := client.BuildUrl(relativeUrl)
 
 	// Run the request.
@@ -304,7 +304,7 @@ func (client *PharosClient) GenericFileGet(identifier string, includeRelations b
 	resp.files = make([]*models.GenericFile, 1)
 
 	// Build the url and the request object
-	relativeUrl := fmt.Sprintf("/api/%s/files/%s", client.apiVersion, escapeSlashes(identifier))
+	relativeUrl := fmt.Sprintf("/api/%s/files/%s", client.apiVersion, escapeForURL(identifier))
 	if includeRelations {
 		relativeUrl += "?include_relations=true"
 	}
@@ -370,7 +370,7 @@ func (client *PharosClient) GenericFileSave(obj *models.GenericFile) *PharosResp
 	httpMethod := "POST"
 	if obj.Id > 0 {
 		// PUT URL looks like /api/v2/files/college.edu%2Fobject_name%2Ffile.xml
-		relativeUrl = fmt.Sprintf("%s%s", relativeUrl, escapeSlashes(obj.Identifier))
+		relativeUrl = fmt.Sprintf("%s%s", relativeUrl, escapeForURL(obj.Identifier))
 		httpMethod = "PUT"
 	}
 	absoluteUrl := client.BuildUrl(relativeUrl)
@@ -516,7 +516,7 @@ func (client *PharosClient) ChecksumSave(obj *models.Checksum, gfIdentifier stri
 
 	// URL and method
 	relativeUrl := fmt.Sprintf("/api/%s/checksums/%s", client.apiVersion,
-		escapeSlashes(gfIdentifier))
+		escapeForURL(gfIdentifier))
 	httpMethod := "POST"
 	absoluteUrl := client.BuildUrl(relativeUrl)
 
@@ -550,7 +550,7 @@ func (client *PharosClient) PremisEventGet(identifier string) *PharosResponse {
 	resp.events = make([]*models.PremisEvent, 1)
 
 	// Build the url and the request object
-	relativeUrl := fmt.Sprintf("/api/%s/events/%s/", client.apiVersion, escapeSlashes(identifier))
+	relativeUrl := fmt.Sprintf("/api/%s/events/%s/", client.apiVersion, escapeForURL(identifier))
 	absoluteUrl := client.BuildUrl(relativeUrl)
 
 	// Run the request
@@ -614,7 +614,7 @@ func (client *PharosClient) PremisEventSave(obj *models.PremisEvent) *PharosResp
 	httpMethod := "POST"
 	if obj.Id > 0 {
 		// PUT is not even implemented in Pharos, and never will be
-		relativeUrl = fmt.Sprintf("%s/%s", relativeUrl, escapeSlashes(obj.Identifier))
+		relativeUrl = fmt.Sprintf("%s/%s", relativeUrl, escapeForURL(obj.Identifier))
 		httpMethod = "PUT"
 	}
 	absoluteUrl := client.BuildUrl(relativeUrl)
@@ -1004,8 +1004,12 @@ func (client *PharosClient) DoRequest(resp *PharosResponse, method, absoluteUrl 
 }
 
 // Replaces "/" with "%2F", which golang's url.QueryEscape does not do.
-func escapeSlashes(s string) string {
-	return strings.Replace(s, "/", "%2F", -1)
+// Also escapes "?" with "%3F". Both of these cause problems with
+// GenericFile identifiers. Slashes also cause problems with object
+// identifiers.
+func escapeForURL(s string) string {
+	escaped := strings.Replace(s, "/", "%2F", -1)
+	return strings.Replace(escaped, "?", "%3F", -1)
 }
 
 func encodeParams(params url.Values) string {
