@@ -42,7 +42,7 @@ func InitLogger(config *models.Config) (*logging.Logger, string) {
 	logBackend := logging.NewLogBackend(writer, "", stdlog.LstdFlags|stdlog.LUTC)
 	if config.LogToStderr {
 		// Log to BOTH file and stderr
-		stderrBackend := logging.NewLogBackend(os.Stderr, "", stdlog.Lshortfile|stdlog.LUTC)
+		stderrBackend := logging.NewLogBackend(os.Stderr, "", stdlog.Lshortfile|stdlog.LstdFlags|stdlog.LUTC)
 		stderrBackend.Color = true
 		logging.SetBackend(logBackend, stderrBackend)
 	} else {

@@ -73,7 +73,7 @@ func cleanDirectory(_context *context.Context, dpnClient *network.DPNRestClient,
 		params.Set("stored", "true")
 		params.Set("from_node", _context.Config.DPN.LocalNode)
 		resp := dpnClient.ReplicationTransferList(params)
-		_context.MessageLog.Info(resp.Request.URL.Opaque)
+		_context.MessageLog.Info("Checking replications at %s", resp.Request.URL.Opaque)
 		if resp.Error != nil {
 			_context.MessageLog.Error("Error getting replication info for bag '%s': %v",
 				bagUUID, resp.Error.Error())
