@@ -73,13 +73,12 @@ func cleanDirectory(_context *context.Context, dpnClient *network.DPNRestClient,
 		params.Set("stored", "true")
 		params.Set("from_node", _context.Config.DPN.LocalNode)
 		resp := dpnClient.ReplicationTransferList(params)
-		_context.MessageLog.Info("Checking replications at %s", resp.Request.URL.Opaque)
 		if resp.Error != nil {
 			_context.MessageLog.Error("Error getting replication info for bag '%s': %v",
 				bagUUID, resp.Error.Error())
 			continue
 		}
-		tarfile := filepath.Join(_context.Config.DPN.StagingDirectory, finfo.Name())
+		tarfile := filepath.Join(directory, finfo.Name())
 		successfulReplications := resp.ReplicationTransfers()
 		if len(successfulReplications) >= _context.Config.DPN.ReplicateToNumNodes {
 			_context.MessageLog.Info("Deleting %s: %d successful replications",
