@@ -38,6 +38,10 @@ type S3Upload struct {
 	concurrency     int
 }
 
+// S3_MIN_CHUNK_SIZE is the minimum chunk size that aws-go-sdk
+// will accept for uploads to S3: 5MB.
+var S3_MIN_CHUNK_SIZE = int64(5 * 1024 * 1024)
+
 // Creates a new S3 upload object using the s3Manager.Uploader described at
 // https://godoc.org/github.com/aws/aws-sdk-go/service/s3/s3manager#Uploader
 //
@@ -123,7 +127,37 @@ func (client *S3Upload) Send(reader io.Reader) {
 	if err != nil {
 		client.ErrorMessage = err.Error()
 	}
+}
 
+// SendWithSize attempts to work around what seems to be a bug
+// in the underlying AWS S3 library. The underlying library is
+// not setting a correct chunk size on files over 50GB, causing
+// uploads to fail with this message:
+//
+// MultipartUpload: upload multipart failed
+// caused by: TotalPartsExceeded: exceeded total allowed
+// configured MaxUploadParts (10000).
+// Adjust PartSize to fit in this limit
+//
+// PT #148913619
+// https://www.pivotaltracker.com/story/show/148913619
+func (client *S3Upload) SendWithSize(reader io.Reader, fileSize int64) {
+	chunkSize := (fileSize + int64(10000)) / int64(1000)
+	if chunkSize < S3_MIN_CHUNK_SIZE {
+		chunkSize = S3_MIN_CHUNK_SIZE
+	}
+	_session := client.GetSession()
+	if _session == nil {
+		return
+	}
+	uploader := s3manager.NewUploader(_session)
+	uploader.PartSize = S3_MIN_CHUNK_SIZE
+	client.UploadInput.Body = reader
+	var err error
+	client.Response, err = uploader.Upload(client.UploadInput)
+	if err != nil {
+		client.ErrorMessage = err.Error()
+	}
 }
 
 func (client *S3Upload) PartSize() int64 {

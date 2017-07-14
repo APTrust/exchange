@@ -470,7 +470,7 @@ func (storer *APTStorer) doUpload(storageSummary *models.StorageSummary, sendWhe
 
 		// Now do the upload using the tar file reader for smaller files
 		// and the File reader for very large files.
-		uploader.Send(reader)
+		uploader.SendWithSize(reader, gf.Size)
 
 		// PT #143660373: S3 zero-size file bug.
 		// S3 returns some very weird stuff here,
