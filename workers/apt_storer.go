@@ -24,6 +24,7 @@ import (
 // On large uploads, network errors are common.
 const MAX_UPLOAD_ATTEMPTS = 15
 const FIFTY_MEGABYTES = int64(52428800)
+const FIFTY_GIGABYTES = int64(50000000000)
 
 // Stores GenericFiles in long-term storage (S3 and Glacier).
 type APTStorer struct {
@@ -471,6 +472,14 @@ func (storer *APTStorer) doUpload(storageSummary *models.StorageSummary, sendWhe
 		// Now do the upload using the tar file reader for smaller files
 		// and the File reader for very large files.
 		uploader.SendWithSize(reader, gf.Size)
+
+		// For large files, give S3 some time to catch up.
+		// On a 50GB+ upload with thousands of parts, S3 seems to always
+		// give the wrong size if we ask within milliseconds of the
+		// upload completing. Part of PT #148913619.
+		if gf.Size > FIFTY_GIGABYTES {
+			time.Sleep(10 * time.Second)
+		}
 
 		// PT #143660373: S3 zero-size file bug.
 		// S3 returns some very weird stuff here,

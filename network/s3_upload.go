@@ -40,7 +40,8 @@ type S3Upload struct {
 
 // S3_MIN_CHUNK_SIZE is the minimum chunk size that aws-go-sdk
 // will accept for uploads to S3: 5MB.
-var S3_MIN_CHUNK_SIZE = int64(5 * 1024 * 1024)
+const S3_MIN_CHUNK_SIZE = int64(5 * 1024 * 1024)
+const BIG_CHUNK_SIZE = int64(64 * 1024 * 1024)
 
 // Creates a new S3 upload object using the s3Manager.Uploader described at
 // https://godoc.org/github.com/aws/aws-sdk-go/service/s3/s3manager#Uploader
@@ -142,9 +143,9 @@ func (client *S3Upload) Send(reader io.Reader) {
 // PT #148913619
 // https://www.pivotaltracker.com/story/show/148913619
 func (client *S3Upload) SendWithSize(reader io.Reader, fileSize int64) {
-	chunkSize := (fileSize + int64(10000)) / int64(1000)
-	if chunkSize < S3_MIN_CHUNK_SIZE {
-		chunkSize = S3_MIN_CHUNK_SIZE
+	chunkSize := (fileSize + int64(1000000)) / int64(10000)
+	if chunkSize < BIG_CHUNK_SIZE {
+		chunkSize = BIG_CHUNK_SIZE
 	}
 	_session := client.GetSession()
 	if _session == nil {
