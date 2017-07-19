@@ -160,7 +160,12 @@ func (client *S3Upload) SendWithSize(reader io.Reader, fileSize int64) {
 	// the system out of memory. So we reduce concurrency
 	// here from the default 5 to 2. Then each apt_store
 	// worker may have up to 2 50MB chunks in memory at once.
+	//
 	// PT #148913619
+	//
+	// Even with these conservative settings (2 workers, 50MB
+	// chunks, and 2 concurrent connections), memory usage
+	// hovers around 1.2GB.
 	uploader.PartSize = chunkSize
 	uploader.Concurrency = 2
 
