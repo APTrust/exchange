@@ -152,7 +152,18 @@ func (client *S3Upload) SendWithSize(reader io.Reader, fileSize int64) {
 		return
 	}
 	uploader := s3manager.NewUploader(_session)
+
+	// The uploader reads these chunks into memory,
+	// so we can't have too many of them. We typically
+	// have 2-6 apt_storer workers running simultaneously,
+	// and if the concurrency is too high, they'll run
+	// the system out of memory. So we reduce concurrency
+	// here from the default 5 to 2. Then each apt_store
+	// worker may have up to 2 50MB chunks in memory at once.
+	// PT #148913619
 	uploader.PartSize = chunkSize
+	uploader.Concurrency = 2
+
 	client.UploadInput.Body = reader
 	var err error
 	client.Response, err = uploader.Upload(client.UploadInput)
