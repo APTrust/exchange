@@ -119,7 +119,8 @@ func (storer *APTStorer) store() {
 			// Happens when a prior worker process is killed,
 			// e.g. through supervisord, system restart, etc.
 			ingestState.IngestManifest.StoreResult.AddError(
-				"In store(), db %s is missing or empty",
+				"In store(), db %s is missing or empty. This object may have "+
+					"already been ingested and recorded.",
 				ingestState.IngestManifest.DBPath)
 			ingestState.IngestManifest.StoreResult.Finish()
 			storer.CleanupChannel <- ingestState
