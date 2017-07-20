@@ -144,7 +144,12 @@ func (recorder *APTRecorder) cleanup() {
 // often wound up being recorded twice.
 func (recorder *APTRecorder) saveAllPharosData(ingestState *models.IngestState) {
 	db, err := storage.NewBoltDB(ingestState.IngestManifest.DBPath)
-	if db != nil {
+	if db == nil {
+		// Happens when a prior worker process is killed,
+		// e.g. through supervisord, system restart, etc.
+		ingestState.IngestManifest.RecordResult.AddError("Bolt DB at %s is nil", ingestState.IngestManifest.DBPath)
+		return
+	} else {
 		defer db.Close()
 	}
 	if err != nil {
@@ -154,6 +159,12 @@ func (recorder *APTRecorder) saveAllPharosData(ingestState *models.IngestState) 
 	obj, err := db.GetIntellectualObject(db.ObjectIdentifier())
 	if err != nil {
 		ingestState.IngestManifest.RecordResult.AddError(err.Error())
+		return
+	}
+	if obj == nil {
+		// May happen when a prior worker process is killed,
+		// e.g. through supervisord, system restart, etc.
+		ingestState.IngestManifest.RecordResult.AddError("IntellectualObject not found in Bolt DB")
 		return
 	}
 	err = obj.BuildIngestEvents(db.FileCount())
