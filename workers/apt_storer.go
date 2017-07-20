@@ -115,6 +115,15 @@ func (storer *APTStorer) store() {
 			ingestState.IngestManifest.StoreResult.Finish()
 			storer.CleanupChannel <- ingestState
 		}
+		if db == nil {
+			// Happens when a prior worker process is killed,
+			// e.g. through supervisord, system restart, etc.
+			ingestState.IngestManifest.StoreResult.AddError(
+				"In store(), db %s is missing or empty",
+				ingestState.IngestManifest.DBPath)
+			ingestState.IngestManifest.StoreResult.Finish()
+			storer.CleanupChannel <- ingestState
+		}
 		objIdentifier, err := ingestState.IngestManifest.ObjectIdentifier()
 		if err != nil {
 			ingestState.IngestManifest.StoreResult.AddError(err.Error())
