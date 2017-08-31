@@ -90,6 +90,14 @@ func (packager *DPNPackager) HandleMessage(message *nsq.Message) error {
 		return nil
 	}
 
+	// Skip this if it's already being worked on.
+	if manifest.WorkItem.IsInProgress() {
+		packager.Context.MessageLog.Info("Skipping NSQ Message %s / WorkItem %d (%s): already in progress",
+			string(message.Body), manifest.WorkItem.Id, manifest.WorkItem.ObjectIdentifier)
+		message.Finish()
+		return nil
+	}
+
 	now := time.Now().UTC()
 	hostname, _ := os.Hostname()
 	manifest.WorkItem.Stage = constants.StagePackage

@@ -60,6 +60,15 @@ func (storer *DPNIngestStorer) HandleMessage(message *nsq.Message) error {
 
 	// Set up the manifest WITHOUT the IntellectualObject
 	manifest := SetupIngestManifest(message, "store", storer.Context, false)
+
+	// Skip this if it's already being worked on.
+	if manifest.WorkItem.IsInProgress() {
+		storer.Context.MessageLog.Info("Skipping NSQ Message %s / WorkItem %d (%s): already in progress",
+			string(message.Body), manifest.WorkItem.Id, manifest.WorkItem.ObjectIdentifier)
+		message.Finish()
+		return nil
+	}
+
 	manifest.StoreSummary.Start()
 	manifest.StoreSummary.Attempted = true
 	manifest.StoreSummary.AttemptNumber += 1
