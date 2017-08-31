@@ -110,7 +110,7 @@ func TestAddToArchiveWithClosedWriter(t *testing.T) {
 	if err == nil {
 		assert.FailNow(t, "Should have gotten a tar write error")
 	}
-	assert.True(t, strings.HasPrefix(err.Error(), "archive/tar: write after close"), err.Error())
+	assert.True(t, strings.Contains(err.Error(), "tar: write after close"), err.Error())
 
 }
 
