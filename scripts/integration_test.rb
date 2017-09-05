@@ -278,7 +278,7 @@ class IntegrationTest
 
 	  # Run the post tests.
 	  @results['apt_restore_test'] = run('apt_restore_post_test.go')
-	  @results['apt_restore_test'] = run('apt_delete_post_test.go')
+	  @results['apt_delete_test'] = run('apt_delete_post_test.go')
 	end
   end
 
