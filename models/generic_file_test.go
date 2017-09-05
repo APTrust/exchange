@@ -112,6 +112,44 @@ func TestGetChecksumByAlgorithm(t *testing.T) {
 	assert.Nil(t, bogusChecksum, "GetChecksum returned something it shouldn't have")
 }
 
+func TestGetChecksumByAlgorithmReturnsLatest(t *testing.T) {
+	gf := testutil.MakeGenericFile(0, 0, "inst.edu/bag/file.txt")
+	startDate, err := time.Parse(time.RFC3339, "2017-09-05T09:14:55Z")
+	require.Nil(t, err)
+	expectedSha256Digest := ""
+	expectedMd5Digest := ""
+	for i := 0; i < 10; i++ {
+		cs := testutil.MakeChecksum()
+		// Make half of the checksums md5, half sha256
+		if i%2 == 0 {
+			cs.Algorithm = constants.AlgSha256
+		} else {
+			cs.Algorithm = constants.AlgMd5
+		}
+		// Put the latest checksum in the middle of the list
+		if i == 4 {
+			cs.DateTime = startDate.Add(time.Duration(1000 * time.Hour))
+			expectedSha256Digest = cs.Digest
+		} else if i == 5 {
+			cs.DateTime = startDate.Add(time.Duration(1000 * time.Hour))
+			expectedMd5Digest = cs.Digest
+		} else {
+			cs.DateTime = startDate.Add(time.Duration(time.Duration(-24*i) * time.Hour))
+		}
+		gf.Checksums = append(gf.Checksums, cs)
+	}
+
+	// SHA256
+	sha256Checksum := gf.GetChecksumByAlgorithm(constants.AlgSha256)
+	require.NotNil(t, sha256Checksum)
+	assert.Equal(t, expectedSha256Digest, sha256Checksum.Digest)
+
+	// MD5
+	md5Checksum := gf.GetChecksumByAlgorithm(constants.AlgMd5)
+	require.NotNil(t, md5Checksum)
+	assert.Equal(t, expectedMd5Digest, md5Checksum.Digest)
+}
+
 func TestGetChecksumByDigest(t *testing.T) {
 	filename := filepath.Join("testdata", "json_objects", "intel_obj.json")
 	intelObj, err := testutil.LoadIntelObjFixture(filename)

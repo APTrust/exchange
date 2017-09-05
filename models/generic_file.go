@@ -267,9 +267,11 @@ func (gf *GenericFile) InstitutionIdentifier() (string, error) {
 // Returns the LAST checksum digest for the given algorithm for this file.
 func (gf *GenericFile) GetChecksumByAlgorithm(algorithm string) *Checksum {
 	var checksum *Checksum
+	latest := time.Time{}
 	for _, cs := range gf.Checksums {
-		if cs != nil && cs.Algorithm == algorithm {
+		if cs != nil && cs.Algorithm == algorithm && cs.DateTime.After(latest) {
 			checksum = cs
+			latest = cs.DateTime
 		}
 	}
 	return checksum
