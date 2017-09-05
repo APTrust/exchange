@@ -712,6 +712,8 @@ func (restorer *APTRestorer) writeManifest(manifestType, algorithm string, resto
 			restorer.Context.MessageLog.Info("Skipping file '%s' for manifest type %s (%s)",
 				gf.Identifier, manifestType, algorithm)
 			continue
+		} else {
+			restorer.Context.MessageLog.Info("Adding '%s' to %s", gf.Identifier, manifestFile.Name())
 		}
 		checksum := gf.GetChecksumByAlgorithm(algorithm)
 		if checksum == nil {
@@ -724,11 +726,23 @@ func (restorer *APTRestorer) writeManifest(manifestType, algorithm string, resto
 			restoreState.PackageSummary.AddError("Error writing checksum for file %s "+
 				"to manifest %s: %v", gf.OriginalPath(), manifestPath, err)
 			return
+		} else {
+			restorer.Context.MessageLog.Info("Wrote %s digest %s for file %s", algorithm,
+				checksum.Digest, gf.Identifier)
 		}
 	}
 }
 
 func (restorer *APTRestorer) fileBelongsInManifest(gf *models.GenericFile, manifestType string) bool {
+	// We don't store bagit.txt, ever, so we won't have a checksum for this file
+	// in Pharos. Nor are we required to put this checksum in the tag manifest.
+	// The fact that Pharos never has a checksum for any bagit.txt file will cause
+	// problems in writeManifest() above, when gf.GetChecksumByAlgorithm() returns
+	// nil. APTrust's published policy says that instead of storing the bagit.txt
+	// file, we recreate it on bag restoration, using the most current bagit version.
+	if gf.OriginalPath() == "bagit.txt" {
+		return false
+	}
 	// PT #138749039: Payload files go in payload manifest,
 	// tag files go in tag manifest.
 	isPayloadFile := strings.HasPrefix(gf.OriginalPath(), "data/")
@@ -851,7 +865,7 @@ func (restorer *APTRestorer) fetchAllFiles(restoreState *models.RestoreState) {
 		if downloader.Sha256Digest != existingSha256.Digest {
 			msg := fmt.Sprintf("sha256 digest mismatch for for file %s."+
 				"Our digest: %s. Digest of fetched file: %s",
-				gf.Identifier, existingSha256, downloader.Sha256Digest)
+				gf.Identifier, existingSha256.Digest, downloader.Sha256Digest)
 			restorer.Context.MessageLog.Error(msg)
 			restoreState.PackageSummary.AddError(msg)
 			break
