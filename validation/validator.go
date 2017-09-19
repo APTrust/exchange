@@ -372,11 +372,26 @@ func (validator *Validator) parseFiles() {
 		}
 
 		// Non EOF error means something went wrong.
+		// Try to avoid out of memory exception, which
+		// is either coming from too many errors or
+		// one gigantic error.
 		if err != nil {
 			if reader != nil {
 				reader.Close()
 			}
-			validator.summary.AddError(err.Error())
+			msg := ""
+			if len(err.Error()) > 2000 {
+				msg = err.Error()[0:2000]
+			} else {
+				msg = err.Error()
+			}
+			validator.summary.AddError(msg)
+			if len(validator.summary.Errors) > 100 {
+				if reader != nil {
+					reader.Close()
+				}
+				return
+			}
 			continue
 		}
 
