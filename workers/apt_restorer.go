@@ -625,6 +625,15 @@ func (restorer *APTRestorer) writeAPTrustInfoFile(restoreState *models.RestoreSt
 // writeBagInfoFile creates the bag-info.txt file, if it does not already
 // exist. We started saving bag-info.txt in mid(?) 2016. Bags ingested
 // prior to that date need a reconstructed bag-info.txt file.
+//
+// See https://www.pivotaltracker.com/story/show/151234118
+// for a description of problems with us storing bag-info.txt and
+// why we should not do it. If the depositor changes or deletes any
+// files after initial ingest, the Payload-Oxum value of the stored
+// bag-info.txt file will not match the actual Payload-Oxum value
+// of the restored bag, and their bag validator will say the bag
+// is invalid. We should always just regenerate bag-info.txt and tell
+// depositors to put tags they want to preserve into other tag files.
 func (restorer *APTRestorer) writeBagInfoFile(restoreState *models.RestoreState) {
 	bagInfoPath := filepath.Join(restoreState.LocalBagDir, "bag-info.txt")
 	if fileutil.FileExists(bagInfoPath) {
