@@ -465,13 +465,15 @@ func (validator *Validator) parseTags(reader io.Reader, relFilePath string) {
 				continue
 			}
 			value := strings.TrimSpace(data[2])
-			tag.Value = strings.Join([]string{tag.Value, value}, " ")
-			validator.setIntelObjTagValue(obj, tag)
+			if tag != nil {
+				tag.Value = strings.Join([]string{tag.Value, value}, " ")
+				validator.setIntelObjTagValue(obj, tag)
+			}
 		} else {
 			validator.summary.AddError("Unable to parse tag data from line: '%s'", line)
 		}
 	}
-	if tag.Label != "" {
+	if tag != nil && tag.Label != "" {
 		obj.IngestTags = append(obj.IngestTags, tag)
 	}
 	if scanner.Err() != nil {
