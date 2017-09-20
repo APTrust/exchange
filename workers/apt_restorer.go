@@ -637,14 +637,19 @@ func (restorer *APTRestorer) writeAPTrustInfoFile(restoreState *models.RestoreSt
 // depositors to put tags they want to preserve into other tag files.
 func (restorer *APTRestorer) writeBagInfoFile(restoreState *models.RestoreState) {
 	bagInfoPath := filepath.Join(restoreState.LocalBagDir, "bag-info.txt")
-	if fileutil.FileExists(bagInfoPath) {
-		restorer.Context.MessageLog.Info("bag-info.txt already exists for %s",
-			restoreState.IntellectualObject.Identifier)
-		return
-	} else {
-		restorer.Context.MessageLog.Info("Creating bag-info.txt for older bag %s",
-			restoreState.IntellectualObject.Identifier)
-	}
+	// ------------------------------------------------------------------------
+	// A.D. 2017-09-20: Commented out due to PT #151234118.
+	// We should remove this permanently in the coming months, unless
+	// someone brings up a strong reason to keep it.
+	// ------------------------------------------------------------------------
+	// if fileutil.FileExists(bagInfoPath) {
+	//	restorer.Context.MessageLog.Info("bag-info.txt already exists for %s",
+	//		restoreState.IntellectualObject.Identifier)
+	//	return
+	// } else {
+	//	restorer.Context.MessageLog.Info("Creating bag-info.txt for older bag %s",
+	//		restoreState.IntellectualObject.Identifier)
+	// }
 	bagInfoFile, err := os.Create(bagInfoPath)
 	if err != nil {
 		restoreState.PackageSummary.AddError("Cannot create bag-info.txt file %s: %v",
@@ -688,10 +693,12 @@ func (restorer *APTRestorer) addFile(restoreState *models.RestoreState, absPath,
 	checksumMd5 := &models.Checksum{
 		Algorithm: constants.AlgMd5,
 		Digest:    md5,
+		DateTime:  time.Now().UTC(),
 	}
 	checksumSha256 := &models.Checksum{
 		Algorithm: constants.AlgSha256,
 		Digest:    sha256,
+		DateTime:  time.Now().UTC(),
 	}
 	gf.Checksums = append(gf.Checksums, checksumMd5)
 	gf.Checksums = append(gf.Checksums, checksumSha256)
@@ -775,9 +782,13 @@ func (restorer *APTRestorer) getManifestPath(manifestType, algorithm string, res
 }
 
 func (restorer *APTRestorer) fetchAllFiles(restoreState *models.RestoreState) {
+
+	// A.D. 2017-09-20: Don't count bag-info.txt among active files,
+	// because we're going to recreate it. This is part of fix to
+	// PT #151234118... https://www.pivotaltracker.com/story/show/151234118
 	activeFileCount := 0
 	for _, gf := range restoreState.IntellectualObject.GenericFiles {
-		if gf.State == "A" {
+		if gf.State == "A" && gf.OriginalPath() != "bag-info.txt" {
 			activeFileCount++
 		}
 	}
@@ -821,6 +832,14 @@ func (restorer *APTRestorer) fetchAllFiles(restoreState *models.RestoreState) {
 		// Except these losers. We don't want them.
 		if gf.State == "D" {
 			restorer.Context.MessageLog.Info("Skipping deleted file %s", gf.Identifier)
+			continue
+		}
+		// PT #151234118: We need to recreate bag-info.txt.
+		// Don't use the saved one, because the number of files
+		// and/or number of bytes may have changed between
+		// when the bag was initially ingested and when it was restored.
+		if gf.OriginalPath() == "bag-info.txt" {
+			restorer.Context.MessageLog.Info("Will recreate bag-info.txt instead of using saved version.")
 			continue
 		}
 

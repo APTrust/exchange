@@ -59,6 +59,7 @@ func testUpdatedWorkItem(t *testing.T, _context *context.Context) {
 	require.Nil(t, resp.Error)
 	workItem := resp.WorkItem()
 
+	require.NotNil(t, workItem, "WorkItem is missing for %s", UPDATED_BAG_IDENTIFIER)
 	assert.Equal(t, constants.StatusSuccess, workItem.Status)
 	assert.Equal(t, constants.StageCleanup, workItem.Stage)
 	assert.Equal(t, "Item was successfully ingested", workItem.Note)
