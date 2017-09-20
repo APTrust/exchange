@@ -331,6 +331,7 @@ func (restorer *APTRestorer) finishWithSuccess(restoreState *models.RestoreState
 	restoreState.WorkItem.Stage = constants.StageResolve
 	restoreState.WorkItem.StageStartedAt = nil
 	restoreState.WorkItem.Status = constants.StatusSuccess
+	restoreState.WorkItem.Outcome = constants.StatusSuccess
 	restoreState.WorkItem.Node = ""
 	restoreState.WorkItem.Pid = 0
 
