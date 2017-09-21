@@ -33,7 +33,7 @@ func TestDeleteResults(t *testing.T) {
 	config.ExpandFilePaths()
 	_context := context.NewContext(config)
 
-	s3Key := testutil.INTEGRATION_GOOD_BAGS[8]
+	s3Key := testutil.INTEGRATION_GOOD_BAGS[9]
 	identifier := strings.Replace(s3Key, "aptrust.receiving.test.", "", 1)
 	identifier = strings.Replace(identifier, ".tar", "", 1)
 

@@ -22,6 +22,7 @@ var TEST_TIMESTAMP time.Time = time.Date(2016, 6, 16, 10, 24, 16, 0, time.UTC)
 
 var INTEGRATION_GOOD_BAGS = []string{
 	"aptrust.receiving.test.test.edu/example.edu.tagsample_good.tar",
+	"aptrust.receiving.test.test.edu/example.edu.sample_ds_store_and_empty.tar",
 	"aptrust.receiving.test.test.edu/ncsu.1840.16-10.tar",
 	"aptrust.receiving.test.test.edu/ncsu.1840.16-1004.tar",
 	"aptrust.receiving.test.test.edu/ncsu.1840.16-1005.tar",

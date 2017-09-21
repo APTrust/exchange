@@ -174,6 +174,15 @@ func TestSavableName(t *testing.T) {
 	assert.True(t, util.HasSavableName("polly/wolly/doodle/all/day"))
 }
 
+func TestLooksLikeJunkFile(t *testing.T) {
+	assert.False(t, util.LooksLikeJunkFile("."))
+	assert.False(t, util.LooksLikeJunkFile(".."))
+	assert.True(t, util.LooksLikeJunkFile("._junk.txt"))
+	assert.True(t, util.LooksLikeJunkFile("data/subdir/._junk.txt"))
+	assert.False(t, util.LooksLikeJunkFile("bagit.txt"))
+	assert.False(t, util.LooksLikeJunkFile("manifest-md5.txt"))
+}
+
 func TestStringListContains(t *testing.T) {
 	list := []string{"apple", "orange", "banana"}
 	assert.True(t, util.StringListContains(list, "orange"))

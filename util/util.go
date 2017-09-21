@@ -173,6 +173,17 @@ func HasSavableName(filename string) bool {
 		reManifest.MatchString(filename))
 }
 
+// LooksLikeJunkFile returns true if the filename looks like a
+// MacOS junk file. These are dot-underscore files that contain
+// extended file attributes. These files are often unintentionally
+// included in tarred bags created on MacOS. They may not appear in
+// the manifests, and that will cause bag validation to fail.
+// Part of https://www.pivotaltracker.com/story/show/151265762
+func LooksLikeJunkFile(filename string) bool {
+	return (strings.HasPrefix(filename, "._") ||
+		strings.Contains(filename, "/._"))
+}
+
 // StringListContains returns true if the list of strings contains item.
 func StringListContains(list []string, item string) bool {
 	if list != nil {

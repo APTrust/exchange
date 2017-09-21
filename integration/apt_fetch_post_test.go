@@ -3,12 +3,12 @@ package integration_test
 import (
 	"github.com/APTrust/exchange/models"
 	"github.com/APTrust/exchange/util"
-	//	"github.com/APTrust/exchange/util/fileutil"
 	"github.com/APTrust/exchange/util/storage"
 	"github.com/APTrust/exchange/util/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 )
@@ -103,7 +103,14 @@ func fetcherTestGoodBagResult(t *testing.T, bagName string, ingestManifest *mode
 		assert.NotEmpty(t, gf.IntellectualObjectIdentifier,
 			"Bag %s file %s IntellectualObjectIdentifier is missing", bagName, gfIdentifier)
 		assert.NotEmpty(t, gf.FileFormat, "Bag %s file %s FileFormat is missing", bagName, gfIdentifier)
-		assert.True(t, gf.Size > 0, "Bag %s file %s Size is missing", bagName, gfIdentifier)
+
+		// Two files actually do have zero size
+		if strings.HasSuffix(gf.OriginalPath(), "empty-file.txt") || strings.HasSuffix(gf.OriginalPath(), "empty_dir/.keep") {
+			assert.EqualValues(t, gf.Size, 0, "Bag %s file %s Size should be zero", bagName, gfIdentifier)
+		} else {
+			assert.True(t, gf.Size > 0, "Bag %s file %s Size is missing", bagName, gfIdentifier)
+		}
+
 		assert.NotEmpty(t, gf.IngestFileType, "Bag %s file %s IngestFileType is missing", bagName, gfIdentifier)
 		assert.NotEmpty(t, gf.IngestMd5, "Bag %s file %s IngestMd5 is missing", bagName, gfIdentifier)
 		assert.NotEmpty(t, gf.IngestMd5GeneratedAt, "Bag %s file %s IngestMd5GeneratedAt is missing", bagName, gfIdentifier)
@@ -167,11 +174,11 @@ func fetcherTestCommon(t *testing.T, bagName string, ingestManifest *models.Inge
 	// For good bags, both the tar file and the .valdb file should
 	// remain on disk after fetch. For bad bags, both should be gone.
 	// if util.StringListContains(testutil.INTEGRATION_GOOD_BAGS, bagName) {
-	// 	assert.True(t, fileutil.FileExists(ingestManifest.BagPath), bagName)
-	// 	assert.True(t, fileutil.FileExists(ingestManifest.DBPath), bagName)
+	//	assert.True(t, fileutil.FileExists(ingestManifest.BagPath), bagName)
+	//	assert.True(t, fileutil.FileExists(ingestManifest.DBPath), bagName)
 	// } else {
-	// 	assert.False(t, fileutil.FileExists(ingestManifest.BagPath), bagName)
-	// 	assert.False(t, fileutil.FileExists(ingestManifest.DBPath), bagName)
+	//	assert.False(t, fileutil.FileExists(ingestManifest.BagPath), bagName)
+	//	assert.False(t, fileutil.FileExists(ingestManifest.DBPath), bagName)
 	// }
 }
 

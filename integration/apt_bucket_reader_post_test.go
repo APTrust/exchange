@@ -97,7 +97,7 @@ func testWorkItemsQueued(t *testing.T, expected *stats.APTBucketReaderStats, act
 	for _, item := range expected.WorkItemsQueued {
 		matchingItem, _ := actual.FindWorkItemByNameAndEtag("WorkItemsQueued", item.Name, item.ETag)
 		assert.NotNil(t, matchingItem,
-			"WorkItem %s missing from WorkItemsQueued", item.Name)
+			"WorkItem %s with etag %s missing from WorkItemsQueued", item.Name, item.ETag)
 	}
 }
 

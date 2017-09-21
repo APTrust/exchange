@@ -271,7 +271,18 @@ func (storer *APTStorer) getStorageSummaryBatch(db *storage.BoltDB, objIdentifie
 
 func (storer *APTStorer) saveFile(db *storage.BoltDB, storageSummary *models.StorageSummary) {
 	gf := storageSummary.GenericFile
-	if !util.HasSavableName(gf.OriginalPath()) {
+	if util.LooksLikeJunkFile(gf.OriginalPath()) && (gf.IngestManifestMd5 != "" || gf.IngestManifestSha256 != "") {
+		// A.D. 2017-09-21. Normally, we ignore Mac junk files that
+		// begin dot-underscore, like ._DS_Store files, because these
+		// creep into the tar files without the bagger knowing, and
+		// the do not show up in the manifests. For Pivotal Tracker issue
+		// https://www.pivotaltracker.com/story/show/151265762, we DO
+		// want to keep these junk files if they are listed in the
+		// manifest, because that means the bagger knew they were there
+		// and intended to keep them.
+		gf.IngestNeedsSave = true
+		storer.Context.MessageLog.Info("Junk file %s will be saved because it appears in manifest", gf.Identifier)
+	} else if !util.HasSavableName(gf.OriginalPath()) {
 		// We don't need to save bagit.txt, or certain manifests.
 		gf.IngestNeedsSave = false
 	} else {

@@ -21,7 +21,7 @@ func TestMarkForRestore(t *testing.T) {
 	config, err := models.LoadConfigFile(configFile)
 	require.Nil(t, err)
 	_context := context.NewContext(config)
-	for _, s3Key := range testutil.INTEGRATION_GOOD_BAGS[0:7] {
+	for _, s3Key := range testutil.INTEGRATION_GOOD_BAGS[0:8] {
 		identifier := strings.Replace(s3Key, "aptrust.receiving.test.", "", 1)
 		identifier = strings.Replace(identifier, ".tar", "", 1)
 		resp := _context.PharosClient.IntellectualObjectRequestRestore(identifier)

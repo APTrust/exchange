@@ -67,7 +67,7 @@ func storeTestCommon(t *testing.T, bagName string, ingestManifest *models.Ingest
 	// Make sure the GenericFiles include info about where we put them.
 	for _, gf := range ingestManifest.Object.GenericFiles {
 		// Test only files that we're SUPPOSED to store.
-		if !util.HasSavableName(gf.OriginalPath()) {
+		if !util.HasSavableName(gf.OriginalPath()) && !isSpecialJunkFile(gf) {
 			continue
 		}
 		assert.True(t, strings.HasPrefix(gf.URI, "https://s3.amazonaws.com/"),
@@ -90,4 +90,10 @@ func storeTestCommon(t *testing.T, bagName string, ingestManifest *models.Ingest
 		assert.False(t, gf.IngestStoredAt.IsZero())
 		assert.False(t, gf.IngestReplicatedAt.IsZero())
 	}
+}
+
+// Special test for bug https://www.pivotaltracker.com/story/show/151265762
+// We want to make sure we actually did save this special junk file.
+func isSpecialJunkFile(gf *models.GenericFile) bool {
+	return gf.Identifier == "test.edu/example.edu.sample_ds_store_and_empty/data/._DS_StoreTest"
 }

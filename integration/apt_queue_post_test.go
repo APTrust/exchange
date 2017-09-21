@@ -71,8 +71,8 @@ func TestRestorationQueue(t *testing.T) {
 		if topic.TopicName == _context.Config.RestoreWorker.NsqTopic {
 			// Should have 7 items. See apt_mark_for_restore_test.go
 			foundTopic = true
-			assert.EqualValues(t, uint64(7), topic.MessageCount,
-				"NSQ restore topic should have 7 items")
+			assert.EqualValues(t, uint64(8), topic.MessageCount,
+				"NSQ restore topic should have 8 items")
 		}
 	}
 	assert.True(t, foundTopic, "Nothing was queued in %s",
