@@ -109,6 +109,15 @@ func (copier *DPNCopier) doCopy() {
 		if manifest.NsqMessage != nil {
 			manifest.NsqMessage.Touch()
 		}
+
+		// Tell Pharos that we've started to copy item.
+		hostname, _ := os.Hostname()
+		note := "Copying bag from remote node"
+		manifest.DPNWorkItem.Note = &note
+		manifest.DPNWorkItem.ProcessingNode = &hostname
+		manifest.DPNWorkItem.Pid = os.Getpid()
+		SaveDPNWorkItemState(copier.Context, manifest, manifest.CopySummary)
+
 		output, err := rsyncCommand.CombinedOutput()
 		copier.Context.MessageLog.Info("Rsync Output: %s", string(output))
 		manifest.RsyncOutput = string(output)
