@@ -355,12 +355,15 @@ func (copier *DPNCopier) copyShouldProceed(manifest *models.ReplicationManifest,
 		copier.logReplicationCancelled(manifest)
 		shouldProceed = false
 	} else if fileutil.FileExists(manifest.LocalPath) {
-		// It's fairly common for NSQ to think the copy timed out,
-		// even though we're still working on it. We don't want to
-		// overwrite the file that's already on disk. That causes
-		// problems with the tar file reader, among other things.
-		copier.logThatFileIsOnDisk(manifest, message)
-		shouldProceed = false
+		// If we got this far, we know the file is not currently
+		// being processed. See if we have a *complete* copy of
+		// the file on disk.
+		stat, err := os.Stat(manifest.LocalPath)
+		if err == nil && uint64(stat.Size()) == manifest.DPNBag.Size {
+			copier.logThatFileIsOnDisk(manifest, message)
+			copier.finishWithSuccess(manifest)
+			shouldProceed = false
+		}
 	}
 	return shouldProceed
 }
