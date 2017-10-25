@@ -290,6 +290,9 @@ func (dpnSync *DPNSync) SyncBags(node *models.Node) {
 	for {
 		log.Debug("Getting page %d of bags from %s", pageNumber, node.Namespace)
 		resp := dpnSync.getBags(remoteClient, pageNumber)
+		if resp.Request != nil {
+			log.Info("%s", resp.Request.URL.String())
+		}
 		if resp.Error != nil {
 			result.AddError(dpn.DPNTypeBag, resp.Error)
 			break
@@ -378,6 +381,9 @@ func (dpnSync *DPNSync) SyncDigests(remoteNode *models.Node) {
 	for {
 		log.Debug("Getting page %d of digests from %s", pageNumber, remoteNode.Namespace)
 		resp := dpnSync.getDigests(remoteClient, pageNumber)
+		if resp.Request != nil {
+			log.Info("%s", resp.Request.URL.String())
+		}
 		if resp.Error != nil {
 			result.AddError(dpn.DPNTypeDigest, resp.Error)
 			break
@@ -575,6 +581,9 @@ func (dpnSync *DPNSync) SyncReplicationRequests(remoteNode *models.Node) {
 	for {
 		log.Debug("Getting page %d of replication transfers from %s", pageNumber, remoteNode.Namespace)
 		resp := dpnSync.getReplicationRequests(remoteClient, pageNumber)
+		if resp.Request != nil {
+			log.Info("%s", resp.Request.URL.String())
+		}
 		if resp.Error != nil {
 			result.AddError(dpn.DPNTypeReplication, resp.Error)
 			break
