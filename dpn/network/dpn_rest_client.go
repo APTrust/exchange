@@ -316,7 +316,10 @@ func (client *DPNRestClient) NodeGetLastPullDate(identifier string) (time.Time, 
 	params.Set("page_size", "1")
 	resp := client.DPNBagList(params)
 	if resp.Error != nil || resp.Count == 0 {
-		return time.Time{}, resp.Error
+		// Default to about 30 days ago, so we don't pull
+		// a million records.
+		defaultLastPullDate := time.Now().UTC().Add(-720 * time.Hour)
+		return defaultLastPullDate, resp.Error
 	}
 	return resp.Bags()[0].UpdatedAt, nil
 }
