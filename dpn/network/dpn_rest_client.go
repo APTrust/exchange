@@ -309,6 +309,9 @@ func (client *DPNRestClient) nodeSave(node *models.Node, httpMethod string) *DPN
 // specified node. The last pull date is derived from the latest
 // updated_at timestamp for bags from the specified admin_node.
 func (client *DPNRestClient) NodeGetLastPullDate(identifier string) (time.Time, error) {
+	// Default to about 30 days ago, so we don't pull
+	// a million records.
+	defaultLastPullDate := time.Now().UTC().Add(-720 * time.Hour)
 	params := url.Values{}
 	params.Set("admin_node", identifier)
 	params.Set("order_by", "updated_at")
@@ -316,12 +319,12 @@ func (client *DPNRestClient) NodeGetLastPullDate(identifier string) (time.Time, 
 	params.Set("page_size", "1")
 	resp := client.DPNBagList(params)
 	if resp.Error != nil || resp.Count == 0 {
-		// Default to about 30 days ago, so we don't pull
-		// a million records.
-		defaultLastPullDate := time.Now().UTC().Add(-720 * time.Hour)
 		return defaultLastPullDate, resp.Error
 	}
-	return resp.Bags()[0].UpdatedAt, nil
+	if !resp.Bags()[0].UpdatedAt.IsZero() {
+		return resp.Bags()[0].UpdatedAt, nil
+	}
+	return defaultLastPullDate, nil
 }
 
 // DPNBagGet returns a DPNResponse with the bag having the specified
