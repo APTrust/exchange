@@ -560,7 +560,9 @@ func cancelIfNecessary(manifest *models.ReplicationManifest, stage string, activ
 	// remote knows whether or not we received a valid copy of the bag, the
 	// remote server (FromNode) will set StoreRequested to true. We don't want
 	// to proceed past the copy stage if StoreRequested is false.
-	if stage != "copy" && manifest.ReplicationTransfer.StoreRequested == false {
+	//
+	// PT #152599892: Check for non-null fixity value before cancelling.
+	if stage != "copy" && manifest.ReplicationTransfer.FixityValue != nil && manifest.ReplicationTransfer.StoreRequested == false {
 		activeSummary.AddError("Aborting replication because StoreRequested is false.")
 		manifest.Cancelled = true
 	}
