@@ -152,7 +152,7 @@ func statAndPrint(filePath string) {
 	defer f.Close()
 	stat, err := f.Stat()
 	if err != nil {
-		fmt.Fprintln(os.Stderr, "Cant stat file: %s", err.Error())
+		fmt.Fprintf(os.Stderr, "Cant stat file: %s\n", err.Error())
 	} else {
 		fmt.Println("File size of", filePath, stat.Size())
 	}
