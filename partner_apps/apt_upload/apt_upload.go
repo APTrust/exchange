@@ -103,7 +103,7 @@ func parseCommandLine() *common.Options {
 
 	filePath, err := filepath.Abs(flag.Arg(0))
 	if err != nil {
-		fmt.Println(os.Stderr, err.Error())
+		fmt.Fprintln(os.Stderr, err.Error())
 		os.Exit(1)
 	}
 	if key == "" {
@@ -152,13 +152,13 @@ Usage:
 apt_update [options] <file>
 
 apt_upload -config=<path to config file> \
-           -region=<aws region to connect to> \
-           -bucket=<bucket to upload to> \
-           -key=<name/key of object to upload> \
-           -contentType=<mime type of upload> \
-           -format=<'text' or 'json'> \
-           -metadata=<json string> \
-           <file>
+		   -region=<aws region to connect to> \
+		   -bucket=<bucket to upload to> \
+		   -key=<name/key of object to upload> \
+		   -contentType=<mime type of upload> \
+		   -format=<'text' or 'json'> \
+		   -metadata=<json string> \
+		   <file>
 
 Params:
 
@@ -187,29 +187,29 @@ AWS credentials, the upload will fail.
 		See the -config option for more info.
 
 -key    if you want your uploaded file to have a different name in S3,
-        specify that here. If you upload a file from /home/joy/my_file.txt,
-        it will be put into your S3 bucket with the name "my_file.txt".
-        Setting the -key option allows you to override that. So if
-        -key='file_001.txt', /home/joy/my_file.txt will be saved to your
-        S3 bucket with the name file_001.txt.
+		specify that here. If you upload a file from /home/joy/my_file.txt,
+		it will be put into your S3 bucket with the name "my_file.txt".
+		Setting the -key option allows you to override that. So if
+		-key='file_001.txt', /home/joy/my_file.txt will be saved to your
+		S3 bucket with the name file_001.txt.
 
 -contentType is the optional content type of the file you're uploading.
-        If you choose to specify this, it should be in mime type format.
-        For example, "image/jpeg" or "text/plain". You typically don't
-        need to set this. If left unset, this usually defaults to something
-        generic and unhelpful like "application/octet-stream".
-        If you want to set it, you'll find a full list of mime types at
-        https://developer.mozilla.org/en-US/docs/Web/HTTP/Basics_of_HTTP/MIME_types/Complete_list_of_MIME_types
+		If you choose to specify this, it should be in mime type format.
+		For example, "image/jpeg" or "text/plain". You typically don't
+		need to set this. If left unset, this usually defaults to something
+		generic and unhelpful like "application/octet-stream".
+		If you want to set it, you'll find a full list of mime types at
+		https://developer.mozilla.org/en-US/docs/Web/HTTP/Basics_of_HTTP/MIME_types/Complete_list_of_MIME_types
 
 -format is the format of the output printed to STDOUT when the upload
-        is complete. Options are 'text' and 'json', and the default is
-        'text'.
+		is complete. Options are 'text' and 'json', and the default is
+		'text'.
 
 -metadata allows you to specify optional metadata, in json format, to be
-        saved in S3 with your file. A metadata json string should look
-        like this:
+		saved in S3 with your file. A metadata json string should look
+		like this:
 
-        -metadata='{"Bag":"my_bag","Bagpath":"data/Image001.tif","Institution":"virginia.edu","Md5":"12345","Sha256":"54321"}'
+		-metadata='{"Bag":"my_bag","Bagpath":"data/Image001.tif","Institution":"virginia.edu","Md5":"12345","Sha256":"54321"}'
 
 Examples:
 

@@ -14,12 +14,12 @@ func main() {
 	pathToConfigFile, pathToOutFile, preserveAttrs := parseCommandLine()
 	configAbsPath, err := filepath.Abs(pathToConfigFile)
 	if err != nil {
-		fmt.Println(os.Stderr, err.Error())
+		fmt.Fprintln(os.Stderr, err.Error())
 		os.Exit(1)
 	}
 	pathToBag, err := filepath.Abs(flag.Arg(0))
 	if err != nil {
-		fmt.Println(os.Stderr, err.Error())
+		fmt.Fprintln(os.Stderr, err.Error())
 		os.Exit(1)
 	}
 	conf, errors := validation.LoadBagValidationConfig(configAbsPath)
@@ -56,14 +56,14 @@ func main() {
 func printOutput(validator *validation.Validator, pathToOutFile string) {
 	file, err := os.Create(pathToOutFile)
 	if err != nil {
-		fmt.Println(os.Stderr, "Can't open output file: %v", err)
+		fmt.Fprintf(os.Stderr, "Can't open output file: %v\n", err)
 		return
 	}
 	defer file.Close()
 
 	db, err := storage.NewBoltDB(validator.DBName())
 	if err != nil {
-		fmt.Println(os.Stderr, "Can't open db: %v", err)
+		fmt.Fprintf(os.Stderr, "Can't open db: %v\n", err)
 		return
 	}
 

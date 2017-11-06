@@ -83,7 +83,7 @@ func MakeDPNNode() *models.Node {
 	return &models.Node{
 		Name:      fake.Word(),
 		Namespace: fake.Word(),
-		APIRoot:   fmt.Sprintf("https://", fake.DomainName()),
+		APIRoot:   fmt.Sprintf("https://%s", fake.DomainName()),
 		SSHPubKey: fake.Word(),
 		CreatedAt: apt_testutil.RandomDateTime(),
 		UpdatedAt: apt_testutil.RandomDateTime(),

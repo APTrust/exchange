@@ -107,7 +107,7 @@ func createFile(pathToFile string) {
 		if err != nil {
 			die(err.Error())
 		} else if n != len(data) {
-			fmt.Fprintln(os.Stderr, "Create wrote only %d of %d bytes", n, len(data))
+			fmt.Fprintf(os.Stderr, "Create wrote only %d of %d bytes\n", n, len(data))
 			os.Exit(1)
 		}
 	}
@@ -122,7 +122,7 @@ func copyFile(destPath, sourcePath string) {
 
 	stat, err := src.Stat()
 	if err != nil {
-		fmt.Fprintln(os.Stderr, "Cant stat file: %s", err.Error())
+		fmt.Fprintf(os.Stderr, "Cant stat file: %s\n", err.Error())
 		os.Exit(1)
 	}
 	srcSize := stat.Size()
@@ -135,7 +135,7 @@ func copyFile(destPath, sourcePath string) {
 
 	n, err := io.Copy(dest, src)
 	if n != srcSize {
-		fmt.Fprintln(os.Stderr, "Copy wrote only %d of %d bytes", n, srcSize)
+		fmt.Fprintf(os.Stderr, "Copy wrote only %d of %d bytes\n", n, srcSize)
 		os.Exit(1)
 	}
 
@@ -159,7 +159,7 @@ func statAndPrint(filePath string) {
 	buf := make([]byte, 256)
 	n, err := f.Read(buf)
 	if err != nil {
-		fmt.Fprintln(os.Stderr, "Cant read file: %s", err.Error())
+		fmt.Fprintf(os.Stderr, "Cant read file: %s\n", err.Error())
 	} else {
 		fmt.Println("Bytes read from", filePath, n)
 		fmt.Println("Bytes:", string(buf))

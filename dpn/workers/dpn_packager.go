@@ -433,7 +433,7 @@ func (packager *DPNPackager) fetchAllFiles(manifest *models.DPNIngestManifest) {
 		if downloader.Sha256Digest != existingSha256.Digest {
 			msg := fmt.Sprintf("sha256 digest mismatch for for file %s."+
 				"Our digest: %s. Digest of fetched file: %s",
-				gf.Identifier, existingSha256, downloader.Sha256Digest)
+				gf.Identifier, existingSha256.Digest, downloader.Sha256Digest)
 			packager.Context.MessageLog.Error(msg)
 			manifest.PackageSummary.AddError(msg)
 			break

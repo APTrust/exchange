@@ -714,7 +714,7 @@ func (restorer *APTRestorer) addFile(restoreState *models.RestoreState, absPath,
 // for this bag.
 func (restorer *APTRestorer) writeManifest(manifestType, algorithm string, restoreState *models.RestoreState) {
 	if algorithm != constants.AlgMd5 && algorithm != constants.AlgSha256 {
-		restorer.Context.MessageLog.Fatal("writeManifest: Unsupported algorithm: %s", algorithm)
+		restorer.Context.MessageLog.Fatalf("writeManifest: Unsupported algorithm: %s", algorithm)
 	}
 	manifestPath := restorer.getManifestPath(manifestType, algorithm, restoreState)
 	manifestFile, err := os.Create(manifestPath)

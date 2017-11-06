@@ -65,6 +65,6 @@ func TestPharosSha256(t *testing.T) {
 	result := models.NewFixityResult(testutil.MakeNsqMessage("999"))
 	result.GenericFile = getGenericFile()
 	if result.PharosSha256() != sha256sum {
-		t.Errorf("FedoraSha256() should have returned", sha256sum)
+		t.Errorf("FedoraSha256() should have returned %s", sha256sum)
 	}
 }

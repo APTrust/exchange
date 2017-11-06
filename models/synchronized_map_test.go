@@ -42,7 +42,7 @@ func TestGet(t *testing.T) {
 	}
 	syncMap.Add("new key", "new value")
 	if syncMap.Get("new key") != "new value" {
-		t.Error("Get() returned '%s' instead of 'new value'", syncMap.Get("new key"))
+		t.Errorf("Get() returned '%s' instead of 'new value'", syncMap.Get("new key"))
 	}
 }
 

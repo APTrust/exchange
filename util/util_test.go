@@ -40,12 +40,12 @@ func TestCleanBagName(t *testing.T) {
 	expected := "some.file"
 	actual := util.CleanBagName("some.file.b001.of200.tar")
 	if actual != expected {
-		t.Error("CleanBagName should have returned '%s', but returned '%s'",
+		t.Errorf("CleanBagName should have returned '%s', but returned '%s'",
 			expected, actual)
 	}
 	actual = util.CleanBagName("some.file.b1.of2.tar")
 	if actual != expected {
-		t.Error("CleanBagName should have returned '%s', but returned '%s'",
+		t.Errorf("CleanBagName should have returned '%s', but returned '%s'",
 			expected, actual)
 	}
 }
@@ -147,7 +147,7 @@ func TestGetInstitutionFromBagName(t *testing.T) {
 		t.Error(err)
 	}
 	if inst != "miami" {
-		t.Error("GetInstitutionFromBagName return institution name '%s', expected 'miami'", inst)
+		t.Errorf("GetInstitutionFromBagName return institution name '%s', expected 'miami'", inst)
 	}
 	_, err = util.GetInstitutionFromBagName("miami.edu.chc0390_metadata.tar")
 	if err != nil {

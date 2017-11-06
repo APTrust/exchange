@@ -86,6 +86,16 @@ func (client *S3ObjectDelete) DeleteList() {
 		client.ErrorMessage = err.Error()
 	}
 	for _, err := range client.Response.Errors {
-		client.ErrorMessage = fmt.Sprintf("Error deleting key '%s': %s | ", err.Key, err.Message)
+		key := "<nil>"
+		msg := "<nil>"
+		if err != nil {
+			if err.Key != nil {
+				key = *err.Key
+			}
+			if err.Message != nil {
+				msg = *err.Message
+			}
+		}
+		client.ErrorMessage = fmt.Sprintf("Error deleting key '%s': %s | ", key, msg)
 	}
 }
