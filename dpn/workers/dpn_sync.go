@@ -112,7 +112,12 @@ func (dpnSync *DPNSync) GetAllNodes() ([]*models.Node, error) {
 	if result.Error != nil {
 		return nil, result.Error
 	}
-	return result.Nodes(), nil
+	nodes := result.Nodes()
+	for _, node := range nodes {
+		node.LastPullDate, _ = dpnSync.LocalClient.NodeGetLastPullDate(node.Namespace)
+		dpnSync.Context.MessageLog.Info("Last pull date for %s is %s", node.Namespace, node.LastPullDate)
+	}
+	return nodes, nil
 }
 
 // LocalNodeName returns the namespace of our local DPN node.
