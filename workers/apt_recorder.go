@@ -116,13 +116,16 @@ func (recorder *APTRecorder) cleanup() {
 				"Bag has been stored and recorded. Deleting files from receiving bucket "+
 					"and staging area.")
 
+			// Call this before calling DeleteFileFromStaging on the valdb file,
+			// because this writes to valdb.
+			recorder.deleteBagFromReceivingBucket(ingestState)
+
 			// Remove both the bag and the validation DB (unless we're running integration tests)
 			DeleteFileFromStaging(ingestState.IngestManifest.BagPath, recorder.Context)
 			if recorder.Context.Config.DeleteOnSuccess == true {
 				DeleteFileFromStaging(ingestState.IngestManifest.DBPath, recorder.Context)
 			}
 
-			recorder.deleteBagFromReceivingBucket(ingestState)
 			MarkWorkItemSucceeded(ingestState, recorder.Context, constants.StageCleanup)
 			ingestState.FinishNSQ()
 		}
