@@ -442,12 +442,21 @@ func LogJson(ingestState *models.IngestState, jsonLog *log.Logger) {
 // the reserved storage from the volume manager. This deletes both the tarred
 // and untarred version of the bag, if they both exist.
 func DeleteFileFromStaging(pathToFile string, _context *context.Context) {
-	looksSafeToDelete := fileutil.LooksSafeToDelete(pathToFile, 12, 3)
-	if pathToFile != "" && fileutil.FileExists(pathToFile) && looksSafeToDelete {
+	if pathToFile == "" {
+		_context.MessageLog.Info("Skipping deletion of empty path")
+		return
+	}
+	if !fileutil.FileExists(pathToFile) {
+		_context.MessageLog.Info("%s was deleted earlier", pathToFile)
+		return
+	}
+	if fileutil.LooksSafeToDelete(pathToFile, 12, 3) {
 		_context.MessageLog.Info("Deleting %s", pathToFile)
 		err := os.Remove(pathToFile)
 		if err != nil {
 			_context.MessageLog.Warning(err.Error())
+		} else {
+			_context.MessageLog.Info("Deleted %s", pathToFile)
 		}
 		if _context.Config.UseVolumeService && strings.HasSuffix(pathToFile, ".tar") {
 			err = _context.VolumeClient.Release(pathToFile)
