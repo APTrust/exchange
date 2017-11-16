@@ -2,6 +2,7 @@ package models_test
 
 import (
 	"github.com/APTrust/exchange/models"
+	"github.com/APTrust/exchange/util/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"runtime"
@@ -28,6 +29,9 @@ func TestClaimedReserveReleasePath(t *testing.T) {
 // This functional/behavioral test goes through some more realistic
 // usage scenarios.
 func TestVolume(t *testing.T) {
+	if testutil.RunningInCI() {
+		t.Skip("Skipping volume test because it looks like we're in the CI environment.")
+	}
 	_, filename, _, _ := runtime.Caller(0)
 	volume := models.NewVolume(filename)
 
@@ -40,11 +44,16 @@ func TestVolume(t *testing.T) {
 	err = volume.Reserve("/path/to/file_2", numBytes)
 	require.Nil(t, err)
 
+	// Using assert.InDelta instead of assert.Equals because
+	// the OS often writes and/or deletes temp files between
+	// tests.
+	delta := float64(3000000)
+
 	// Make sure we're tracking the available space correctly.
 	bytesAvailable, err := volume.AvailableSpace()
 	require.Nil(t, err)
 	expectedBytesAvailable := (initialSpace - (2 * numBytes))
-	assert.Equal(t, expectedBytesAvailable, bytesAvailable)
+	assert.InDelta(t, expectedBytesAvailable, bytesAvailable, delta)
 
 	// Make sure a request for too much space is rejected
 	err = volume.Reserve("/path/to/file_3", numBytes*2)
@@ -57,7 +66,7 @@ func TestVolume(t *testing.T) {
 	// Make sure it was freed.
 	bytesAvailable, err = volume.AvailableSpace()
 	require.Nil(t, err)
-	assert.Equal(t, initialSpace, bytesAvailable)
+	assert.InDelta(t, initialSpace, bytesAvailable, delta)
 
 	// Now we should have enough space for this.
 	err = volume.Reserve("/path/to/file_4", numBytes*2)
