@@ -10,6 +10,7 @@ import (
 	"github.com/APTrust/exchange/partner_apps/common"
 	"net/url"
 	"os"
+	"strings"
 	"time"
 )
 
@@ -25,6 +26,9 @@ type OutputObject struct {
 func main() {
 	fileToCheck := ""
 	opts := getUserOptions()
+	if opts.Debug {
+		printOpts(opts)
+	}
 	if opts.HasErrors() {
 		fmt.Fprintln(os.Stderr, opts.AllErrorsAsString())
 		os.Exit(1)
@@ -38,6 +42,10 @@ func main() {
 		fmt.Fprintln(os.Stderr, "Try: apt_check_ingest --help")
 		os.Exit(1)
 	}
+	if opts.Debug {
+		fmt.Printf("Filename: %s\n", fileToCheck)
+		fmt.Println("----------------------------------------------")
+	}
 	client, err := network.NewPharosClient(opts.PharosURL, APIVersion,
 		opts.APTrustAPIUser, opts.APTrustAPIKey)
 	if err != nil {
@@ -50,6 +58,9 @@ func main() {
 	params.Set("sort", "date")
 
 	resp := client.WorkItemList(params)
+	if opts.Debug {
+		printResponse(resp, opts)
+	}
 	if resp.Error != nil {
 		fmt.Fprintln(os.Stderr, resp.Error.Error())
 		os.Exit(1)
@@ -62,6 +73,9 @@ func main() {
 		}
 		if item.ObjectIdentifier != "" {
 			resp = client.IntellectualObjectGet(item.ObjectIdentifier, false, false)
+			if opts.Debug {
+				printResponse(resp, opts)
+			}
 			if resp.Error != nil {
 				fmt.Fprintln(os.Stderr, resp.Error.Error())
 			}
@@ -95,6 +109,41 @@ func printJson(objects []OutputObject) {
 	fmt.Println(string(jsonBytes))
 }
 
+func printResponse(resp *network.PharosResponse, opts *common.Options) {
+	url := strings.Replace(resp.Request.URL.String(), "https:", opts.PharosURL, 1)
+	fmt.Println("----- HTTP Request -----")
+	fmt.Println(resp.Request.Method, url)
+	fmt.Println("Headers:")
+	for k, v := range resp.Request.Header {
+		fmt.Printf("  %s: %s\n", k, v[0])
+	}
+	fmt.Println("\n")
+	fmt.Println("----- HTTP Response -----")
+	fmt.Println("Headers:")
+	for k, v := range resp.Response.Header {
+		fmt.Printf("  %s: %s\n", k, v[0])
+	}
+	fmt.Println("\nBody:")
+	respData, _ := resp.RawResponseData()
+	fmt.Println(string(respData))
+	fmt.Println("----------------------------------------------\n\n")
+}
+
+func printOpts(opts *common.Options) {
+	configFile := opts.PathToConfigFile
+	if configFile == "" {
+		configFile = "<none>"
+	}
+	fmt.Println("Runtime options:")
+	fmt.Println("  Config File:", configFile)
+	fmt.Println("  APTrust API User:", opts.APTrustAPIUser, "(from", opts.APTrustAPIUserFrom, ")")
+	fmt.Println("  APTrust API Key:", opts.APTrustAPIKey, "(from", opts.APTrustAPIKeyFrom, ")")
+	fmt.Println("  APTrust REST URL:", opts.PharosURL)
+	fmt.Println("  Output Format:", opts.OutputFormat)
+	fmt.Println("  Debug:", opts.Debug)
+	fmt.Println("----------------------------------------------\n")
+}
+
 // Get user-specified options from the command line,
 // environment, and/or config file.
 func getUserOptions() *common.Options {
@@ -110,10 +159,12 @@ func parseCommandLine() *common.Options {
 	var pharosEnv string
 	var outputFormat string
 	var help bool
+	var debug bool
 	flag.StringVar(&pathToConfigFile, "config", "", "Path to partner config file")
 	flag.StringVar(&pharosEnv, "env", "production", "Which environment to query: production [default] or demo.")
 	flag.StringVar(&outputFormat, "format", "text", "Output format ('text' or 'json')")
 	flag.BoolVar(&help, "help", false, "Show help")
+	flag.BoolVar(&debug, "debug", false, "Print debugging output to stdout")
 	flag.Parse()
 
 	if help {
@@ -135,6 +186,7 @@ func parseCommandLine() *common.Options {
 		PathToConfigFile: pathToConfigFile,
 		OutputFormat:     outputFormat,
 		PharosURL:        pharosUrl,
+		Debug:            debug,
 	}
 }
 
@@ -157,7 +209,7 @@ See https://wiki.aptrust.org/Partner_Tools for more info on the
 APTrust config file.
 
 Usage: apt_check_ingest [-config=<path to config file>] [-env=<production|demo>] \
-                        [-format=<json|text>] <filename.tar>
+                        [-format=<json|text>] [-debug] <filename.tar>
 
 Option -config is should point the APTrust partner config file that
 contains your user email and API key. If you don't want to specify the
@@ -171,6 +223,10 @@ https://demo.aptrust.org. If unspecified, this defaults to production.
 Option -format specifies whether the result of the query should be printed
 to STDOUT in json or plain text format. Default is json.
 
+Option -debug will print information about the program's runtime options
+(including API user and API key) to STDOUT. It will also print the request
+sent to the APTrust REST server and the server's response.
+
 Param filename.tar is the name of the tar file you uploaded for
 ingest. For example, virginia.edu.bag_of_images.tar
 
@@ -178,6 +234,7 @@ You will get multiple results for bags that have been ingested more than
 once. For example, if you uploaded version 1 of a bag last year, and then
 a newer version today, the output will include results for both bags,
 with the most recent version listed first.
+
 `
 	fmt.Println(message)
 }

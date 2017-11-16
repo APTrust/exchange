@@ -62,6 +62,8 @@ type Options struct {
 	// OutputFormat specifies how the program should print its results
 	// to STDOUT. Options are "text" and "json".
 	OutputFormat string
+	// Debug indicates whether we should print debug output to Stdout.
+	Debug bool
 	// error contains a list of errors describing why these options are
 	// not valid for an operation like upload or download.
 	errors []string
