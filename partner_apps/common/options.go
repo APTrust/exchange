@@ -179,7 +179,7 @@ func (opts *Options) EnsureDownloadDirIsSet() {
 // in ~/.aptrust_partner.conf or %HOMEPATH%\.aptrust_partner.conf
 func (opts *Options) MergeConfigFileOptions() {
 	partnerConfig := &PartnerConfig{}
-	if opts.PathToConfigFile != "" && partner.DefaultConfigFileExists() {
+	if opts.PathToConfigFile != "" || partner.DefaultConfigFileExists() {
 		var err error
 		partnerConfig, err = opts.LoadConfigFile()
 		if err != nil {
