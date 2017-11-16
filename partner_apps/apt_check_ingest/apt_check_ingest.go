@@ -117,7 +117,7 @@ func printResponse(resp *network.PharosResponse, opts *common.Options) {
 	for k, v := range resp.Request.Header {
 		fmt.Printf("  %s: %s\n", k, v[0])
 	}
-	fmt.Println("\n")
+	fmt.Println("")
 	fmt.Println("----- HTTP Response -----")
 	fmt.Println("Headers:")
 	for k, v := range resp.Response.Header {
@@ -126,7 +126,8 @@ func printResponse(resp *network.PharosResponse, opts *common.Options) {
 	fmt.Println("\nBody:")
 	respData, _ := resp.RawResponseData()
 	fmt.Println(string(respData))
-	fmt.Println("----------------------------------------------\n\n")
+	fmt.Println("----------------------------------------------")
+	fmt.Println("")
 }
 
 func printOpts(opts *common.Options) {
@@ -141,7 +142,8 @@ func printOpts(opts *common.Options) {
 	fmt.Println("  APTrust REST URL:", opts.PharosURL)
 	fmt.Println("  Output Format:", opts.OutputFormat)
 	fmt.Println("  Debug:", opts.Debug)
-	fmt.Println("----------------------------------------------\n")
+	fmt.Println("----------------------------------------------")
+	fmt.Println("")
 }
 
 // Get user-specified options from the command line,
