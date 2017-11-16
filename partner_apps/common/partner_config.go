@@ -16,6 +16,8 @@ type PartnerConfig struct {
 	ReceivingBucket    string
 	RestorationBucket  string
 	DownloadDir        string
+	APTrustAPIUser     string
+	APTrustAPIKey      string
 	warnings           []string
 }
 
@@ -74,6 +76,10 @@ func (partnerConfig *PartnerConfig) addSetting(name, value string) {
 		partnerConfig.RestorationBucket = cleanValue
 	case "downloaddir":
 		partnerConfig.DownloadDir = cleanValue
+	case "aptrustapiuser":
+		partnerConfig.APTrustAPIUser = cleanValue
+	case "aptrustapikey":
+		partnerConfig.APTrustAPIKey = cleanValue
 	default:
 		partnerConfig.addWarning(fmt.Sprintf("Invalid setting: %s = %s", cleanName, cleanValue))
 	}

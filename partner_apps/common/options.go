@@ -20,6 +20,17 @@ type Options struct {
 	// AccessKeyFrom describes the source from which the Options object
 	// loaded the AWS AccessKeyId. This is used only for testing and debugging.
 	AccessKeyFrom string
+	// APTrustAPIKey is the key to connect to APTrust REST API.
+	// The key must belong to APTrustAPIUser.
+	APTrustAPIKey string
+	// APTrustAPIKeyFrom tells whether the API key came from the config
+	// file or the environment.
+	APTrustAPIKeyFrom string
+	// APTrustAPIKey is the user email address to connect to APTrust REST API.
+	APTrustAPIUser string
+	// APTrustAPIUserFrom tells whether the API user came from the config
+	// file or the environment.
+	APTrustAPIUserFrom string
 	// SecretAccessKey is the AWS Secret Access Key used to access your
 	// S3 bucket.
 	SecretAccessKey string
@@ -46,6 +57,8 @@ type Options struct {
 	// FileToUpload is the path the file that should be uploaded to S3.
 	// This is required for apt_upload only, and is ignored elsewhere.
 	FileToUpload string
+	// PharosURL is the URL of the Pharos production or demo system.
+	PharosURL string
 	// OutputFormat specifies how the program should print its results
 	// to STDOUT. Options are "text" and "json".
 	OutputFormat string
@@ -123,6 +136,15 @@ func (opts *Options) VerifyOutputFormat() {
 	}
 }
 
+func (opts *Options) VerifyRequiredAPICredentials() {
+	if opts.APTrustAPIUser == "" {
+		opts.addError("Cannot find APTrust API user in environment or config file")
+	}
+	if opts.APTrustAPIKey == "" {
+		opts.addError("Cannot find APTrust API key in environment or config file")
+	}
+}
+
 // EnsureDownloadDirIsSet makes sure we have a directory to download the file into.
 func (opts *Options) EnsureDownloadDirIsSet() {
 	var err error
@@ -154,13 +176,14 @@ func (opts *Options) EnsureDownloadDirIsSet() {
 // a config file, use that. Otherwise, use the default config file
 // in ~/.aptrust_partner.conf or %HOMEPATH%\.aptrust_partner.conf
 func (opts *Options) MergeConfigFileOptions() {
-	if opts.PathToConfigFile == "" && !partner.DefaultConfigFileExists() {
-		return // there is no partner config to load
-	}
-	partnerConfig, err := opts.LoadConfigFile()
-	if err != nil {
-		fmt.Fprintf(os.Stderr, err.Error())
-		return
+	partnerConfig := &PartnerConfig{}
+	if opts.PathToConfigFile != "" && partner.DefaultConfigFileExists() {
+		var err error
+		partnerConfig, err = opts.LoadConfigFile()
+		if err != nil {
+			fmt.Fprintf(os.Stderr, err.Error())
+			return
+		}
 	}
 	if opts.Bucket == "" {
 		opts.Bucket = partnerConfig.RestorationBucket
@@ -184,6 +207,30 @@ func (opts *Options) MergeConfigFileOptions() {
 		} else {
 			opts.SecretAccessKey = os.Getenv("AWS_SECRET_ACCESS_KEY")
 			opts.SecretKeyFrom = "ENV['AWS_SECRET_ACCESS_KEY']"
+		}
+	}
+	if opts.APTrustAPIKey == "" {
+		if partnerConfig.APTrustAPIKey != "" {
+			opts.APTrustAPIKey = partnerConfig.APTrustAPIKey
+			opts.APTrustAPIKeyFrom = opts.PathToConfigFile
+		} else if os.Getenv("APTRUST_API_KEY") != "" {
+			opts.APTrustAPIKey = os.Getenv("APTRUST_API_KEY")
+			opts.APTrustAPIKeyFrom = "ENV['APTRUST_API_KEY']"
+		} else if os.Getenv("PHAROS_API_KEY") != "" {
+			opts.APTrustAPIKey = os.Getenv("PHAROS_API_KEY")
+			opts.APTrustAPIKeyFrom = "ENV['PHAROS_API_KEY']"
+		}
+	}
+	if opts.APTrustAPIUser == "" {
+		if partnerConfig.APTrustAPIUser != "" {
+			opts.APTrustAPIUser = partnerConfig.APTrustAPIUser
+			opts.APTrustAPIUserFrom = opts.PathToConfigFile
+		} else if os.Getenv("APTRUST_API_USER") != "" {
+			opts.APTrustAPIUser = os.Getenv("APTRUST_API_USER")
+			opts.APTrustAPIUserFrom = "ENV['APTRUST_API_USER']"
+		} else if os.Getenv("PHAROS_API_USER") != "" {
+			opts.APTrustAPIUser = os.Getenv("PHAROS_API_USER")
+			opts.APTrustAPIUserFrom = "ENV['PHAROS_API_USER']"
 		}
 	}
 }
