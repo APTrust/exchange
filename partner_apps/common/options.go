@@ -187,10 +187,10 @@ func (opts *Options) MergeConfigFileOptions() {
 			return
 		}
 	}
-	if opts.Bucket == "" {
+	if opts.Bucket == "" && partnerConfig.RestorationBucket != "" {
 		opts.Bucket = partnerConfig.RestorationBucket
 	}
-	if opts.Dir == "" {
+	if opts.Dir == "" && partnerConfig.DownloadDir != "" {
 		opts.Dir = partnerConfig.DownloadDir
 	}
 	if opts.AccessKeyId == "" {

@@ -46,7 +46,7 @@ func TestSetAndVerifyDownloadOptions(t *testing.T) {
 	require.Nil(t, err)
 	opts.PathToConfigFile = filePath
 	opts.SetAndVerifyDownloadOptions()
-	assert.Equal(t, 1, len(opts.Errors()))
+	assert.Equal(t, 1, len(opts.Errors()), opts.Errors)
 
 	// Should NOT overwrite opts if explicitly set.
 	conf := getTestConfig(t)
@@ -98,7 +98,7 @@ func TestSetAndVerifyUploadOptions(t *testing.T) {
 	require.Nil(t, err)
 	opts.PathToConfigFile = filePath
 	opts.SetAndVerifyUploadOptions()
-	assert.Equal(t, 1, len(opts.Errors()))
+	assert.Equal(t, 1, len(opts.Errors()), opts.Errors)
 
 	// Should NOT overwrite opts if explicitly set.
 	conf := getTestConfig(t)
