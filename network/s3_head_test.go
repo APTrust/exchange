@@ -25,7 +25,7 @@ func TestHead(t *testing.T) {
 	client.Head(testFile)
 	assert.EqualValues(t, testFileSize, *client.Response.ContentLength)
 	assert.Equal(t, testFileETag, *client.Response.ETag)
-	assert.Equal(t, "application/x-tar", *client.Response.ContentType)
+	assert.Equal(t, "binary/octet-stream", *client.Response.ContentType)
 	trimmedETag := strings.Replace(testFileETag, "\"", "", -1)
 
 	storedFile := client.StoredFile()
