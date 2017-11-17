@@ -83,13 +83,16 @@ func main() {
 		}
 	}
 	if opts.OutputFormat == "text" {
-		printText(outputObjects)
+		printText(outputObjects, fileToCheck)
 	} else {
 		printJson(outputObjects)
 	}
 }
 
-func printText(objects []OutputObject) {
+func printText(objects []OutputObject, fileToCheck string) {
+	if len(objects) == 0 {
+		fmt.Println("No record for", fileToCheck)
+	}
 	for i, obj := range objects {
 		ingested := (obj.WorkItem.Stage == constants.StageCleanup &&
 			obj.WorkItem.Status == constants.StatusSuccess)
