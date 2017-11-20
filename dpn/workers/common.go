@@ -750,7 +750,7 @@ func EnsureItemIsMarkedCancelled(_context *context.Context, manifest *models.Rep
 	if manifest.ReplicationTransfer.Cancelled == false {
 		panic("Don't call EnsureItemIsMarkedCancelled unless the replication has been cancelled!")
 	}
-	if manifest.DPNWorkItem.CompletedAt.IsZero() {
+	if manifest.DPNWorkItem.CompletedAt == nil || manifest.DPNWorkItem.CompletedAt.IsZero() {
 		note := "Replication was cancelled"
 		now := time.Now().UTC()
 		manifest.DPNWorkItem.CompletedAt = &now
