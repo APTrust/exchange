@@ -380,7 +380,7 @@ func (copier *DPNCopier) logReplicationStored(manifest *models.ReplicationManife
 
 func (copier *DPNCopier) logReplicationCancelled(manifest *models.ReplicationManifest) {
 	bagUUID := "<UUID unknown>"
-	if manifest.DPNBag.UUID != nil {
+	if manifest.DPNBag != nil && manifest.DPNBag.UUID != nil {
 		bagUUID = manifest.DPNBag.UUID
 	}
 	copier.Context.MessageLog.Info("Replication %s for bag %s was cancelled",
