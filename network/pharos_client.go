@@ -1008,7 +1008,7 @@ func (client *PharosClient) DoRequest(resp *PharosResponse, method, absoluteUrl 
 // GenericFile identifiers. Slashes also cause problems with object
 // identifiers.
 func escapeForURL(s string) string {
-	escaped := strings.Replace(s, "%", "%3A", -1)
+	escaped := strings.Replace(s, "%", "%25", -1)
 	escaped = strings.Replace(s, "/", "%2F", -1)
 	return strings.Replace(escaped, "?", "%3F", -1)
 }
