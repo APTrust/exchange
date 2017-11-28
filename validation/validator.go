@@ -16,6 +16,7 @@ import (
 	"os"
 	"path"
 	"regexp"
+	"runtime"
 	"strings"
 	"time"
 )
@@ -616,6 +617,12 @@ func (validator *Validator) verifyTopLevelFolder() {
 	}
 	re := regexp.MustCompile("\\.tar$")
 	baseName := path.Base(obj.IngestTarFilePath)
+	// Not sure why, but the Go path library uses hard-coded forward slashes.
+	// https://golang.org/src/path/path.go?s=4737:4766#L171
+	// That causes a problem on Windows.
+	if runtime.GOOS == "windows" {
+		baseName = strings.Replace(baseName, "\\", "/", -1)
+	}
 	expectedDirName := re.ReplaceAllString(baseName, "")
 	dirNames := obj.IngestTopLevelDirNames
 	if dirNames != nil {
