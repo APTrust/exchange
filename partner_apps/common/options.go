@@ -31,6 +31,9 @@ type Options struct {
 	// APTrustAPIUserFrom tells whether the API user came from the config
 	// file or the environment.
 	APTrustAPIUserFrom string
+	// ETag is the etag of an S3 upload. This is for tools that look up
+	// bags by etag.
+	ETag string
 	// SecretAccessKey is the AWS Secret Access Key used to access your
 	// S3 bucket.
 	SecretAccessKey string

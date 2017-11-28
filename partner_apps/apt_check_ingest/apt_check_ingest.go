@@ -56,6 +56,9 @@ func main() {
 	params.Set("name", fileToCheck)
 	params.Set("item_action", constants.ActionIngest)
 	params.Set("sort", "date")
+	if opts.ETag != "" {
+		params.Set("etag", opts.ETag)
+	}
 
 	resp := client.WorkItemList(params)
 	if opts.Debug {
@@ -171,11 +174,13 @@ func parseCommandLine() *common.Options {
 	var pathToConfigFile string
 	var pharosEnv string
 	var outputFormat string
+	var etag string
 	var help bool
 	var debug bool
 	flag.StringVar(&pathToConfigFile, "config", "", "Path to partner config file")
 	flag.StringVar(&pharosEnv, "env", "production", "Which environment to query: production [default] or demo.")
 	flag.StringVar(&outputFormat, "format", "text", "Output format ('text' or 'json')")
+	flag.StringVar(&etag, "etag", "", "The etag of the bag you want to check on")
 	flag.BoolVar(&help, "help", false, "Show help")
 	flag.BoolVar(&debug, "debug", false, "Print debugging output to stdout")
 	flag.Parse()
@@ -198,6 +203,7 @@ func parseCommandLine() *common.Options {
 	return &common.Options{
 		PathToConfigFile: pathToConfigFile,
 		OutputFormat:     outputFormat,
+		ETag:             etag,
 		PharosURL:        pharosUrl,
 		Debug:            debug,
 	}
@@ -221,8 +227,11 @@ AptrustApiKey = "f887afc5e1624eda92ae1a5aecdf210c"
 See https://wiki.aptrust.org/Partner_Tools for more info on the
 APTrust config file.
 
-Usage: apt_check_ingest [-config=<path to config file>] [-env=<production|demo>] \
-						[-format=<json|text>] [-debug] <filename.tar>
+Usage: apt_check_ingest [-config=<path to config file>] \
+			[-env=<production|demo>] \
+			[-etag=<etag>] \
+			[-format=<json|text>] \
+			[-debug] <filename.tar>
 
 Option -config is should point the APTrust partner config file that
 contains your user email and API key. If you don't want to specify the
@@ -233,6 +242,11 @@ Option -env specifies whether the tool should query the APTrust production
 system at https://repo.aptrust.org or the demo system at
 https://demo.aptrust.org. If unspecified, this defaults to production.
 
+Option -etag is the AWS S3 etag assigned to a file upon upload to the
+receiving bucket. If you've uploaded multiple versions of a bag, each one
+will have a different etag. Specifying the etag here allows you to check
+on a single version of a bag that was uploaded multiple times.
+
 Option -format specifies whether the result of the query should be printed
 to STDOUT in json or plain text format. Default is json.
 
@@ -240,8 +254,8 @@ Option -debug will print information about the program's runtime options
 (including API user and API key) to STDOUT. It will also print the request
 sent to the APTrust REST server and the server's response.
 
-Param filename.tar is the name of the tar file you uploaded for
-ingest. For example, virginia.edu.bag_of_images.tar
+Param filename.tar is the name of the bag you uploaded for ingest. For
+example, virginia.edu.bag_of_images.tar
 
 You will get multiple results for bags that have been ingested more than
 once. For example, if you uploaded version 1 of a bag last year, and then
