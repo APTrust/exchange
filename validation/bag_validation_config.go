@@ -6,6 +6,8 @@ import (
 	"github.com/APTrust/exchange/constants"
 	"github.com/APTrust/exchange/util"
 	"github.com/APTrust/exchange/util/fileutil"
+	"io/ioutil"
+	"path/filepath"
 	"regexp"
 	"strings"
 )
@@ -143,7 +145,15 @@ func (config *BagValidationConfig) CompileFileNameRegex() error {
 
 func LoadBagValidationConfig(pathToConfigFile string) (*BagValidationConfig, []error) {
 	errors := make([]error, 0)
-	file, err := fileutil.LoadRelativeFile(pathToConfigFile)
+	var file []byte
+	// If pathToConfigFile is already absolute, go right to it.
+	// Otherwise, consider the path relative to EXCHANGE_HOME.
+	absPath, err := filepath.Abs(pathToConfigFile)
+	if err == nil && absPath == pathToConfigFile {
+		file, err = ioutil.ReadFile(pathToConfigFile)
+	} else {
+		file, err = fileutil.LoadRelativeFile(pathToConfigFile)
+	}
 	if err != nil {
 		detailedError := fmt.Errorf(
 			"Error reading bag validation config file '%s': %v\n",

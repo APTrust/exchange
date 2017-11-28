@@ -100,9 +100,9 @@ apt_validate validates bags according to the specified config file.
 Usage:
 
 apt_validate --config=<config_file> \
-			 --attrs=<true|false> \
-			 --outfile=<path_to_output_file> \
-			 path_to_bag
+		--attrs=<true|false> \
+		--outfile=<path_to_output_file> \
+		path_to_bag
 
 The path_to_bag parameter is required. It should be the absolute path
 to the directory containing the untarred bag, or to a tarred bag file.
