@@ -96,10 +96,18 @@ func printText(objects []OutputObject, fileToCheck string) {
 	for i, obj := range objects {
 		ingested := (obj.WorkItem.Stage == constants.StageCleanup &&
 			obj.WorkItem.Status == constants.StatusSuccess)
+		objIdentifier := "<not ingested yet>"
+		if obj.WorkItem.ObjectIdentifier != "" {
+			objIdentifier = obj.WorkItem.ObjectIdentifier
+		}
 		fmt.Printf("%d) %s\n", i+1, obj.WorkItem.Name)
-		fmt.Printf("    Updated: %s, Stage: %s, Status: %s, Ingested: %t\n",
-			obj.WorkItem.UpdatedAt.Format(time.RFC3339),
-			obj.WorkItem.Stage, obj.WorkItem.Status, ingested)
+		fmt.Printf("    Etag:       %s\n", obj.WorkItem.ETag)
+		fmt.Printf("    Size:       %d\n", obj.WorkItem.Size)
+		fmt.Printf("    Updated:    %s\n", obj.WorkItem.UpdatedAt.Format(time.RFC3339))
+		fmt.Printf("    Stage:      %s\n", obj.WorkItem.Stage)
+		fmt.Printf("    Status:     %s\n", obj.WorkItem.Status)
+		fmt.Printf("    Ingested:   %t\n", ingested)
+		fmt.Printf("    Identifier: %s\n", objIdentifier)
 	}
 }
 
@@ -214,7 +222,7 @@ See https://wiki.aptrust.org/Partner_Tools for more info on the
 APTrust config file.
 
 Usage: apt_check_ingest [-config=<path to config file>] [-env=<production|demo>] \
-                        [-format=<json|text>] [-debug] <filename.tar>
+						[-format=<json|text>] [-debug] <filename.tar>
 
 Option -config is should point the APTrust partner config file that
 contains your user email and API key. If you don't want to specify the
