@@ -621,7 +621,8 @@ func (validator *Validator) verifyTopLevelFolder() {
 	// https://golang.org/src/path/path.go?s=4737:4766#L171
 	// That causes a problem on Windows.
 	if runtime.GOOS == "windows" {
-		baseName = strings.Replace(baseName, "\\", "/", -1)
+		parts := strings.Split(obj.IngestTarFilePath, "\\")
+		baseName = parts[len(parts)-1]
 	}
 	expectedDirName := re.ReplaceAllString(baseName, "")
 	dirNames := obj.IngestTopLevelDirNames
