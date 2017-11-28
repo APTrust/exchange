@@ -133,7 +133,7 @@ func parseCommandLine() *common.Options {
 		meta := make(map[string]string)
 		err := json.Unmarshal([]byte(metadata), &meta)
 		if err != nil {
-			fmt.Fprintln(os.Stderr, "Cannot parse metadata JSON: %v", err)
+			fmt.Fprintln(os.Stderr, "Cannot parse metadata JSON:", err)
 			os.Exit(1)
 		}
 		opts.Metadata = meta
