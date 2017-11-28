@@ -6,6 +6,7 @@ import (
 	"github.com/APTrust/exchange/context"
 	"github.com/APTrust/exchange/models"
 	"github.com/APTrust/exchange/network"
+	"github.com/APTrust/exchange/util"
 	"github.com/APTrust/exchange/util/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -101,12 +102,33 @@ func testUpdatedFilesInPharos(t *testing.T, _context *context.Context, obj *mode
 	assert.Equal(t, 2, len(updatedFile.FindEventsByType(constants.EventDigestCalculation)))
 	assert.Equal(t, 2, len(updatedFile.FindEventsByType(constants.EventReplication)))
 	require.Equal(t, 4, len(updatedFile.Checksums))
-	require.Equal(t, "44d85cf4810d6c6fe87750117633e461", updatedFile.Checksums[0].Digest)
-	require.Equal(t, "248fac506a5c46b3c760312b99827b6fb5df4698d6cf9a9cdc4c54746728ab99",
-		updatedFile.Checksums[1].Digest)
-	require.Equal(t, "7a31f705fc1a16571374406c5a9b7681", updatedFile.Checksums[2].Digest)
-	require.Equal(t, "baf8752080187b1e401ae952047029ae4e16b5f54c5daf9d97bc0c7598772326",
-		updatedFile.Checksums[3].Digest)
+
+	actualDigests := []string{
+		updatedFile.Checksums[0].Digest,
+		updatedFile.Checksums[1].Digest,
+		updatedFile.Checksums[2].Digest,
+		updatedFile.Checksums[3].Digest,
+	}
+	expectedDigests := []string{
+		"44d85cf4810d6c6fe87750117633e461",
+		"248fac506a5c46b3c760312b99827b6fb5df4698d6cf9a9cdc4c54746728ab99",
+		"7a31f705fc1a16571374406c5a9b7681",
+		"baf8752080187b1e401ae952047029ae4e16b5f54c5daf9d97bc0c7598772326",
+	}
+
+	// Digests may be in unexpected order. Make sure they're all present.
+	for _, expectedDigest := range expectedDigests {
+		assert.True(t, util.StringListContains(actualDigests, expectedDigest),
+			"Digest %s not found", expectedDigest)
+	}
+
+	// require.Equal(t, "44d85cf4810d6c6fe87750117633e461", updatedFile.Checksums[0].Digest)
+	// require.Equal(t, "248fac506a5c46b3c760312b99827b6fb5df4698d6cf9a9cdc4c54746728ab99",
+	//	updatedFile.Checksums[1].Digest)
+	// require.Equal(t, "7a31f705fc1a16571374406c5a9b7681", updatedFile.Checksums[2].Digest)
+	// require.Equal(t, "baf8752080187b1e401ae952047029ae4e16b5f54c5daf9d97bc0c7598772326",
+	//	updatedFile.Checksums[3].Digest)
+
 	testUpdatedFileInStorage(t, _context, updatedFile)
 
 	// The new file is in the new version of the bag, but was not
