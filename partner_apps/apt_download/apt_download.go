@@ -108,6 +108,8 @@ func parseCommandLine() *common.Options {
 		opts.SecretKeyFrom = "environment"
 	}
 
+	opts.MergeConfigFileOptions()
+
 	return opts
 }
 
@@ -127,7 +129,7 @@ apt_download -config=<path to config file> \
 
 Params:
 
-Note that bucket and key are the only required params. This program will get
+Note that key is the only required param. This program will get
 your AWS credentials from the config file, if it can find one. Otherwise,
 it will get your AWS credentials from the environment variables
 "AWS_ACCESS_KEY_ID" and "AWS_SECRET_ACCESS_KEY". If it can't find your
@@ -147,7 +149,10 @@ AWS credentials, the download will fail.
 		but you may set it on the command line to download non-APTrust
 		files from your own buckets.
 
--bucket is the name of the S3 bucket to download from. This is required.
+-bucket is the name of the S3 bucket to download from. If omitted, the program
+		will use the name of the restoration bucket in your partner config
+		file. If you have no config file, or the restoration bucket isn't
+		specified there, then you must specify the bucket on the command line.
 
 -key    is the name of the item you want to download from S3. This param
 		is required.
