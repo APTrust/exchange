@@ -18,6 +18,8 @@ import (
 	"time"
 )
 
+const filesize = int64(23552)
+
 func getUploadClient() (*network.S3Upload, error) {
 	relpath := filepath.Join("testdata", "json_objects", "s3_upload_output.json")
 	filename, err := fileutil.RelativeToAbsPath(relpath)
@@ -75,14 +77,14 @@ func TestNewUploadResult(t *testing.T) {
 	require.Nil(t, err)
 	headClient, err := getHeadClient()
 	require.Nil(t, err)
-	result := common.NewUploadResult(opts, uploadClient, headClient)
+	result := common.NewUploadResult(opts, uploadClient, headClient, filesize)
 	require.NotNil(t, result)
 	assert.Equal(t, opts.Region, result.Region)
 	assert.Equal(t, opts.Bucket, result.Bucket)
 	assert.Equal(t, opts.Key, result.Key)
 	assert.Equal(t, opts.FileToUpload, result.CopiedFrom)
 	assert.Equal(t, "", result.ErrorMessage)
-	assert.Equal(t, int64(23552), result.S3ContentLength)
+	assert.Equal(t, filesize, result.S3ContentLength)
 	assert.Equal(t, "05e68e69767c772d36bd8a2baf693428", result.S3ETag)
 	lastModified, err := time.Parse(time.RFC3339, "2017-04-28T19:25:27Z")
 	assert.Nil(t, err)
@@ -97,7 +99,7 @@ func TestUploadResultToJson(t *testing.T) {
 	require.Nil(t, err)
 	headClient, err := getHeadClient()
 	require.Nil(t, err)
-	result := common.NewUploadResult(opts, uploadClient, headClient)
+	result := common.NewUploadResult(opts, uploadClient, headClient, filesize)
 	require.NotNil(t, result)
 	jsonString, err := result.ToJson()
 	require.Nil(t, err)
@@ -111,7 +113,18 @@ func TestUploadResultToText(t *testing.T) {
 	require.Nil(t, err)
 	headClient, err := getHeadClient()
 	require.Nil(t, err)
-	result := common.NewUploadResult(opts, uploadClient, headClient)
+	result := common.NewUploadResult(opts, uploadClient, headClient, filesize)
 	require.NotNil(t, result)
 	assert.Equal(t, "[OK] Uploaded '/dev/null/file.txt' to 'test.bucket/TestKey' (23552 bytes) with etag '05e68e69767c772d36bd8a2baf693428'", result.ToText())
+}
+
+func TestUploadSizeError(t *testing.T) {
+	opts := getOpts()
+	uploadClient, err := getUploadClient()
+	require.Nil(t, err)
+	headClient, err := getHeadClient()
+	require.Nil(t, err)
+	result := common.NewUploadResult(opts, uploadClient, headClient, int64(99999))
+	require.NotNil(t, result)
+	assert.Equal(t, "[ERROR] Failed to upload '/dev/null/file.txt':  Local file has size 99999, but S3 object has size 23552", result.ToText())
 }

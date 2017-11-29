@@ -24,7 +24,7 @@ type UploadResult struct {
 	ErrorMessage    string    `json:"error_message,omitempty"`
 }
 
-func NewUploadResult(opts *Options, uploadClient *network.S3Upload, headClient *network.S3Head) *UploadResult {
+func NewUploadResult(opts *Options, uploadClient *network.S3Upload, headClient *network.S3Head, filesize int64) *UploadResult {
 	result := &UploadResult{
 		Region:       opts.Region,
 		Bucket:       opts.Bucket,
@@ -57,6 +57,11 @@ func NewUploadResult(opts *Options, uploadClient *network.S3Upload, headClient *
 		result.S3ContentType = util.PointerToString(headClient.Response.ContentType)
 		if headClient.ErrorMessage != "" {
 			result.ErrorMessage += headClient.ErrorMessage
+		}
+		if contentLength != filesize {
+			result.ErrorMessage += fmt.Sprintf(
+				" Local file has size %d, but S3 object has size %d",
+				filesize, contentLength)
 		}
 	}
 	return result
