@@ -15,6 +15,14 @@ import (
 )
 
 const APIVersion = "v2"
+const (
+	EXIT_OK             = 0
+	EXIT_NOT_INGESTED   = 1
+	EXIT_MIXED          = 2
+	EXIT_ITEM_NOT_FOUND = 3
+	EXIT_USER_ERR       = 4
+	EXIT_RUNTIME_ERR    = 5
+)
 
 type OutputObject struct {
 	WorkItem           *models.WorkItem
@@ -31,7 +39,7 @@ func main() {
 	}
 	if opts.HasErrors() {
 		fmt.Fprintln(os.Stderr, opts.AllErrorsAsString())
-		os.Exit(1)
+		os.Exit(EXIT_USER_ERR)
 	}
 	args := flag.Args() // non-flag args
 	if len(args) > 0 {
@@ -40,7 +48,7 @@ func main() {
 	if fileToCheck == "" {
 		fmt.Fprintln(os.Stderr, "Missing required argument filename")
 		fmt.Fprintln(os.Stderr, "Try: apt_check_ingest --help")
-		os.Exit(1)
+		os.Exit(EXIT_USER_ERR)
 	}
 	if opts.Debug {
 		fmt.Printf("Filename: %s\n", fileToCheck)
@@ -50,7 +58,7 @@ func main() {
 		opts.APTrustAPIUser, opts.APTrustAPIKey)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err.Error())
-		os.Exit(1)
+		os.Exit(EXIT_RUNTIME_ERR)
 	}
 	params := url.Values{}
 	params.Set("name", fileToCheck)
@@ -66,7 +74,7 @@ func main() {
 	}
 	if resp.Error != nil {
 		fmt.Fprintln(os.Stderr, resp.Error.Error())
-		os.Exit(1)
+		os.Exit(EXIT_RUNTIME_ERR)
 	}
 	items := resp.WorkItems()
 	outputObjects := make([]OutputObject, len(items))
@@ -81,24 +89,54 @@ func main() {
 			}
 			if resp.Error != nil {
 				fmt.Fprintln(os.Stderr, resp.Error.Error())
+				os.Exit(EXIT_RUNTIME_ERR)
 			}
 			outputObjects[i].IntellectualObject = resp.IntellectualObject()
 		}
 	}
 	if opts.OutputFormat == "text" {
-		printText(outputObjects, fileToCheck)
+		printText(outputObjects, fileToCheck, opts.ETag)
 	} else {
 		printJson(outputObjects)
 	}
+	os.Exit(exitCode(outputObjects))
 }
 
-func printText(objects []OutputObject, fileToCheck string) {
+func ingested(item *models.WorkItem) bool {
+	return (item.Stage == constants.StageCleanup &&
+		item.Status == constants.StatusSuccess)
+}
+
+func exitCode(objects []OutputObject) int {
 	if len(objects) == 0 {
-		fmt.Println("No record for", fileToCheck)
+		return EXIT_ITEM_NOT_FOUND
+	}
+	succeeded := false
+	failed := false
+	for _, obj := range objects {
+		if ingested(obj.WorkItem) {
+			succeeded = true
+		} else {
+			failed = true
+		}
+	}
+	if succeeded && failed {
+		return EXIT_MIXED
+	} else if succeeded {
+		return EXIT_OK
+	}
+	return EXIT_NOT_INGESTED
+}
+
+func printText(objects []OutputObject, fileToCheck, etag string) {
+	if len(objects) == 0 {
+		if etag != "" {
+			fmt.Println("No record for", fileToCheck, "with etag", etag)
+		} else {
+			fmt.Println("No record for", fileToCheck)
+		}
 	}
 	for i, obj := range objects {
-		ingested := (obj.WorkItem.Stage == constants.StageCleanup &&
-			obj.WorkItem.Status == constants.StatusSuccess)
 		objIdentifier := "<not ingested yet>"
 		if obj.WorkItem.ObjectIdentifier != "" {
 			objIdentifier = obj.WorkItem.ObjectIdentifier
@@ -109,7 +147,7 @@ func printText(objects []OutputObject, fileToCheck string) {
 		fmt.Printf("    Updated:    %s\n", obj.WorkItem.UpdatedAt.Format(time.RFC3339))
 		fmt.Printf("    Stage:      %s\n", obj.WorkItem.Stage)
 		fmt.Printf("    Status:     %s\n", obj.WorkItem.Status)
-		fmt.Printf("    Ingested:   %t\n", ingested)
+		fmt.Printf("    Ingested:   %t\n", ingested(obj.WorkItem))
 		fmt.Printf("    Identifier: %s\n", objIdentifier)
 	}
 }
@@ -262,6 +300,17 @@ once. For example, if you uploaded version 1 of a bag last year, and then
 a newer version today, the output will include results for both bags,
 with the most recent version listed first.
 
+Exit codes:
+
+0 - Bag or bags were successfully ingested
+1 - Bag or bags were not ingested
+2 - Some bags have been ingested, some have not
+3 - No record was found for the requested bag (or bag + etag)
+4 - Operation could not be completed due to usage error (e.g. missing params)
+5 - Operation could not be completed due to runtime, network, or server error
+
+Exit codes 0 and 1 indicate that ALL bags matching your query have (0)
+or have not (1) been ingested. Exit code 2 indicates mixed results.
 `
 	fmt.Println(message)
 }
