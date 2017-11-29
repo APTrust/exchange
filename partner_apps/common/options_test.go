@@ -169,6 +169,25 @@ func TestVerifyRequiredUploadOptions(t *testing.T) {
 	assert.Empty(t, opts.Errors())
 }
 
+func TestVerifyRequiredListOptions(t *testing.T) {
+	opts := common.Options{}
+	opts.VerifyRequiredListOptions()
+	assert.Equal(t, 4, len(opts.Errors()))
+
+	filePath, err := getConfigFilePath()
+	require.Nil(t, err)
+	opts.PathToConfigFile = filePath
+	opts.ClearErrors()
+	opts.MergeConfigFileOptions("list")
+	opts.VerifyRequiredListOptions()
+	assert.Equal(t, 1, len(opts.Errors()))
+
+	opts.Limit = 100
+	opts.ClearErrors()
+	opts.VerifyRequiredUploadOptions()
+	assert.Empty(t, opts.Errors())
+}
+
 func TestVerifyOutputFormat(t *testing.T) {
 	opts := common.Options{}
 	opts.OutputFormat = "text"

@@ -54,6 +54,12 @@ type Options struct {
 	// to S3. This option applies to uploads only, and can be left
 	// empty.
 	ContentType string
+	// Limit is for apt_list. It specifies the maximum number of items
+	// to list.
+	Limit int
+	// Prefix is the key prefix to list in apt_list. (I.e. List only those
+	// S3 objects whose key begins with this string.)
+	Prefix string
 	// Metadata is optional metadata to be saved in S3 when uploading
 	// a file.
 	Metadata map[string]string
@@ -100,6 +106,17 @@ func (opts *Options) SetAndVerifyUploadOptions() {
 	opts.VerifyRequiredUploadOptions()
 }
 
+// SetAndVerifyListOptions
+func (opts *Options) SetAndVerifyListOptions() {
+	opts.ClearErrors()
+	if opts.OutputFormat == "" {
+		opts.OutputFormat = "text"
+	}
+	opts.MergeConfigFileOptions("upload")
+	opts.VerifyOutputFormat()
+	opts.VerifyRequiredListOptions()
+}
+
 // VerifyRequiredDownloadOptions checks to see that all
 // required download options are set.
 func (opts *Options) VerifyRequiredDownloadOptions() {
@@ -131,6 +148,23 @@ func (opts *Options) VerifyRequiredUploadOptions() {
 	}
 	if opts.FileToUpload == "" {
 		opts.addError("You must specify a file to upload")
+	}
+}
+
+// VerifyRequiredListOptions checks to see that all
+// required S3 list options are set.
+func (opts *Options) VerifyRequiredListOptions() {
+	if opts.Bucket == "" {
+		opts.addError("Param -bucket must be specified on the command line or in the config file")
+	}
+	if opts.AccessKeyId == "" {
+		opts.addError("Cannot find AWS_ACCESS_KEY_ID in environment or config file")
+	}
+	if opts.SecretAccessKey == "" {
+		opts.addError("Cannot find AWS_SECRET_ACCESS_KEY in environment or config file")
+	}
+	if opts.Limit < 1 {
+		opts.addError("Option -limit (number of items to list) must be greater than zero.")
 	}
 }
 
