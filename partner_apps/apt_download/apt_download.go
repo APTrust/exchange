@@ -107,9 +107,6 @@ func parseCommandLine() *common.Options {
 		opts.SecretAccessKey = os.Getenv("AWS_SECRET_ACCESS_KEY")
 		opts.SecretKeyFrom = "environment"
 	}
-
-	opts.MergeConfigFileOptions()
-
 	return opts
 }
 
