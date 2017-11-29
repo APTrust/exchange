@@ -309,7 +309,7 @@ Exit codes:
 3 - No record was found for the requested bag (or bag + etag)
 4 - Operation could not be completed due to usage error (e.g. missing params)
 5 - Operation could not be completed due to runtime, network, or server error
-6 - Printed help message. No other operations attempted.
+6 - Printed help or version message. No other operations attempted.
 
 Exit codes 0 and 1 indicate that ALL bags matching your query have (0)
 or have not (1) been ingested. Exit code 2 indicates mixed results.
