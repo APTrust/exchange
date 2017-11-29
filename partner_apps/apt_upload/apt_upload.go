@@ -13,11 +13,20 @@ import (
 	"strings"
 )
 
+const (
+	EXIT_OK          = 0 // Item was successfully uploaded.
+	EXIT_FAILED      = 1 // Upload failed.
+	EXIT_NOT_EXISTS  = 2 // File does not exist.
+	EXIT_USER_ERR    = 3 // Operation could not be completed due to usage error (e.g. missing params)
+	EXIT_RUNTIME_ERR = 4 // Operation could not be completed due to runtime, network, or server error
+	EXIT_HELP        = 5 // Printed help or version message. No other operations attempted.
+)
+
 func main() {
 	opts := getUserOptions()
 	if opts.HasErrors() {
 		fmt.Fprintln(os.Stderr, opts.AllErrorsAsString())
-		os.Exit(1)
+		os.Exit(EXIT_USER_ERR)
 	}
 	uploadClient := network.NewS3Upload(
 		opts.AccessKeyId,
@@ -26,11 +35,14 @@ func main() {
 		opts.Bucket,
 		opts.Key,
 		opts.ContentType)
-	file, err := os.Open(opts.FileToUpload)
-	if err != nil {
-		fmt.Fprintln(os.Stderr, err.Error())
-		os.Exit(1)
+	filestat, err := os.Stat(opts.FileToUpload)
+	exitOnFileError(err)
+	filesize := int64(0)
+	if filestat != nil {
+		filesize = filestat.Size()
 	}
+	file, err := os.Open(opts.FileToUpload)
+	exitOnFileError(err)
 	defer file.Close()
 	if opts.Metadata != nil {
 		for key, value := range opts.Metadata {
@@ -38,18 +50,29 @@ func main() {
 		}
 	}
 	uploadClient.Send(file)
-	printResult(opts, uploadClient)
+	exitCode := printResult(opts, uploadClient, filesize)
+	os.Exit(exitCode)
+}
+
+func exitOnFileError(err error) {
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err.Error())
+		if os.IsNotExist(err) {
+			os.Exit(EXIT_NOT_EXISTS)
+		}
+		os.Exit(EXIT_RUNTIME_ERR)
+	}
 }
 
 // printResults prints the results of the upload to STDOUT.
-func printResult(opts *common.Options, uploadClient *network.S3Upload) {
+func printResult(opts *common.Options, uploadClient *network.S3Upload, filesize int64) int {
 	headClient := network.NewS3Head(
 		opts.AccessKeyId,
 		opts.SecretAccessKey,
 		opts.Region,
 		opts.Bucket)
 	headClient.Head(opts.Key)
-	result := common.NewUploadResult(opts, uploadClient, headClient)
+	result := common.NewUploadResult(opts, uploadClient, headClient, filesize)
 	output := result.ToText()
 	if opts.OutputFormat == "json" {
 		var err error
@@ -57,10 +80,14 @@ func printResult(opts *common.Options, uploadClient *network.S3Upload) {
 		if err != nil {
 			fmt.Fprintln(os.Stderr, result.ToText())
 			fmt.Fprintln(os.Stderr, err.Error())
-			os.Exit(1)
+			os.Exit(EXIT_RUNTIME_ERR)
 		}
 	}
 	fmt.Println(output)
+	if result.ErrorMessage != "" {
+		return EXIT_RUNTIME_ERR
+	}
+	return EXIT_OK
 }
 
 // Get user-specified options from the command line,
@@ -228,6 +255,15 @@ Examples:
    name
 
    apt_upload -bucket="my.custom.bucket" -key="MySpecialFile.tar" /home/joy/my_bag.tar
+
+Exit codes:
+
+0 - Item was successfully uploaded.
+1 - Upload failed.
+2 - File does not exist.
+3 - Operation could not be completed due to usage error (e.g. missing params)
+4 - Operation could not be completed due to runtime, network, or server error
+5 - Printed help or version message. No other operations attempted.
 `
 	fmt.Println(message)
 }
