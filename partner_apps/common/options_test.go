@@ -180,11 +180,31 @@ func TestVerifyRequiredListOptions(t *testing.T) {
 	opts.ClearErrors()
 	opts.MergeConfigFileOptions("list")
 	opts.VerifyRequiredListOptions()
+	assert.Equal(t, 2, len(opts.Errors()))
+
+	opts.Bucket = "Monsieur Creosote"
+	opts.ClearErrors()
+	opts.VerifyRequiredListOptions()
 	assert.Equal(t, 1, len(opts.Errors()))
 
 	opts.Limit = 100
 	opts.ClearErrors()
-	opts.VerifyRequiredUploadOptions()
+	opts.VerifyRequiredListOptions()
+	assert.Empty(t, opts.Errors())
+}
+
+func TestVerifyRequiredDeleteOptions(t *testing.T) {
+	opts := common.Options{}
+	opts.VerifyRequiredDeleteOptions()
+	assert.Equal(t, 4, len(opts.Errors()))
+
+	filePath, err := getConfigFilePath()
+	require.Nil(t, err)
+	opts.PathToConfigFile = filePath
+	opts.Bucket = "Monsieur Creosote"
+	opts.ClearErrors()
+	opts.MergeConfigFileOptions("delete")
+	opts.VerifyRequiredListOptions()
 	assert.Empty(t, opts.Errors())
 }
 

@@ -117,6 +117,16 @@ func (opts *Options) SetAndVerifyListOptions() {
 	opts.VerifyRequiredListOptions()
 }
 
+// SetAndVerifyDeleteOptions
+func (opts *Options) SetAndVerifyDeleteOptions() {
+	opts.ClearErrors()
+	if opts.OutputFormat == "" {
+		opts.OutputFormat = "text"
+	}
+	opts.MergeConfigFileOptions("delete")
+	opts.VerifyRequiredDeleteOptions()
+}
+
 // VerifyRequiredDownloadOptions checks to see that all
 // required download options are set.
 func (opts *Options) VerifyRequiredDownloadOptions() {
@@ -165,6 +175,20 @@ func (opts *Options) VerifyRequiredListOptions() {
 	}
 	if opts.Limit < 1 {
 		opts.addError("Option -limit (number of items to list) must be greater than zero.")
+	}
+}
+
+// VerifyRequiredDeleteOptions checks to see that all
+// required S3 delete options are set.
+func (opts *Options) VerifyRequiredDeleteOptions() {
+	if opts.Bucket == "" {
+		opts.addError("Param -bucket must be specified on the command line or in the config file")
+	}
+	if opts.AccessKeyId == "" {
+		opts.addError("Cannot find AWS_ACCESS_KEY_ID in environment or config file")
+	}
+	if opts.SecretAccessKey == "" {
+		opts.addError("Cannot find AWS_SECRET_ACCESS_KEY in environment or config file")
 	}
 }
 
