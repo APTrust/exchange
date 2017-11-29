@@ -196,7 +196,7 @@ func TestVerifyRequiredListOptions(t *testing.T) {
 func TestVerifyRequiredDeleteOptions(t *testing.T) {
 	opts := common.Options{}
 	opts.VerifyRequiredDeleteOptions()
-	assert.Equal(t, 4, len(opts.Errors()))
+	assert.Equal(t, 3, len(opts.Errors()))
 
 	filePath, err := getConfigFilePath()
 	require.Nil(t, err)
@@ -204,7 +204,7 @@ func TestVerifyRequiredDeleteOptions(t *testing.T) {
 	opts.Bucket = "Monsieur Creosote"
 	opts.ClearErrors()
 	opts.MergeConfigFileOptions("delete")
-	opts.VerifyRequiredListOptions()
+	opts.VerifyRequiredDeleteOptions()
 	assert.Empty(t, opts.Errors())
 }
 
