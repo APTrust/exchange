@@ -22,6 +22,7 @@ const (
 	EXIT_ITEM_NOT_FOUND = 3
 	EXIT_USER_ERR       = 4
 	EXIT_RUNTIME_ERR    = 5
+	EXIT_HELP           = 6
 )
 
 type OutputObject struct {
@@ -225,13 +226,13 @@ func parseCommandLine() *common.Options {
 
 	if help {
 		printUsage()
-		os.Exit(0)
+		os.Exit(EXIT_HELP)
 	}
 
 	if pharosEnv != "production" && pharosEnv != "demo" {
 		fmt.Fprintln(os.Stderr, "Invalid value for -env:", pharosEnv)
 		printUsage()
-		os.Exit(0)
+		os.Exit(EXIT_USER_ERR)
 	}
 
 	pharosUrl := "https://repo.aptrust.org"
@@ -308,6 +309,7 @@ Exit codes:
 3 - No record was found for the requested bag (or bag + etag)
 4 - Operation could not be completed due to usage error (e.g. missing params)
 5 - Operation could not be completed due to runtime, network, or server error
+6 - Printed help message. No other operations attempted.
 
 Exit codes 0 and 1 indicate that ALL bags matching your query have (0)
 or have not (1) been ingested. Exit code 2 indicates mixed results.
