@@ -8,13 +8,24 @@ import (
 	"github.com/APTrust/exchange/partner_apps/common"
 	"os"
 	"path/filepath"
+	"strings"
+)
+
+const (
+	EXIT_OK          = 0 // Bag was successfully downloaded.
+	EXIT_FAILED      = 1 // Bag was found in S3 but download failed.
+	EXIT_NOT_FOUND   = 2 // Bag was not found in S3.
+	EXIT_USER_ERR    = 3 // Operation could not be completed due to usage error (e.g. missing params)
+	EXIT_RUNTIME_ERR = 4 // Operation could not be completed due to runtime, network, or server error
+	EXIT_HELP        = 5 // Printed help or version message. No other operations attempted.
+
 )
 
 func main() {
 	opts := getUserOptions()
 	if opts.HasErrors() {
 		fmt.Fprintln(os.Stderr, opts.AllErrorsAsString())
-		os.Exit(1)
+		os.Exit(EXIT_USER_ERR)
 	}
 	client := network.NewS3Download(
 		opts.AccessKeyId,
@@ -35,10 +46,17 @@ func main() {
 		if err != nil {
 			fmt.Fprintf(os.Stderr, result.ToText())
 			fmt.Fprintf(os.Stderr, err.Error())
-			os.Exit(1)
+			os.Exit(EXIT_RUNTIME_ERR)
 		}
 	}
 	fmt.Println(output)
+	exitCode := EXIT_OK
+	if strings.Contains(result.ErrorMessage, "NoSuchKey") {
+		exitCode = EXIT_NOT_FOUND
+	} else if result.ErrorMessage != "" {
+		exitCode = EXIT_RUNTIME_ERR
+	}
+	os.Exit(exitCode)
 }
 
 // Get user-specified options from the command line,
@@ -69,7 +87,7 @@ func parseCommandLine() *common.Options {
 
 	if help {
 		printUsage()
-		os.Exit(0)
+		os.Exit(EXIT_HELP)
 	}
 
 	opts := &common.Options{
@@ -105,12 +123,12 @@ apt_download -config=<path to config file> \
 			 -bucket=<bucket to download from> \
 			 -key=<name/key of object to download> \
 			 -dir=<download the object to this dir> \
-             -format=<'text' or 'json'>
+			 -format=<'text' or 'json'>
 
 Params:
 
-Note that key is the only required param. This program will get your
-AWS credentials from the config file, if it can find one. Otherwise,
+Note that bucket and key are the only required params. This program will get
+your AWS credentials from the config file, if it can find one. Otherwise,
 it will get your AWS credentials from the environment variables
 "AWS_ACCESS_KEY_ID" and "AWS_SECRET_ACCESS_KEY". If it can't find your
 AWS credentials, the download will fail.
@@ -144,8 +162,8 @@ AWS credentials, the download will fail.
 		current working directory from which you're running this app.
 
 -format is the format of the output printed to STDOUT when the download
-        is complete. Options are 'text' and 'json', and the default is
-        'text'.
+		is complete. Options are 'text' and 'json', and the default is
+		'text'.
 
 Examples:
 
@@ -153,17 +171,26 @@ Examples:
    default APTrust partner config file in ~/.aptrust_partner.conf (Mac/Linux)
    or %HOMEPATH%\.aptrust_partner.conf
 
-   apt_download -key="my_bag.tar"
+   apt_download -bucket="aptrust.restore.test.edu" -key="my_bag.tar"
 
 2. Download item "my_bag.tar" from your restoration bucket, using a
    custom APTrust partner config file
 
-   apt_download -key="my_bag.tar" -config="/home/joy/aptrust_config.txt"
+   apt_download -bucket="aptrust.restore.test.edu" -key="my_bag.tar" -config="/home/joy/aptrust_config.txt"
 
 3. Download item "my_bag.tar" from a specified bucket and save it in
    /home/joy/downloads
 
    apt_download -key="my_bag.tar" -bucket="my.custom.bucket" -dir="/home/joy/downloads"
+
+Exit codes:
+
+0 - Bag was successfully downloaded.
+1 - Bag was found in S3 but download failed.
+2 - Bag was not found in S3.
+3 - Operation could not be completed due to usage error (e.g. missing params)
+4 - Operation could not be completed due to runtime, network, or server error
+5 - Printed help or version message. No other operations attempted.
 `
 	fmt.Println(message)
 }
