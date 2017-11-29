@@ -114,7 +114,7 @@ apt_delete [options] key
 
 apt_delete -config=<path to config file> \
 	   -region=<AWS region> \
-	   -bucket=<bucket to upload to> \
+	   -bucket=<bucket to delete from> \
 	   file1 ... fileN
 
 Params:
@@ -126,7 +126,7 @@ it will get your AWS credentials from the environment variables
 AWS credentials, it will exit with an error message.
 
 -config is the optional path to your APTrust partner config file.
-	If you omit this, the uploader uses the config at
+	If you omit this, the program uses the config at
 	~/.aptrust_partner.conf (Mac/Linux) or %HOMEPATH%\.aptrust_partner.conf
 	(Windows) if that file exists. The config file should contain
 	your AWS keys, and the locations of your receiving bucket.

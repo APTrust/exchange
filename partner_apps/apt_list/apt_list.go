@@ -159,7 +159,7 @@ apt_list [options]
 
 apt_list -config=<path to config file> \
 		 -region=<AWS region> \
-		 -bucket=<bucket to upload to> \
+		 -bucket=<bucket to list> \
 		 -prefix=<list items starting with prefix> \
 		 -format=<text|json> \
 		 -limit=100
