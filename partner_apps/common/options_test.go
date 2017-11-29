@@ -124,7 +124,7 @@ func TestSetAndVerifyUploadOptions(t *testing.T) {
 		FileToUpload:     "./some/file.txt",
 	}
 	opts.SetAndVerifyUploadOptions()
-	assert.Equal(t, conf.RestorationBucket, opts.Bucket)
+	assert.Equal(t, conf.ReceivingBucket, opts.Bucket)
 	assert.Equal(t, conf.DownloadDir, opts.Dir)
 	assert.Equal(t, conf.AwsAccessKeyId, opts.AccessKeyId)
 	assert.Equal(t, conf.AwsSecretAccessKey, opts.SecretAccessKey)
@@ -140,7 +140,7 @@ func TestVerifyRequiredDownloadOptions(t *testing.T) {
 	require.Nil(t, err)
 	opts.PathToConfigFile = filePath
 	opts.ClearErrors()
-	opts.MergeConfigFileOptions()
+	opts.MergeConfigFileOptions("download")
 	opts.VerifyRequiredDownloadOptions()
 	assert.Equal(t, 1, len(opts.Errors()))
 
@@ -159,7 +159,7 @@ func TestVerifyRequiredUploadOptions(t *testing.T) {
 	require.Nil(t, err)
 	opts.PathToConfigFile = filePath
 	opts.ClearErrors()
-	opts.MergeConfigFileOptions()
+	opts.MergeConfigFileOptions("upload")
 	opts.VerifyRequiredUploadOptions()
 	assert.Equal(t, 1, len(opts.Errors()))
 
@@ -209,7 +209,7 @@ func TestMergeConfigFileOptions(t *testing.T) {
 	opts := &common.Options{
 		PathToConfigFile: filePath,
 	}
-	opts.MergeConfigFileOptions()
+	opts.MergeConfigFileOptions("download")
 	assert.Equal(t, conf.RestorationBucket, opts.Bucket)
 	assert.Equal(t, conf.DownloadDir, opts.Dir)
 	assert.Equal(t, conf.AwsAccessKeyId, opts.AccessKeyId)

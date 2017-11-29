@@ -203,7 +203,7 @@ func printOpts(opts *common.Options) {
 // environment, and/or config file.
 func getUserOptions() *common.Options {
 	opts := parseCommandLine()
-	opts.MergeConfigFileOptions()
+	opts.MergeConfigFileOptions("check_ingest")
 	opts.VerifyOutputFormat()
 	opts.VerifyRequiredAPICredentials()
 	return opts

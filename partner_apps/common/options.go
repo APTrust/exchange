@@ -83,7 +83,7 @@ func (opts *Options) SetAndVerifyDownloadOptions() {
 	if opts.OutputFormat == "" {
 		opts.OutputFormat = "text"
 	}
-	opts.MergeConfigFileOptions()
+	opts.MergeConfigFileOptions("download")
 	opts.VerifyOutputFormat()
 	opts.EnsureDownloadDirIsSet()
 	opts.VerifyRequiredDownloadOptions()
@@ -95,7 +95,7 @@ func (opts *Options) SetAndVerifyUploadOptions() {
 	if opts.OutputFormat == "" {
 		opts.OutputFormat = "text"
 	}
-	opts.MergeConfigFileOptions()
+	opts.MergeConfigFileOptions("upload")
 	opts.VerifyOutputFormat()
 	opts.VerifyRequiredUploadOptions()
 }
@@ -180,7 +180,7 @@ func (opts *Options) EnsureDownloadDirIsSet() {
 // load them from the config file, if we can. If the user specified
 // a config file, use that. Otherwise, use the default config file
 // in ~/.aptrust_partner.conf or %HOMEPATH%\.aptrust_partner.conf
-func (opts *Options) MergeConfigFileOptions() {
+func (opts *Options) MergeConfigFileOptions(action string) {
 	partnerConfig := &PartnerConfig{}
 	if opts.PathToConfigFile != "" || partner.DefaultConfigFileExists() {
 		var err error
@@ -190,8 +190,11 @@ func (opts *Options) MergeConfigFileOptions() {
 			return
 		}
 	}
-	if opts.Bucket == "" && partnerConfig.RestorationBucket != "" {
+	if action == "download" && opts.Bucket == "" && partnerConfig.RestorationBucket != "" {
 		opts.Bucket = partnerConfig.RestorationBucket
+	}
+	if action == "upload" && opts.Bucket == "" && partnerConfig.ReceivingBucket != "" {
+		opts.Bucket = partnerConfig.ReceivingBucket
 	}
 	if opts.Dir == "" && partnerConfig.DownloadDir != "" {
 		opts.Dir = partnerConfig.DownloadDir
