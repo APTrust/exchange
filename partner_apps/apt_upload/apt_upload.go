@@ -120,19 +120,16 @@ func parseCommandLine() *common.Options {
 
 	if help {
 		printUsage()
-		os.Exit(0)
+		os.Exit(EXIT_HELP)
 	}
 
 	if len(flag.Args()) < 1 {
 		fmt.Fprintln(os.Stderr, "Please specify a file to upload.")
-		os.Exit(1)
+		os.Exit(EXIT_USER_ERR)
 	}
 
 	filePath, err := filepath.Abs(flag.Arg(0))
-	if err != nil {
-		fmt.Fprintln(os.Stderr, err.Error())
-		os.Exit(1)
-	}
+	exitOnFileError(err)
 	if key == "" {
 		key = path.Base(filePath)
 	}
@@ -161,7 +158,7 @@ func parseCommandLine() *common.Options {
 		err := json.Unmarshal([]byte(metadata), &meta)
 		if err != nil {
 			fmt.Fprintln(os.Stderr, "Cannot parse metadata JSON:", err)
-			os.Exit(1)
+			os.Exit(EXIT_RUNTIME_ERR)
 		}
 		opts.Metadata = meta
 	}
