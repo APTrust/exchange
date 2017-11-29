@@ -149,7 +149,7 @@ apt_upload uploads a file to S3.
 
 Usage:
 
-apt_update [options] <file>
+apt_upload [options] <file>
 
 apt_upload -config=<path to config file> \
 		   -region=<aws region to connect to> \
