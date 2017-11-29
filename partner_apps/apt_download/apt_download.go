@@ -139,7 +139,7 @@ AWS credentials, the download will fail.
 		your AWS keys, and the locations of your receiving bucket, restore
 		bucket, and the local directory into which you want items downloaded.
 		For info about what should be in your config file, see
-		https://sites.google.com/a/aptrust.org/member-wiki/partner-tools
+		https://wiki.aptrust.org/Partner_Tools
 
 -region is the S3 region to connect to. This defaults to us-east-1. You
 		generally should not have to set this for APTrust downloads,
