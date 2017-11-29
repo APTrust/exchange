@@ -147,10 +147,7 @@ AWS credentials, the download will fail.
 		but you may set it on the command line to download non-APTrust
 		files from your own buckets.
 
--bucket is the name of the S3 bucket to download from. If this is not
-		specified on the command line, apt_download will use the
-		restoration bucket specified in your APTrust partner config file.
-		See the -config option for more info.
+-bucket is the name of the S3 bucket to download from. This is required.
 
 -key    is the name of the item you want to download from S3. This param
 		is required.
