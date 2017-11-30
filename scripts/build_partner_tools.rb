@@ -1,6 +1,7 @@
 #!/usr/bin/env ruby
 
 require 'optparse'
+require 'fileutils'
 
 # Don't include spaces in these vars, since they cause
 # problems in the linker, even when quoted.
@@ -24,11 +25,15 @@ def run()
   if !options['version'] || !options['platform']
     exit 1
   end
+
+  # Set up substitution vars
   git_hash = `git rev-parse --short HEAD`.chomp
   build_date = Time.now.utc.strftime("%FT%TZ")
   ldflags = get_ld_flags(options['version'], build_date, git_hash)
   tags = "-tags='partners,#{options['platform']}'"
   build_dir = ensure_build_dir(options['exchange_root'])
+
+  # Build each app, with substitution vars
   @apps.each do |app_name|
     source_dir = File.join(options['exchange_root'], 'partner_apps', app_name)
     cmd = "go build #{tags} #{ldflags} -o #{build_dir}/#{app_name} #{app_name}.go"
@@ -40,6 +45,12 @@ def run()
       raise "Build failed for #{app_name}"
     end
   end
+
+  # Copy the README into the bin dir for zipping and distribution.
+  puts "Copying README.txt"
+  readMeSrc = File.join(options['exchange_root'], 'partner_apps', 'README.txt')
+  readMeDest = File.join(options['exchange_root'], 'partner_apps', 'bin', 'README.txt')
+  FileUtils.copy(readMeSrc, readMeDest)
 end
 
 def get_ld_flags(version, build_date, git_hash)
