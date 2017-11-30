@@ -109,6 +109,7 @@ Usage:
 apt_validate --config=<config_file> \
 		--attrs=<true|false> \
 		--outfile=<path_to_output_file> \
+        [--version] \
 		path_to_bag
 
 The path_to_bag parameter is required. It should be the absolute path
@@ -128,6 +129,8 @@ The --outfile option is not required. If specified, the validator will dump
 JSON information about the bag and its contents to this file. That info may be
 useful, especially when combined with --attrs=true, in cases where you're trying
 to debug your bagging process.
+
+Option --version prints version info and exits.
 
 Exit codes:
 

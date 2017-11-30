@@ -129,6 +129,7 @@ apt_download -config=<path to config file> \
 			 -bucket=<bucket to download from> \
 			 -key=<name/key of object to download> \
 			 -dir=<download the object to this dir> \
+             [-version] \
 			 -format=<'text' or 'json'>
 
 Params:
@@ -170,6 +171,8 @@ AWS credentials, the download will fail.
 -format is the format of the output printed to STDOUT when the download
 		is complete. Options are 'text' and 'json', and the default is
 		'text'.
+
+-version prints version info and exits.
 
 Examples:
 

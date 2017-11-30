@@ -119,8 +119,9 @@ Usage:
 apt_delete [options] key
 
 apt_delete -config=<path to config file> \
-	   -region=<AWS region> \
+	   [-region=<AWS region>] \
 	   -bucket=<bucket to delete from> \
+       [-version]
 	   file1 ... fileN
 
 Params:
@@ -142,6 +143,8 @@ AWS credentials, it will exit with an error message.
 -region is the S3 region to connect to. This defaults to us-east-1.
 
 -bucket is the name of the S3 bucket containing the key you want to delete.
+
+Option -version prints version info and exits.
 
 Following the options on the command line, list one or more keys (S3 object
 names) that you want to delete. This should be a whitespace-separated list.

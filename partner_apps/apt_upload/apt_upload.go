@@ -189,6 +189,7 @@ apt_upload -config=<path to config file> \
 		   -contentType=<mime type of upload> \
 		   -format=<'text' or 'json'> \
 		   -metadata=<json string> \
+           [-version] \
 		   <file>
 
 Params:
@@ -241,6 +242,8 @@ AWS credentials, the upload will fail.
 		like this:
 
 		-metadata='{"Bag":"my_bag","Bagpath":"data/Image001.tif","Institution":"virginia.edu","Md5":"12345","Sha256":"54321"}'
+
+-version prints version info and exits.
 
 Examples:
 

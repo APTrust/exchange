@@ -169,6 +169,7 @@ apt_list -config=<path to config file> \
 		 -bucket=<bucket to list> \
 		 -prefix=<list items starting with prefix> \
 		 -format=<text|json> \
+         [-version] \
 		 -limit=100
 
 Params:
@@ -197,6 +198,8 @@ AWS credentials, it will exit with an error message.
 -format is the format of the output printed to STDOUT when the upload
 		is complete. Options are 'text' and 'json', and the default is
 		'text'.
+
+- version prints version info and exits
 
 -limit is the maximum number of items to list. This defaults to 100.
 

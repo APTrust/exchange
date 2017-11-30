@@ -276,6 +276,7 @@ Usage: apt_check_ingest [-config=<path to config file>] \
 			[-env=<production|demo>] \
 			[-etag=<etag>] \
 			[-format=<json|text>] \
+            [-version] \
 			[-debug] <filename.tar>
 
 Option -config is should point the APTrust partner config file that
@@ -294,6 +295,8 @@ on a single version of a bag that was uploaded multiple times.
 
 Option -format specifies whether the result of the query should be printed
 to STDOUT in json or plain text format. Default is json.
+
+Option -version prints version info and exits.
 
 Option -debug will print information about the program's runtime options
 (including API user and API key) to STDOUT. It will also print the request
