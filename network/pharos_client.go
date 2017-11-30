@@ -1009,7 +1009,7 @@ func (client *PharosClient) DoRequest(resp *PharosResponse, method, absoluteUrl 
 // identifiers.
 func escapeForURL(s string) string {
 	escaped := strings.Replace(s, "%", "%25", -1)
-	escaped = strings.Replace(s, "/", "%2F", -1)
+	escaped = strings.Replace(escaped, "/", "%2F", -1)
 	return strings.Replace(escaped, "?", "%3F", -1)
 }
 
