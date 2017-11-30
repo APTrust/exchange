@@ -25,7 +25,7 @@ def run()
     exit 1
   end
   git_hash = `git rev-parse --short HEAD`.chomp
-  build_date = Time.now.utc.strftime("%FT%T%:z")
+  build_date = Time.now.utc.strftime("%FT%TZ")
   ldflags = get_ld_flags(options['version'], build_date, git_hash)
   tags = "-tags='partners,#{options['platform']}'"
   build_dir = ensure_build_dir(options['exchange_root'])

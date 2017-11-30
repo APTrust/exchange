@@ -60,10 +60,11 @@ func GetVersion() string {
 	osName := strings.Title(runtime.GOOS)
 	architecture := runtime.GOARCH
 	appName := path.Base(os.Args[0])
-	version := fmt.Sprintf("%s version %s for %s %s\n", appName, Version, osName, architecture)
-	version += fmt.Sprintf("Commit %s. Built %s.\n", GitHash, BuildDate)
-	version += fmt.Sprintf("Released by APTrust.org under the %s license.\n", License)
-	version += fmt.Sprintf("Help: %s\n", Email)
-	version += fmt.Sprintf("More info at %s\n", WikiUrl)
+	version := fmt.Sprintf("%s\n", appName)
+	version += fmt.Sprintf("    Version %s for %s %s\n", Version, osName, architecture)
+	version += fmt.Sprintf("    Commit %s. Built %s.\n", GitHash, BuildDate)
+	version += fmt.Sprintf("    Released by APTrust.org under the %s license.\n", License)
+	version += fmt.Sprintf("    Help: %s\n", Email)
+	version += fmt.Sprintf("    More info at %s\n\n", WikiUrl)
 	return version
 }
