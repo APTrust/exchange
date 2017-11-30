@@ -6,3 +6,4 @@ partner_apps/apt_download/apt_download
 partner_apps/apt_upload/apt_upload
 partner_apps/apt_upload/apt_list
 partner_apps/apt_upload/apt_delete
+partner_apps/bin
