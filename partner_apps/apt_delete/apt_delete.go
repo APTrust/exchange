@@ -64,14 +64,20 @@ func parseCommandLine() (*common.Options, []string) {
 	var bucket string
 	var key string
 	var help bool
+	var version bool
 	flag.StringVar(&pathToConfigFile, "config", "", "Path to partner config file")
 	flag.StringVar(&region, "region", constants.AWSVirginia, "AWS region (default 'us-east-1')")
 	flag.StringVar(&bucket, "bucket", "", "The bucket to delete from")
 	flag.StringVar(&key, "key", "", "The key (name) of the object to delete")
 	flag.BoolVar(&help, "help", false, "Show help")
+	flag.BoolVar(&version, "version", false, "Show version")
 
 	flag.Parse()
 
+	if version {
+		fmt.Println(common.GetVersion())
+		os.Exit(EXIT_HELP)
+	}
 	if help {
 		printUsage()
 		os.Exit(EXIT_HELP)

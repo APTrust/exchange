@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"github.com/APTrust/exchange/partner_apps/common"
 	"github.com/APTrust/exchange/util/fileutil"
 	"github.com/APTrust/exchange/util/storage"
 	"github.com/APTrust/exchange/validation"
@@ -78,13 +79,19 @@ func cleanup(filePath string) {
 
 func parseCommandLine() (pathToConfigFile, pathToOutFile string, preserveAttrs bool) {
 	var help bool
+	var version bool
 	flag.StringVar(&pathToConfigFile, "config", "", "Path to bag validation config file")
 	flag.StringVar(&pathToOutFile, "outfile", "", "Path to file for dumping JSON output")
 	flag.BoolVar(&preserveAttrs, "attrs", false, "Preserve attributes")
 	flag.BoolVar(&help, "help", false, "Show help")
+	flag.BoolVar(&version, "version", false, "Show version")
 
 	flag.Parse()
 
+	if version {
+		fmt.Println(common.GetVersion())
+		os.Exit(100)
+	}
 	if help || pathToConfigFile == "" || flag.Arg(0) == "" {
 		printUsage()
 		os.Exit(0)

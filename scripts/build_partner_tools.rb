@@ -4,6 +4,9 @@ require 'optparse'
 
 # Don't include spaces in these vars, since they cause
 # problems in the linker, even when quoted.
+# Also note that double quotes and percent signs may
+# cause some problems.
+# See https://github.com/golang/go/wiki/GcToolchainTricks
 REPO_URL = "https://github.com/APTrust/exchange"
 WIKI_URL = "https://wiki.aptrust.org/Partner_Tools"
 LICENSE = "Apache-2.0"
@@ -41,6 +44,8 @@ end
 
 def get_ld_flags(version, build_date, git_hash)
   pkg = "github.com/APTrust/exchange/partner_apps/common"
+  # Single quotes around the entire arg that follows -X
+  # helps prevent some errors.
   flags =  [ "-X '#{pkg}.Version=#{version}'",
              "-X '#{pkg}.BuildDate=#{build_date}'",
              "-X '#{pkg}.GitHash=#{git_hash}'",

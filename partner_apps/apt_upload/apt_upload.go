@@ -107,6 +107,8 @@ func parseCommandLine() *common.Options {
 	var outputFormat string
 	var metadata string
 	var help bool
+	var version bool
+
 	flag.StringVar(&pathToConfigFile, "config", "", "Path to partner config file")
 	flag.StringVar(&region, "region", constants.AWSVirginia, "AWS region to upload to (default 'us-east-1')")
 	flag.StringVar(&bucket, "bucket", "", "The bucket to upload to (default is your receiving bucket)")
@@ -115,9 +117,14 @@ func parseCommandLine() *common.Options {
 	flag.StringVar(&outputFormat, "format", "text", "Output format ('text' or 'json')")
 	flag.StringVar(&metadata, "metadata", "", "Optional metadata to store in S3")
 	flag.BoolVar(&help, "help", false, "Show help")
+	flag.BoolVar(&version, "version", false, "Show version")
 
 	flag.Parse()
 
+	if version {
+		fmt.Println(common.GetVersion())
+		os.Exit(EXIT_HELP)
+	}
 	if help {
 		printUsage()
 		os.Exit(EXIT_HELP)

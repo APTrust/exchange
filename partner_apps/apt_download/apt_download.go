@@ -75,6 +75,8 @@ func parseCommandLine() *common.Options {
 	var dir string
 	var outputFormat string
 	var help bool
+	var version bool
+
 	flag.StringVar(&pathToConfigFile, "config", "", "Path to partner config file")
 	flag.StringVar(&region, "region", constants.AWSVirginia, "AWS region to download from (default 'us-east-1')")
 	flag.StringVar(&bucket, "bucket", "", "The bucket to fetch from (default is your restore bucket)")
@@ -82,9 +84,14 @@ func parseCommandLine() *common.Options {
 	flag.StringVar(&dir, "dir", "", "Download file to this directory (default is current dir)")
 	flag.StringVar(&outputFormat, "format", "text", "Output format ('text' or 'json')")
 	flag.BoolVar(&help, "help", false, "Show help")
+	flag.BoolVar(&version, "version", false, "Show version")
 
 	flag.Parse()
 
+	if version {
+		fmt.Println(common.GetVersion())
+		os.Exit(EXIT_HELP)
+	}
 	if help {
 		printUsage()
 		os.Exit(EXIT_HELP)
