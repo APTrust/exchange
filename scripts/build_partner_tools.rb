@@ -40,14 +40,14 @@ def run()
 end
 
 def get_ld_flags(version, build_date, git_hash)
-  pkg = "github.com/APTrust/exchange/partner_apps/common/common"
-  flags =  [ "-X #{pkg}.Version=#{version}",
-             "-X #{pkg}.BuildDate=#{build_date}",
-             "-X #{pkg}.GitHash=#{git_hash}",
-             "-X #{pkg}.RepoUrl=#{REPO_URL}",
-             "-X #{pkg}.WikiUrl=#{WIKI_URL}",
-             "-X #{pkg}.License=#{LICENSE}",
-             "-X #{pkg}.Email=#{EMAIL}"
+  pkg = "github.com/APTrust/exchange/partner_apps/common"
+  flags =  [ "-X '#{pkg}.Version=#{version}'",
+             "-X '#{pkg}.BuildDate=#{build_date}'",
+             "-X '#{pkg}.GitHash=#{git_hash}'",
+             "-X '#{pkg}.RepoUrl=#{REPO_URL}'",
+             "-X '#{pkg}.WikiUrl=#{WIKI_URL}'",
+             "-X '#{pkg}.License=#{LICENSE}'",
+             "-X '#{pkg}.Email=#{EMAIL}'"
            ]
   return "-ldflags \"#{flags.join(' ')}\""
 end
@@ -64,12 +64,11 @@ end
 def parse_options()
   options = {}
   OptionParser.new do |opts|
-    opts.on("-h", "--help", print_help) do
+    opts.on("-h", "--help", "Print help message and exit") do
       print_help
       exit!
     end
     opts.on("-p", "--platform platform", "Build for platform (mac, linux, windows)") do |p|
-      puts "Platform = #{p}"
       if !['mac', 'linux', 'windows'].include?(p)
         puts "Required option -p must be one of 'mac', 'linux', or 'windows'"
         exit!
@@ -77,7 +76,6 @@ def parse_options()
       options['platform'] = p
     end
     opts.on("-v", "--version version", "Build version to assign to binaries (e.g. 2.3-beta)") do |v|
-      puts "Version = #{v}"
       if v.nil? || v == ""
         puts "Option -v (--version) is required. E.g. --version=2.3-beta"
         exit!
@@ -104,7 +102,3 @@ end
 if __FILE__ == $0
   run()
 end
-
-
-#cd apt_check_ingest
-#go build -tags=partners -ldflags "-X =`date -u +.%Y%m%d.%H%M%S`" service.go

@@ -1,9 +1,11 @@
 package common
 
 import (
-//"fmt"
-//"runtime"
-//"strings"
+	"fmt"
+	"os"
+	"path"
+	"runtime"
+	"strings"
 )
 
 // These vars are set by the build script in scripts/build_partner_tools.rb
@@ -54,8 +56,14 @@ const (
 	EXIT_NO_OP = 100
 )
 
-func GetVersion() {
-	//osName := strings.Title(runtime.GOOS)
-	//architecture := runtime.GOARCH
-
+func GetVersion() string {
+	osName := strings.Title(runtime.GOOS)
+	architecture := runtime.GOARCH
+	appName := path.Base(os.Args[0])
+	version := fmt.Sprintf("%s version %s for %s %s\n", appName, Version, osName, architecture)
+	version += fmt.Sprintf("Commit %s. Built %s.\n", GitHash, BuildDate)
+	version += fmt.Sprintf("Released by APTrust.org under the %s license.\n", License)
+	version += fmt.Sprintf("Help: %s\n", Email)
+	version += fmt.Sprintf("More info at %s\n", WikiUrl)
+	return version
 }

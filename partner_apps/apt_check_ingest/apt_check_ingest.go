@@ -215,15 +215,21 @@ func parseCommandLine() *common.Options {
 	var outputFormat string
 	var etag string
 	var help bool
+	var version bool
 	var debug bool
 	flag.StringVar(&pathToConfigFile, "config", "", "Path to partner config file")
 	flag.StringVar(&pharosEnv, "env", "production", "Which environment to query: production [default] or demo.")
 	flag.StringVar(&outputFormat, "format", "text", "Output format ('text' or 'json')")
 	flag.StringVar(&etag, "etag", "", "The etag of the bag you want to check on")
 	flag.BoolVar(&help, "help", false, "Show help")
+	flag.BoolVar(&version, "version", false, "Show version")
 	flag.BoolVar(&debug, "debug", false, "Print debugging output to stdout")
 	flag.Parse()
 
+	if version {
+		fmt.Println(common.GetVersion())
+		os.Exit(EXIT_HELP)
+	}
 	if help {
 		printUsage()
 		os.Exit(EXIT_HELP)
