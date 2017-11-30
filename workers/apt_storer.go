@@ -409,6 +409,7 @@ func (storer *APTStorer) getUuidOfExistingFile(gfIdentifier string) (string, err
 		gfIdentifier)
 	resp := storer.Context.PharosClient.GenericFileGet(gfIdentifier, false)
 	if resp.Error != nil {
+		storer.Context.MessageLog.Warning("Error getting URL %s", resp.Request.URL.String())
 		return "", resp.Error
 	}
 	uuid := ""
