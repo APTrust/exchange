@@ -13,19 +13,11 @@ import (
 	"time"
 )
 
-const (
-	EXIT_OK          = 0 // Program completed successfully.
-	EXIT_NOT_EXISTS  = 1 // Bucket does not exist.
-	EXIT_USER_ERR    = 2 // Operation could not be completed due to usage error (e.g. missing params)
-	EXIT_RUNTIME_ERR = 3 // Operation could not be completed due to runtime, network, or server error
-	EXIT_HELP        = 4 // Printed help or version message. No other operations attempted.
-)
-
 func main() {
 	opts := getUserOptions()
 	if opts.HasErrors() {
 		fmt.Fprintln(os.Stderr, opts.AllErrorsAsString())
-		os.Exit(EXIT_USER_ERR)
+		os.Exit(common.EXIT_USER_ERR)
 	}
 	s3ObjList := network.NewS3ObjectList(
 		opts.AccessKeyId,
@@ -40,7 +32,7 @@ func main() {
 		s3ObjList.GetList(opts.Prefix)
 		if s3ObjList.ErrorMessage != "" {
 			printError(s3ObjList.ErrorMessage)
-			os.Exit(EXIT_RUNTIME_ERR)
+			os.Exit(common.EXIT_RUNTIME_ERR)
 		}
 		if !headerPrinted {
 			printHeader(opts)
@@ -53,7 +45,7 @@ func main() {
 	if opts.OutputFormat == "json" {
 		fmt.Println("]")
 	}
-	os.Exit(EXIT_OK)
+	os.Exit(common.EXIT_OK)
 }
 
 func printError(errMsg string) {
@@ -79,7 +71,7 @@ func printResult(items []*s3.Object, format string) {
 			jsonData, err := json.Marshal(item)
 			if err != nil {
 				fmt.Fprintln(os.Stderr, err.Error())
-				os.Exit(EXIT_RUNTIME_ERR)
+				os.Exit(common.EXIT_RUNTIME_ERR)
 			}
 			fmt.Print(string(jsonData))
 		}
@@ -122,16 +114,16 @@ func parseCommandLine() *common.Options {
 
 	if version {
 		fmt.Println(common.GetVersion())
-		os.Exit(EXIT_HELP)
+		os.Exit(common.EXIT_NO_OP)
 	}
 	if help {
 		printUsage()
-		os.Exit(EXIT_HELP)
+		os.Exit(common.EXIT_NO_OP)
 	}
 
 	if bucket == "" {
 		fmt.Fprintln(os.Stderr, "Please specify a bucket to list.")
-		os.Exit(EXIT_USER_ERR)
+		os.Exit(common.EXIT_USER_ERR)
 	}
 
 	opts := &common.Options{
@@ -162,64 +154,70 @@ apt_list lists files in an S3 bucket
 
 Usage:
 
-apt_list [options]
+apt_list --bucket=<bucket to list> \
+         [--config=<path to config file>] \
+         [--format=<text|json>] \
+         [--limit=100]
+         [--prefix=<list items starting with prefix>] \
+         [--region=<AWS region>]
 
-apt_list -config=<path to config file> \
-		 -region=<AWS region> \
-		 -bucket=<bucket to list> \
-		 -prefix=<list items starting with prefix> \
-		 -format=<text|json> \
-         [-version] \
-		 -limit=100
+Options:
 
-Params:
+Note that option flags may be preceded by either one or two dashes,
+so -option is the same as --option.
 
-Note that bucket is the only required param. This program will get your
-AWS credentials from the config file, if it can find one. Otherwise,
-it will get your AWS credentials from the environment variables
-"AWS_ACCESS_KEY_ID" and "AWS_SECRET_ACCESS_KEY". If it can't find your
-AWS credentials, it will exit with an error message.
+This program will get your AWS credentials from the config file, if it
+can find one. Otherwise, it will get your AWS credentials from the
+environment variables "AWS_ACCESS_KEY_ID" and "AWS_SECRET_ACCESS_KEY".
+If it can't find your AWS credentials, it will exit with an error message.
 
--config is the optional path to your APTrust partner config file.
-		If you omit this, the uploader uses the config at
-		~/.aptrust_partner.conf (Mac/Linux) or %HOMEPATH%\.aptrust_partner.conf
-		(Windows) if that file exists. The config file should contain
-		your AWS keys, and the locations of your receiving bucket.
-		For info about what should be in your config file, see
-		https://wiki.aptrust.org/Partner_Tools
+--bucket is the name of the S3 bucket whose contents you want to list.
 
--region is the S3 region to connect to. This defaults to us-east-1.
+--config is the optional path to your APTrust partner config file.
+  If you omit this, the uploader uses the config at
+  ~/.aptrust_partner.conf (Mac/Linux) or %HOMEPATH%\.aptrust_partner.conf
+  (Windows) if that file exists. The config file should contain
+  your AWS keys, and the locations of your receiving bucket.
+  For info about what should be in your config file, see
+  https://wiki.aptrust.org/Partner_Tools
 
--bucket is the name of the S3 bucket whose contents you want to list.
+--format is the format of the output printed to STDOUT when the upload
+  is complete. Options are 'text' and 'json', and the default is 'text'.
 
--prefix is optional. If specified, the program will list only those items
-		beginning with this prefix.
+--help prints this help message and exits.
 
--format is the format of the output printed to STDOUT when the upload
-		is complete. Options are 'text' and 'json', and the default is
-		'text'.
+--limit is the maximum number of items to list. This defaults to 100.
 
-- version prints version info and exits
+--prefix filters the list of results to include only those items
+  beginning with this prefix. E.g., if --prefix="bag200", the list
+  will include only files whose names begin with bag200.
 
--limit is the maximum number of items to list. This defaults to 100.
+--region is the S3 region to connect to. This defaults to us-east-1.
+
+--version prints version info and exits
 
 Examples:
 
 1. List everything in the bucket my_bucket:
 
-   apt_list -bucket=my_bucket
+   apt_list --bucket=my_bucket
 
 2. List items in my bucket whose name begins with "image":
 
-   apt_list -bucket=my_bucket -prefix=image
+   apt_list --bucket=my_bucket --prefix=image
+
+3. List items in my bucket whose name begins with "image" using AWS
+   credentials from the config file "apt_config.txt":
+
+   apt_list --bucket=my_bucket --prefix=image --config="apt_config.txt"
 
 Exit codes:
 
 0 - Program completed successfully.
-1 - Bucket does not exist.
-2 - Operation could not be completed due to usage error (e.g. missing params)
-3 - Operation could not be completed due to runtime, network, or server error
-4 - Printed help or version message. No other operations attempted.
+1 - Operation could not be completed due to runtime, network, or server error
+3 - Operation could not be completed due to usage error (e.g. missing params)
+4 - Bucket does not exist.
+100 - Printed help or version message. No other operations attempted.
 `
 	fmt.Println(message)
 }
