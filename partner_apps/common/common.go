@@ -19,6 +19,9 @@ var (
 	Email     string
 )
 
+// Current Pharos API Version
+const PharosAPIVersion = "v2"
+
 // Exit Codes
 const (
 	// EXIT_OK means program completed successfully.

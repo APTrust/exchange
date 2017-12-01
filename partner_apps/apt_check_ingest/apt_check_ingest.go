@@ -14,17 +14,6 @@ import (
 	"time"
 )
 
-const APIVersion = "v2"
-const (
-	EXIT_OK             = 0
-	EXIT_NOT_INGESTED   = 1
-	EXIT_MIXED          = 2
-	EXIT_ITEM_NOT_FOUND = 3
-	EXIT_USER_ERR       = 4
-	EXIT_RUNTIME_ERR    = 5
-	EXIT_HELP           = 6
-)
-
 type OutputObject struct {
 	WorkItem           *models.WorkItem
 	IntellectualObject *models.IntellectualObject
@@ -40,7 +29,7 @@ func main() {
 	}
 	if opts.HasErrors() {
 		fmt.Fprintln(os.Stderr, opts.AllErrorsAsString())
-		os.Exit(EXIT_USER_ERR)
+		os.Exit(common.EXIT_USER_ERR)
 	}
 	args := flag.Args() // non-flag args
 	if len(args) > 0 {
@@ -49,17 +38,18 @@ func main() {
 	if fileToCheck == "" {
 		fmt.Fprintln(os.Stderr, "Missing required argument filename")
 		fmt.Fprintln(os.Stderr, "Try: apt_check_ingest --help")
-		os.Exit(EXIT_USER_ERR)
+		os.Exit(common.EXIT_USER_ERR)
 	}
 	if opts.Debug {
 		fmt.Printf("Filename: %s\n", fileToCheck)
 		fmt.Println("----------------------------------------------")
 	}
-	client, err := network.NewPharosClient(opts.PharosURL, APIVersion,
+	client, err := network.NewPharosClient(opts.PharosURL,
+		common.PharosAPIVersion,
 		opts.APTrustAPIUser, opts.APTrustAPIKey)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err.Error())
-		os.Exit(EXIT_RUNTIME_ERR)
+		os.Exit(common.EXIT_RUNTIME_ERR)
 	}
 	params := url.Values{}
 	params.Set("name", fileToCheck)
@@ -75,7 +65,7 @@ func main() {
 	}
 	if resp.Error != nil {
 		fmt.Fprintln(os.Stderr, resp.Error.Error())
-		os.Exit(EXIT_RUNTIME_ERR)
+		os.Exit(common.EXIT_RUNTIME_ERR)
 	}
 	items := resp.WorkItems()
 	outputObjects := make([]OutputObject, len(items))
@@ -90,7 +80,7 @@ func main() {
 			}
 			if resp.Error != nil {
 				fmt.Fprintln(os.Stderr, resp.Error.Error())
-				os.Exit(EXIT_RUNTIME_ERR)
+				os.Exit(common.EXIT_RUNTIME_ERR)
 			}
 			outputObjects[i].IntellectualObject = resp.IntellectualObject()
 		}
@@ -110,7 +100,7 @@ func ingested(item *models.WorkItem) bool {
 
 func exitCode(objects []OutputObject) int {
 	if len(objects) == 0 {
-		return EXIT_ITEM_NOT_FOUND
+		return common.EXIT_ITEM_NOT_FOUND
 	}
 	succeeded := false
 	failed := false
@@ -122,11 +112,11 @@ func exitCode(objects []OutputObject) int {
 		}
 	}
 	if succeeded && failed {
-		return EXIT_MIXED
+		return common.EXIT_SOME_INGESTED
 	} else if succeeded {
-		return EXIT_OK
+		return common.EXIT_OK
 	}
-	return EXIT_NOT_INGESTED
+	return common.EXIT_NOT_INGESTED
 }
 
 func printText(objects []OutputObject, fileToCheck, etag string) {
@@ -228,17 +218,17 @@ func parseCommandLine() *common.Options {
 
 	if version {
 		fmt.Println(common.GetVersion())
-		os.Exit(EXIT_HELP)
+		os.Exit(common.EXIT_NO_OP)
 	}
 	if help {
 		printUsage()
-		os.Exit(EXIT_HELP)
+		os.Exit(common.EXIT_NO_OP)
 	}
 
 	if pharosEnv != "production" && pharosEnv != "demo" {
 		fmt.Fprintln(os.Stderr, "Invalid value for -env:", pharosEnv)
 		printUsage()
-		os.Exit(EXIT_USER_ERR)
+		os.Exit(common.EXIT_USER_ERR)
 	}
 
 	pharosUrl := "https://repo.aptrust.org"
@@ -272,38 +262,49 @@ AptrustApiKey = "f887afc5e1624eda92ae1a5aecdf210c"
 See https://wiki.aptrust.org/Partner_Tools for more info on the
 APTrust config file.
 
-Usage: apt_check_ingest [-config=<path to config file>] \
-			[-env=<production|demo>] \
-			[-etag=<etag>] \
-			[-format=<json|text>] \
-            [-version] \
-			[-debug] <filename.tar>
+Usage: apt_check_ingest [--config=<path to config file>] \
+			[--env=<production|demo>] \
+			[--etag=<etag>] \
+			[--format=<json|text>] \
+			[--debug] <filename.tar>
 
-Option -config is should point the APTrust partner config file that
-contains your user email and API key. If you don't want to specify the
-user and key in a config file, the program will try to read them from
-the environment keys APTRUST_API_USER and APTRUST_API_KEY.
+       apt_check_ingest --version
+       apt_check_ingest --help
 
-Option -env specifies whether the tool should query the APTrust production
-system at https://repo.aptrust.org or the demo system at
-https://demo.aptrust.org. If unspecified, this defaults to production.
+Note that option flags may be preceded by either one or two dashes,
+so -option is the same as --option.
 
-Option -etag is the AWS S3 etag assigned to a file upon upload to the
-receiving bucket. If you've uploaded multiple versions of a bag, each one
-will have a different etag. Specifying the etag here allows you to check
-on a single version of a bag that was uploaded multiple times.
+Options
 
-Option -format specifies whether the result of the query should be printed
-to STDOUT in json or plain text format. Default is json.
+--config should point the APTrust partner config file that
+  contains your user email and API key. If you don't want to specify the
+  user and key in a config file, the program will try to read them from
+  the environment keys APTRUST_API_USER and APTRUST_API_KEY.
 
-Option -version prints version info and exits.
+--env specifies whether the tool should query the APTrust production
+  system at https://repo.aptrust.org or the demo system at
+  https://demo.aptrust.org. If unspecified, this defaults to production.
 
-Option -debug will print information about the program's runtime options
-(including API user and API key) to STDOUT. It will also print the request
-sent to the APTrust REST server and the server's response.
+--etag is the AWS S3 etag assigned to a file upon upload to the
+  receiving bucket. If you've uploaded multiple versions of a bag, each one
+  will have a different etag. Specifying the etag here allows you to check
+  on a single version of a bag that was uploaded multiple times.
 
-Param filename.tar is the name of the bag you uploaded for ingest. For
-example, virginia.edu.bag_of_images.tar
+--format specifies whether the result of the query should be printed
+  to STDOUT in json or plain text format. Default is json.
+
+--help prints this help message and exits.
+
+--version prints version info and exits.
+
+--debug prints information about the program's runtime options
+  (including API user and API key) to STDOUT. It will also print the request
+  sent to the APTrust REST server and the server's response.
+
+Params
+
+filename.tar is the name of the bag you uploaded for ingest. Use the filename
+  only, not the full path to the bag. E.g., "virginia.edu.images.tar".
 
 You will get multiple results for bags that have been ingested more than
 once. For example, if you uploaded version 1 of a bag last year, and then
@@ -312,16 +313,16 @@ with the most recent version listed first.
 
 Exit codes:
 
-0 - Bag or bags were successfully ingested
-1 - Bag or bags were not ingested
-2 - Some bags have been ingested, some have not
-3 - No record was found for the requested bag (or bag + etag)
-4 - Operation could not be completed due to usage error (e.g. missing params)
-5 - Operation could not be completed due to runtime, network, or server error
-6 - Printed help or version message. No other operations attempted.
+0   - Bag or bags were successfully ingested
+1   - Operation could not be completed due to runtime, network, or server error
+4   - No record was found for the requested bag (or bag + etag)
+3   - Operation could not be completed due to usage error (e.g. missing params)
+5   - Bag or bags were not ingested
+6   - Some bags have been ingested, some have not
+100 - Printed help or version message. No other operations attempted.
 
-Exit codes 0 and 1 indicate that ALL bags matching your query have (0)
-or have not (1) been ingested. Exit code 2 indicates mixed results.
+Exit codes 0 and 5 indicate that ALL bags matching your query have (0)
+or have not (5) been ingested. Exit code 6 indicates mixed results.
 `
 	fmt.Println(message)
 }
