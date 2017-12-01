@@ -10,19 +10,11 @@ import (
 	"strings"
 )
 
-const (
-	EXIT_OK          = 0 // Program completed successfully.
-	EXIT_NOT_EXISTS  = 1 // File/key does not exist.
-	EXIT_USER_ERR    = 2 // Operation could not be completed due to usage error (e.g. missing params)
-	EXIT_RUNTIME_ERR = 3 // Operation could not be completed due to runtime, network, or server error
-	EXIT_HELP        = 4 // Printed help or version message. No other operations attempted.
-)
-
 func main() {
 	opts, keys := getUserOptions()
 	if opts.HasErrors() {
 		fmt.Fprintln(os.Stderr, opts.AllErrorsAsString())
-		os.Exit(EXIT_USER_ERR)
+		os.Exit(common.EXIT_USER_ERR)
 	}
 	s3ObjDelete := network.NewS3ObjectDelete(
 		opts.AccessKeyId,
@@ -34,18 +26,18 @@ func main() {
 	if s3ObjDelete.ErrorMessage != "" {
 		os.Exit(printError(s3ObjDelete.ErrorMessage))
 	}
-	os.Exit(EXIT_OK)
+	os.Exit(common.EXIT_OK)
 }
 
 func printError(errMsg string) int {
-	exitCode := EXIT_RUNTIME_ERR
+	exitCode := common.EXIT_RUNTIME_ERR
 	fmt.Fprintln(os.Stderr, errMsg)
 	if strings.Contains(errMsg, "AccessDenied") {
 		fmt.Fprintln(os.Stderr, "Be sure the bucket and key name are correct. "+
 			"S3 may return 'Access Denied' for buckets that don't exist.")
 	}
 	if strings.Contains(errMsg, "NoSuchKey") {
-		exitCode = EXIT_NOT_EXISTS
+		exitCode = common.EXIT_ITEM_NOT_FOUND
 	}
 	return exitCode
 }
@@ -76,11 +68,11 @@ func parseCommandLine() (*common.Options, []string) {
 
 	if version {
 		fmt.Println(common.GetVersion())
-		os.Exit(EXIT_HELP)
+		os.Exit(common.EXIT_NO_OP)
 	}
 	if help {
 		printUsage()
-		os.Exit(EXIT_HELP)
+		os.Exit(common.EXIT_NO_OP)
 	}
 
 	opts := &common.Options{
@@ -103,7 +95,7 @@ func parseCommandLine() (*common.Options, []string) {
 
 	if len(files) == 0 {
 		fmt.Fprintln(os.Stderr, "You must specify at least one file to delete.")
-		os.Exit(EXIT_USER_ERR)
+		os.Exit(common.EXIT_USER_ERR)
 	}
 
 	return opts, files
@@ -118,33 +110,40 @@ Usage:
 
 apt_delete [options] key
 
-apt_delete -config=<path to config file> \
-	   [-region=<AWS region>] \
-	   -bucket=<bucket to delete from> \
-       [-version]
+apt_delete --config=<path to config file> \
+	   [--region=<AWS region>] \
+	   --bucket=<bucket to delete from> \
 	   file1 ... fileN
 
-Params:
+apt_delete --help
+apt_delete --version
 
-Note that bucket and key are required params. This program will get your
+Options:
+
+Note that option flags may be preceded by either one or two dashes,
+so -option is the same as --option.
+
+--bucket and --key are required params. This program will get your
 AWS credentials from the config file, if it can find one. Otherwise,
 it will get your AWS credentials from the environment variables
 "AWS_ACCESS_KEY_ID" and "AWS_SECRET_ACCESS_KEY". If it can't find your
 AWS credentials, it will exit with an error message.
 
--config is the optional path to your APTrust partner config file.
-	If you omit this, the program uses the config at
-	~/.aptrust_partner.conf (Mac/Linux) or %HOMEPATH%\.aptrust_partner.conf
-	(Windows) if that file exists. The config file should contain
-	your AWS keys, and the locations of your receiving bucket.
-	For info about what should be in your config file, see
-	https://wiki.aptrust.org/Partner_Tools
+--bucket is the name of the S3 bucket containing the key you want to delete.
 
--region is the S3 region to connect to. This defaults to us-east-1.
+--config is the optional path to your APTrust partner config file.
+  If you omit this, the program uses the config at
+  ~/.aptrust_partner.conf (Mac/Linux) or %HOMEPATH%\.aptrust_partner.conf
+  (Windows) if that file exists. The config file should contain
+  your AWS keys, and the locations of your receiving bucket.
+  For info about what should be in your config file, see
+  https://wiki.aptrust.org/Partner_Tools
 
--bucket is the name of the S3 bucket containing the key you want to delete.
+--help prints this help message and exits.
 
-Option -version prints version info and exits.
+--region is the S3 region to connect to. This defaults to us-east-1.
+
+--version prints version info and exits.
 
 Following the options on the command line, list one or more keys (S3 object
 names) that you want to delete. This should be a whitespace-separated list.
@@ -158,12 +157,12 @@ Example:
 
 Exit codes:
 
-0 - Program completed successfully.
-1 - File/key does not exist. [The current underlying Amazon S3 library
-	does not report these errors. Deleting a non-existent key returns success.]
-2 - Operation could not be completed due to usage error (e.g. missing params)
-3 - Operation could not be completed due to runtime, network, or server error
-4 - Printed help or version message. No other operations attempted.
+0   - Program completed successfully.
+1   - Operation could not be completed due to runtime, network, or server error
+3   - Operation could not be completed due to usage error (e.g. missing params)
+4   - File/key does not exist. [The current underlying Amazon S3 library
+      does not report these errors. Deleting a non-existent key returns success.]
+100 - Printed help or version message. No other operations attempted.
 `
 	fmt.Println(message)
 }
