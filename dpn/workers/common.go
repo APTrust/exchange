@@ -729,7 +729,7 @@ func EnsureItemIsMarkedComplete(_context *context.Context, manifest *models.Repl
 	if manifest.ReplicationTransfer.Stored == false {
 		panic("Don't call EnsureItemIsMarkedComplete unless the bag has been stored!")
 	}
-	if manifest.DPNWorkItem.CompletedAt.IsZero() {
+	if manifest.DPNWorkItem.CompletedAt == nil || manifest.DPNWorkItem.CompletedAt.IsZero() {
 		note := "Bag copied to long-term storage"
 		now := time.Now().UTC()
 		manifest.DPNWorkItem.CompletedAt = &now
