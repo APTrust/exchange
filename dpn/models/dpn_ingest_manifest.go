@@ -46,6 +46,13 @@ type DPNIngestManifest struct {
 	// POST this DPNBag record to our local DPN REST server.
 	DPNBag *DPNBag
 
+	// UUID is the uuid that will become the identifier of the DPNBag.
+	// This uuid is generated early in the packaging process, before
+	// the DPN bag is even created. The packager needs to know this
+	// uuid first when assembling the files for the bag, and later
+	// when creating the bag's dpn-info.txt tag file.
+	UUID string
+
 	// PackageSummary describes what happened during the packaging
 	// of this DPN bag. The process involves packing all of the
 	// IntellectualObject's files into a DPN bag, whose structure

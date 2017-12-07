@@ -1,7 +1,8 @@
 package models
 
 import (
-	"github.com/satori/go.uuid"
+	"fmt"
+	"github.com/APTrust/exchange/util"
 	"time"
 )
 
@@ -66,15 +67,17 @@ type DPNBag struct {
 	UpdatedAt time.Time `json:"updated_at"`
 }
 
-func NewDPNBag(localId, member, ingestNode string) *DPNBag {
+func NewDPNBag(localId, uuid, member, ingestNode string) (*DPNBag, error) {
+	if !util.LooksLikeUUID(uuid) {
+		return nil, fmt.Errorf("uuid param '%s' does not look like a valid uuid", uuid)
+	}
 	// AdminNode same is ingest node for newly-ingested
 	// bags, per DPN spec.
-	_uuid := uuid.NewV4().String()
 	return &DPNBag{
-		UUID:             _uuid,
+		UUID:             uuid,
 		LocalId:          localId,
 		Member:           member,
-		FirstVersionUUID: _uuid,
+		FirstVersionUUID: uuid,
 		Version:          1,
 		IngestNode:       ingestNode,
 		AdminNode:        ingestNode,
@@ -85,5 +88,5 @@ func NewDPNBag(localId, member, ingestNode string) *DPNBag {
 		ReplicatingNodes: make([]string, 0),
 		CreatedAt:        time.Now().UTC(),
 		UpdatedAt:        time.Now().UTC(),
-	}
+	}, nil
 }

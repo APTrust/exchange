@@ -169,10 +169,20 @@ func (packager *DPNPackager) buildDPNBag(manifest *models.DPNIngestManifest) {
 	if depositingInstitution == nil {
 		return
 	}
-	manifest.DPNBag = models.NewDPNBag(
+
+	// PT #153490043
+	// Be sure the new bag gets the same UUID that the BagBuilder
+	// generated earlier.
+	var err error
+	manifest.DPNBag, err = models.NewDPNBag(
 		manifest.IntellectualObject.Identifier,
+		manifest.UUID,
 		depositingInstitution.DPNUUID,
 		packager.Context.Config.DPN.LocalNode)
+	if err != nil {
+		manifest.PackageSummary.AddError("Error creating DPN bag: %s", err.Error())
+		return
+	}
 
 	// Calculate the sha256 digest of the tag manifest. This is used for
 	// validating bag transfers in DPN. Note that we are NOT using a
@@ -335,6 +345,14 @@ func (packager *DPNPackager) assembleFilesAndManifests(manifest *models.DPNInges
 		manifest.PackageSummary.AddError("Cannot create BagBuilder: %v", err)
 		return
 	}
+
+	// PT #153490043
+	// Make sure the manifest knows the UUID that the builder has
+	// assigned to this bag. Later in the bagging process, we will
+	// need to pass this UUID to NewDPNBag.
+	manifest.UUID = builder.UUID
+
+	// Fetch all of this object's files from S3 so we can build the DPN bag.
 	packager.fetchAllFiles(manifest)
 
 	for _, gf := range manifest.IntellectualObject.GenericFiles {

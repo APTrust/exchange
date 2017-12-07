@@ -2,12 +2,22 @@ package models_test
 
 import (
 	"github.com/APTrust/exchange/dpn/models"
+	"github.com/satori/go.uuid"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"strings"
 	"testing"
 )
 
 func TestNewDPNBag(t *testing.T) {
-	bag := models.NewDPNBag("local_id", "some_member", "some_node")
+	bag, err := models.NewDPNBag("local_id", "not_a_uuid", "some_member", "some_node")
+	require.NotNil(t, err)
+	assert.True(t, strings.Contains(err.Error(), "does not look like a valid uuid"))
+	assert.Nil(t, bag)
+
+	_uuid := uuid.NewV4().String()
+	bag, err = models.NewDPNBag("local_id", _uuid, "some_member", "some_node")
+	assert.Nil(t, err)
 	assert.NotNil(t, bag)
 	assert.NotEmpty(t, bag.UUID)
 	assert.Equal(t, bag.UUID, bag.FirstVersionUUID)
