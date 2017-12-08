@@ -118,17 +118,13 @@ back to the S3 bucket, so we can retrieve it. This program returns 0 on success
 and non-zero on failure. See the exit codes below. It also prints details in JSON
 format to STDOUT.
 
-Usage: apt_restore_from_glacier -config=<path> \
-			 -region=<aws region> \
-			 -bucket=<bucket name> \
-			 -key=<key to restore> \
-			 -days=<number of days to keep restored item in S3>
+Usage: apt_restore_from_glacier -region=<aws region> \
+	   -bucket=<bucket name> \
+	   -key=<key to restore> \
+	   -days=<number of days to keep restored item in S3>
 
 Starred (*) params are required.
 
-Param -config (*) is the path to the APTrust config file. It can be an
-	   absolute path, or config/<file.json> if it's in the config directory
-	   of $EXCHANGE_HOME.
 Param -region (*) is the AWS region containing the S3/Glacier bucket.
 	   "us-east-1" is Virginia (DPN Glacier)
 	   "us-west-2" is Oregon (APTrust Glacier only)
@@ -144,8 +140,8 @@ Example
 Restore MyFile.txt from the Oregon Glacier bucket to the Oregon S3 bucket,
 and leave the copy in Oregon S3 for ten days:
 
-apt_restore_from_glacier -config=config/production.json -region="us-west-2" \
-			   -bucket="aptrust.preservation.storage" -key="MyFile.txt" -days=10
+apt_restore_from_glacier -region="us-west-2" \
+	   -bucket="aptrust.preservation.storage" -key="MyFile.txt" -days=10
 
 
 Return Codes
