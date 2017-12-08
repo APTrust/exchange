@@ -23,6 +23,7 @@ EMAIL = "support@aptrust.org"
 def run()
   options = parse_options()
   if !options['version'] || !options['platform']
+    print_help
     exit 1
   end
 
@@ -51,6 +52,15 @@ def run()
   readMeSrc = File.join(options['exchange_root'], 'partner_apps', 'README.txt')
   readMeDest = File.join(options['exchange_root'], 'partner_apps', 'bin', 'README.txt')
   FileUtils.copy(readMeSrc, readMeDest)
+
+  puts "Copying bag validation config files"
+  src = File.join(options['exchange_root'], 'config', 'aptrust_bag_validation_config.json')
+  dest = File.join(options['exchange_root'], 'partner_apps', 'bin', 'aptrust_bag_validation_config.json')
+  FileUtils.copy(src, dest)
+
+  src = File.join(options['exchange_root'], 'config', 'dpn_bag_validation_config.json')
+  dest = File.join(options['exchange_root'], 'partner_apps', 'bin', 'dpn_bag_validation_config.json')
+  FileUtils.copy(src, dest)
 end
 
 def get_ld_flags(version, build_date, git_hash)
@@ -106,7 +116,9 @@ end
 def print_help()
   puts ""
   puts "build_partner_tools.rb --platform=< mac | linux | windows> --version=<version>"
+  puts ""
   puts "Builds and packages all partner tools"
+  puts ""
   puts "Option --p or --platform is the platform for which you are building."
   puts "Option --v or --version is the version number to stamp on this build."
   puts ""
