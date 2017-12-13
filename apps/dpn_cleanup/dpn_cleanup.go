@@ -68,6 +68,26 @@ func cleanDirectory(_context *context.Context, dpnClient *network.DPNRestClient,
 		if !util.LooksLikeUUID(bagUUID) {
 			continue // Don't delete it if it's not a DPN tar file
 		}
+
+		// Make sure bag exists before checking for replications.
+		// The DPN server will tell us that non-existent bags have
+		// been replicated, and that causes us to delete some tar
+		// files from our staging area before we've had a chance
+		// to store them in DPN.
+		// PT #153636373
+		// https://github.com/dpn-admin/dpn-server/issues/158
+		bagResponse := dpnClient.DPNBagGet(bagUUID)
+		if bagResponse.Error != nil {
+			_context.MessageLog.Error("Error getting bag record '%s': %v",
+				bagUUID, bagResponse.Error.Error())
+			continue
+		}
+		if bagResponse.Bag() == nil {
+			_context.MessageLog.Info("DPN has no record of bag %s yet. Skipping deletion for now.",
+				bagUUID)
+			continue
+		}
+
 		params := url.Values{}
 		params.Set("bag", bagUUID)
 		params.Set("stored", "true")
