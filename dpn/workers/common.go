@@ -522,6 +522,12 @@ func initManifest(message *nsq.Message, stage string) (*models.ReplicationManife
 func restoreReplicationState(manifest *models.ReplicationManifest, _context *context.Context) bool {
 	restoreSucceeded := false
 	savedState := ""
+	if manifest == nil {
+		return false
+	}
+	if manifest.DPNWorkItem == nil {
+		return false
+	}
 	if manifest.DPNWorkItem.State != nil {
 		savedState = *manifest.DPNWorkItem.State
 	}
