@@ -34,7 +34,7 @@ func TestRetoreResults(t *testing.T) {
 	testFailed := false
 	pathToJsonLog := filepath.Join(config.LogDirectory, "apt_restore.json")
 	for _, bagName := range testutil.INTEGRATION_GOOD_BAGS[0:7] {
-		objIdentifier := strings.Replace(bagName, "aptrust.receiving.test.", "", 1)
+		objIdentifier := strings.Replace(bagName, "aptrust.integration.test", "test.edu", 1)
 		objIdentifier = strings.Replace(objIdentifier, ".tar", "", 1)
 		restoreState, err := testutil.FindRestoreStateInLog(pathToJsonLog, objIdentifier)
 		assert.Nil(t, err)

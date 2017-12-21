@@ -185,7 +185,7 @@ func TestIngestManifest_BagHasBeenValidated(t *testing.T) {
 
 func TestIngestManifest_ObjectIdentifier(t *testing.T) {
 	manifest := models.NewIngestManifest()
-	manifest.S3Bucket = "aptrust.receiving.test.test.edu"
+	manifest.S3Bucket = "aptrust.integration.test"
 	manifest.S3Key = "test_bag.tar"
 	objIdentifier, err := manifest.ObjectIdentifier()
 	assert.Nil(t, err)

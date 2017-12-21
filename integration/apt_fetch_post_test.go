@@ -41,7 +41,7 @@ func TestFetchResults(t *testing.T) {
 		fetcherTestCommon(t, bagName, ingestManifest)
 		// TODO: Test WorkItem (stage, status, etc.) below
 		fetcherTestGoodBagResult(t, bagName, ingestManifest)
-		if bagName == "aptrust.receiving.test.test.edu/example.edu.tagsample_good.tar" {
+		if bagName == "aptrust.integration.test/example.edu.tagsample_good.tar" {
 			fetcherTestSpecifics(t, ingestManifest)
 		}
 	}
@@ -196,7 +196,7 @@ func fetcherTestSpecifics(t *testing.T, ingestManifest *models.IngestManifest) {
 	assert.Equal(t, "Bag of goodies", obj.Description)
 	assert.Equal(t, "Institution", obj.Access)
 	assert.Equal(t, "uva-internal-id-0001", obj.AltIdentifier)
-	assert.Equal(t, "aptrust.receiving.test.test.edu", obj.IngestS3Bucket)
+	assert.Equal(t, "aptrust.integration.test", obj.IngestS3Bucket)
 	assert.Equal(t, "example.edu.tagsample_good.tar", obj.IngestS3Key)
 	assert.Equal(t, "test.edu", obj.Institution)
 	assert.Equal(t, "manifest-md5.txt", obj.IngestManifests[0])

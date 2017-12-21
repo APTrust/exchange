@@ -22,10 +22,10 @@ func TestHead(t *testing.T) {
 		os.Getenv("AWS_ACCESS_KEY_ID"),
 		os.Getenv("AWS_SECRET_ACCESS_KEY"),
 		_context.Config.APTrustS3Region, testBucket)
-	client.Head(testFile)
+	client.Head(testFile) // "virginia.edu.uva-lib_2278801.tar"
 	assert.EqualValues(t, testFileSize, *client.Response.ContentLength)
 	assert.Equal(t, testFileETag, *client.Response.ETag)
-	assert.Equal(t, "binary/octet-stream", *client.Response.ContentType)
+	assert.Equal(t, "application/x-tar", *client.Response.ContentType)
 	trimmedETag := strings.Replace(testFileETag, "\"", "", -1)
 
 	storedFile := client.StoredFile()

@@ -22,7 +22,7 @@ func TestMarkForDelete(t *testing.T) {
 	require.Nil(t, err)
 	_context := context.NewContext(config)
 	s3Key := testutil.INTEGRATION_GOOD_BAGS[9]
-	identifier := strings.Replace(s3Key, "aptrust.receiving.test.", "", 1)
+	identifier := strings.Replace(s3Key, "aptrust.integration.test", "test.edu", 1)
 	identifier = strings.Replace(identifier, ".tar", "", 1)
 	resp := _context.PharosClient.IntellectualObjectRequestDelete(identifier)
 	require.Nil(t, resp.Error)

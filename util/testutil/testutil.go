@@ -21,26 +21,26 @@ import (
 var TEST_TIMESTAMP time.Time = time.Date(2016, 6, 16, 10, 24, 16, 0, time.UTC)
 
 var INTEGRATION_GOOD_BAGS = []string{
-	"aptrust.receiving.test.test.edu/example.edu.tagsample_good.tar",
-	"aptrust.receiving.test.test.edu/example.edu.sample_ds_store_and_empty.tar",
-	"aptrust.receiving.test.test.edu/ncsu.1840.16-10.tar",
-	"aptrust.receiving.test.test.edu/ncsu.1840.16-1004.tar",
-	"aptrust.receiving.test.test.edu/ncsu.1840.16-1005.tar",
-	"aptrust.receiving.test.test.edu/ncsu.1840.16-1013.tar",
-	"aptrust.receiving.test.test.edu/ncsu.1840.16-1028.tar",
-	"aptrust.receiving.test.test.edu/ncsu.1840.16-2928.tar",
-	"aptrust.receiving.test.test.edu/virginia.edu.uva-lib_2141114.tar",
-	"aptrust.receiving.test.test.edu/virginia.edu.uva-lib_2274642.tar",
-	"aptrust.receiving.test.test.edu/virginia.edu.uva-lib_2274765.tar",
-	"aptrust.receiving.test.test.edu/virginia.edu.uva-lib_2278801.tar",
+	"aptrust.integration.test/example.edu.tagsample_good.tar",
+	"aptrust.integration.test/example.edu.sample_ds_store_and_empty.tar",
+	"aptrust.integration.test/ncsu.1840.16-10.tar",
+	"aptrust.integration.test/ncsu.1840.16-1004.tar",
+	"aptrust.integration.test/ncsu.1840.16-1005.tar",
+	"aptrust.integration.test/ncsu.1840.16-1013.tar",
+	"aptrust.integration.test/ncsu.1840.16-1028.tar",
+	"aptrust.integration.test/ncsu.1840.16-2928.tar",
+	"aptrust.integration.test/virginia.edu.uva-lib_2141114.tar",
+	"aptrust.integration.test/virginia.edu.uva-lib_2274642.tar",
+	"aptrust.integration.test/virginia.edu.uva-lib_2274765.tar",
+	"aptrust.integration.test/virginia.edu.uva-lib_2278801.tar",
 }
 
 var INTEGRATION_BAD_BAGS = []string{
-	"aptrust.receiving.test.test.edu/example.edu.tagsample_bad.tar",
-	"aptrust.receiving.test.test.edu/s3_upload_test.tar",
-	"aptrust.receiving.test.test.edu/TestBags.zip",
-	"aptrust.receiving.test.test.edu/test.edu.bag2.tar",
-	"aptrust.receiving.test.test.edu/test.edu.bag6.tar",
+	"aptrust.integration.test/example.edu.tagsample_bad.tar",
+	"aptrust.integration.test/s3_upload_test.tar",
+	"aptrust.integration.test/TestBags.zip",
+	"aptrust.integration.test/test.edu.bag2.tar",
+	"aptrust.integration.test/test.edu.bag6.tar",
 }
 
 func ShouldRunIntegrationTests() bool {

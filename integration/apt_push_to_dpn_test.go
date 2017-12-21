@@ -24,7 +24,7 @@ func TestPushToDPN(t *testing.T) {
 	require.Nil(t, err)
 	_context := context.NewContext(config)
 	for _, s3Key := range testutil.INTEGRATION_GOOD_BAGS[0:7] {
-		identifier := strings.Replace(s3Key, "aptrust.receiving.test.", "", 1)
+		identifier := strings.Replace(s3Key, "aptrust.integration.test", "test.edu", 1)
 		identifier = strings.Replace(identifier, ".tar", "", 1)
 		resp := _context.PharosClient.IntellectualObjectPushToDPN(identifier)
 		workItem := resp.WorkItem()

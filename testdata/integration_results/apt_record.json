@@ -1,7 +1,7 @@
--------- BEGIN aptrust.receiving.test.test.edu/ncsu.1840.16-10.tar | Etag: 4e53ca872fec1b8d654722678806d215 | Time: 2016-11-24T14:37:03Z -------- 
+-------- BEGIN aptrust.integration.test/ncsu.1840.16-10.tar | Etag: 4e53ca872fec1b8d654722678806d215 | Time: 2016-11-24T14:37:03Z --------
  {
   "WorkItemId": 1043273149,
-  "S3Bucket": "aptrust.receiving.test.test.edu",
+  "S3Bucket": "aptrust.integration.test",
   "S3Key": "ncsu.1840.16-10.tar",
   "ETag": "4e53ca872fec1b8d654722678806d215",
   "FetchResult": {
@@ -1556,7 +1556,7 @@
     ],
     "created_at": "2016-11-24T14:37:00.06Z",
     "updated_at": "2016-11-24T14:37:00.06Z",
-    "ingest_s3_bucket": "aptrust.receiving.test.test.edu",
+    "ingest_s3_bucket": "aptrust.integration.test",
     "ingest_s3_key": "ncsu.1840.16-10.tar",
     "ingest_tar_file_path": "/Users/diamond/tmp/tar/test.edu/ncsu.1840.16-10.tar",
     "ingest_untarred_path": "",
@@ -1616,13 +1616,13 @@
     "ingest_error_message": "",
     "ingest_deleted_from_receiving_at": "2016-11-24T14:37:02.822629995Z"
   }
-} 
- -------- END aptrust.receiving.test.test.edu/ncsu.1840.16-10.tar | Etag: 4e53ca872fec1b8d654722678806d215 | Time: 2016-11-24T14:37:03Z -------- 
+}
+ -------- END aptrust.integration.test/ncsu.1840.16-10.tar | Etag: 4e53ca872fec1b8d654722678806d215 | Time: 2016-11-24T14:37:03Z --------
 
--------- BEGIN aptrust.receiving.test.test.edu/example.edu.tagsample_good.tar | Etag: be29422f1b80fb3e8d5907be121c7f52 | Time: 2016-11-24T14:37:05Z -------- 
+-------- BEGIN aptrust.integration.test/example.edu.tagsample_good.tar | Etag: be29422f1b80fb3e8d5907be121c7f52 | Time: 2016-11-24T14:37:05Z --------
  {
   "WorkItemId": 1043273148,
-  "S3Bucket": "aptrust.receiving.test.test.edu",
+  "S3Bucket": "aptrust.integration.test",
   "S3Key": "example.edu.tagsample_good.tar",
   "ETag": "be29422f1b80fb3e8d5907be121c7f52",
   "FetchResult": {
@@ -4280,7 +4280,7 @@
     ],
     "created_at": "2016-11-24T14:37:01.211Z",
     "updated_at": "2016-11-24T14:37:01.211Z",
-    "ingest_s3_bucket": "aptrust.receiving.test.test.edu",
+    "ingest_s3_bucket": "aptrust.integration.test",
     "ingest_s3_key": "example.edu.tagsample_good.tar",
     "ingest_tar_file_path": "/Users/diamond/tmp/tar/test.edu/example.edu.tagsample_good.tar",
     "ingest_untarred_path": "",
@@ -4357,13 +4357,13 @@
     "ingest_error_message": "",
     "ingest_deleted_from_receiving_at": "2016-11-24T14:37:05.013381196Z"
   }
-} 
- -------- END aptrust.receiving.test.test.edu/example.edu.tagsample_good.tar | Etag: be29422f1b80fb3e8d5907be121c7f52 | Time: 2016-11-24T14:37:05Z -------- 
+}
+ -------- END aptrust.integration.test/example.edu.tagsample_good.tar | Etag: be29422f1b80fb3e8d5907be121c7f52 | Time: 2016-11-24T14:37:05Z --------
 
--------- BEGIN aptrust.receiving.test.test.edu/virginia.edu.uva-lib_2141114.tar | Etag: 83e92e06a9db85da2a1798042fe8b4dd | Time: 2016-11-24T14:37:06Z -------- 
+-------- BEGIN aptrust.integration.test/virginia.edu.uva-lib_2141114.tar | Etag: 83e92e06a9db85da2a1798042fe8b4dd | Time: 2016-11-24T14:37:06Z --------
  {
   "WorkItemId": 1043273158,
-  "S3Bucket": "aptrust.receiving.test.test.edu",
+  "S3Bucket": "aptrust.integration.test",
   "S3Key": "virginia.edu.uva-lib_2141114.tar",
   "ETag": "83e92e06a9db85da2a1798042fe8b4dd",
   "FetchResult": {
@@ -5750,7 +5750,7 @@
     ],
     "created_at": "2016-11-24T14:37:02.676Z",
     "updated_at": "2016-11-24T14:37:02.676Z",
-    "ingest_s3_bucket": "aptrust.receiving.test.test.edu",
+    "ingest_s3_bucket": "aptrust.integration.test",
     "ingest_s3_key": "virginia.edu.uva-lib_2141114.tar",
     "ingest_tar_file_path": "/Users/diamond/tmp/tar/test.edu/virginia.edu.uva-lib_2141114.tar",
     "ingest_untarred_path": "",
@@ -5823,13 +5823,13 @@
     "ingest_error_message": "",
     "ingest_deleted_from_receiving_at": "2016-11-24T14:37:06.161186016Z"
   }
-} 
- -------- END aptrust.receiving.test.test.edu/virginia.edu.uva-lib_2141114.tar | Etag: 83e92e06a9db85da2a1798042fe8b4dd | Time: 2016-11-24T14:37:06Z -------- 
+}
+ -------- END aptrust.integration.test/virginia.edu.uva-lib_2141114.tar | Etag: 83e92e06a9db85da2a1798042fe8b4dd | Time: 2016-11-24T14:37:06Z --------
 
--------- BEGIN aptrust.receiving.test.test.edu/ncsu.1840.16-1004.tar | Etag: d18720b9ec3c24e0e6370fb4ff42b132 | Time: 2016-11-24T14:37:07Z -------- 
+-------- BEGIN aptrust.integration.test/ncsu.1840.16-1004.tar | Etag: d18720b9ec3c24e0e6370fb4ff42b132 | Time: 2016-11-24T14:37:07Z --------
  {
   "WorkItemId": 1043273150,
-  "S3Bucket": "aptrust.receiving.test.test.edu",
+  "S3Bucket": "aptrust.integration.test",
   "S3Key": "ncsu.1840.16-1004.tar",
   "ETag": "d18720b9ec3c24e0e6370fb4ff42b132",
   "FetchResult": {
@@ -7384,7 +7384,7 @@
     ],
     "created_at": "2016-11-24T14:37:04.783Z",
     "updated_at": "2016-11-24T14:37:04.783Z",
-    "ingest_s3_bucket": "aptrust.receiving.test.test.edu",
+    "ingest_s3_bucket": "aptrust.integration.test",
     "ingest_s3_key": "ncsu.1840.16-1004.tar",
     "ingest_tar_file_path": "/Users/diamond/tmp/tar/test.edu/ncsu.1840.16-1004.tar",
     "ingest_untarred_path": "",
@@ -7444,13 +7444,13 @@
     "ingest_error_message": "",
     "ingest_deleted_from_receiving_at": "2016-11-24T14:37:07.313273936Z"
   }
-} 
- -------- END aptrust.receiving.test.test.edu/ncsu.1840.16-1004.tar | Etag: d18720b9ec3c24e0e6370fb4ff42b132 | Time: 2016-11-24T14:37:07Z -------- 
+}
+ -------- END aptrust.integration.test/ncsu.1840.16-1004.tar | Etag: d18720b9ec3c24e0e6370fb4ff42b132 | Time: 2016-11-24T14:37:07Z --------
 
--------- BEGIN aptrust.receiving.test.test.edu/ncsu.1840.16-1005.tar | Etag: 7d10655f68bfe1910396cbe1fbb4f012 | Time: 2016-11-24T14:37:08Z -------- 
+-------- BEGIN aptrust.integration.test/ncsu.1840.16-1005.tar | Etag: 7d10655f68bfe1910396cbe1fbb4f012 | Time: 2016-11-24T14:37:08Z --------
  {
   "WorkItemId": 1043273151,
-  "S3Bucket": "aptrust.receiving.test.test.edu",
+  "S3Bucket": "aptrust.integration.test",
   "S3Key": "ncsu.1840.16-1005.tar",
   "ETag": "7d10655f68bfe1910396cbe1fbb4f012",
   "FetchResult": {
@@ -9005,7 +9005,7 @@
     ],
     "created_at": "2016-11-24T14:37:06.015Z",
     "updated_at": "2016-11-24T14:37:06.015Z",
-    "ingest_s3_bucket": "aptrust.receiving.test.test.edu",
+    "ingest_s3_bucket": "aptrust.integration.test",
     "ingest_s3_key": "ncsu.1840.16-1005.tar",
     "ingest_tar_file_path": "/Users/diamond/tmp/tar/test.edu/ncsu.1840.16-1005.tar",
     "ingest_untarred_path": "",
@@ -9065,13 +9065,13 @@
     "ingest_error_message": "",
     "ingest_deleted_from_receiving_at": "2016-11-24T14:37:08.3846698Z"
   }
-} 
- -------- END aptrust.receiving.test.test.edu/ncsu.1840.16-1005.tar | Etag: 7d10655f68bfe1910396cbe1fbb4f012 | Time: 2016-11-24T14:37:08Z -------- 
+}
+ -------- END aptrust.integration.test/ncsu.1840.16-1005.tar | Etag: 7d10655f68bfe1910396cbe1fbb4f012 | Time: 2016-11-24T14:37:08Z --------
 
--------- BEGIN aptrust.receiving.test.test.edu/ncsu.1840.16-1028.tar | Etag: d2a002b07adc9ffdc3bad260ed54dd88 | Time: 2016-11-24T14:37:09Z -------- 
+-------- BEGIN aptrust.integration.test/ncsu.1840.16-1028.tar | Etag: d2a002b07adc9ffdc3bad260ed54dd88 | Time: 2016-11-24T14:37:09Z --------
  {
   "WorkItemId": 1043273153,
-  "S3Bucket": "aptrust.receiving.test.test.edu",
+  "S3Bucket": "aptrust.integration.test",
   "S3Key": "ncsu.1840.16-1028.tar",
   "ETag": "d2a002b07adc9ffdc3bad260ed54dd88",
   "FetchResult": {
@@ -10626,7 +10626,7 @@
     ],
     "created_at": "2016-11-24T14:37:07.319Z",
     "updated_at": "2016-11-24T14:37:07.319Z",
-    "ingest_s3_bucket": "aptrust.receiving.test.test.edu",
+    "ingest_s3_bucket": "aptrust.integration.test",
     "ingest_s3_key": "ncsu.1840.16-1028.tar",
     "ingest_tar_file_path": "/Users/diamond/tmp/tar/test.edu/ncsu.1840.16-1028.tar",
     "ingest_untarred_path": "",
@@ -10686,13 +10686,13 @@
     "ingest_error_message": "",
     "ingest_deleted_from_receiving_at": "2016-11-24T14:37:09.521686Z"
   }
-} 
- -------- END aptrust.receiving.test.test.edu/ncsu.1840.16-1028.tar | Etag: d2a002b07adc9ffdc3bad260ed54dd88 | Time: 2016-11-24T14:37:09Z -------- 
+}
+ -------- END aptrust.integration.test/ncsu.1840.16-1028.tar | Etag: d2a002b07adc9ffdc3bad260ed54dd88 | Time: 2016-11-24T14:37:09Z --------
 
--------- BEGIN aptrust.receiving.test.test.edu/virginia.edu.uva-lib_2274765.tar | Etag: ae2b16ddd4922c045432ab32cff508a9 | Time: 2016-11-24T14:37:11Z -------- 
+-------- BEGIN aptrust.integration.test/virginia.edu.uva-lib_2274765.tar | Etag: ae2b16ddd4922c045432ab32cff508a9 | Time: 2016-11-24T14:37:11Z --------
  {
   "WorkItemId": 1043273160,
-  "S3Bucket": "aptrust.receiving.test.test.edu",
+  "S3Bucket": "aptrust.integration.test",
   "S3Key": "virginia.edu.uva-lib_2274765.tar",
   "ETag": "ae2b16ddd4922c045432ab32cff508a9",
   "FetchResult": {
@@ -11921,7 +11921,7 @@
     ],
     "created_at": "2016-11-24T14:37:08.528Z",
     "updated_at": "2016-11-24T14:37:08.528Z",
-    "ingest_s3_bucket": "aptrust.receiving.test.test.edu",
+    "ingest_s3_bucket": "aptrust.integration.test",
     "ingest_s3_key": "virginia.edu.uva-lib_2274765.tar",
     "ingest_tar_file_path": "/Users/diamond/tmp/tar/test.edu/virginia.edu.uva-lib_2274765.tar",
     "ingest_untarred_path": "",
@@ -11994,13 +11994,13 @@
     "ingest_error_message": "",
     "ingest_deleted_from_receiving_at": "2016-11-24T14:37:10.64063381Z"
   }
-} 
- -------- END aptrust.receiving.test.test.edu/virginia.edu.uva-lib_2274765.tar | Etag: ae2b16ddd4922c045432ab32cff508a9 | Time: 2016-11-24T14:37:11Z -------- 
+}
+ -------- END aptrust.integration.test/virginia.edu.uva-lib_2274765.tar | Etag: ae2b16ddd4922c045432ab32cff508a9 | Time: 2016-11-24T14:37:11Z --------
 
--------- BEGIN aptrust.receiving.test.test.edu/ncsu.1840.16-2928.tar | Etag: 7695fb5c3dbdd44121a605331f190b67 | Time: 2016-11-24T14:37:12Z -------- 
+-------- BEGIN aptrust.integration.test/ncsu.1840.16-2928.tar | Etag: 7695fb5c3dbdd44121a605331f190b67 | Time: 2016-11-24T14:37:12Z --------
  {
   "WorkItemId": 1043273154,
-  "S3Bucket": "aptrust.receiving.test.test.edu",
+  "S3Bucket": "aptrust.integration.test",
   "S3Key": "ncsu.1840.16-2928.tar",
   "ETag": "7695fb5c3dbdd44121a605331f190b67",
   "FetchResult": {
@@ -13555,7 +13555,7 @@
     ],
     "created_at": "2016-11-24T14:37:09.749Z",
     "updated_at": "2016-11-24T14:37:09.749Z",
-    "ingest_s3_bucket": "aptrust.receiving.test.test.edu",
+    "ingest_s3_bucket": "aptrust.integration.test",
     "ingest_s3_key": "ncsu.1840.16-2928.tar",
     "ingest_tar_file_path": "/Users/diamond/tmp/tar/test.edu/ncsu.1840.16-2928.tar",
     "ingest_untarred_path": "",
@@ -13615,13 +13615,13 @@
     "ingest_error_message": "",
     "ingest_deleted_from_receiving_at": "2016-11-24T14:37:11.935360922Z"
   }
-} 
- -------- END aptrust.receiving.test.test.edu/ncsu.1840.16-2928.tar | Etag: 7695fb5c3dbdd44121a605331f190b67 | Time: 2016-11-24T14:37:12Z -------- 
+}
+ -------- END aptrust.integration.test/ncsu.1840.16-2928.tar | Etag: 7695fb5c3dbdd44121a605331f190b67 | Time: 2016-11-24T14:37:12Z --------
 
--------- BEGIN aptrust.receiving.test.test.edu/ncsu.1840.16-1013.tar | Etag: a3b49ae4915a991e0c1877fe14f3d18b | Time: 2016-11-24T14:37:12Z -------- 
+-------- BEGIN aptrust.integration.test/ncsu.1840.16-1013.tar | Etag: a3b49ae4915a991e0c1877fe14f3d18b | Time: 2016-11-24T14:37:12Z --------
  {
   "WorkItemId": 1043273152,
-  "S3Bucket": "aptrust.receiving.test.test.edu",
+  "S3Bucket": "aptrust.integration.test",
   "S3Key": "ncsu.1840.16-1013.tar",
   "ETag": "a3b49ae4915a991e0c1877fe14f3d18b",
   "FetchResult": {
@@ -15496,7 +15496,7 @@
     ],
     "created_at": "2016-11-24T14:37:10.716Z",
     "updated_at": "2016-11-24T14:37:10.716Z",
-    "ingest_s3_bucket": "aptrust.receiving.test.test.edu",
+    "ingest_s3_bucket": "aptrust.integration.test",
     "ingest_s3_key": "ncsu.1840.16-1013.tar",
     "ingest_tar_file_path": "/Users/diamond/tmp/tar/test.edu/ncsu.1840.16-1013.tar",
     "ingest_untarred_path": "",
@@ -15556,13 +15556,13 @@
     "ingest_error_message": "",
     "ingest_deleted_from_receiving_at": "2016-11-24T14:37:12.670714077Z"
   }
-} 
- -------- END aptrust.receiving.test.test.edu/ncsu.1840.16-1013.tar | Etag: a3b49ae4915a991e0c1877fe14f3d18b | Time: 2016-11-24T14:37:12Z -------- 
+}
+ -------- END aptrust.integration.test/ncsu.1840.16-1013.tar | Etag: a3b49ae4915a991e0c1877fe14f3d18b | Time: 2016-11-24T14:37:12Z --------
 
--------- BEGIN aptrust.receiving.test.test.edu/virginia.edu.uva-lib_2278801.tar | Etag: 036995504a5b07a865b62e1a7c0ea9c4 | Time: 2016-11-24T14:37:13Z -------- 
+-------- BEGIN aptrust.integration.test/virginia.edu.uva-lib_2278801.tar | Etag: 036995504a5b07a865b62e1a7c0ea9c4 | Time: 2016-11-24T14:37:13Z --------
  {
   "WorkItemId": 1043273161,
-  "S3Bucket": "aptrust.receiving.test.test.edu",
+  "S3Bucket": "aptrust.integration.test",
   "S3Key": "virginia.edu.uva-lib_2278801.tar",
   "ETag": "036995504a5b07a865b62e1a7c0ea9c4",
   "FetchResult": {
@@ -16949,7 +16949,7 @@
     ],
     "created_at": "2016-11-24T14:37:11.78Z",
     "updated_at": "2016-11-24T14:37:11.78Z",
-    "ingest_s3_bucket": "aptrust.receiving.test.test.edu",
+    "ingest_s3_bucket": "aptrust.integration.test",
     "ingest_s3_key": "virginia.edu.uva-lib_2278801.tar",
     "ingest_tar_file_path": "/Users/diamond/tmp/tar/test.edu/virginia.edu.uva-lib_2278801.tar",
     "ingest_untarred_path": "",
@@ -17022,13 +17022,13 @@
     "ingest_error_message": "",
     "ingest_deleted_from_receiving_at": "2016-11-24T14:37:13.676450903Z"
   }
-} 
- -------- END aptrust.receiving.test.test.edu/virginia.edu.uva-lib_2278801.tar | Etag: 036995504a5b07a865b62e1a7c0ea9c4 | Time: 2016-11-24T14:37:13Z -------- 
+}
+ -------- END aptrust.integration.test/virginia.edu.uva-lib_2278801.tar | Etag: 036995504a5b07a865b62e1a7c0ea9c4 | Time: 2016-11-24T14:37:13Z --------
 
--------- BEGIN aptrust.receiving.test.test.edu/virginia.edu.uva-lib_2274642.tar | Etag: 8d87686d8f05c8411ffd2959e1a7357e | Time: 2016-11-24T14:37:14Z -------- 
+-------- BEGIN aptrust.integration.test/virginia.edu.uva-lib_2274642.tar | Etag: 8d87686d8f05c8411ffd2959e1a7357e | Time: 2016-11-24T14:37:14Z --------
  {
   "WorkItemId": 1043273159,
-  "S3Bucket": "aptrust.receiving.test.test.edu",
+  "S3Bucket": "aptrust.integration.test",
   "S3Key": "virginia.edu.uva-lib_2274642.tar",
   "ETag": "8d87686d8f05c8411ffd2959e1a7357e",
   "FetchResult": {
@@ -18415,7 +18415,7 @@
     ],
     "created_at": "2016-11-24T14:37:12.741Z",
     "updated_at": "2016-11-24T14:37:12.741Z",
-    "ingest_s3_bucket": "aptrust.receiving.test.test.edu",
+    "ingest_s3_bucket": "aptrust.integration.test",
     "ingest_s3_key": "virginia.edu.uva-lib_2274642.tar",
     "ingest_tar_file_path": "/Users/diamond/tmp/tar/test.edu/virginia.edu.uva-lib_2274642.tar",
     "ingest_untarred_path": "",
@@ -18488,6 +18488,5 @@
     "ingest_error_message": "",
     "ingest_deleted_from_receiving_at": "2016-11-24T14:37:14.265995409Z"
   }
-} 
- -------- END aptrust.receiving.test.test.edu/virginia.edu.uva-lib_2274642.tar | Etag: 8d87686d8f05c8411ffd2959e1a7357e | Time: 2016-11-24T14:37:14Z -------- 
-
+}
+ -------- END aptrust.integration.test/virginia.edu.uva-lib_2274642.tar | Etag: 8d87686d8f05c8411ffd2959e1a7357e | Time: 2016-11-24T14:37:14Z --------

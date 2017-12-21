@@ -15,7 +15,7 @@ import (
 // is in the testdata directory so you can put it back on S3
 // if it ever gets deleted.
 
-const testBucket string = "aptrust.receiving.test.test.edu"
+const testBucket string = "aptrust.integration.test"
 const testFile string = "virginia.edu.uva-lib_2278801.tar"
 const testFileSize int64 = 30720
 const testFileETag string = "\"036995504a5b07a865b62e1a7c0ea9c4\""

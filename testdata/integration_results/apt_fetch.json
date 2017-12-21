@@ -1,7 +1,7 @@
--------- BEGIN aptrust.receiving.test.test.edu/example.edu.tagsample_good.tar | Etag: be29422f1b80fb3e8d5907be121c7f52 | Time: 2016-10-07T14:39:38Z --------
+-------- BEGIN aptrust.integration.test/example.edu.tagsample_good.tar | Etag: be29422f1b80fb3e8d5907be121c7f52 | Time: 2016-10-07T14:39:38Z --------
  {
   "WorkItemId": 1043274090,
-  "S3Bucket": "aptrust.receiving.test.test.edu",
+  "S3Bucket": "aptrust.integration.test",
   "S3Key": "example.edu.tagsample_good.tar",
   "ETag": "be29422f1b80fb3e8d5907be121c7f52",
   "FetchResult": {
@@ -72,7 +72,7 @@
     "events": [],
     "created_at": "0001-01-01T00:00:00Z",
     "updated_at": "0001-01-01T00:00:00Z",
-    "ingest_s3_bucket": "aptrust.receiving.test.test.edu",
+    "ingest_s3_bucket": "aptrust.integration.test",
     "ingest_s3_key": "example.edu.tagsample_good.tar",
     "ingest_tar_file_path": "/Users/apd4n/tmp/test_tar/test.edu/example.edu.tagsample_good.tar",
     "ingest_untarred_path": "",
@@ -91,11 +91,11 @@
     "ingest_deleted_from_receiving_at": "0001-01-01T00:00:00Z"
   }
 }
- -------- END aptrust.receiving.test.test.edu/example.edu.tagsample_good.tar | Etag: be29422f1b80fb3e8d5907be121c7f52 | Time: 2016-10-07T14:39:38Z --------
--------- BEGIN aptrust.receiving.test.test.edu/ncsu.1840.16-10.tar | Etag: 4e53ca872fec1b8d654722678806d215 | Time: 2016-10-07T14:39:39Z --------
+ -------- END aptrust.integration.test/example.edu.tagsample_good.tar | Etag: be29422f1b80fb3e8d5907be121c7f52 | Time: 2016-10-07T14:39:38Z --------
+-------- BEGIN aptrust.integration.test/ncsu.1840.16-10.tar | Etag: 4e53ca872fec1b8d654722678806d215 | Time: 2016-10-07T14:39:39Z --------
  {
   "WorkItemId": 1043274091,
-  "S3Bucket": "aptrust.receiving.test.test.edu",
+  "S3Bucket": "aptrust.integration.test",
   "S3Key": "ncsu.1840.16-10.tar",
   "ETag": "4e53ca872fec1b8d654722678806d215",
   "FetchResult": {
@@ -166,7 +166,7 @@
     "events": [],
     "created_at": "0001-01-01T00:00:00Z",
     "updated_at": "0001-01-01T00:00:00Z",
-    "ingest_s3_bucket": "aptrust.receiving.test.test.edu",
+    "ingest_s3_bucket": "aptrust.integration.test",
     "ingest_s3_key": "ncsu.1840.16-10.tar",
     "ingest_tar_file_path": "/Users/apd4n/tmp/test_tar/test.edu/ncsu.1840.16-10.tar",
     "ingest_untarred_path": "",
@@ -185,12 +185,12 @@
     "ingest_deleted_from_receiving_at": "0001-01-01T00:00:00Z"
   }
 }
- -------- END aptrust.receiving.test.test.edu/ncsu.1840.16-10.tar | Etag: 4e53ca872fec1b8d654722678806d215 | Time: 2016-10-07T14:39:39Z --------
+ -------- END aptrust.integration.test/ncsu.1840.16-10.tar | Etag: 4e53ca872fec1b8d654722678806d215 | Time: 2016-10-07T14:39:39Z --------
 
--------- BEGIN aptrust.receiving.test.test.edu/example.edu.tagsample_good.tar | Etag: be29422f1b80fb3e8d5907be121c7f52 | Time: 2016-10-07T14:39:39Z --------
+-------- BEGIN aptrust.integration.test/example.edu.tagsample_good.tar | Etag: be29422f1b80fb3e8d5907be121c7f52 | Time: 2016-10-07T14:39:39Z --------
  {
   "WorkItemId": 1043274090,
-  "S3Bucket": "aptrust.receiving.test.test.edu",
+  "S3Bucket": "aptrust.integration.test",
   "S3Key": "example.edu.tagsample_good.tar",
   "ETag": "be29422f1b80fb3e8d5907be121c7f52",
   "FetchResult": {
@@ -724,7 +724,7 @@
     "events": [],
     "created_at": "0001-01-01T00:00:00Z",
     "updated_at": "0001-01-01T00:00:00Z",
-    "ingest_s3_bucket": "aptrust.receiving.test.test.edu",
+    "ingest_s3_bucket": "aptrust.integration.test",
     "ingest_s3_key": "example.edu.tagsample_good.tar",
     "ingest_tar_file_path": "/Users/apd4n/tmp/test_tar/test.edu/example.edu.tagsample_good.tar",
     "ingest_untarred_path": "",
@@ -802,4 +802,4 @@
     "ingest_deleted_from_receiving_at": "0001-01-01T00:00:00Z"
   }
 }
- -------- END aptrust.receiving.test.test.edu/example.edu.tagsample_good.tar | Etag: be29422f1b80fb3e8d5907be121c7f52 | Time: 2016-10-07T14:39:39Z --------
+ -------- END aptrust.integration.test/example.edu.tagsample_good.tar | Etag: be29422f1b80fb3e8d5907be121c7f52 | Time: 2016-10-07T14:39:39Z --------

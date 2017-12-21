@@ -65,7 +65,7 @@ All of these tests run in a local "integration" environment. No tests
 actually touch other DPN nodes. The only service these tests rely on
 that isn't running locally is AWS S3. You must have S3 keys in your
 environment that can read from the integration test bucket at
-aptrust.receiving.test.test.edu and can write to the test preservation
+aptrust.integration.test and can write to the test preservation
 buckets for APTrust and DPN.
 
 Some tests do copy bags into the APTrust and DPN preservation buckets,

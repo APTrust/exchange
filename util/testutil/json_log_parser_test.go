@@ -16,7 +16,7 @@ func TestFindIngestManifestInLog(t *testing.T) {
 	// Should get a manifest if the item exists.
 	// Identifier is the S3 bucket/key.
 	manifest, err := testutil.FindIngestManifestInLog(pathToLogFile,
-		"aptrust.receiving.test.test.edu/ncsu.1840.16-10.tar")
+		"aptrust.integration.test/ncsu.1840.16-10.tar")
 	assert.Nil(t, err)
 	assert.NotNil(t, manifest)
 	assert.NotNil(t, manifest.Object)
@@ -32,7 +32,7 @@ func TestFindIngestManifestInLog(t *testing.T) {
 	// The first version has a zero timestamp for FetchResult.StartedAt,
 	// while the second one has a non-zero timestamp.
 	manifest, err = testutil.FindIngestManifestInLog(pathToLogFile,
-		"aptrust.receiving.test.test.edu/example.edu.tagsample_good.tar")
+		"aptrust.integration.test/example.edu.tagsample_good.tar")
 	assert.Nil(t, err)
 	require.NotNil(t, manifest)
 	assert.False(t, manifest.FetchResult.StartedAt.IsZero())
@@ -111,9 +111,9 @@ func TestExtractJson(t *testing.T) {
 	pathToIngestLog, _ := fileutil.RelativeToAbsPath(
 		filepath.Join("testdata", "integration_results", "apt_fetch.json"))
 	jsonString, err := testutil.ExtractJson(pathToIngestLog,
-		"aptrust.receiving.test.test.edu/ncsu.1840.16-10.tar")
+		"aptrust.integration.test/ncsu.1840.16-10.tar")
 	assert.Nil(t, err)
-	assert.Equal(t, 2502, len(jsonString))
+	assert.Equal(t, 2488, len(jsonString))
 
 	// APTrust Restore - finds by IntellectualObject.Identifier
 	pathToRestoreLog, _ := fileutil.RelativeToAbsPath(
@@ -127,7 +127,7 @@ func TestExtractJson(t *testing.T) {
 		filepath.Join("testdata", "integration_results", "dpn_package.json"))
 	jsonString, err = testutil.ExtractJson(pathToDPNIngestLog, "ncsu.1840.16-10.tar")
 	assert.Nil(t, err)
-	assert.Equal(t, 2463, len(jsonString))
+	assert.Equal(t, 2455, len(jsonString))
 
 	// DPN Replication - Finds by DPN Replication.Identifier
 	pathToReplicationLog, _ := fileutil.RelativeToAbsPath(

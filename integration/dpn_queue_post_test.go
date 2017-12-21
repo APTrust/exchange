@@ -16,7 +16,7 @@ import (
 func identifiersPushedToDPN() []string {
 	identifiers := make([]string, 7)
 	for index, s3Key := range testutil.INTEGRATION_GOOD_BAGS[0:7] {
-		identifier := strings.Replace(s3Key, "aptrust.receiving.test.", "", 1)
+		identifier := strings.Replace(s3Key, "aptrust.integration.test", "test.edu", 1)
 		identifier = strings.Replace(identifier, ".tar", "", 1)
 		identifiers[index] = identifier
 	}
@@ -66,11 +66,11 @@ func TestWorkItemsCreatedAndQueued(t *testing.T) {
 	for _, topic := range stats.Data.Topics {
 		if topic.TopicName == _context.Config.FetchWorker.NsqTopic {
 			// We fetch 17 bags in our integration tests, plus one that gets
-			// updated (ingested a second time) and an invalid README file
-			// from one of the test buckets.
-			// They're not all valid, but we should have 19 items in the queue.
+			// updated (ingested a second time) and two invalid text files
+			// from the test buckets.
+			// They're not all valid, but we should have 20 items in the queue.
 			foundFetchTopic = true
-			assert.EqualValues(t, uint64(19), topic.MessageCount)
+			assert.EqualValues(t, uint64(20), topic.MessageCount)
 		} else if topic.TopicName == _context.Config.StoreWorker.NsqTopic {
 			// All of the 12 valid bags should have made it into the store topic.
 			// The updated (reingested) bag goes in a second time, giving us 13.

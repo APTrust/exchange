@@ -102,7 +102,7 @@ require_relative 'service'
 # These integration tests [will soon] perform all of these operations
 # against locally-running services. The only outside services these integration
 # tests touch are S3 and Glacier. Integration test bags are in the S3 bucket
-# aptrust.receiving.test.test.edu, and if those are ever deleted, they can
+# aptrust.integration.test, and if those are ever deleted, they can
 # be restored from testdata/s3_bags/TestBags.zip. These tests store ingested
 # and replicated bags in the APTrust and DPN preservation test buckets, which
 # should be emptied periodically.

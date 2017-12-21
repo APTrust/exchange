@@ -87,7 +87,7 @@ func TestInteObjDPNUUID(t *testing.T) {
 	_context, err := apt_testutil.GetContext("integration.json")
 	require.Nil(t, err)
 	for _, s3Key := range apt_testutil.INTEGRATION_GOOD_BAGS[0:7] {
-		tar := strings.Replace(s3Key, "aptrust.receiving.test.", "", 1)
+		tar := strings.Replace(s3Key, "aptrust.integration.test", "test.edu", 1)
 		objIdentifier := strings.Replace(tar, ".tar", "", 1)
 		resp := _context.PharosClient.IntellectualObjectGet(objIdentifier, false, false)
 		require.Nil(t, resp.Error)
@@ -186,7 +186,7 @@ func TestIngestRecordNodeAndDigest(t *testing.T) {
 	require.NotNil(t, dpnClient)
 
 	for _, s3Key := range apt_testutil.INTEGRATION_GOOD_BAGS[0:7] {
-		tar := strings.Replace(s3Key, "aptrust.receiving.test.", "", 1)
+		tar := strings.Replace(s3Key, "aptrust.integration.test", "test.edu", 1)
 		objIdentifier := strings.Replace(tar, ".tar", "", 1)
 		resp := _context.PharosClient.IntellectualObjectGet(objIdentifier, false, false)
 		require.Nil(t, resp.Error)

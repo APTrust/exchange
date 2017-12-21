@@ -111,7 +111,7 @@
 	},
 
 	"ReceivingBuckets": [
-		"aptrust.receiving.test.test.edu"
+		"aptrust.integration.test"
 	],
 
 	"DPN": {

@@ -120,7 +120,7 @@ func testErrors(t *testing.T, expected *stats.APTBucketReaderStats, actual *stat
 }
 
 // We should have the following warnings, based on the subdirectories
-// we created in aptrust.receiving.test.test.edu. This test will fail
+// we created in aptrust.integration.test. This test will fail
 // if someone deletes those subdirectories.
 //
 // "Ignoring TestSubDir/ (subdirectory)",
