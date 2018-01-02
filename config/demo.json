@@ -130,8 +130,10 @@
 		"aptrust.receiving.test.jhu.edu",
 		"aptrust.receiving.test.miami.edu",
 		"aptrust.receiving.test.ncsu.edu",
+		"aptrust.receiving.test.nd.edu",
 		"aptrust.receiving.test.psu.edu",
 		"aptrust.receiving.test.syr.edu",
+		"aptrust.receiving.test.test.edu",
 		"aptrust.receiving.test.uchicago.edu",
 		"aptrust.receiving.test.uc.edu",
 		"aptrust.receiving.test.uchicago.edu",
@@ -139,7 +141,6 @@
 		"aptrust.receiving.test.umd.edu",
 		"aptrust.receiving.test.umich.edu",
 		"aptrust.receiving.test.unc.edu",
-		"aptrust.receiving.test.nd.edu",
 		"aptrust.receiving.test.virginia.edu",
 		"aptrust.receiving.test.vt.edu"
 	],
