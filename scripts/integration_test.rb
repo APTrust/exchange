@@ -202,6 +202,7 @@ class IntegrationTest
 
 	  @service.stop_everything unless more_tests_follow
 	  sleep 5
+      print_results unless more_tests_follow
 
 	  # Return value should say whether any tests failed
 	  return (@results['apt_fetch_test'] &&
