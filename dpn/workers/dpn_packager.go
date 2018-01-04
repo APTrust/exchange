@@ -97,6 +97,17 @@ func (packager *DPNPackager) HandleMessage(message *nsq.Message) error {
 		message.Finish()
 		return nil
 	}
+	// PT #153959973: Skip if this item is already past the packaging stage.
+	// This happens when NSQ thinks the item timed out & requeues it.
+	stage := manifest.WorkItem.Stage
+	if stage == constants.StageValidate || stage == constants.StageStore ||
+		stage == constants.StageRecord || stage == constants.StageResolve {
+		packager.Context.MessageLog.Info(
+			"Skipping NSQ Message %s / WorkItem %d (%s): item is past packaging, in stage %s",
+			string(message.Body), manifest.WorkItem.Id, manifest.WorkItem.ObjectIdentifier, stage)
+		message.Finish()
+		return nil
+	}
 
 	now := time.Now().UTC()
 	hostname, _ := os.Hostname()
