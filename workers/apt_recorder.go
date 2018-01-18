@@ -259,6 +259,11 @@ func (recorder *APTRecorder) saveIntellectualObject(ingestState *models.IngestSt
 		obj.Id = existingObject.Id
 	}
 
+	// PT #154003667: Make sure item is marked as active, since this is an ingest.
+	// This fixes a rare case where an object has been deleted and comes back from
+	// Pharos with State = "D", and now we're re-ingesting a new version of it.
+	obj.State = "A"
+
 	resp = recorder.Context.PharosClient.IntellectualObjectSave(obj)
 	if resp.Error != nil {
 		ingestState.IngestManifest.RecordResult.AddError(resp.Error.Error())

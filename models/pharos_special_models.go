@@ -17,6 +17,7 @@ type IntellectualObjectForPharos struct {
 	Access        string `json:"access"`
 	DPNUUID       string `json:"dpn_uuid"`
 	ETag          string `json:"etag"`
+	State         string `json:"state"`
 }
 
 func NewIntellectualObjectForPharos(obj *IntellectualObject) *IntellectualObjectForPharos {
@@ -30,6 +31,7 @@ func NewIntellectualObjectForPharos(obj *IntellectualObject) *IntellectualObject
 		Access:        strings.ToLower(obj.Access), // Note that Pharos wants lowercase
 		DPNUUID:       obj.DPNUUID,
 		ETag:          obj.ETag,
+		State:         obj.State,
 	}
 }
 

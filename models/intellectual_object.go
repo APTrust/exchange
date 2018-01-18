@@ -78,6 +78,9 @@ type IntellectualObject struct {
 	// with GenericFiles, so see GenericFile.PremisEvents as well.
 	PremisEvents []*PremisEvent `json:"premis_events,omitempty"`
 
+	// State of the object. A = active, D = deleted.
+	State string `json:"state"`
+
 	// CreatedAt is the Pharos timestamp describing when this
 	// IntellectualObject was first recorded in our database.
 	// This is usually within minutes of the ingest event, after
@@ -202,6 +205,7 @@ func NewIntellectualObject() *IntellectualObject {
 		IngestTagManifests: make([]string, 0),
 		IngestFilesIgnored: make([]string, 0),
 		IngestTags:         make([]*Tag, 0),
+		State:              "A",
 	}
 }
 

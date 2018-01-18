@@ -52,6 +52,8 @@ func TestNewIntellectualObjectForPharos(t *testing.T) {
 	assert.Equal(t, strings.ToLower(intelObj.Access), pharosObj.Access)
 	assert.Equal(t, intelObj.DPNUUID, pharosObj.DPNUUID)
 	assert.Equal(t, intelObj.ETag, pharosObj.ETag)
+	assert.Equal(t, intelObj.State, pharosObj.State)
+	assert.Equal(t, "A", pharosObj.State)
 }
 
 func TestNewPremisEventForPharos(t *testing.T) {
