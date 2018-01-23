@@ -1098,6 +1098,68 @@ func TestDPNBagList(t *testing.T) {
 	assert.Equal(t, expectedUrl, response.Request.URL.Opaque)
 }
 
+func TestPharosDPNBagSave(t *testing.T) {
+	testServer := httptest.NewServer(http.HandlerFunc(pharosDPNBagSaveHandler))
+	defer testServer.Close()
+
+	client, err := network.NewPharosClient(testServer.URL, "v2", "user", "key")
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	// ---------------------------------------------
+	// First, test create...
+	// ---------------------------------------------
+	obj := testutil.MakePharosDPNBag()
+	obj.Id = 0
+	response := client.DPNBagSave(obj)
+
+	// Check the request URL and method
+	assert.Equal(t, "POST", response.Request.Method)
+	assert.Equal(t, "/api/v2/dpn_bags/", response.Request.URL.Opaque)
+
+	// Basic sanity check on response values
+	assert.Nil(t, response.Error)
+
+	obj = response.DPNBag()
+	assert.EqualValues(t, "PharosDPNBag", response.ObjectType())
+	if obj == nil {
+		t.Errorf("DPNBag should not be nil")
+	}
+	assert.NotEqual(t, "", obj.ObjectIdentifier)
+	assert.NotEqual(t, "", obj.DPNIdentifier)
+
+	// Make sure the client returns the SAVED object,
+	// not the unsaved one we sent.
+	assert.NotEqual(t, 0, obj.Id)
+
+	// ---------------------------------------------
+	// Now test with an update...
+	// ---------------------------------------------
+	obj = testutil.MakePharosDPNBag()
+	origModTime := obj.UpdatedAt
+	response = client.DPNBagSave(obj)
+
+	// Check the request URL and method
+	expectedUrl := fmt.Sprintf("/api/v2/dpn_bags/%d/", obj.Id)
+	assert.Equal(t, "PUT", response.Request.Method)
+	assert.Equal(t, expectedUrl, response.Request.URL.Opaque)
+
+	// Basic sanity check on response values
+	assert.Nil(t, response.Error)
+
+	obj = response.DPNBag()
+	assert.EqualValues(t, "PharosDPNBag", response.ObjectType())
+	if obj == nil {
+		t.Errorf("DPNBag should not be nil")
+	}
+	assert.Equal(t, 1000, obj.Id)
+	assert.Equal(t, "popeye", obj.ObjectIdentifier)
+	assert.Equal(t, "olive oyl", obj.DPNIdentifier)
+	assert.NotEqual(t, origModTime, obj.UpdatedAt)
+}
+
 // -------------------------------------------------------------------------
 // -------------------------------------------------------------------------
 // -------------------------------------------------------------------------
@@ -1526,4 +1588,26 @@ func pharosDPNBagListHandler(w http.ResponseWriter, r *http.Request) {
 	listJson, _ := json.Marshal(data)
 	w.Header().Set("Content-Type", "application/json")
 	fmt.Fprintln(w, string(listJson))
+}
+
+func pharosDPNBagSaveHandler(w http.ResponseWriter, r *http.Request) {
+	decoder := json.NewDecoder(r.Body)
+	decoder.UseNumber()
+	data := make(map[string]interface{})
+	err := decoder.Decode(&data)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error decoding JSON data: %v", err)
+		fmt.Fprintln(w, "")
+		return
+	}
+
+	// Assign ID and timestamps, as if the object has been saved.
+	data["id"] = 1000
+	data["object_identifier"] = "popeye"
+	data["dpn_identifier"] = "olive oyl"
+	data["created_at"] = time.Now().UTC()
+	data["updated_at"] = time.Now().UTC()
+	objJson, _ := json.Marshal(data)
+	w.Header().Set("Content-Type", "application/json")
+	fmt.Fprintln(w, string(objJson))
 }
