@@ -275,6 +275,24 @@ func MakeStoredFile() *models.StoredFile {
 	}
 }
 
+func MakePharosDPNBag() *models.PharosDPNBag {
+	nodes := []string{"aptrust", "chron", "hathi", "sdr", "tdr"}
+	return &models.PharosDPNBag{
+		Id:               rand.Intn(50000) + 1,
+		InstitutionId:    rand.Intn(20) + 1,
+		ObjectIdentifier: RandomObjectIdentifier(),
+		DPNIdentifier:    uuid.NewV4().String(),
+		DPNSize:          int64(rand.Intn(50000000) + 1),
+		Node1:            RandomFromList(nodes),
+		Node2:            RandomFromList(nodes),
+		Node3:            RandomFromList(nodes),
+		DPNCreatedAt:     RandomDateTime(),
+		DPNUpdatedAt:     RandomDateTime(),
+		CreatedAt:        RandomDateTime(),
+		UpdatedAt:        RandomDateTime(),
+	}
+}
+
 func RandomDateTime() time.Time {
 	t := time.Now().UTC()
 	minutes := rand.Intn(500000) * -1

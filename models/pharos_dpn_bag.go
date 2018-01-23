@@ -6,8 +6,8 @@ import (
 
 // PharosDPNBag represents a lightweight DPN bag record stored in Pharos.
 type PharosDPNBag struct {
-	Id               string    `json:"id"`
-	InstitutionId    string    `json:"institution_id"`
+	Id               int       `json:"id"`
+	InstitutionId    int       `json:"institution_id"`
 	ObjectIdentifier string    `json:"object_identifier"`
 	DPNIdentifier    string    `json:"dpn_identifier"`
 	DPNSize          int64     `json:"dpn_size"`

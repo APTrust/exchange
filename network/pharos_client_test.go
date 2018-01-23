@@ -1434,3 +1434,26 @@ func dpnWorkItemSaveHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	fmt.Fprintln(w, string(objJson))
 }
+
+// -------------------------------------------------------------------------
+// PharosDPNBag handlers
+// -------------------------------------------------------------------------
+
+func pharosDPNBagGetHandler(w http.ResponseWriter, r *http.Request) {
+	obj := testutil.MakePharosDPNBag()
+	objJson, _ := json.Marshal(obj)
+	w.Header().Set("Content-Type", "application/json")
+	fmt.Fprintln(w, string(objJson))
+}
+
+func pharosDPNBagListHandler(w http.ResponseWriter, r *http.Request) {
+	list := make([]*models.PharosDPNBag, 4)
+	for i := 0; i < 4; i++ {
+		list[i] = testutil.MakePharosDPNBag()
+	}
+	data := listResponseData()
+	data["results"] = list
+	listJson, _ := json.Marshal(data)
+	w.Header().Set("Content-Type", "application/json")
+	fmt.Fprintln(w, string(listJson))
+}
