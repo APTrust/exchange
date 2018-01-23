@@ -43,6 +43,7 @@ func initInstitutionIdMap(ctx *context.Context) error {
 	params.Add("page", "1")
 	params.Add("per_page", "100")
 	resp := ctx.PharosClient.InstitutionList(params)
+	ctx.MessageLog.Info(resp.Request.URL.Opaque)
 	if resp.Error != nil {
 		return resp.Error
 	}
@@ -61,6 +62,7 @@ func getLatestTimestamp(ctx *context.Context) (time.Time, error) {
 	params := url.Values{}
 	params.Add("sort", "dpn_upated_at DESC")
 	resp := ctx.PharosClient.DPNBagList(params)
+	ctx.MessageLog.Info(resp.Request.URL.Opaque)
 	if resp.Error != nil {
 		return time.Time{}, resp.Error
 	}
@@ -89,6 +91,7 @@ func syncToPharos(ctx *context.Context) error {
 
 	for {
 		resp := dpnClient.DPNBagList(params)
+		ctx.MessageLog.Info(resp.Request.URL.Opaque)
 		if resp.Error != nil {
 			return resp.Error
 		}
@@ -151,6 +154,7 @@ func getExistingPharosDPNBag(ctx *context.Context, dpnUUID string) *models.Pharo
 	params.Add("page", "1")
 	params.Add("page_size", "10")
 	resp := ctx.PharosClient.DPNBagList(params)
+	ctx.MessageLog.Info(resp.Request.URL.Opaque)
 	if resp.Error != nil {
 		// Quit here, so we don't corrupt the DPNBags table.
 		// We don't want to insert a bag with a DPN UUID that's already
