@@ -12,9 +12,10 @@ import (
 	"time"
 )
 
+var InstitutionIdMap map[string]int
+
 // dpn_sync syncs data in our local DPN registry by pulling data about
 // bags, replication requests, etc. from other nodes. See printUsage().
-
 func main() {
 	pathToConfigFile := parseCommandLine()
 	config, err := models.LoadConfigFile(pathToConfigFile)
@@ -23,12 +24,35 @@ func main() {
 		os.Exit(1)
 	}
 	_context := context.NewContext(config)
+	err = initInstitutionIdMap(_context)
+	if err != nil {
+		_context.MessageLog.Error(err.Error())
+		fmt.Fprintf(os.Stderr, err.Error())
+		os.Exit(1)
+	}
 	err = syncToPharos(_context)
 	if err != nil {
 		_context.MessageLog.Error(err.Error())
 		fmt.Fprintf(os.Stderr, err.Error())
 		os.Exit(1)
 	}
+}
+
+func initInstitutionIdMap(ctx *context.Context) error {
+	params := url.Values{}
+	params.Add("page", "1")
+	params.Add("per_page", "100")
+	resp := ctx.PharosClient.InstitutionList(params)
+	if resp.Error != nil {
+		return resp.Error
+	}
+	InstitutionIdMap = make(map[string]int)
+	for _, inst := range resp.Institutions() {
+		if inst.DPNUUID != "" {
+			InstitutionIdMap[inst.DPNUUID] = inst.Id
+		}
+	}
+	return nil
 }
 
 // getLatestTimestamp returns the latest UpdatedAt timestamp
@@ -69,6 +93,11 @@ func syncToPharos(ctx *context.Context) error {
 			return resp.Error
 		}
 		for _, dpnBag := range resp.Bags() {
+			// Quit early if this happens. It shouldn't.
+			if InstitutionIdMap[dpnBag.Member] == 0 {
+				return fmt.Errorf("Pharos has no institution record for DPN member %s",
+					dpnBag.Member)
+			}
 			existingBag := getExistingPharosDPNBag(ctx, dpnBag.UUID)
 			existingBagId := 0
 			if existingBag != nil {
@@ -98,7 +127,7 @@ func convertToPharos(dpnBag *dpn_models.DPNBag, existingBagId int) *models.Pharo
 	pharosDPNBag := &models.PharosDPNBag{
 		Id: existingBagId,
 	}
-	pharosDPNBag.InstitutionId = pharosInstIdFor(dpnBag.Member)
+	pharosDPNBag.InstitutionId = InstitutionIdMap[dpnBag.Member]
 	pharosDPNBag.ObjectIdentifier = dpnBag.LocalId
 	pharosDPNBag.DPNIdentifier = dpnBag.UUID
 	pharosDPNBag.DPNSize = dpnBag.Size
@@ -141,10 +170,6 @@ func getExistingPharosDPNBag(ctx *context.Context, dpnUUID string) *models.Pharo
 		return nil
 	}
 	return resp.DPNBag()
-}
-
-func pharosInstIdFor(dpnMemberUUID string) int {
-	return 0
 }
 
 // See if you can figure out from the function name what this does.
