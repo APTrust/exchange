@@ -904,6 +904,57 @@ func (client *PharosClient) DPNWorkItemGet(id int) *PharosResponse {
 	return resp
 }
 
+// DPNBagList returns a list of PharosDPNBags that match the specified
+// criteria. Valid params include institution_id, object_identifier, dpn_identifier,
+// node_1, node_2, node_3, created_before, created_after, updated_before, updated_after.
+// Sort by 'dpn_upated_at DESC' to get latest.
+func (client *PharosClient) DPNBagList(params url.Values) *PharosResponse {
+	// Set up the response object
+	resp := NewPharosResponse(PharosDPNBag)
+	resp.dpnBags = make([]*models.PharosDPNBag, 0)
+
+	// Build the url and the request object
+	relativeUrl := fmt.Sprintf("/api/%s/dpn_bags/?%s", client.apiVersion, encodeParams(params))
+	absoluteUrl := client.BuildUrl(relativeUrl)
+
+	// Run the request
+	client.DoRequest(resp, "GET", absoluteUrl, nil)
+	if resp.Error != nil {
+		return resp
+	}
+
+	// Parse the JSON from the response body.
+	// If there's an error, it will be recorded in resp.Error
+	resp.UnmarshalJsonList()
+	return resp
+}
+
+// DPNBagGet returns the PharosDPNBag with the specified Id.
+// Param id is Pharos' DPNBag.id, not the DPN UUID or the Pharos object_identifier.
+func (client *PharosClient) DPNBagGet(id int) *PharosResponse {
+	// Set up the response object
+	resp := NewPharosResponse(PharosDPNBag)
+	resp.dpnBags = make([]*models.PharosDPNBag, 1)
+
+	// Build the url and the request object
+	relativeUrl := fmt.Sprintf("/api/%s/dpn_bags/%d/", client.apiVersion, id)
+	absoluteUrl := client.BuildUrl(relativeUrl)
+
+	// Run the request
+	client.DoRequest(resp, "GET", absoluteUrl, nil)
+	if resp.Error != nil {
+		return resp
+	}
+
+	// Parse the JSON from the response body
+	dpnBag := &models.PharosDPNBag{}
+	resp.Error = json.Unmarshal(resp.data, dpnBag)
+	if resp.Error == nil {
+		resp.dpnBags[0] = dpnBag
+	}
+	return resp
+}
+
 // -------------------------------------------------------------------------
 // Utility Methods
 // -------------------------------------------------------------------------
