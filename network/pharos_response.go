@@ -71,6 +71,10 @@ type PharosResponse struct {
 	// objectType is not Institution.
 	institutions []*models.Institution
 
+	// dpnBags are Pharos DPN bag records, pulled from the Pharos DB,
+	// not from DPN.
+	dpnBags []*models.PharosDPNBag
+
 	// A slice of WorkItem pointers. Will be nil if
 	// objectType is not WorkItem.
 	workItems []*models.WorkItem
@@ -101,6 +105,7 @@ const (
 	PharosWorkItem                            = "WorkItem"
 	PharosWorkItemState                       = "WorkItemState"
 	PharosDPNWorkItem                         = "DPNWorkItem"
+	PharosDPNBag                              = "PharosDPNBag"
 )
 
 // Creates a new PharosResponse and returns a pointer to it.
@@ -241,6 +246,22 @@ func (resp *PharosResponse) Checksums() []*models.Checksum {
 	return resp.checksums
 }
 
+// Returns the PharosDPNBag parsed from the HTTP response body,  or nil.
+func (resp *PharosResponse) DPNBag() *models.PharosDPNBag {
+	if resp.dpnBags != nil && len(resp.dpnBags) > 0 {
+		return resp.dpnBags[0]
+	}
+	return nil
+}
+
+// Returns a list of PharosDPNBag parsed from the HTTP response body.
+func (resp *PharosResponse) DPNBags() []*models.PharosDPNBag {
+	if resp.dpnBags == nil {
+		return make([]*models.PharosDPNBag, 0)
+	}
+	return resp.dpnBags
+}
+
 // Returns the DPNWorkItem parsed from the HTTP response body,  or nil.
 func (resp *PharosResponse) DPNWorkItem() *models.DPNWorkItem {
 	if resp.dpnWorkItems != nil && len(resp.dpnWorkItems) > 0 {
@@ -325,6 +346,8 @@ func (resp *PharosResponse) UnmarshalJsonList() error {
 		return resp.decodeAsGenericFileList()
 	case PharosChecksum:
 		return resp.decodeAsChecksumList()
+	case PharosDPNBag:
+		return resp.decodeAsDPNBagList()
 	case PharosDPNWorkItem:
 		return resp.decodeAsDPNWorkItemList()
 	case PharosPremisEvent:
@@ -430,6 +453,30 @@ func (resp *PharosResponse) decodeAsChecksumList() error {
 	resp.Next = temp.Next
 	resp.Previous = temp.Previous
 	resp.checksums = temp.Results
+	resp.listHasBeenParsed = true
+	return resp.Error
+}
+
+func (resp *PharosResponse) decodeAsDPNBagList() error {
+	if resp.listHasBeenParsed {
+		return nil
+	}
+	temp := struct {
+		Count    int                    `json:"count"`
+		Next     *string                `json:"next"`
+		Previous *string                `json:"previous"`
+		Results  []*models.PharosDPNBag `json:"results"`
+	}{0, nil, nil, nil}
+	data, err := resp.RawResponseData()
+	if err != nil {
+		resp.Error = err
+		return err
+	}
+	resp.Error = json.Unmarshal(data, &temp)
+	resp.Count = temp.Count
+	resp.Next = temp.Next
+	resp.Previous = temp.Previous
+	resp.dpnBags = temp.Results
 	resp.listHasBeenParsed = true
 	return resp.Error
 }
