@@ -955,6 +955,43 @@ func (client *PharosClient) DPNBagGet(id int) *PharosResponse {
 	return resp
 }
 
+// DPNBagSave saves a PharosDPNBag record to Pharos.
+func (client *PharosClient) DPNBagSave(obj *models.PharosDPNBag) *PharosResponse {
+	// Set up the response object
+	resp := NewPharosResponse(PharosDPNBag)
+	resp.dpnBags = make([]*models.PharosDPNBag, 1)
+
+	// URL and method
+	relativeUrl := fmt.Sprintf("/api/%s/dpn_bags/", client.apiVersion)
+	httpMethod := "POST"
+	if obj.Id > 0 {
+		// URL should look like /api/v2/dpn_bags/46956/
+		relativeUrl = fmt.Sprintf("%s%d/", relativeUrl, obj.Id)
+		httpMethod = "PUT"
+	}
+	absoluteUrl := client.BuildUrl(relativeUrl)
+
+	// Prepare the JSON data
+	postData, err := obj.SerializeForPharos()
+	if err != nil {
+		resp.Error = err
+	}
+
+	// Run the request
+	client.DoRequest(resp, httpMethod, absoluteUrl, bytes.NewBuffer(postData))
+	if resp.Error != nil {
+		return resp
+	}
+
+	// Parse the JSON from the response body
+	dpnBag := &models.PharosDPNBag{}
+	resp.Error = json.Unmarshal(resp.data, dpnBag)
+	if resp.Error == nil {
+		resp.dpnBags[0] = dpnBag
+	}
+	return resp
+}
+
 // -------------------------------------------------------------------------
 // Utility Methods
 // -------------------------------------------------------------------------

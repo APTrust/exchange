@@ -1,6 +1,7 @@
 package models
 
 import (
+	"encoding/json"
 	"time"
 )
 
@@ -18,4 +19,13 @@ type PharosDPNBag struct {
 	DPNUpdatedAt     time.Time `json:"dpn_updated_at"`
 	CreatedAt        time.Time `json:"created_at"`
 	UpdatedAt        time.Time `json:"updated_at"`
+}
+
+// SerializeForPharos serializes a version of this record that Pharos
+// will accept as post/put input. The Pharos post/put serialization
+// requires the data to be wrapped in a hash with key 'dpn_bag'.
+func (bag *PharosDPNBag) SerializeForPharos() ([]byte, error) {
+	data := make(map[string]*PharosDPNBag)
+	data["dpn_bag"] = bag
+	return json.Marshal(data)
 }
