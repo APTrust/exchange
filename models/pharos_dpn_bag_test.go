@@ -15,7 +15,7 @@ func TestPharosDPNBagSerializeForPharos(t *testing.T) {
 		InstitutionId:    6,
 		ObjectIdentifier: "test.edu/test_bag",
 		DPNIdentifier:    "1ee00bbf-b39e-4302-b68a-29a40c0af025",
-		DPNSize:          int64(1492),
+		DPNSize:          uint64(1492),
 		Node1:            "aptrust",
 		Node2:            "chron",
 		Node3:            "hathi",

@@ -11,7 +11,7 @@ type PharosDPNBag struct {
 	InstitutionId    int       `json:"institution_id"`
 	ObjectIdentifier string    `json:"object_identifier"`
 	DPNIdentifier    string    `json:"dpn_identifier"`
-	DPNSize          int64     `json:"dpn_size"`
+	DPNSize          uint64    `json:"dpn_size"`
 	Node1            string    `json:"node_1"`
 	Node2            string    `json:"node_2"`
 	Node3            string    `json:"node_3"`

@@ -282,7 +282,7 @@ func MakePharosDPNBag() *models.PharosDPNBag {
 		InstitutionId:    rand.Intn(20) + 1,
 		ObjectIdentifier: RandomObjectIdentifier(),
 		DPNIdentifier:    uuid.NewV4().String(),
-		DPNSize:          int64(rand.Intn(50000000) + 1),
+		DPNSize:          uint64(rand.Intn(50000000) + 1),
 		Node1:            RandomFromList(nodes),
 		Node2:            RandomFromList(nodes),
 		Node3:            RandomFromList(nodes),
