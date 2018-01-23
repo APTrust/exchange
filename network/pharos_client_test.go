@@ -1028,6 +1028,76 @@ func TestDPNWorkItemSave(t *testing.T) {
 	assert.NotEqual(t, origModTime, obj.UpdatedAt)
 }
 
+func TestDPNBagGet(t *testing.T) {
+	testServer := httptest.NewServer(http.HandlerFunc(pharosDPNBagGetHandler))
+	defer testServer.Close()
+
+	client, err := network.NewPharosClient(testServer.URL, "v2", "user", "key")
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	response := client.DPNBagGet(999)
+
+	// Check the request URL and method
+	assert.Equal(t, "GET", response.Request.Method)
+	assert.Equal(t, "/api/v2/dpn_bags/999/", response.Request.URL.Opaque)
+
+	// Basic sanity check on response values
+	assert.Nil(t, response.Error)
+
+	obj := response.DPNBag()
+	assert.EqualValues(t, "PharosDPNBag", response.ObjectType())
+	if obj == nil {
+		t.Errorf("PharosDPNBag should not be nil")
+	}
+	assert.NotEqual(t, 0, obj.Id)
+	assert.NotEqual(t, "", obj.ObjectIdentifier)
+	assert.NotEqual(t, "", obj.DPNIdentifier)
+}
+
+func TestDPNBagList(t *testing.T) {
+	testServer := httptest.NewServer(http.HandlerFunc(pharosDPNBagListHandler))
+	defer testServer.Close()
+
+	client, err := network.NewPharosClient(testServer.URL, "v2", "user", "key")
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	response := client.DPNBagList(nil)
+
+	// Check the request URL and method
+	assert.Equal(t, "GET", response.Request.Method)
+	assert.Equal(t, "/api/v2/dpn_bags/?", response.Request.URL.Opaque)
+
+	// Basic sanity check on response values
+	assert.Nil(t, response.Error)
+	assert.EqualValues(t, "PharosDPNBag", response.ObjectType())
+
+	list := response.DPNBags()
+	if list == nil {
+		t.Errorf("PharosDPNBag list should not be nil")
+		return
+	}
+	if len(list) != 4 {
+		t.Errorf("PharosDPNBag list should have four items. Found %d.", len(list))
+		return
+	}
+	for _, obj := range list {
+		assert.NotEqual(t, "", obj.ObjectIdentifier)
+		assert.NotEqual(t, "", obj.DPNIdentifier)
+	}
+
+	// Make sure params are added to URL
+	params := sampleParams()
+	response = client.DPNBagList(params)
+	expectedUrl := fmt.Sprintf("/api/v2/dpn_bags/?%s", params.Encode())
+	assert.Equal(t, expectedUrl, response.Request.URL.Opaque)
+}
+
 // -------------------------------------------------------------------------
 // -------------------------------------------------------------------------
 // -------------------------------------------------------------------------
