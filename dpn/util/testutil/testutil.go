@@ -116,7 +116,7 @@ func MakeDPNBag() *models.DPNBag {
 		BagType:          "D",
 		IngestNode:       "aptrust",
 		AdminNode:        "aptrust",
-		Member:           "9a000000-0000-4000-a000-000000000002", // Faber College
+		Member:           "9a000000-0000-4000-a000-000000000001", // Sunnyvale College
 		CreatedAt:        tenSecondsAgo,
 		UpdatedAt:        tenSecondsAgo,
 	}
