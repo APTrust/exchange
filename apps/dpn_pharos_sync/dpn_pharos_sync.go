@@ -39,6 +39,7 @@ func main() {
 }
 
 func initInstitutionIdMap(ctx *context.Context) error {
+	ctx.MessageLog.Info("Caching institutions")
 	params := url.Values{}
 	params.Add("page", "1")
 	params.Add("per_page", "100")
@@ -59,8 +60,9 @@ func initInstitutionIdMap(ctx *context.Context) error {
 // getLatestTimestamp returns the latest UpdatedAt timestamp
 // from the DPN bags table in Pharos.
 func getLatestTimestamp(ctx *context.Context) (time.Time, error) {
+	ctx.MessageLog.Info("Getting latest timestamp from Pharos")
 	params := url.Values{}
-	params.Add("sort", "dpn_upated_at DESC")
+	params.Add("sort", "dpn_updated_at DESC")
 	resp := ctx.PharosClient.DPNBagList(params)
 	ctx.MessageLog.Info(resp.Request.URL.Opaque)
 	if resp.Error != nil {
@@ -74,6 +76,8 @@ func syncToPharos(ctx *context.Context) error {
 	if err != nil {
 		return err
 	}
+	ctx.MessageLog.Info("Most recent DPN bag has update timestamp of %s", timestamp.Format(time.RFC3339))
+
 	dpnClient, err := network.NewDPNRestClient(
 		ctx.Config.DPN.RestClient.LocalServiceURL,
 		ctx.Config.DPN.DPNAPIVersion,
@@ -83,18 +87,30 @@ func syncToPharos(ctx *context.Context) error {
 	if err != nil {
 		return fmt.Errorf("Error creating local DPN REST client: %v", err)
 	}
+	ctx.MessageLog.Info("Set up DPN client for %s", ctx.Config.DPN.RestClient.LocalServiceURL)
+
 	params := url.Values{}
 	params.Add("after", timestamp.Format(time.RFC3339))
 	params.Add("ingest_node", ctx.Config.DPN.LocalNode) // only bags we ingested
 	params.Add("page", "1")
 	params.Add("page_size", "100")
 
+	ctx.MessageLog.Info("Checking for bags updated since %s", timestamp.Format(time.RFC3339))
 	for {
 		resp := dpnClient.DPNBagList(params)
-		ctx.MessageLog.Info(resp.Request.URL.Opaque)
+		ctx.MessageLog.Info("%s", resp.Request.URL.String())
+
+		// VERBOSE LOGGING
+		// ctx.MessageLog.Info("%v", resp.Request)
+		// ctx.MessageLog.Info("%v", resp.Response)
+		// data, _ := resp.RawResponseData()
+		// ctx.MessageLog.Info(string(data))
+		// END VERBOSE LOGGING
+
 		if resp.Error != nil {
 			return resp.Error
 		}
+		ctx.MessageLog.Info("Request returned %d bags", len(resp.Bags()))
 		for _, dpnBag := range resp.Bags() {
 			// Quit early if this happens. It shouldn't.
 			if InstitutionIdMap[dpnBag.Member] == 0 {
