@@ -46,6 +46,7 @@ class Context
 	  'apt_volume_service' => App.new('apt_volume_service', 'service'),
 	  'dpn_copy' => App.new('dpn_copy', 'service'),
 	  'dpn_queue' => App.new('dpn_queue', 'application'),
+	  'dpn_pharos_sync' => App.new('dpn_pharos_sync', 'application'),
 	  'dpn_sync' => App.new('dpn_sync', 'application'),
 	  'dpn_validate' => App.new('dpn_validate', 'service'),
 	  'dpn_replication_store' => App.new('dpn_replication_store', 'service'),

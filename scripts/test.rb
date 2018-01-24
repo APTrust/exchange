@@ -36,6 +36,7 @@ def tests
     'apt_ingest' => 'Test the APTrust ingest process (runs apt_queue)',
     'apt_restore' => 'Test the APTrust restore and delete processes (runs apt_ingest)',
     'apt_fixity' => 'Test the APTrust fixity checking process (runs apt_restore)',
+    'dpn_pharos_sync' => 'Sync DPN bag records to Pharos dpn_bags table',
     'dpn_rest_client' => 'Test the DPN REST client against a local cluster',
     'dpn_sync' => 'Test DPN sync against a local cluster',
     'dpn_replicate' => 'Test DPN replication. Runs dpn_sync and dpn_rest_client',

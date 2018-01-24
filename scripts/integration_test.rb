@@ -317,6 +317,25 @@ class IntegrationTest
 	end
   end
 
+  # Sync DPN bag records from the DPN server to Pharos.
+  def dpn_pharos_sync(more_tests_follow)
+	run_suite(more_tests_follow) do
+	  # Build
+	  @build.build(@context.apps['dpn_pharos_sync'])
+
+	  # Start services
+	  @service.pharos_reset_db
+	  @service.pharos_load_fixtures
+	  @service.pharos_start
+	  @service.dpn_cluster_start  # sleeps to wait for all nodes to come up
+	  @service.app_start(@context.apps['dpn_pharos_sync'])
+
+	  # Post test
+	  @results['dpn_pharos_sync_test'] = run('dpn_pharos_sync_post_test.go')
+	end
+  end
+
+
 
   # dpn_rest_client tests the DPN REST client against a
   # locally-running DPN cluster. Returns true if all tests passed,
