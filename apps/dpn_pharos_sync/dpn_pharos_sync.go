@@ -68,6 +68,9 @@ func getLatestTimestamp(ctx *context.Context) (time.Time, error) {
 	if resp.Error != nil {
 		return time.Time{}, resp.Error
 	}
+	if resp.DPNBag() == nil {
+		return time.Time{}, nil
+	}
 	return resp.DPNBag().DPNUpdatedAt, nil
 }
 
