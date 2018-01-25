@@ -83,6 +83,7 @@ func syncToPharos(ctx *context.Context) error {
 		return err
 	}
 	ctx.MessageLog.Info("Most recent DPN bag has update timestamp of %s", timestamp.Format(time.RFC3339))
+	ctx.MessageLog.Info("Using DPN API key that starts with %s", ctx.Config.DPN.RestClient.LocalAuthToken[0:4])
 
 	dpnClient, err := network.NewDPNRestClient(
 		ctx.Config.DPN.RestClient.LocalServiceURL,
@@ -105,6 +106,12 @@ func syncToPharos(ctx *context.Context) error {
 	for {
 		resp := dpnClient.DPNBagList(params)
 		ctx.MessageLog.Info("%s", resp.Request.URL.String())
+
+		if resp.Response != nil {
+			ctx.MessageLog.Info("Server responded: %s", resp.Response.Status)
+		} else {
+			ctx.MessageLog.Warning("Server did not return a response")
+		}
 
 		// VERBOSE LOGGING
 		// ctx.MessageLog.Info("%v", resp.Request)
