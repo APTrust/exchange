@@ -102,6 +102,7 @@ func syncToPharos(ctx *context.Context) error {
 	params.Add("page_size", "100")
 
 	ctx.MessageLog.Info("Checking for bags updated since %s", timestamp.Format(time.RFC3339))
+	page := 1
 	for {
 		resp := dpnClient.DPNBagList(params)
 		ctx.MessageLog.Info("%s", resp.Request.URL.String())
@@ -151,7 +152,8 @@ func syncToPharos(ctx *context.Context) error {
 		if !resp.HasNextPage() {
 			break
 		} else {
-			params = resp.ParamsForNextPage()
+			page += 1
+			params.Set("page", fmt.Sprintf("%d", page))
 		}
 	}
 
