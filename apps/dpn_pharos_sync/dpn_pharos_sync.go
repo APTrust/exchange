@@ -83,7 +83,6 @@ func syncToPharos(ctx *context.Context) error {
 		return err
 	}
 	ctx.MessageLog.Info("Most recent DPN bag has update timestamp of %s", timestamp.Format(time.RFC3339))
-	ctx.MessageLog.Info("Using DPN API key that starts with %s", ctx.Config.DPN.RestClient.LocalAuthToken[0:4])
 
 	dpnClient, err := network.NewDPNRestClient(
 		ctx.Config.DPN.RestClient.LocalServiceURL,
