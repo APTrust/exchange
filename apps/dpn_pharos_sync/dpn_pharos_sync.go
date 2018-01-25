@@ -38,6 +38,7 @@ func main() {
 		fmt.Fprintln(os.Stderr, err.Error())
 		os.Exit(1)
 	}
+	_context.MessageLog.Info("dpn_pharos_sync finished normally")
 }
 
 func initInstitutionIdMap(ctx *context.Context) error {
