@@ -26,14 +26,16 @@ func main() {
 	_context := context.NewContext(config)
 	err = initInstitutionIdMap(_context)
 	if err != nil {
-		_context.MessageLog.Error(err.Error())
-		fmt.Fprintf(os.Stderr, err.Error())
+		// Use "%s" so percent signs in the error message are not
+		// interprested as formatting directives.
+		_context.MessageLog.Error("%s", err.Error())
+		fmt.Fprintln(os.Stderr, err.Error())
 		os.Exit(1)
 	}
 	err = syncToPharos(_context)
 	if err != nil {
-		_context.MessageLog.Error(err.Error())
-		fmt.Fprintf(os.Stderr, err.Error())
+		_context.MessageLog.Error("%s", err.Error())
+		fmt.Fprintln(os.Stderr, err.Error())
 		os.Exit(1)
 	}
 }
