@@ -117,8 +117,9 @@ func syncToPharos(ctx *context.Context) error {
 			return resp.Error
 		}
 		ctx.MessageLog.Info("Request returned %d bags", len(resp.Bags()))
-		for _, dpnBag := range resp.Bags() {
+		for i, dpnBag := range resp.Bags() {
 			if dpnBag == nil {
+				ctx.MessageLog.Info("Item %d in bag list is nil", i)
 				continue
 			}
 			// Quit early if this happens. It shouldn't.
