@@ -42,6 +42,7 @@ func main() {
 
 func initInstitutionIdMap(ctx *context.Context) error {
 	ctx.MessageLog.Info("Caching institutions")
+	InstitutionIdMap = make(map[string]int)
 	params := url.Values{}
 	params.Add("page", "1")
 	params.Add("per_page", "100")
@@ -50,10 +51,10 @@ func initInstitutionIdMap(ctx *context.Context) error {
 	if resp.Error != nil {
 		return resp.Error
 	}
-	InstitutionIdMap = make(map[string]int)
 	for _, inst := range resp.Institutions() {
 		if inst.DPNUUID != "" {
 			InstitutionIdMap[inst.DPNUUID] = inst.Id
+			ctx.MessageLog.Info("(%d) %s: %s", inst.Id, inst.Name, inst.DPNUUID)
 		}
 	}
 	return nil
@@ -117,6 +118,9 @@ func syncToPharos(ctx *context.Context) error {
 		}
 		ctx.MessageLog.Info("Request returned %d bags", len(resp.Bags()))
 		for _, dpnBag := range resp.Bags() {
+			if dpnBag == nil {
+				continue
+			}
 			// Quit early if this happens. It shouldn't.
 			if InstitutionIdMap[dpnBag.Member] == 0 {
 				return fmt.Errorf("Pharos has no institution record for DPN member %s",
