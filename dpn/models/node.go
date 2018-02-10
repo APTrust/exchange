@@ -82,6 +82,9 @@ type Node struct {
 // you specified in the howMany param if this node replicates
 // to fewer nodes.
 //
+// Param avoidThisNode is the namespace of a node we should NOT
+// replicate to. Pass an empty string if there are no nodes to avoid.
+//
 // We may have to revisit this in the future, if DPN specifies
 // logic for how to choose remote nodes. For now, we can choose
 // any node, because they are all geographically diverse and
@@ -90,7 +93,7 @@ type Node struct {
 // This will return an error if the number of nodes you want to select
 // (the howMany param) exceeds the number of nodes that this node
 // actually replicates to.
-func (node *Node) ChooseNodesForReplication(howMany int) ([]string, error) {
+func (node *Node) ChooseNodesForReplication(howMany int, avoidThisNode string) ([]string, error) {
 	selectedNodes := make([]string, 0)
 	if howMany > len(node.ReplicateTo) {
 		return selectedNodes, fmt.Errorf("Cannot choose %d nodes for replication when "+
@@ -98,14 +101,17 @@ func (node *Node) ChooseNodesForReplication(howMany int) ([]string, error) {
 	}
 	if howMany >= len(node.ReplicateTo) {
 		for _, namespace := range node.ReplicateTo {
-			selectedNodes = append(selectedNodes, namespace)
+			if namespace != avoidThisNode {
+				selectedNodes = append(selectedNodes, namespace)
+			}
 		}
 	} else {
 		nodeMap := make(map[string]int)
 		for len(selectedNodes) < howMany {
 			randInt := rand.Intn(len(node.ReplicateTo))
 			namespace := node.ReplicateTo[randInt]
-			if _, alreadyAdded := nodeMap[namespace]; !alreadyAdded {
+			_, nodeAlreadyAdded := nodeMap[namespace]
+			if namespace != avoidThisNode && !nodeAlreadyAdded {
 				selectedNodes = append(selectedNodes, namespace)
 				nodeMap[namespace] = randInt
 			}

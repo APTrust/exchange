@@ -13,6 +13,15 @@ import (
 	"time"
 )
 
+// DO_NOT_REPLICATE_TO describes which nodes we should NOT replicate
+// member content to. The key is the member uuid, and the value is
+// the node to avoid.
+var DO_NOT_REPLICATE_TO = map[string]string{
+	// Do not replicate bags from U. Michigan to Hathi Trust
+	// because Hathi is at U. Mich.
+	"7277cbab-d539-4a81-ac1e-70cefc28fb2e": "hathi",
+}
+
 // DPNIngestRecorder records information about locally-ingested
 // DPN bags in both APTrust and DPN.
 type DPNIngestRecorder struct {
@@ -215,11 +224,14 @@ func (recorder *DPNIngestRecorder) getLocalNode(manifest *models.DPNIngestManife
 // ask to replicate our new DPN bag.
 func (recorder *DPNIngestRecorder) chooseReplicationNodes(manifest *models.DPNIngestManifest, localNode *models.Node) []string {
 	howMany := recorder.Context.Config.DPN.ReplicateToNumNodes
-	replicateToNodes, err := localNode.ChooseNodesForReplication(howMany)
+	// PT #155101004: Certain members want to avoid replicating to certain nodes.
+	avoidThisNode := DO_NOT_REPLICATE_TO[manifest.DPNBag.Member]
+	replicateToNodes, err := localNode.ChooseNodesForReplication(howMany, avoidThisNode)
 	if err != nil {
 		manifest.RecordSummary.AddError("Cannot choose nodes for replication: %v", err)
 		return nil
 	}
+	recorder.Context.MessageLog.Info("Replicating to %v, avoiding %s", replicateToNodes, avoidThisNode)
 	return replicateToNodes
 }
 
