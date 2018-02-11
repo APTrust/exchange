@@ -117,6 +117,11 @@ func (dpnQueue *DPNQueue) queueReplicationRequests() {
 			queueItem := models.NewQueueItem(xfer.ReplicationId)
 			dpnWorkItem := dpnQueue.getOrCreateWorkItem(xfer.ReplicationId, xfer.FromNode,
 				constants.DPNTaskReplication)
+			if dpnWorkItem == nil {
+				dpnQueue.Context.MessageLog.Error("Count not create DPNWorkItem for replication %s from %s",
+					xfer.ReplicationId, xfer.FromNode)
+				continue
+			}
 			queueItem.ItemId = dpnWorkItem.Id
 			if dpnWorkItem.QueuedAt == nil || dpnWorkItem.QueuedAt.IsZero() {
 				dpnQueue.queueTransfer(dpnWorkItem, constants.DPNTaskReplication)
