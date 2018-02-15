@@ -11,6 +11,7 @@ import (
 	apt_models "github.com/APTrust/exchange/models"
 	apt_network "github.com/APTrust/exchange/network"
 	"github.com/APTrust/exchange/tarfile"
+	"github.com/APTrust/exchange/util"
 	"github.com/APTrust/exchange/util/fileutil"
 	"github.com/APTrust/exchange/validation"
 	"github.com/nsqio/go-nsq"
@@ -78,6 +79,21 @@ func (packager *DPNPackager) HandleMessage(message *nsq.Message) error {
 
 	// Set up the manifest WITH the IntellectualObject
 	manifest := SetupIngestManifest(message, "package", packager.Context, true)
+
+	// PT #155253826: Don't package if this item is already in DPN.
+	// If DPN ever starts accepting version 2+ of existing bags,
+	// we'll have to change this. For now (early 2018), DPN only accepts
+	// the first version of each bag.
+	if manifest.IntellectualObject != nil &&
+		util.LooksLikeUUID(manifest.IntellectualObject.DPNUUID) {
+		packager.Context.MessageLog.Info(
+			"Skipping NSQ Message %s / WorkItem %d (%s): item has already been ingested into DPN with uuid %s",
+			string(message.Body), manifest.WorkItem.Id, manifest.WorkItem.ObjectIdentifier, manifest.IntellectualObject.DPNUUID)
+		message.Finish()
+		return nil
+
+	}
+
 	manifest.PackageSummary.Start()
 	manifest.PackageSummary.Attempted = true
 	manifest.PackageSummary.AttemptNumber += 1
