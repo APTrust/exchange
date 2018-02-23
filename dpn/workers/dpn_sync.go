@@ -143,10 +143,15 @@ func (dpnSync *DPNSync) RemoteNodeNames() []string {
 func (dpnSync *DPNSync) SyncEverythingFromNode(remoteNode *models.Node) {
 	result := dpnSync.Results[remoteNode.Namespace]
 
-	dpnSync.SyncNode(remoteNode)
-	if result.HasErrors("") {
-		return
-	}
+	// PT #155465568: Stop synching node records for now
+	// because Chronopolis has bad data about its replication
+	// agreements, and the sync wipes out APTrust's replication
+	// agreement with Chron.
+	// --------------------------------------------------------
+	// dpnSync.SyncNode(remoteNode)
+	// if result.HasErrors("") {
+	// 	return
+	// }
 
 	dpnSync.SyncMembers(remoteNode)
 	if result.HasErrors("") {
