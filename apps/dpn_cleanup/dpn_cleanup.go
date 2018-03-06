@@ -100,8 +100,16 @@ func cleanDirectory(_context *context.Context, dpnClient *network.DPNRestClient,
 		}
 		tarfile := filepath.Join(directory, finfo.Name())
 		successfulReplications := resp.ReplicationTransfers()
-		if len(successfulReplications) >= _context.Config.DPN.ReplicateToNumNodes {
-			_context.MessageLog.Info("Deleting %s: %d successful replications",
+
+		// PT #155739755: Make sure completed replications are from two
+		// different nodes before deleting the bag from staging.
+		replicatingNodes := make(map[string]bool)
+		for _, repl := range successfulReplications {
+			replicatingNodes[repl.ToNode] = true
+		}
+
+		if len(replicatingNodes) >= _context.Config.DPN.ReplicateToNumNodes {
+			_context.MessageLog.Info("Deleting %s: item is replicated at %d nodes",
 				tarfile, len(successfulReplications))
 			removeFile(_context, tarfile)
 		} else {
