@@ -142,7 +142,8 @@
 		"aptrust.receiving.test.umich.edu",
 		"aptrust.receiving.test.unc.edu",
 		"aptrust.receiving.test.virginia.edu",
-		"aptrust.receiving.test.vt.edu"
+		"aptrust.receiving.test.vt.edu",
+        "aptrust.receiving.test.vwu.edu"
 	],
 
 	"DPN": {

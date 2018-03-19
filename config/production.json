@@ -139,7 +139,8 @@
 		"aptrust.receiving.unc.edu",
 		"aptrust.receiving.nd.edu",
 		"aptrust.receiving.virginia.edu",
-		"aptrust.receiving.vt.edu"
+		"aptrust.receiving.vt.edu",
+        "aptrust.receiving.vwu.edu"
 	],
 	"DPN": {
 		"LocalNode": "aptrust",
