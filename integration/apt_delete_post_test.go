@@ -15,6 +15,8 @@ import (
 	"testing"
 )
 
+// PT #156321235: This test is turned off in scripts/integration tests for now.
+
 /*
 These tests check the results of the integration tests for
 the app apt_file_delete. See the ingest_test.sh script in
