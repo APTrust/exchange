@@ -64,16 +64,12 @@ func NewDPNSync(_context *context.Context) (*DPNSync, error) {
 	if err != nil {
 		return nil, fmt.Errorf("Error creating remote DPN REST client: %v", err)
 	}
-	results := make(map[string]*models.SyncResult)
-	for nodeName := range remoteClients {
-		results[nodeName] = models.NewSyncResult(nodeName)
-	}
 	sync := DPNSync{
 		LocalClient:   localClient,
 		RemoteNodes:   make(map[string]*models.Node),
 		RemoteClients: remoteClients,
 		Context:       _context,
-		Results:       results,
+		Results:       make(map[string]*models.SyncResult),
 	}
 	return &sync, nil
 }
@@ -93,6 +89,9 @@ func (dpnSync *DPNSync) Run() bool {
 	hasErrors := false
 	for _, node := range nodes {
 		if node.Namespace != dpnSync.LocalNodeName() {
+			if dpnSync.Results[node.Namespace] == nil {
+				dpnSync.Results[node.Namespace] = models.NewSyncResult(node.Namespace)
+			}
 			dpnSync.RemoteNodes[node.Namespace] = node
 			dpnSync.SyncEverythingFromNode(node)
 			if dpnSync.Results[node.Namespace].HasErrors("") {
