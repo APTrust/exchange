@@ -92,7 +92,7 @@ func (dpnSync *DPNSync) Run() bool {
 	}
 	hasErrors := false
 	for _, node := range nodes {
-		if node.Namespace != dpnSync.LocalNodeName() {
+		if node.Namespace != dpnSync.LocalNodeName() && node != nil {
 			dpnSync.RemoteNodes[node.Namespace] = node
 			dpnSync.SyncEverythingFromNode(node)
 			if dpnSync.Results[node.Namespace].HasErrors("") {
