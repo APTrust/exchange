@@ -1,6 +1,7 @@
 package integration_test
 
 import (
+	"fmt"
 	"github.com/APTrust/exchange/context"
 	"github.com/APTrust/exchange/models"
 	"github.com/APTrust/exchange/util/testutil"
@@ -31,6 +32,8 @@ func TestPushToDPN(t *testing.T) {
 		require.Nil(t, resp.Error)
 		require.NotNil(t, workItem)
 		_context.MessageLog.Info("Created DPN work item #%d for %s",
+			workItem.Id, workItem.ObjectIdentifier)
+		fmt.Printf("Created DPN work item #%d for %s\n",
 			workItem.Id, workItem.ObjectIdentifier)
 	}
 }
