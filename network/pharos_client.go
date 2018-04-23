@@ -304,7 +304,7 @@ func (client *PharosClient) GenericFileGet(identifier string, includeRelations b
 	resp.files = make([]*models.GenericFile, 1)
 
 	// Build the url and the request object
-	relativeUrl := fmt.Sprintf("/api/%s/files/%s", client.apiVersion, url.QueryEscape(identifier))
+	relativeUrl := fmt.Sprintf("/api/%s/files/%s", client.apiVersion, escapeFileIdentifier(identifier)) // url.QueryEscape(identifier))
 	if includeRelations {
 		relativeUrl += "?include_relations=true"
 	}
@@ -1089,6 +1089,11 @@ func (client *PharosClient) DoRequest(resp *PharosResponse, method, absoluteUrl 
 		resp.Error = fmt.Errorf("Server returned status code %d. Body: %s",
 			resp.Response.StatusCode, string(body))
 	}
+}
+
+func escapeFileIdentifier(identifier string) string {
+	encoded := url.QueryEscape(identifier)
+	return strings.Replace(encoded, "+", "%20", -1)
 }
 
 func encodeParams(params url.Values) string {
