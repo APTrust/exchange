@@ -26,8 +26,17 @@
 
 	"APTrustS3Region": "us-east-1",
 	"APTrustGlacierRegion": "us-west-2",
+    "GlacierRegionVA": "us-east-1",
+    "GlacierRegionOH": "us-east-2",
+    "GlacierRegionOR": "us-west-2",
+
 	"PreservationBucket": "aptrust.test.preservation",
 	"ReplicationBucket": "aptrust.test.preservation.oregon",
+
+    "GlacierBucketVA": "aptrust.test.preservation.glacier.va",
+    "GlacierBucketOH": "aptrust.test.preservation.glacier.oh",
+    "GlacierBucketOR": "aptrust.test.preservation.glacier.or",
+
 	"CustomRestoreBucket": "aptrust.restore.test",
 	"RestoreToTestBuckets": false,
 	"MaxDaysSinceFixityCheck": 60,

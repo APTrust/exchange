@@ -26,6 +26,12 @@ const VALIDATION_DB_SUFFIX = ".valdb"
 
 var TAR_SUFFIX = regexp.MustCompile("\\.tar$")
 
+// **************************************************************
+//
+// TODO: Glacier-Only: Set StorageOption on object and all files.
+//
+// **************************************************************
+
 // Validator validates a BagIt bag using a BagValidationConfig
 // object, which describes the bag's requirements.
 type Validator struct {

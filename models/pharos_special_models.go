@@ -18,6 +18,7 @@ type IntellectualObjectForPharos struct {
 	DPNUUID       string `json:"dpn_uuid"`
 	ETag          string `json:"etag"`
 	State         string `json:"state"`
+	StorageOption string `json:"storage_option"`
 }
 
 func NewIntellectualObjectForPharos(obj *IntellectualObject) *IntellectualObjectForPharos {
@@ -32,6 +33,7 @@ func NewIntellectualObjectForPharos(obj *IntellectualObject) *IntellectualObject
 		DPNUUID:       obj.DPNUUID,
 		ETag:          obj.ETag,
 		State:         obj.State,
+		StorageOption: obj.StorageOption,
 	}
 }
 
@@ -45,6 +47,7 @@ type GenericFileForPharos struct {
 	FileFormat           string `json:"file_format"`
 	URI                  string `json:"uri"`
 	Size                 int64  `json:"size"`
+	StorageOption        string `json:"storage_option"`
 	// TODO: Next two items are not part of Pharos model, but they should be.
 	// We need to add these to the Rails schema.
 	//	FileCreated                  time.Time      `json:"file_created"`
@@ -68,6 +71,7 @@ func NewGenericFileForPharos(gf *GenericFile) *GenericFileForPharos {
 		FileFormat:           gf.FileFormat,
 		URI:                  gf.URI,
 		Size:                 gf.Size,
+		StorageOption:        gf.StorageOption,
 		// TODO: See note above. Add these to Rails!
 		//		FileCreated:                    gf.FileCreated,
 		//		FileModified:                   gf.FileModified,

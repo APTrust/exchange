@@ -81,6 +81,9 @@ type IntellectualObject struct {
 	// State of the object. A = active, D = deleted.
 	State string `json:"state"`
 
+	// Storage option: Standard, Glacier-OH, Glacier-OR, Glacier-VA.
+	StorageOption string `json:"storage_option"`
+
 	// CreatedAt is the Pharos timestamp describing when this
 	// IntellectualObject was first recorded in our database.
 	// This is usually within minutes of the ingest event, after
@@ -206,6 +209,7 @@ func NewIntellectualObject() *IntellectualObject {
 		IngestFilesIgnored: make([]string, 0),
 		IngestTags:         make([]*Tag, 0),
 		State:              "A",
+		StorageOption:      constants.StorageStandard,
 	}
 }
 

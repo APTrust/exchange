@@ -107,6 +107,22 @@ var ActionTypes []string = []string{
 	ActionDelete,
 }
 
+// Storage types
+
+const (
+	StorageStandard  = "Standard"
+	StorageGlacierVA = "Glacier-VA"
+	StorageGlacierOH = "Glacier-OH"
+	StorageGlacierOR = "Glacier-OR"
+)
+
+var StorageTypes []string = []string{
+	StorageStandard,
+	StorageGlacierVA,
+	StorageGlacierOH,
+	StorageGlacierOR,
+}
+
 // DPN task types
 const (
 	DPNTaskSync        = "sync"
@@ -146,6 +162,7 @@ var AccessRights []string = []string{
 // AWS Regions (the ones we're using for storage)
 const (
 	AWSVirginia = "us-east-1"
+	AWSOhio     = "us-east-2"
 	AWSOregon   = "us-west-2"
 )
 

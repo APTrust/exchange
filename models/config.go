@@ -139,6 +139,29 @@ type Config struct {
 	// handles ongoing fixity checks.
 	FixityWorker WorkerConfig
 
+	// GlacierBucketVA is the name of the Glacier-only storage bucket in Virginia.
+	GlacierBucketVA string
+
+	// GlacierBucketOH is the name of the Glacier-only storage bucket in Ohio.
+	GlacierBucketOH string
+
+	// GlacierBucketOR is the name of the Glacier-only storage bucket in Oregon.
+	// This bucket is distinct from the regular APTrust Glacier preservation
+	// bucket in Oregon, since this one is for the Glacier-only storage class.
+	GlacierBucketOR string
+
+	// GlacierRegionVA is the name of the AWS region in which the Virginia
+	// Glacier-only storage bucket is located.
+	GlacierRegionVA string
+
+	// GlacierRegionOH is the name of the AWS region in which the Ohio
+	// Glacier-only storage bucket is located.
+	GlacierRegionOH string
+
+	// GlacierRegionOR is the name of the AWS region in which the Oregon
+	// Glacier-only storage bucket is located.
+	GlacierRegionOR string
+
 	// LogDirectory is where we'll write our log files.
 	LogDirectory string
 

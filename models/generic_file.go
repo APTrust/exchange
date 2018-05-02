@@ -91,6 +91,9 @@ type GenericFile struct {
 	// State will be "A" for active files, "D" for deleted files.
 	State string `json:"state,omitempty"`
 
+	// Storage option: Standard, Glacier-OH, Glacier-OR, Glacier-VA.
+	StorageOption string `json:"storage_option"`
+
 	// ----------------------------------------------------
 	// The fields below are for internal housekeeping
 	// during the ingest process. We don't send this data
@@ -223,6 +226,7 @@ func NewGenericFile() *GenericFile {
 		PremisEvents:                make([]*PremisEvent, 0),
 		IngestPreviousVersionExists: false,
 		IngestNeedsSave:             true,
+		StorageOption:               constants.StorageStandard,
 	}
 }
 
@@ -394,9 +398,11 @@ func (gf *GenericFile) BuildIngestEvents() error {
 		return err
 	}
 
-	err = gf.buildReplicationEvent()
-	if err != nil {
-		return err
+	if gf.StorageOption == constants.StorageStandard {
+		err = gf.buildReplicationEvent()
+		if err != nil {
+			return err
+		}
 	}
 
 	err = gf.buildFileIngestEvent()
@@ -505,7 +511,8 @@ func (gf *GenericFile) buildS3URLAssignmentEvent() error {
 	// overwriting an existing URL with a new version of a file.
 	if !hasS3URLAssignment && gf.IngestNeedsSave {
 		event, err := NewEventGenericFileIdentifierAssignment(
-			gf.IngestStoredAt, constants.IdTypeStorageURL,
+			gf.IngestStoredAt,
+			constants.IdTypeStorageURL,
 			gf.IngestStorageURL)
 		if err != nil {
 			return fmt.Errorf("Error building S3 URL identifier assignment event for %s: %v",

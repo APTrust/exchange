@@ -305,11 +305,19 @@ func (storer *APTStorer) saveFile(db *storage.BoltDB, storageSummary *models.Sto
 	// Now copy to storage only if the file has changed.
 	if gf.IngestNeedsSave {
 		storer.Context.MessageLog.Info("File %s needs save", gf.Identifier)
-		if gf.IngestStoredAt.IsZero() || gf.IngestStorageURL == "" {
-			storer.copyToLongTermStorage(storageSummary, "s3")
-		}
-		if gf.IngestReplicatedAt.IsZero() || gf.IngestReplicationURL == "" {
-			storer.copyToLongTermStorage(storageSummary, "glacier")
+		if gf.StorageOption == constants.StorageStandard {
+			if gf.IngestStoredAt.IsZero() || gf.IngestStorageURL == "" {
+				storer.copyToLongTermStorage(storageSummary, "s3")
+			}
+			if gf.IngestReplicatedAt.IsZero() || gf.IngestReplicationURL == "" {
+				storer.copyToLongTermStorage(storageSummary, "glacier")
+			}
+		} else {
+			storer.Context.MessageLog.Info("Skipping S3 because file %s is %s", gf.Identifier, gf.StorageOption)
+			// ***************************************
+			// Send directly to Glacier VA, OH or OR.
+			// ***************************************
+			storer.copyToLongTermStorage(storageSummary, gf.StorageOption)
 		}
 		// Don't do cleanup until both copies are saved.
 		defer storer.cleanupTempFile(gf)
@@ -439,9 +447,15 @@ func (storer *APTStorer) copyToLongTermStorage(storageSummary *models.StorageSum
 	for attemptNumber := 1; attemptNumber <= MAX_UPLOAD_ATTEMPTS; attemptNumber++ {
 		storer.doUpload(storageSummary, sendWhere, attemptNumber)
 		// Stop trying if storage succeeded
-		if sendWhere == "s3" && gf.IngestStoredAt.IsZero() == false {
+		//
+		// if sendWhere == "s3" && gf.IngestStoredAt.IsZero() == false {
+		// 	break
+		// } else
+		//
+		if sendWhere == "glacier" && gf.IngestReplicatedAt.IsZero() == false {
 			break
-		} else if sendWhere == "glacier" && gf.IngestReplicatedAt.IsZero() == false {
+		} else if sendWhere != "glacier" && gf.IngestStoredAt.IsZero() == false {
+			// Covers "s3", "Glacier-VA", "Glacier-OH" and "Glacier-OR"
 			break
 		}
 	}
@@ -692,6 +706,15 @@ func (storer *APTStorer) initUploader(storageSummary *models.StorageSummary, sen
 	} else if sendWhere == "glacier" {
 		region = storer.Context.Config.APTrustGlacierRegion
 		bucket = storer.Context.Config.ReplicationBucket
+	} else if sendWhere == constants.StorageGlacierVA {
+		region = storer.Context.Config.GlacierRegionVA
+		bucket = storer.Context.Config.GlacierBucketVA
+	} else if sendWhere == constants.StorageGlacierOH {
+		region = storer.Context.Config.GlacierRegionOH
+		bucket = storer.Context.Config.GlacierBucketOH
+	} else if sendWhere == constants.StorageGlacierOR {
+		region = storer.Context.Config.GlacierRegionOR
+		bucket = storer.Context.Config.GlacierBucketOR
 	} else {
 		storageSummary.StoreResult.AddError("Cannot save %s to %s because "+
 			"storer doesn't know where %s is", gf.Identifier, sendWhere)
