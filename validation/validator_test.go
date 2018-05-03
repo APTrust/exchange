@@ -28,6 +28,7 @@ var err_4 = "Tag 'Access' has illegal value 'acksess'."
 var err_5 = "Bad sha256 digest for 'data/datastream-descMetadata': manifest says 'This-checksum-is-bad-on-purpose.-The-validator-should-catch-it!!', file digest is 'cf9cbce80062932e10ee9cd70ec05ebc24019deddfea4e54b8788decd28b4bc7'"
 var err_6 = "Bad md5 digest for 'custom_tags/tracked_tag_file.txt': manifest says '00000000000000000000000000000000', file digest is 'dafbffffc3ed28ef18363394935a2651'"
 var err_7 = "Bad sha256 digest for 'custom_tags/tracked_tag_file.txt': manifest says '0000000000000000000000000000000000000000000000000000000000000000', file digest is '3f2f50c5bde87b58d6132faee14d1a295d115338643c658df7fa147e2296ccdd'"
+var err_8 = "Tag 'Storage-Option' has illegal value 'cardboard-box'."
 
 func getValidationConfig() (*validation.BagValidationConfig, error) {
 	configFilePath := path.Join("testdata", "json_objects", "bag_validation_config.json")
@@ -188,7 +189,16 @@ func TestValidator_FromTarFile_BagInvalid(t *testing.T) {
 	assert.Nil(t, err)
 	assert.NotNil(t, summary)
 	assert.True(t, summary.HasErrors())
-	// TODO: Check for specific errors
+
+	// Check for specific errors
+	assert.True(t, util.StringListContains(summary.Errors, err_1))
+	assert.True(t, util.StringListContains(summary.Errors, err_2))
+	assert.True(t, util.StringListContains(summary.Errors, err_3))
+	assert.True(t, util.StringListContains(summary.Errors, err_4))
+	assert.True(t, util.StringListContains(summary.Errors, err_5))
+	assert.True(t, util.StringListContains(summary.Errors, err_6))
+	assert.True(t, util.StringListContains(summary.Errors, err_7))
+	assert.True(t, util.StringListContains(summary.Errors, err_8))
 }
 
 // Read a valid bag from a directory
@@ -225,7 +235,7 @@ func TestValidator_FromDirectory_BagInvalid_NoMeta(t *testing.T) {
 	assert.Nil(t, err)
 	assert.NotNil(t, summary)
 	assert.True(t, summary.HasErrors())
-	assert.Equal(t, 8, len(summary.Errors))
+	assert.Equal(t, 9, len(summary.Errors))
 	assert.True(t, util.StringListContains(summary.Errors, err_0))
 	assert.True(t, util.StringListContains(summary.Errors, err_1))
 	assert.True(t, util.StringListContains(summary.Errors, err_2))
@@ -253,7 +263,7 @@ func TestValidator_FromDirectory_BagInvalid(t *testing.T) {
 	assert.Nil(t, err)
 	assert.NotNil(t, summary)
 	assert.True(t, summary.HasErrors())
-	assert.Equal(t, 8, len(summary.Errors))
+	assert.Equal(t, 9, len(summary.Errors))
 	assert.True(t, util.StringListContains(summary.Errors, err_0))
 	assert.True(t, util.StringListContains(summary.Errors, err_1))
 	assert.True(t, util.StringListContains(summary.Errors, err_2))
@@ -301,7 +311,7 @@ func TestValidator_InvalidBag(t *testing.T) {
 	assert.Nil(t, err)
 	assert.NotNil(t, summary)
 	assert.True(t, summary.HasErrors())
-	assert.Equal(t, 8, len(summary.Errors))
+	assert.Equal(t, 9, len(summary.Errors))
 	assert.True(t, util.StringListContains(summary.Errors, err_0))
 	assert.True(t, util.StringListContains(summary.Errors, err_1))
 	assert.True(t, util.StringListContains(summary.Errors, err_2))
