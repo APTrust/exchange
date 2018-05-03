@@ -1,7 +1,7 @@
 package validation_test
 
 import (
-	"fmt"
+	"github.com/APTrust/exchange/constants"
 	"github.com/APTrust/exchange/testhelper"
 	"github.com/APTrust/exchange/util"
 	"github.com/APTrust/exchange/util/fileutil"
@@ -272,8 +272,6 @@ func TestValidator_FromDirectory_BagInvalid(t *testing.T) {
 	assert.True(t, util.StringListContains(summary.Errors, err_5))
 	assert.True(t, util.StringListContains(summary.Errors, err_6))
 	assert.True(t, util.StringListContains(summary.Errors, err_7))
-	fmt.Println(summary.AllErrorsAsString())
-	fmt.Println(bagPath)
 }
 
 // Read from a file that is not a directory or a valid tar file.
@@ -329,6 +327,9 @@ func TestValidator_GoodBags(t *testing.T) {
 		"example.edu.multipart.b01.of02.tar",
 		"example.edu.multipart.b02.of02.tar",
 		"example.edu.sample_good.tar",
+		"example.edu.sample_glacier_oh.tar",
+		"example.edu.sample_glacier_or.tar",
+		"example.edu.sample_glacier_va.tar",
 	}
 	bagValidationConfig, err := getValidationConfig()
 	if err != nil {
@@ -431,7 +432,6 @@ func TestValidator_NoBagInfo(t *testing.T) {
 	assert.Equal(t, 2, len(summary.Errors))
 	assert.True(t, util.StringListContains(summary.Errors, "Required file 'bag-info.txt' is missing."))
 	assert.True(t, util.StringListContains(summary.Errors, "Required tag 'Access' is missing."))
-	fmt.Println(summary.AllErrorsAsString())
 }
 
 func TestValidator_NoDataDir(t *testing.T) {
@@ -602,5 +602,61 @@ func TestValidator_SavesExtendedMetadata(t *testing.T) {
 		assert.NotEmpty(t, gf.IngestFileType)
 		assert.NotEmpty(t, gf.IngestUUID)
 		assert.NotEmpty(t, gf.IngestUUIDGeneratedAt)
+	}
+}
+
+func TestValidator_SetsStorageOption(t *testing.T) {
+	goodBags := []string{
+		"example.edu.multipart.b01.of02.tar",
+		"example.edu.multipart.b02.of02.tar",
+		"example.edu.sample_good.tar",
+		"example.edu.sample_glacier_oh.tar",
+		"example.edu.sample_glacier_or.tar",
+		"example.edu.sample_glacier_va.tar",
+	}
+	bagValidationConfig, err := getValidationConfig()
+	if err != nil {
+		assert.Fail(t, "Could not load BagValidationConfig: %s", err.Error())
+	}
+	optionalFileSpec := validation.FileSpec{Presence: "OPTIONAL"}
+	bagValidationConfig.FileSpecs["tagmanifest-md5.txt"] = optionalFileSpec
+	_, filename, _, _ := runtime.Caller(0)
+	dir := filepath.Dir(filename)
+
+	for _, goodBag := range goodBags {
+		pathToBag, err := filepath.Abs(path.Join(dir, "..", "testdata", "unit_test_bags", goodBag))
+		validator, err := validation.NewValidator(pathToBag, bagValidationConfig, true)
+		if err != nil {
+			assert.Fail(t, "NewValidator returned unexpected error: %s", err.Error())
+		}
+		defer deleteFile(validator.DBName())
+		summary, err := validator.Validate()
+		require.Nil(t, err)
+		assert.NotNil(t, summary)
+		assert.False(t, summary.HasErrors())
+
+		expectedOption := constants.StorageStandard
+		if strings.Contains(goodBag, "glacier_oh") {
+			expectedOption = constants.StorageGlacierOH
+		} else if strings.Contains(goodBag, "glacier_or") {
+			expectedOption = constants.StorageGlacierOR
+		} else if strings.Contains(goodBag, "glacier_va") {
+			expectedOption = constants.StorageGlacierVA
+		}
+
+		boltDB, err := storage.NewBoltDB(validator.DBName())
+		require.Nil(t, err)
+		require.NotNil(t, boltDB)
+		obj, err := boltDB.GetIntellectualObject(validator.ObjIdentifier)
+		require.Nil(t, err)
+		require.NotNil(t, obj)
+		assert.Equal(t, expectedOption, obj.StorageOption)
+
+		for _, identifier := range boltDB.FileIdentifiers() {
+			gf, err := boltDB.GetGenericFile(identifier)
+			require.Nil(t, err)
+			require.NotNil(t, gf)
+			assert.Equal(t, expectedOption, gf.StorageOption)
+		}
 	}
 }
