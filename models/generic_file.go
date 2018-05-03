@@ -398,6 +398,7 @@ func (gf *GenericFile) BuildIngestEvents() error {
 		return err
 	}
 
+	// There is no replication for Glacier-only storage.
 	if gf.StorageOption == constants.StorageStandard {
 		err = gf.buildReplicationEvent()
 		if err != nil {
