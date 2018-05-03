@@ -581,7 +581,13 @@ class IntegrationTest
   # Runs all the APTrust and DPN unit tests. Does not run any tests that
   # rely on external services. Returns true/false to indicate whether all
   # tests passed.
+  #
+  # Note that `go clean -testcache` forces Golang to run all the unit
+  # tests anew. Without this option, Golang caches test results and then
+  # does not re-run tests if the file being tested hasn't changed since
+  # the last run.
   def units(more_tests_follow)
+    `go clean -testcache`
 	@results['unit_tests'] = run_all_unit_tests
 	print_results
   end
