@@ -1,6 +1,7 @@
 package workers
 
 import (
+	"github.com/APTrust/exchange/constants"
 	"github.com/APTrust/exchange/context"
 	"github.com/APTrust/exchange/models"
 	"github.com/APTrust/exchange/network"
@@ -57,6 +58,7 @@ func (aptQueue *APTQueueFixity) Run() {
 	itemsAdded := 0
 	params.Set("not_checked_since", sinceWhen.Format(time.RFC3339))
 	params.Set("per_page", strconv.Itoa(perPage))
+	params.Set("storage_option", constants.StorageStandard)
 	params.Set("page", "1")
 	if aptQueue.identifierLike != "" {
 		params.Set("identifier_like", aptQueue.identifierLike)

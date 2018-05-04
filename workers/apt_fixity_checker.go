@@ -61,6 +61,14 @@ func (checker *APTFixityChecker) HandleMessage(message *nsq.Message) error {
 		return nil // Should we return an error to NSQ?
 	}
 
+	if fixityResult.GenericFile.StorageOption != constants.StorageStandard {
+		checker.Context.MessageLog.Info("Skipping %s because StorageOption is %s.",
+			fixityResult.GenericFile.Identifier,
+			fixityResult.GenericFile.StorageOption)
+		message.Finish()
+		return nil
+	}
+
 	// Item may have been queued multiple times and then checked a few hours ago.
 	if !checker.stillNeedsFixityCheck(fixityResult.GenericFile) {
 		checker.Context.MessageLog.Info("Skipping %s because it had a fixity check at %s.",
