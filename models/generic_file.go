@@ -565,6 +565,9 @@ func (gf *GenericFile) buildFileIngestEvent() error {
 		event.IntellectualObjectIdentifier = gf.IntellectualObjectIdentifier
 		event.GenericFileId = gf.Id
 		event.GenericFileIdentifier = gf.Identifier
+		if gf.StorageOption != constants.StorageStandard {
+			event.Detail = fmt.Sprintf("Completed copy to %s (%s)", gf.StorageOption, gf.IngestUUID)
+		}
 		gf.PremisEvents = append(gf.PremisEvents, event)
 	}
 	return nil
