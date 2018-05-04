@@ -12,6 +12,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/nsqio/go-nsq"
 	"io"
+	"net/http"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -114,6 +115,7 @@ func (storer *APTStorer) store() {
 				ingestState.IngestManifest.DBPath, err.Error())
 			ingestState.IngestManifest.StoreResult.Finish()
 			storer.CleanupChannel <- ingestState
+			continue
 		}
 		if db == nil {
 			// Happens when a prior worker process is killed,
@@ -124,12 +126,34 @@ func (storer *APTStorer) store() {
 				ingestState.IngestManifest.DBPath)
 			ingestState.IngestManifest.StoreResult.Finish()
 			storer.CleanupChannel <- ingestState
+			continue
 		}
 		objIdentifier, err := ingestState.IngestManifest.ObjectIdentifier()
 		if err != nil {
 			ingestState.IngestManifest.StoreResult.AddError(err.Error())
 			ingestState.IngestManifest.StoreResult.Finish()
 			storer.CleanupChannel <- ingestState
+			continue
+		}
+
+		// If this object was previously ingested, we need to store it
+		// in the same place as the original ingest. Otherwise, we'd have
+		// multiple versions in multiple places. So here, we force the
+		// StorageOption to whatever the original StorageOption was.
+		//
+		// The following test bags should verify this through integration
+		// tests:
+		//
+		// testdata/unit_test_bags/updated/example.edu.sample_glacier_oh.tar
+		// testdata/unit_test_bags/updated/example.edu.tagsample_good.tar
+		existingStorageOption, err := storer.setStorageOption(db, objIdentifier)
+		if err != nil {
+			msg := fmt.Sprintf("While trying to get original storage option, "+
+				"error looking up IntellectualObject in Pharos: %v", err)
+			ingestState.IngestManifest.StoreResult.AddError(msg)
+			ingestState.IngestManifest.StoreResult.Finish()
+			storer.CleanupChannel <- ingestState
+			continue
 		}
 
 		for {
@@ -147,6 +171,19 @@ func (storer *APTStorer) store() {
 			wg := sync.WaitGroup{}
 			wg.Add(fileCount)
 			for i := 0; i < fileCount; i++ {
+				// Hacked in for Glacier-Only option.
+				// Force StorageOption to match original ingest, if there
+				// was a prior ingest.
+				//
+				// The following test bags should verify this through integration
+				// tests:
+				//
+				// testdata/unit_test_bags/updated/example.edu.sample_glacier_oh.tar
+				// testdata/unit_test_bags/updated/example.edu.tagsample_good.tar
+				if existingStorageOption != "" {
+					storageSummaries[i].GenericFile.StorageOption = existingStorageOption
+				}
+
 				go func(storageSummary *models.StorageSummary) {
 					defer wg.Done()
 					storer.saveFile(db, storageSummary)
@@ -314,9 +351,7 @@ func (storer *APTStorer) saveFile(db *storage.BoltDB, storageSummary *models.Sto
 			}
 		} else {
 			storer.Context.MessageLog.Info("Skipping S3 because file %s is %s", gf.Identifier, gf.StorageOption)
-			// ***************************************
 			// Send directly to Glacier VA, OH or OR.
-			// ***************************************
 			storer.copyToLongTermStorage(storageSummary, gf.StorageOption)
 		}
 		// Don't do cleanup until both copies are saved.
@@ -431,6 +466,55 @@ func (storer *APTStorer) getUuidOfExistingFile(gfIdentifier string) (string, err
 		return "", fmt.Errorf("Could not extract UUID from URI %s", existingGenericFile.URI)
 	}
 	return uuid, nil
+}
+
+// getPharosObjectStorageOption returns the StorageOption of the
+// IntellectualObject from Pharos. If this object was previously ingested,
+// we need to store it in the same place as the original ingest. Otherwise,
+// we'd have multiple versions in multiple places.
+func (storer *APTStorer) setStorageOption(db *storage.BoltDB, objIdentifier string) (string, error) {
+	storer.Context.MessageLog.Info("Checking Pharos for original storage type of object %s",
+		objIdentifier)
+	resp := storer.Context.PharosClient.IntellectualObjectGet(objIdentifier, false, false)
+
+	// Not found should be common, as most ingests are first-time ingests.
+	if resp.Response.StatusCode == http.StatusNotFound {
+		return "", nil
+	}
+
+	// If we have some other error, that's a problem.
+	if resp.Error != nil {
+		storer.Context.MessageLog.Error("Error getting URL %s", resp.Request.URL.String())
+		return "", resp.Error
+	}
+
+	existingObject := resp.IntellectualObject()
+	if existingObject == nil {
+		storer.Context.MessageLog.Info("No existing Pharos object %s, so no need to reset StorageOption",
+			objIdentifier)
+		return "", nil
+	}
+	if existingObject.State == "D" {
+		storer.Context.MessageLog.Info("Ignoring existing Pharos object %s because state = 'D'",
+			objIdentifier)
+		return "", nil
+	}
+
+	obj, err := db.GetIntellectualObject(objIdentifier)
+	if err != nil {
+		return "", fmt.Errorf("Can't get IntellectualObject from BoltDB: %v", err)
+	}
+
+	// Force the StorageOption of the item we're ingesting to match the
+	// existing (non-deleted) object in Pharos.
+	if obj.StorageOption != existingObject.StorageOption {
+		storer.Context.MessageLog.Info("Changing StorageOption %s on object %s to %s "+
+			"to match StorageOption of existing object in Pharos.",
+			obj.StorageOption, objIdentifier, existingObject.StorageOption)
+		obj.StorageOption = existingObject.StorageOption
+		db.Save(objIdentifier, obj)
+	}
+	return existingObject.StorageOption, nil
 }
 
 // Copy the GenericFile to long-term storage in S3 or Glacier
