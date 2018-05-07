@@ -35,6 +35,12 @@ var INTEGRATION_GOOD_BAGS = []string{
 	"aptrust.integration.test/virginia.edu.uva-lib_2278801.tar",
 }
 
+var INTEGRATION_GLACIER_BAGS = []string{
+	"aptrust.integration.test/example.edu.sample_glacier_oh.tar",
+	"aptrust.integration.test/example.edu.sample_glacier_or.tar",
+	"aptrust.integration.test/example.edu.sample_glacier_va.tar",
+}
+
 var INTEGRATION_BAD_BAGS = []string{
 	"aptrust.integration.test/example.edu.tagsample_bad.tar",
 	"aptrust.integration.test/s3_upload_test.tar",
