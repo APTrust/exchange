@@ -604,7 +604,7 @@ func (storer *APTStorer) doUpload(storageSummary *models.StorageSummary, sendWhe
 		// PT #143660373: S3 zero-size file bug.
 		// S3 returns some very weird stuff here,
 		// sometimes zero, sometimes 10x the actual file size.
-		s3Obj := storer.getS3FileDetail(gf.IngestUUID)
+		s3Obj := storer.getS3FileDetail(uploader.AWSRegion, *uploader.UploadInput.Bucket, gf.IngestUUID)
 		if s3Obj == nil {
 			errMsg := fmt.Sprintf("%s returned nothing for %s (%s).", sendWhere, gf.IngestUUID, gf.Identifier)
 			if attemptNumber == MAX_UPLOAD_ATTEMPTS {
@@ -636,7 +636,7 @@ func (storer *APTStorer) doUpload(storageSummary *models.StorageSummary, sendWhe
 			}
 		}
 	} else {
-		storer.Context.MessageLog.Error("Could not get reader from tar file.")
+		storer.Context.MessageLog.Error("Could not get reader from tar file %s.", storageSummary.TarFilePath)
 	}
 }
 
@@ -899,12 +899,11 @@ func (storer *APTStorer) markFileAsStored(gf *models.GenericFile, sendWhere, sto
 }
 
 // PT #143660373: S3 zero-size file bug.
-func (storer *APTStorer) getS3FileDetail(fileUUID string) *s3.Object {
+func (storer *APTStorer) getS3FileDetail(region, bucket, fileUUID string) *s3.Object {
 	s3Client := network.NewS3ObjectList(
 		os.Getenv("AWS_ACCESS_KEY_ID"),
 		os.Getenv("AWS_SECRET_ACCESS_KEY"),
-		storer.Context.Config.APTrustS3Region,
-		storer.Context.Config.PreservationBucket, 1)
+		region, bucket, 1)
 	s3Client.GetList(fileUUID)
 	if len(s3Client.Response.Contents) > 0 {
 		return s3Client.Response.Contents[0]
