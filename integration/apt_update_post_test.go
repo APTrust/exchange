@@ -33,7 +33,7 @@ import (
 
 const (
 	UPDATED_BAG_IDENTIFIER = "test.edu/example.edu.tagsample_good"
-	UPDATED_BAG_ETAG       = "a08e2b0b3ba3490434c23a8d78b1760f"
+	UPDATED_BAG_ETAG       = "ec520876f7c87e24f926a8efea390b26"
 
 	UPDATED_GLACIER_BAG_IDENTIFIER = "test.edu/example.edu.sample_glacier_oh"
 	UPDATED_GLACIER_BAG_ETAG       = "bf01126663915a4f5d135a37443b8349"
