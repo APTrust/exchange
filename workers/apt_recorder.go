@@ -9,6 +9,7 @@ import (
 	"github.com/APTrust/exchange/util/storage"
 	"github.com/nsqio/go-nsq"
 	"os"
+	"strings"
 	"time"
 )
 
@@ -287,8 +288,10 @@ func (recorder *APTRecorder) createGenericFiles(ingestState *models.IngestState,
 		return
 	}
 	fileMap := make(map[string]*models.GenericFile, len(files))
-	for _, gf := range files {
+	identifiers := make([]string, len(files))
+	for i, gf := range files {
 		fileMap[gf.Identifier] = gf
+		identifiers[i] = gf.Identifier
 	}
 	resp := recorder.Context.PharosClient.GenericFileSaveBatch(files)
 	if resp.Error != nil {
@@ -296,11 +299,19 @@ func (recorder *APTRecorder) createGenericFiles(ingestState *models.IngestState,
 		recorder.Context.MessageLog.Error(
 			"Pharos returned this after attempt to save batch of GenericFiles:\n%s",
 			string(body))
+		recorder.Context.MessageLog.Error(
+			"File identifiers in failed batch:\b%s", strings.Join(identifiers, ", "))
 		ingestState.IngestManifest.RecordResult.AddError(resp.Error.Error())
 	}
 	// We may have managed to save some files despite the error.
 	// If so, record what was saved.
 	for _, savedFile := range resp.GenericFiles() {
+		if savedFile == nil {
+			// PT #157398417
+			// This happens after GenericFileSaveBatch returns an error.
+			recorder.Context.MessageLog.Warning("Nil GenericFile from resp.GenericFiles()")
+			continue
+		}
 		gf := fileMap[savedFile.Identifier]
 		if gf == nil {
 			ingestState.IngestManifest.RecordResult.AddError("After save, could not find file '%s' "+
@@ -339,12 +350,25 @@ func (recorder *APTRecorder) updateGenericFiles(ingestState *models.IngestState,
 // savePremisEventsForObject saves the object-level Premis events.
 func (recorder *APTRecorder) savePremisEventsForObject(ingestState *models.IngestState, obj *models.IntellectualObject) {
 	for i, event := range obj.PremisEvents {
+		if event.Id > 0 {
+			recorder.Context.MessageLog.Info("PremisEvent %d has already been saved", event.Id)
+			continue
+		}
 		event.IntellectualObjectId = obj.Id
 		resp := recorder.Context.PharosClient.PremisEventSave(event)
 		if resp.Error != nil {
+			method := "??"
+			url := "??"
+			if resp.Request != nil {
+				method = resp.Request.Method
+				if resp.Request.URL != nil {
+					url = resp.Request.URL.String()
+				}
+			}
 			ingestState.IngestManifest.RecordResult.AddError(
-				"While saving events for '%s', error adding PremisEvent '%s': %v",
-				obj.Identifier, event.EventType, resp.Error)
+				"While saving events for '%s', error adding PremisEvent '%s'."+
+					"Method: %s, URL: %s, Error: %v",
+				obj.Identifier, event.EventType, method, url, resp.Error)
 		} else {
 			obj.PremisEvents[i].MergeAttributes(resp.PremisEvent())
 		}
