@@ -13,6 +13,12 @@ def run
     puts "Try --help to see options."
     return
   end
+  # Note that `go clean -testcache` forces Golang to run all the unit
+  # tests anew. Without this option, Golang caches test results and then
+  # does not re-run tests if the file being tested hasn't changed since
+  # the last run. This is particularly problematic for integration tests.
+  puts "Clearing the Go test cache..."
+  `go clean -testcache`
   integration_test = IntegrationTest.new(context)
   integration_test.send(test_name, false)
 end
