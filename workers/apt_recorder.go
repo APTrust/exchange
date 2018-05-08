@@ -9,6 +9,7 @@ import (
 	"github.com/APTrust/exchange/util/storage"
 	"github.com/nsqio/go-nsq"
 	"os"
+	"strings"
 	"time"
 )
 
@@ -287,8 +288,10 @@ func (recorder *APTRecorder) createGenericFiles(ingestState *models.IngestState,
 		return
 	}
 	fileMap := make(map[string]*models.GenericFile, len(files))
-	for _, gf := range files {
+	identifiers := make([]string, len(files))
+	for i, gf := range files {
 		fileMap[gf.Identifier] = gf
+		identifiers[i] = gf.Identifier
 	}
 	resp := recorder.Context.PharosClient.GenericFileSaveBatch(files)
 	if resp.Error != nil {
@@ -296,6 +299,8 @@ func (recorder *APTRecorder) createGenericFiles(ingestState *models.IngestState,
 		recorder.Context.MessageLog.Error(
 			"Pharos returned this after attempt to save batch of GenericFiles:\n%s",
 			string(body))
+		recorder.Context.MessageLog.Error(
+			"File identifiers in failed batch:\b%s", strings.Join(identifiers, ", "))
 		ingestState.IngestManifest.RecordResult.AddError(resp.Error.Error())
 	}
 	// We may have managed to save some files despite the error.
