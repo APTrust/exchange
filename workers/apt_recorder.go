@@ -306,6 +306,12 @@ func (recorder *APTRecorder) createGenericFiles(ingestState *models.IngestState,
 	// We may have managed to save some files despite the error.
 	// If so, record what was saved.
 	for _, savedFile := range resp.GenericFiles() {
+		if savedFile == nil {
+			// PT #157398417
+			// This happens after GenericFileSaveBatch returns an error.
+			recorder.Context.MessageLog.Warning("Nil GenericFile from resp.GenericFiles()")
+			continue
+		}
 		gf := fileMap[savedFile.Identifier]
 		if gf == nil {
 			ingestState.IngestManifest.RecordResult.AddError("After save, could not find file '%s' "+
