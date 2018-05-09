@@ -31,22 +31,14 @@ import (
 // 5. Ensure updated file has new ingest & fixity calculation events in Pharos.
 // 6. Ensure ingest work item was marked complete in Pharos.
 
-const (
-	UPDATED_BAG_IDENTIFIER = "test.edu/example.edu.tagsample_good"
-	UPDATED_BAG_ETAG       = "ec520876f7c87e24f926a8efea390b26"
-
-	UPDATED_GLACIER_BAG_IDENTIFIER = "test.edu/example.edu.sample_glacier_oh"
-	UPDATED_GLACIER_BAG_ETAG       = "bf01126663915a4f5d135a37443b8349"
-)
-
 func TestUpdatedItemsInPharos(t *testing.T) {
 	if !testutil.ShouldRunIntegrationTests() {
 		t.Skip("Skipping integration test. Set ENV var RUN_EXCHANGE_INTEGRATION=true if you want to run them.")
 	}
 	_context, err := testutil.GetContext("integration.json")
 	require.Nil(t, err)
-	testUpdatedWorkItem(t, _context, UPDATED_BAG_IDENTIFIER, UPDATED_BAG_ETAG)
-	testUpdatedWorkItem(t, _context, UPDATED_GLACIER_BAG_IDENTIFIER, UPDATED_GLACIER_BAG_ETAG)
+	testUpdatedWorkItem(t, _context, testutil.UPDATED_BAG_IDENTIFIER, testutil.UPDATED_BAG_ETAG)
+	testUpdatedWorkItem(t, _context, testutil.UPDATED_GLACIER_BAG_IDENTIFIER, testutil.UPDATED_GLACIER_BAG_ETAG)
 	testUpdatedObject(t, _context)
 	testUpdatedGlacierObject(t, _context)
 }
@@ -74,7 +66,7 @@ func testUpdatedWorkItem(t *testing.T, _context *context.Context, bagIdentifier,
 }
 
 func testUpdatedObject(t *testing.T, _context *context.Context) {
-	resp := _context.PharosClient.IntellectualObjectGet(UPDATED_BAG_IDENTIFIER, true, true)
+	resp := _context.PharosClient.IntellectualObjectGet(testutil.UPDATED_BAG_IDENTIFIER, true, true)
 	obj := resp.IntellectualObject()
 	require.NotNil(t, obj)
 
@@ -185,10 +177,8 @@ func testUpdatedFileInStorage(t *testing.T, _context *context.Context, gf *model
 	}
 }
 
-// ---------------------------------------------------------------------------
-
 func testUpdatedGlacierObject(t *testing.T, _context *context.Context) {
-	resp := _context.PharosClient.IntellectualObjectGet(UPDATED_GLACIER_BAG_IDENTIFIER, true, true)
+	resp := _context.PharosClient.IntellectualObjectGet(testutil.UPDATED_GLACIER_BAG_IDENTIFIER, true, true)
 	obj := resp.IntellectualObject()
 	require.NotNil(t, obj)
 
@@ -203,7 +193,7 @@ func testUpdatedGlacierObject(t *testing.T, _context *context.Context) {
 		}
 	}
 	assert.Equal(t, 2, objectLevelEventCount)
-	assert.Equal(t, 15, fileLevelEventCount) // What should this count be??
+	assert.Equal(t, 9, fileLevelEventCount) // What should this count be??
 	assert.Empty(t, obj.FindEventsByType(constants.EventDeletion))
 	require.Equal(t, 6, len(obj.GenericFiles))
 	assert.Equal(t, constants.StorageGlacierOH, obj.StorageOption)
@@ -233,14 +223,14 @@ func testUpdatedGlacierFilesInPharos(t *testing.T, _context *context.Context, ob
 	expectedDigests := []string{
 		"44d85cf4810d6c6fe87750117633e461",
 		"248fac506a5c46b3c760312b99827b6fb5df4698d6cf9a9cdc4c54746728ab99",
-		"7a31f705fc1a16571374406c5a9b7681",
-		"baf8752080187b1e401ae952047029ae4e16b5f54c5daf9d97bc0c7598772326",
+		"380e7ae9ff6401c48f775310569936b1",
+		"7a60e3badcf418ae91b731535d7ca47c52977ab10ee925eb8285c377393d085a",
 	}
 
 	// Digests may be in unexpected order. Make sure they're all present.
 	for _, expectedDigest := range expectedDigests {
 		assert.True(t, util.StringListContains(actualDigests, expectedDigest),
-			"Digest %s not found", expectedDigest)
+			"Digest %s not found. Actual: %v", expectedDigest, actualDigests)
 	}
 
 	testUpdatedGlacierFileInStorage(t, _context, updatedFile)

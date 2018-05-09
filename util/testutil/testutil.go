@@ -49,6 +49,15 @@ var INTEGRATION_BAD_BAGS = []string{
 	"aptrust.integration.test/test.edu.bag6.tar",
 }
 
+// Integration tests ingest a second, updated version of these bags.
+const (
+	UPDATED_BAG_IDENTIFIER = "test.edu/example.edu.tagsample_good"
+	UPDATED_BAG_ETAG       = "ec520876f7c87e24f926a8efea390b26"
+
+	UPDATED_GLACIER_BAG_IDENTIFIER = "test.edu/example.edu.sample_glacier_oh"
+	UPDATED_GLACIER_BAG_ETAG       = "bf01126663915a4f5d135a37443b8349"
+)
+
 func ShouldRunIntegrationTests() bool {
 	return os.Getenv("RUN_EXCHANGE_INTEGRATION") == "true"
 }
