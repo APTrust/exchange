@@ -871,7 +871,9 @@ func (storer *APTStorer) assertRequiredMetadata(storageSummary *models.StorageSu
 }
 
 func (storer *APTStorer) markFileAsStored(gf *models.GenericFile, sendWhere, storageUrl string) {
-	if sendWhere == "s3" {
+	// For new Glacier-only storage, condition if sendWhere != "glacier"
+	// covers S3, Glacier-OH, Glacier-OR, and Glacier-VA
+	if sendWhere != "glacier" {
 		gf.IngestStoredAt = time.Now().UTC()
 		gf.IngestStorageURL = storageUrl
 		gf.URI = storageUrl
