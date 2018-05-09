@@ -8,4 +8,5 @@ partner_apps/apt_upload/apt_list
 partner_apps/apt_upload/apt_delete
 partner_apps/bin
 apps/apt_restore_from_glacier/apt_restore_from_glacier
+apps/apt_dump_valdb/apt_dump_valdb
 .DS_Store
