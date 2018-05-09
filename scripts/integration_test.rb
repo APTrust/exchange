@@ -180,9 +180,9 @@ class IntegrationTest
 	  @service.app_start(@context.apps['apt_volume_service'])
 	  sleep 5
 	  @service.app_start(@context.apps['apt_fetch'])
-	  sleep 50  # let nsq store topic fill before client connects
+	  sleep 40  # let nsq store topic fill before client connects
 	  @service.app_start(@context.apps['apt_store'])
-	  sleep 50  # let nsq record topic fill before client connects
+	  sleep 40  # let nsq record topic fill before client connects
 	  @service.app_start(@context.apps['apt_record'])
 	  sleep 40  # allow fetch/store/record time to finish
 
@@ -197,7 +197,13 @@ class IntegrationTest
 	  # Now get an updated bag from the special bucket and
 	  # ingest that so we can run our update integration tests.
 	  @service.run_bucket_reader_for_update()
-	  sleep 50
+	  puts 'Done with bucket reader. Allowing time to process updated files.'
+
+      # This is a problem: tests pass or fail depending on how
+      # long we sleep here and above. Tests that pass on one
+      # system may fail on a system with a slower internet
+      # connection.
+	  sleep 40
 	  @results['apt_update_test'] = run('apt_update_post_test.go')
 
 	  @service.stop_everything unless more_tests_follow
