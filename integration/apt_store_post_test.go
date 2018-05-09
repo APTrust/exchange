@@ -32,7 +32,8 @@ func TestStoreResults(t *testing.T) {
 	// with the "config/integration.json" config options. We'll read
 	// that file.
 	pathToJsonLog := filepath.Join(config.LogDirectory, "apt_store.json")
-	for _, bagName := range testutil.INTEGRATION_GOOD_BAGS {
+	bagNames = append(testutil.INTEGRATION_GOOD_BAGS, testutil.INTEGRATION_GLACIER_BAGS...)
+	for _, bagName := range bagNames {
 		ingestManifest, err := testutil.FindIngestManifestInLog(pathToJsonLog, bagName)
 		assert.Nil(t, err)
 		if err != nil {
