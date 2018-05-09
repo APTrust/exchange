@@ -11,6 +11,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"net/url"
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -26,6 +27,8 @@ func TestIngestedItemsInPharos(t *testing.T) {
 	params.Set("item_action", constants.ActionIngest)
 	params.Set("page", "1")
 	params.Set("per_page", "10")
+
+	defer deleteValDBForUpdateFiles(t, _context)
 
 	for _, bagName := range testutil.INTEGRATION_GOOD_BAGS {
 		tarFileName := strings.Split(bagName, "/")[1]
@@ -104,5 +107,24 @@ func testFileIsInStorage(t *testing.T, _context *context.Context, gf *models.Gen
 		assert.Equal(t, gf.OriginalPath(), storedFile.PathInBag, idAndUuid)
 		assert.Equal(t, gf.GetChecksumByAlgorithm(constants.AlgMd5).Digest, storedFile.Md5, idAndUuid)
 		assert.Equal(t, gf.GetChecksumByAlgorithm(constants.AlgSha256).Digest, storedFile.Sha256, idAndUuid)
+	}
+}
+
+// We're going to re-ingest two bags for the update test.
+// Delete the .valdb files for those bags, so the ingest
+// workers don't try to reuse them. The delete would happen
+// on demo and production automatically. We keep the .valdb files
+// around for integration tests only so we can inspect them
+// after the tests run.
+func deleteValDBForUpdateFiles(t *testing.T, _context *context.Context) {
+	// These constants are defined in apt_update_post_test.go
+	updateBags := []string{
+		testutil.UPDATED_BAG_IDENTIFIER,
+		testutil.UPDATED_GLACIER_BAG_IDENTIFIER,
+	}
+	for _, bagName := range updateBags {
+		valdbFile := filepath.Join(_context.Config.TarDirectory, bagName+".valdb")
+		err := os.Remove(valdbFile)
+		assert.Nil(t, err, "Error removing %s: %v", valdbFile, err)
 	}
 }
