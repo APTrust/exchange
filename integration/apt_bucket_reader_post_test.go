@@ -123,9 +123,10 @@ func testErrors(t *testing.T, expected *stats.APTBucketReaderStats, actual *stat
 // we created in aptrust.integration.test. This test will fail
 // if someone deletes those subdirectories.
 //
+// "Ignoring non-tar file TestBags.zip",
 // "Ignoring TestSubDir/ (subdirectory)",
 // "Ignoring TestSubDir/SubSubDir/ (subdirectory)",
 // "Ignoring TestSubDir/SubSubDir/example.edu.tagsample_good.tar (subdirectory)"
 func testWarnings(t *testing.T, expected *stats.APTBucketReaderStats, actual *stats.APTBucketReaderStats) {
-	assert.Equal(t, 3, len(actual.Warnings))
+	assert.Equal(t, 4, len(actual.Warnings))
 }
