@@ -1,11 +1,15 @@
 package integration_test
 
 import (
+	"github.com/APTrust/exchange/constants"
+	"github.com/APTrust/exchange/context"
 	"github.com/APTrust/exchange/models"
+	"github.com/APTrust/exchange/network"
 	"github.com/APTrust/exchange/util"
 	"github.com/APTrust/exchange/util/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -28,6 +32,8 @@ func TestStoreResults(t *testing.T) {
 	require.Nil(t, err)
 	config.ExpandFilePaths()
 
+	_context, err := testutil.GetContext("integration.json")
+
 	// Find the log file that apt_store created when it was running
 	// with the "config/integration.json" config options. We'll read
 	// that file.
@@ -39,8 +45,8 @@ func TestStoreResults(t *testing.T) {
 		if err != nil {
 			continue
 		}
-		// TODO: Test WorkItem (stage, status, etc.) below
 		storeTestCommon(t, bagName, ingestManifest, config)
+		testItemIsInStorage(t, _context, ingestManifest.WorkItemId)
 	}
 }
 
@@ -97,4 +103,58 @@ func storeTestCommon(t *testing.T, bagName string, ingestManifest *models.Ingest
 // We want to make sure we actually did save this special junk file.
 func isSpecialJunkFile(gf *models.GenericFile) bool {
 	return gf.Identifier == "test.edu/example.edu.sample_ds_store_and_empty/data/._DS_StoreTest"
+}
+
+func testItemIsInStorage(t *testing.T, _context *context.Context, workItemId int) {
+
+	resp := _context.PharosClient.WorkItemGet(workItemId)
+	require.Nil(t, resp.Error)
+	workItem := resp.WorkItem()
+	require.NotNil(t, workItem)
+	require.NotEmpty(t, workItem.ObjectIdentifier)
+
+	resp = _context.PharosClient.IntellectualObjectGet(workItem.ObjectIdentifier, true, false)
+	require.Nil(t, resp.Error)
+	obj := resp.IntellectualObject()
+
+	region := _context.Config.APTrustS3Region
+	bucket := _context.Config.PreservationBucket
+
+	if obj.StorageOption == constants.StorageGlacierOH {
+		region = _context.Config.GlacierRegionOH
+		bucket = _context.Config.GlacierBucketOH
+	} else if obj.StorageOption == constants.StorageGlacierOR {
+		region = _context.Config.GlacierRegionOR
+		bucket = _context.Config.GlacierBucketOR
+	} else if obj.StorageOption == constants.StorageGlacierVA {
+		region = _context.Config.GlacierRegionVA
+		bucket = _context.Config.GlacierBucketVA
+	}
+
+	// s3Head gets metadata about specific objects in S3/Glacier.
+	s3Head := network.NewS3Head(
+		os.Getenv("AWS_ACCESS_KEY_ID"),
+		os.Getenv("AWS_SECRET_ACCESS_KEY"),
+		region,
+		bucket)
+
+	for _, gf := range obj.GenericFiles {
+		fileUUID, err := gf.PreservationStorageFileName()
+		require.Nil(t, err)
+		// Make sure each item file is present and has the expected
+		// metadata. s3Head.Response.Metadata is map[string]*string.
+		s3Head.Head(fileUUID)
+		require.Empty(t, s3Head.ErrorMessage)
+		metadata := s3Head.Response.Metadata
+		require.NotNil(t, metadata, "Missing metadata for %s", gf.Identifier)
+
+		storedFile := s3Head.StoredFile()
+		assert.Equal(t, gf.Size, storedFile.Size)
+		assert.True(t, strings.HasPrefix(gf.IntellectualObjectIdentifier, storedFile.Institution))
+		assert.NotEmpty(t, gf.FileFormat, storedFile.ContentType)
+		assert.True(t, strings.Contains(gf.IntellectualObjectIdentifier, storedFile.BagName))
+		assert.Equal(t, gf.OriginalPath(), storedFile.PathInBag)
+		assert.Equal(t, gf.GetChecksumByAlgorithm(constants.AlgMd5).Digest, storedFile.Md5)
+		assert.Equal(t, gf.GetChecksumByAlgorithm(constants.AlgSha256).Digest, storedFile.Sha256)
+	}
 }
