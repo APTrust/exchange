@@ -186,6 +186,15 @@ func (reader *APTBucketReader) processBucket(bucketName string) {
 				}
 				continue
 			}
+			// Skip non-tar files
+			if !strings.HasSuffix(*s3Object.Key, ".tar") {
+				msg := fmt.Sprintf("Ignoring non-tar file %s", *s3Object.Key)
+				reader.Context.MessageLog.Info(msg)
+				if reader.stats != nil {
+					reader.stats.AddWarning(msg)
+				}
+				continue
+			}
 			// Ok, it's not in a nested directory, so let's process it.
 			if reader.stats != nil {
 				reader.stats.AddS3Item(fmt.Sprintf("%s/%s", bucketName, *s3Object.Key))
