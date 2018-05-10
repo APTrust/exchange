@@ -72,6 +72,26 @@ func TestFixityCheckResults(t *testing.T) {
 	}
 }
 
+func TestNoGlacierFilesChecked(t *testing.T) {
+	if !testutil.ShouldRunIntegrationTests() {
+		t.Skip("Skipping integration test. Set ENV var RUN_EXCHANGE_INTEGRATION=true if you want to run them.")
+	}
+
+	_context, err := testutil.GetContext("integration.json")
+	require.Nil(t, err)
+	logFile := filepath.Join(_context.Config.LogDirectory, "apt_queue_fixity.log")
+
+	// This test is weak. It just checks to see whether apt_queue_for_fixity
+	// requests only files with Standard storage type
+	cmd := exec.Command("grep", "&storage_option=Standard", logFile, "| wc -l")
+	err = cmd.Run()
+	if err == nil {
+		bytes, _ := cmd.Output()
+		output := strings.TrimSpace(string(bytes))
+		assert.Equal(t, "1", output, "Expected to find storage_option=Standard in apt_queue_fixity.log")
+	}
+}
+
 func TestFixityCheckAddRemove(t *testing.T) {
 	if !testutil.ShouldRunIntegrationTests() {
 		t.Skip("Skipping integration test. Set ENV var RUN_EXCHANGE_INTEGRATION=true if you want to run them.")
