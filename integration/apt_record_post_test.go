@@ -33,7 +33,8 @@ func TestRecordResults(t *testing.T) {
 	// with the "config/integration.json" config options. We'll read
 	// that file.
 	pathToJsonLog := filepath.Join(config.LogDirectory, "apt_record.json")
-	for _, bagName := range testutil.INTEGRATION_GOOD_BAGS {
+	bagNames := append(testutil.INTEGRATION_GOOD_BAGS, testutil.INTEGRATION_GLACIER_BAGS...)
+	for _, bagName := range bagNames {
 		ingestManifest, err := testutil.FindIngestManifestInLog(pathToJsonLog, bagName)
 		assert.Nil(t, err)
 		if err != nil {
@@ -161,7 +162,11 @@ func recordTestCommon(t *testing.T, bagName string, ingestManifest *models.Inges
 		assert.False(t, sha256.UpdatedAt.IsZero(), "sha256.UpdatedAt was not set for %s", gf.Identifier)
 
 		// Make sure PremisEvents are present
-		require.Equal(t, 6, len(gf.PremisEvents),
+		expectedEventCount := 6
+		if gf.StorageOption != constants.StorageStandard {
+			expectedEventCount = 5 // no replication event for Glacier-only files
+		}
+		require.Equal(t, expectedEventCount, len(gf.PremisEvents),
 			"PremisEvents count should be %s, found %d for %s", 6, len(gf.PremisEvents), gf.Identifier)
 		assert.Equal(t, 1, len(gf.FindEventsByType(constants.EventFixityCheck)),
 			"Missing fixity check event for %s", gf.Identifier)
@@ -169,8 +174,10 @@ func recordTestCommon(t *testing.T, bagName string, ingestManifest *models.Inges
 			"Missing digest calculation event for %s", gf.Identifier)
 		assert.Equal(t, 2, len(gf.FindEventsByType(constants.EventIdentifierAssignment)),
 			"Missing identifier assignment event(s) for %s", gf.Identifier)
-		assert.Equal(t, 1, len(gf.FindEventsByType(constants.EventReplication)),
-			"Missing replication event for %s", gf.Identifier)
+		if gf.StorageOption == constants.StorageStandard {
+			assert.Equal(t, 1, len(gf.FindEventsByType(constants.EventReplication)),
+				"Missing replication event for %s", gf.Identifier)
+		}
 		assert.Equal(t, 1, len(gf.FindEventsByType(constants.EventIngestion)),
 			"Missing ingestion event for %s", gf.Identifier)
 
