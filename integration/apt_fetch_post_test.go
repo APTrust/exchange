@@ -55,14 +55,6 @@ func TestFetchResults(t *testing.T) {
 		// TODO: Test WorkItem (stage, status, etc.) below
 		fetcherTestGoodBagResult(t, bagName, ingestManifest)
 	}
-	for _, bagName := range testutil.INTEGRATION_BAD_BAGS {
-		ingestManifest, err := testutil.FindIngestManifestInLog(pathToJsonLog, bagName)
-		require.Nil(t, err, bagName)
-		require.NotNil(t, ingestManifest, bagName)
-		fetcherTestCommon(t, bagName, ingestManifest)
-		// TODO: Test WorkItem (stage, status, etc.) below
-		fetcherTestBadBagResult(t, bagName, ingestManifest)
-	}
 }
 
 func fetcherTestGoodBagResult(t *testing.T, bagName string, ingestManifest *models.IngestManifest) {
@@ -131,16 +123,6 @@ func fetcherTestGoodBagResult(t *testing.T, bagName string, ingestManifest *mode
 		assert.NotEmpty(t, gf.IngestUUID, "Bag %s file %s UUID is missing", bagName, gfIdentifier)
 		assert.NotEmpty(t, gf.IngestUUIDGeneratedAt, "Bag %s file %s UUIDGeneratedAt is missing", bagName, gfIdentifier)
 	}
-}
-
-func fetcherTestBadBagResult(t *testing.T, bagName string, ingestManifest *models.IngestManifest) {
-	// These files are invalid, and should show fatal validation errors.
-	assert.NotEmpty(t, ingestManifest.ValidateResult.Errors,
-		"ValidateResult.Errors should not be empty for %s", bagName)
-	assert.True(t, ingestManifest.ValidateResult.ErrorIsFatal,
-		"ValidateResult.ErrorIsFatal should be true for %s", bagName)
-	assert.False(t, ingestManifest.ValidateResult.Retry,
-		"ValidateResult.Retry should be false for %s", bagName)
 }
 
 func fetcherTestCommon(t *testing.T, bagName string, ingestManifest *models.IngestManifest) {
