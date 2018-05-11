@@ -162,6 +162,9 @@ type Config struct {
 	// Glacier-only storage bucket is located.
 	GlacierRegionOR string
 
+	// Configuration options for apt_glacier_restore
+	GlacierRestoreWorker WorkerConfig
+
 	// LogDirectory is where we'll write our log files.
 	LogDirectory string
 
