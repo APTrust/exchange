@@ -45,21 +45,47 @@ func NewGlacierRestore(_context *context.Context) *APTGlacierRestore {
 
 // This is the callback that NSQ workers use to handle messages from NSQ.
 func (restorer *APTGlacierRestore) HandleMessage(message *nsq.Message) error {
-
 	// TODO: Set up GlacierRestoreState
-
-	// restorer.RequestChannel <- glacierRestoreState
-
-	// Return no error, so NSQ knows we're OK.
+	workItem, err := GetWorkItem(message, restorer.Context)
+	if err != nil {
+		restorer.Context.MessageLog.Error(err.Error())
+		return err
+	}
+	var glacierRestoreState *models.GlacierRestoreState
+	if workItem.WorkItemStateId != nil && *workItem.WorkItemStateId != 0 {
+		workItemState, err := GetWorkItemState(workItem, restorer.Context, false)
+		if err != nil {
+			restorer.Context.MessageLog.Error(err.Error())
+			return err
+		}
+		if workItemState != nil && workItemState.HasData() {
+			glacierRestoreState, err := workItemState.GlacierRestoreState()
+			if err != nil {
+				restorer.Context.MessageLog.Error(err.Error())
+				return err
+			}
+			glacierRestoreState.NSQMessage = message
+			glacierRestoreState.WorkItem = workItem
+		}
+	} else {
+		glacierRestoreState = models.NewGlacierRestoreState(message, workItem)
+	}
+	restorer.RequestChannel <- glacierRestoreState
 	return nil
 }
 
 func (restorer *APTGlacierRestore) requestRestore() {
-	//for restoreState := range restorer.RequestChannel {
-	// Request retrieval from Glacier
-	// Update GlacierRestoreState
-	// Push to CleanupChannel
-	//}
+	for glacierRestoreState := range restorer.RequestChannel {
+		glacierRestoreState.WorkSummary.ClearErrors()
+		glacierRestoreState.WorkSummary.Attempted = true
+		glacierRestoreState.WorkSummary.AttemptNumber += 1
+		glacierRestoreState.WorkSummary.Start()
+		// if WorkItem has a GenericFileIdentifier, this is a
+		// single-file restore. Otherwise, it's an object restore.
+		// Request retrieval from Glacier
+		// Update GlacierRestoreState
+		// Push to CleanupChannel
+	}
 }
 
 func (restorer *APTGlacierRestore) cleanup() {
@@ -67,4 +93,8 @@ func (restorer *APTGlacierRestore) cleanup() {
 	// Update WorkItem in Pharos
 	// Push to NSQ's restoration channel for packaging, etc.
 	//}
+}
+
+func (restorer *APTGlacierRestore) requestAllFiles(glacierRestoreState *models.GlacierRestoreState) {
+
 }

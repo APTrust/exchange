@@ -1,20 +1,34 @@
 package models
 
 import (
+	"github.com/nsqio/go-nsq"
 	"time"
 )
 
 type GlacierRestoreState struct {
+	// NSQMessage is the NSQ message being processed in this restore
+	// request. Not serialized because it will change each time we
+	// try to process a request.
+	NSQMessage *nsq.Message `json:"-"`
 	// WorkItem is the Pharos WorkItem we're processing.
 	// Not serialized because the Pharos WorkItem record will be
 	// more up-to-date and authoritative.
 	WorkItem *WorkItem `json:"-"`
-	// RequestSummary contains information about whether/when
+	// WorkSummary contains information about whether/when
 	// we requested this object(s) be restored from Glacier.
-	RequestSummary *WorkSummary
+	WorkSummary *WorkSummary
 	// Requests are the requests we've made (or need to make)
 	// to Glacier to retrieve the objects we need to retrieve.
 	Requests []GlacierRestoreRequest
+}
+
+func NewGlacierRestoreState(message *nsq.Message, workItem *WorkItem) *GlacierRestoreState {
+	return &GlacierRestoreState{
+		NSQMessage:  message,
+		WorkItem:    workItem,
+		WorkSummary: NewWorkSummary(),
+		Requests:    make([]GlacierRestoreRequest, 0),
+	}
 }
 
 // TODO: Implement functions to add and find restore requests.

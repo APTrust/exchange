@@ -93,16 +93,18 @@ var StageTypes []string = []string{
 // https://github.com/APTrust/fluctus/blob/develop/config/application.rb
 
 const (
-	ActionIngest      = "Ingest"
-	ActionFixityCheck = "Fixity Check"
-	ActionRestore     = "Restore"
-	ActionDelete      = "Delete"
-	ActionDPN         = "DPN"
+	ActionIngest         = "Ingest"
+	ActionFixityCheck    = "Fixity Check"
+	ActionGlacierRestore = "Glacier Restore"
+	ActionRestore        = "Restore"
+	ActionDelete         = "Delete"
+	ActionDPN            = "DPN"
 )
 
 var ActionTypes []string = []string{
 	ActionIngest,
 	ActionFixityCheck,
+	ActionGlacierRestore,
 	ActionRestore,
 	ActionDelete,
 }
