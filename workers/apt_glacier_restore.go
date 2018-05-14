@@ -51,7 +51,7 @@ func (restorer *APTGlacierRestore) HandleMessage(message *nsq.Message) error {
 		restorer.Context.MessageLog.Error(err.Error())
 		return err
 	}
-	var glacierRestoreState *models.GlacierRestoreState
+	var state *models.GlacierRestoreState
 	if workItem.WorkItemStateId != nil && *workItem.WorkItemStateId != 0 {
 		workItemState, err := GetWorkItemState(workItem, restorer.Context, false)
 		if err != nil {
@@ -59,27 +59,27 @@ func (restorer *APTGlacierRestore) HandleMessage(message *nsq.Message) error {
 			return err
 		}
 		if workItemState != nil && workItemState.HasData() {
-			glacierRestoreState, err := workItemState.GlacierRestoreState()
+			state, err := workItemState.GlacierRestoreState()
 			if err != nil {
 				restorer.Context.MessageLog.Error(err.Error())
 				return err
 			}
-			glacierRestoreState.NSQMessage = message
-			glacierRestoreState.WorkItem = workItem
+			state.NSQMessage = message
+			state.WorkItem = workItem
 		}
 	} else {
-		glacierRestoreState = models.NewGlacierRestoreState(message, workItem)
+		state = models.NewGlacierRestoreState(message, workItem)
 	}
-	restorer.RequestChannel <- glacierRestoreState
+	restorer.RequestChannel <- state
 	return nil
 }
 
 func (restorer *APTGlacierRestore) requestRestore() {
-	for glacierRestoreState := range restorer.RequestChannel {
-		glacierRestoreState.WorkSummary.ClearErrors()
-		glacierRestoreState.WorkSummary.Attempted = true
-		glacierRestoreState.WorkSummary.AttemptNumber += 1
-		glacierRestoreState.WorkSummary.Start()
+	for state := range restorer.RequestChannel {
+		state.WorkSummary.ClearErrors()
+		state.WorkSummary.Attempted = true
+		state.WorkSummary.AttemptNumber += 1
+		state.WorkSummary.Start()
 		// if WorkItem has a GenericFileIdentifier, this is a
 		// single-file restore. Otherwise, it's an object restore.
 		// Request retrieval from Glacier
@@ -95,6 +95,44 @@ func (restorer *APTGlacierRestore) cleanup() {
 	//}
 }
 
-func (restorer *APTGlacierRestore) requestAllFiles(glacierRestoreState *models.GlacierRestoreState) {
+func (restorer *APTGlacierRestore) requestAllFiles(state *models.GlacierRestoreState) {
+	if state.WorkItem.GenericFileIdentifier != "" {
+		gfIdentifier := state.WorkItem.GenericFileIdentifier
+		resp := restorer.Context.PharosClient.GenericFileGet(gfIdentifier, false)
+		if resp.Error != nil {
+			state.WorkSummary.AddError("Error getting GenericFile %s from Pharos: %v", gfIdentifier, resp.Error)
+			return
+		}
+		genericFile := resp.GenericFile()
+		if genericFile == nil {
+			state.WorkSummary.AddError("Pharos returned nil for GenericFile %s", gfIdentifier)
+			return
+		}
+		restorer.requestFile(state, genericFile)
+	} else if state.WorkItem.ObjectIdentifier != "" {
+		objIdentifier := state.WorkItem.ObjectIdentifier
+		resp := restorer.Context.PharosClient.IntellectualObjectGet(objIdentifier, true, false)
+		if resp.Error != nil {
+			state.WorkSummary.AddError("Error getting IntellectualObject %s from Pharos: %v", objIdentifier, resp.Error)
+			return
+		}
+		obj := resp.IntellectualObject()
+		if obj == nil {
+			state.WorkSummary.AddError("Pharos returned nil for IntellectualObject %s", objIdentifier)
+			return
+		}
+		restorer.Context.MessageLog.Info("Object %s has %d files", obj.Identifier, len(obj.GenericFiles))
+		for _, genericFile := range obj.GenericFiles {
+			restorer.requestFile(state, genericFile)
+		}
+	} else {
+		state.WorkSummary.AddError("Cannot process WorkItem %d: no file identifier or object identifier.", state.WorkItem.Id)
+		return
+	}
+}
 
+func (restorer *APTGlacierRestore) requestFile(state *models.GlacierRestoreState, gf *models.GenericFile) {
+	restorer.Context.MessageLog.Info("Requesting Glacier retrieval of %s at %s (%s)", gf.Identifier, gf.URI, gf.StorageOption)
+
+	// TODO: Use network.S3Restore
 }
