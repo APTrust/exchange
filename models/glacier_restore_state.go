@@ -149,7 +149,7 @@ func NewGlacierRequestReport() *GlacierRequestReport {
 
 // AllRetrievalsInitialed returns true if we have initiated the retrieval
 // process for all of the files we were suppsed to retrieve.
-func (report *GlacierRequestReport) AllRetrievalsInitialed() bool {
+func (report *GlacierRequestReport) AllRetrievalsInitiated() bool {
 	return len(report.FilesNotRequested) == 0 && len(report.RequestsNotAccepted) == 0
 }
 
