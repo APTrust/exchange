@@ -1,20 +1,28 @@
 package workers
 
 import (
-	//	"fmt"
-	//	"github.com/APTrust/exchange/constants"
+	"fmt"
+	"github.com/APTrust/exchange/constants"
 	"github.com/APTrust/exchange/context"
 	"github.com/APTrust/exchange/models"
-	//	"github.com/APTrust/exchange/network"
+	"github.com/APTrust/exchange/network"
 	//	"github.com/APTrust/exchange/util"
 	//	"github.com/APTrust/exchange/util/fileutil"
 	//	"github.com/APTrust/exchange/util/storage"
 	//	"github.com/APTrust/exchange/validation"
 	"github.com/nsqio/go-nsq"
-	//	"os"
+	"os"
 	//	"strings"
-	//	"time"
+	"time"
 )
+
+// Standard retrieval is 3-5 hours
+const RETRIEVAL_OPTION = "Standard"
+
+// Keep the files in S3 up to 5 days, in case we're
+// having system problems and we need to attempt the
+// restore multiple times.
+const DAYS_TO_KEEP_IN_S3 = 5
 
 // Requests that an object be restored from Glacier to S3. This is
 // the first step toward restoring a Glacier-only bag.
@@ -132,7 +140,96 @@ func (restorer *APTGlacierRestore) requestAllFiles(state *models.GlacierRestoreS
 }
 
 func (restorer *APTGlacierRestore) requestFile(state *models.GlacierRestoreState, gf *models.GenericFile) {
-	restorer.Context.MessageLog.Info("Requesting Glacier retrieval of %s at %s (%s)", gf.Identifier, gf.URI, gf.StorageOption)
+	details, err := restorer.getRequestDetails(gf)
+	if err != nil {
+		state.WorkSummary.AddError(err.Error())
+		return
+	}
 
-	// TODO: Use network.S3Restore
+	glacierRestoreRequest := restorer.getRequestRecord(state, gf, details)
+	if glacierRestoreRequest == nil {
+		// Prior request was accepted and is in progress
+		return
+	}
+	restorer.initializeRetrieval(state, gf, details, glacierRestoreRequest)
+}
+
+func (restorer *APTGlacierRestore) getRequestDetails(gf *models.GenericFile) (map[string]string, error) {
+	details := make(map[string]string)
+	fileUUID, err := gf.PreservationStorageFileName()
+	if err != nil {
+		return nil, fmt.Errorf("File %s: %v. URI is %s", gf.Identifier, err, gf.URI)
+	}
+	details["fileUUID"] = fileUUID
+	details["region"] = restorer.Context.Config.GlacierRegionVA
+	details["bucket"] = restorer.Context.Config.GlacierBucketVA
+	if gf.StorageOption == constants.StorageGlacierOH {
+		details["region"] = restorer.Context.Config.GlacierRegionOH
+		details["bucket"] = restorer.Context.Config.GlacierBucketOH
+	} else if gf.StorageOption == constants.StorageGlacierOR {
+		details["region"] = restorer.Context.Config.GlacierRegionOR
+		details["bucket"] = restorer.Context.Config.GlacierBucketOR
+	} else {
+		return nil, fmt.Errorf("Cannot restore file %s because StorageOption is %s", gf.Identifier, gf.StorageOption)
+	}
+	return details, nil
+}
+
+func (restorer *APTGlacierRestore) getRequestRecord(state *models.GlacierRestoreState, gf *models.GenericFile, details map[string]string) *models.GlacierRestoreRequest {
+	glacierRestoreRequest := state.FindRequest(gf.Identifier)
+	if glacierRestoreRequest != nil {
+		if glacierRestoreRequest.RequestAccepted {
+			restorer.Context.MessageLog.Info("Skipping %s: retrieval request was accepted earlier.", gf.Identifier)
+			return nil
+		} else {
+			restorer.Context.MessageLog.Info("Retrying existing request for %s, which was not previously accepted", gf.Identifier)
+		}
+	} else {
+		restorer.Context.MessageLog.Info("Creating new request for %s", gf.Identifier)
+		glacierRestoreRequest = &models.GlacierRestoreRequest{
+			GenericFileIdentifier: gf.Identifier,
+			GlacierBucket:         details["bucket"],
+			GlacierKey:            details["fileUUID"],
+			RequestAccepted:       false,
+			SomeoneElseRequested:  false,
+		}
+		state.Requests = append(state.Requests, glacierRestoreRequest)
+	}
+	return glacierRestoreRequest
+}
+
+func (restorer *APTGlacierRestore) initializeRetrieval(state *models.GlacierRestoreState, gf *models.GenericFile, details map[string]string, glacierRestoreRequest *models.GlacierRestoreRequest) {
+
+	restorer.Context.MessageLog.Info("Requesting Glacier retrieval of %s at %s (%s)",
+		gf.Identifier, gf.URI, gf.StorageOption)
+
+	restoreClient := network.NewS3Restore(
+		os.Getenv("AWS_ACCESS_KEY_ID"),
+		os.Getenv("AWS_SECRET_ACCESS_KEY"),
+		details["region"],
+		details["bucket"],
+		details["fileUUID"],
+		RETRIEVAL_OPTION,
+		DAYS_TO_KEEP_IN_S3)
+	now := time.Now().UTC()
+	estimatedDeletionFromS3 := now.AddDate(0, 0, DAYS_TO_KEEP_IN_S3)
+	someoneElseRequested := false
+	restoreClient.Restore()
+	if restoreClient.ErrorMessage != "" {
+		if restoreClient.RestoreAlreadyInProgress {
+			// Although we checked for this above, this case can occur when
+			// an outside service requests Glacier retrieval.
+			restorer.Context.MessageLog.Info("Retrieval of %s was requested earlier (probably by someone else) and is already in progress.", gf.Identifier)
+			someoneElseRequested = true
+		} else {
+			state.WorkSummary.AddError("Glacier retrieval request returned an error for %s at %s: %v", gf.Identifier, gf.URI, restoreClient.ErrorMessage)
+			return
+		}
+	}
+
+	// Update this info. It's a pointer, so it will be saved with GlacierRestoreState.
+	glacierRestoreRequest.RequestAccepted = (restoreClient.ErrorMessage == "")
+	glacierRestoreRequest.RequestedAt = now
+	glacierRestoreRequest.EstimatedDeletionFromS3 = estimatedDeletionFromS3
+	glacierRestoreRequest.SomeoneElseRequested = someoneElseRequested
 }

@@ -19,7 +19,7 @@ type GlacierRestoreState struct {
 	WorkSummary *WorkSummary
 	// Requests are the requests we've made (or need to make)
 	// to Glacier to retrieve the objects we need to retrieve.
-	Requests []GlacierRestoreRequest
+	Requests []*GlacierRestoreRequest
 }
 
 func NewGlacierRestoreState(message *nsq.Message, workItem *WorkItem) *GlacierRestoreState {
@@ -27,11 +27,22 @@ func NewGlacierRestoreState(message *nsq.Message, workItem *WorkItem) *GlacierRe
 		NSQMessage:  message,
 		WorkItem:    workItem,
 		WorkSummary: NewWorkSummary(),
-		Requests:    make([]GlacierRestoreRequest, 0),
+		Requests:    make([]*GlacierRestoreRequest, 0),
 	}
 }
 
-// TODO: Implement functions to add and find restore requests.
+func (state *GlacierRestoreState) FindRequest(gfIdentifier string) *GlacierRestoreRequest {
+	var request *GlacierRestoreRequest
+	if state.Requests != nil {
+		for _, req := range state.Requests {
+			if req.GenericFileIdentifier == gfIdentifier {
+				request = req
+				break
+			}
+		}
+	}
+	return request
+}
 
 type GlacierRestoreRequest struct {
 	// GenericFileIdentifier is the identifier of the generic
@@ -43,35 +54,23 @@ type GlacierRestoreRequest struct {
 	// GlacierKey is the key we want to restore
 	// (usually a UUID, for APTrust).
 	GlacierKey string
-	// AttemptNumber is the number of times we've requested
-	// the item be restored.
-	AttemptNumber int
-	// ObjectSize is the size (in bytes) of the object we
-	// want to restore.
-	ObjectSize int64
 	// RequestAccepted indicates whether Glacier accepted
 	// our request to restore this object.
 	RequestAccepted bool
 	// RequestedAt is the timestamp of the last request to
 	// restore this object.
 	RequestedAt time.Time
-	// AcceptedAt is the timestamp describing when Glacier
-	// accepted the restore request.
-	AcceptedAt time.Time
-	// EstimatedAvailabilityTime describes approximately when
+	// EstimatedDeletionFromS3 describes approximately when
 	// this item should be available at the RestorationURL.
 	// This time can vary, depending on what level of Glacier
 	// retrieval service we're using. Using the standard service
 	// level, this should be about four hours after RequestedAt,
 	// if the requests succeeded.
-	EstimatedAvailabilityTime time.Time
-	// RestorationURL is the URL in S3 where this object will
-	// be available once it's been restored.
-	RestorationURL string
-	// DaysAvailable is the number of days after restoration that
-	// this item will remain in the S3 bucket.
-	DaysAvailable int
-	// ObjectMetadata is the metadata attached to the Glacier
-	// object at the time we reqested its retrieval.
-	ObjectMetadata map[string]string
+	EstimatedDeletionFromS3 time.Time
+	// SomeoneElseRequested will be true if apt_glacier_restore
+	// thinks someone else requested retrieval of the object.
+	// If this is true, EstimatedDeletionFromS3 may not be
+	// reliable, because we don't know when the retrieval
+	// request occurred, or with what parameters.
+	SomeoneElseRequested bool
 }
