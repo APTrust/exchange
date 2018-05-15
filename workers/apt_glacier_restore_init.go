@@ -26,14 +26,14 @@ const DAYS_TO_KEEP_IN_S3 = 5
 
 // Requests that an object be restored from Glacier to S3. This is
 // the first step toward restoring a Glacier-only bag.
-type APTGlacierRestore struct {
+type APTGlacierRestoreInit struct {
 	Context        *context.Context
 	RequestChannel chan *models.GlacierRestoreState
 	CleanupChannel chan *models.GlacierRestoreState
 }
 
-func NewGlacierRestore(_context *context.Context) *APTGlacierRestore {
-	restorer := &APTGlacierRestore{
+func NewGlacierRestore(_context *context.Context) *APTGlacierRestoreInit {
+	restorer := &APTGlacierRestoreInit{
 		Context: _context,
 	}
 	// Set up buffered channels
@@ -52,7 +52,7 @@ func NewGlacierRestore(_context *context.Context) *APTGlacierRestore {
 }
 
 // This is the callback that NSQ workers use to handle messages from NSQ.
-func (restorer *APTGlacierRestore) HandleMessage(message *nsq.Message) error {
+func (restorer *APTGlacierRestoreInit) HandleMessage(message *nsq.Message) error {
 	// TODO: Set up GlacierRestoreState
 	workItem, err := GetWorkItem(message, restorer.Context)
 	if err != nil {
@@ -82,7 +82,7 @@ func (restorer *APTGlacierRestore) HandleMessage(message *nsq.Message) error {
 	return nil
 }
 
-func (restorer *APTGlacierRestore) requestRestore() {
+func (restorer *APTGlacierRestoreInit) requestRestore() {
 	for state := range restorer.RequestChannel {
 		state.WorkSummary.ClearErrors()
 		state.WorkSummary.Attempted = true
@@ -96,14 +96,14 @@ func (restorer *APTGlacierRestore) requestRestore() {
 	}
 }
 
-func (restorer *APTGlacierRestore) cleanup() {
+func (restorer *APTGlacierRestoreInit) cleanup() {
 	//for restoreState := range restorer.RequestChannel {
 	// Update WorkItem in Pharos
 	// Push to NSQ's restoration channel for packaging, etc.
 	//}
 }
 
-func (restorer *APTGlacierRestore) requestAllFiles(state *models.GlacierRestoreState) {
+func (restorer *APTGlacierRestoreInit) requestAllFiles(state *models.GlacierRestoreState) {
 	if state.WorkItem.GenericFileIdentifier != "" {
 		gfIdentifier := state.WorkItem.GenericFileIdentifier
 		resp := restorer.Context.PharosClient.GenericFileGet(gfIdentifier, false)
@@ -139,7 +139,7 @@ func (restorer *APTGlacierRestore) requestAllFiles(state *models.GlacierRestoreS
 	}
 }
 
-func (restorer *APTGlacierRestore) requestFile(state *models.GlacierRestoreState, gf *models.GenericFile) {
+func (restorer *APTGlacierRestoreInit) requestFile(state *models.GlacierRestoreState, gf *models.GenericFile) {
 	details, err := restorer.getRequestDetails(gf)
 	if err != nil {
 		state.WorkSummary.AddError(err.Error())
@@ -154,7 +154,7 @@ func (restorer *APTGlacierRestore) requestFile(state *models.GlacierRestoreState
 	restorer.initializeRetrieval(state, gf, details, glacierRestoreRequest)
 }
 
-func (restorer *APTGlacierRestore) getRequestDetails(gf *models.GenericFile) (map[string]string, error) {
+func (restorer *APTGlacierRestoreInit) getRequestDetails(gf *models.GenericFile) (map[string]string, error) {
 	details := make(map[string]string)
 	fileUUID, err := gf.PreservationStorageFileName()
 	if err != nil {
@@ -175,7 +175,7 @@ func (restorer *APTGlacierRestore) getRequestDetails(gf *models.GenericFile) (ma
 	return details, nil
 }
 
-func (restorer *APTGlacierRestore) getRequestRecord(state *models.GlacierRestoreState, gf *models.GenericFile, details map[string]string) *models.GlacierRestoreRequest {
+func (restorer *APTGlacierRestoreInit) getRequestRecord(state *models.GlacierRestoreState, gf *models.GenericFile, details map[string]string) *models.GlacierRestoreRequest {
 	glacierRestoreRequest := state.FindRequest(gf.Identifier)
 	if glacierRestoreRequest != nil {
 		if glacierRestoreRequest.RequestAccepted {
@@ -198,7 +198,7 @@ func (restorer *APTGlacierRestore) getRequestRecord(state *models.GlacierRestore
 	return glacierRestoreRequest
 }
 
-func (restorer *APTGlacierRestore) initializeRetrieval(state *models.GlacierRestoreState, gf *models.GenericFile, details map[string]string, glacierRestoreRequest *models.GlacierRestoreRequest) {
+func (restorer *APTGlacierRestoreInit) initializeRetrieval(state *models.GlacierRestoreState, gf *models.GenericFile, details map[string]string, glacierRestoreRequest *models.GlacierRestoreRequest) {
 
 	restorer.Context.MessageLog.Info("Requesting Glacier retrieval of %s at %s (%s)",
 		gf.Identifier, gf.URI, gf.StorageOption)

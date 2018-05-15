@@ -44,6 +44,35 @@ func (state *GlacierRestoreState) FindRequest(gfIdentifier string) *GlacierResto
 	return request
 }
 
+func (state *GlacierRestoreState) GetReport(genericFiles []*GenericFile) *GlacierRequestReport {
+	report := NewGlacierRequestReport()
+	requests := make(map[string]*GlacierRestoreRequest, len(state.Requests))
+	for _, req := range state.Requests {
+		requests[req.GenericFileIdentifier] = req
+	}
+	return report
+}
+
+type GlacierRequestReport struct {
+	FilesNotRequested   []string
+	RequestsNotAccepted []string
+	EarliestRequest     time.Time
+	LatestRequest       time.Time
+	EarliestExpiry      time.Time
+	LatestExpiry        time.Time
+}
+
+func (report *GlacierRequestReport) AllRequestsInitialized() bool {
+	return len(report.FilesNotRequested) == 0 && len(report.RequestsNotAccepted) == 0
+}
+
+func NewGlacierRequestReport() *GlacierRequestReport {
+	return &GlacierRequestReport{
+		FilesNotRequested:   make([]string, 0),
+		RequestsNotAccepted: make([]string, 0),
+	}
+}
+
 type GlacierRestoreRequest struct {
 	// GenericFileIdentifier is the identifier of the generic
 	// file we want to restore.
