@@ -49,6 +49,27 @@ func (state *GlacierRestoreState) GetReport(genericFiles []*GenericFile) *Glacie
 	requests := make(map[string]*GlacierRestoreRequest, len(state.Requests))
 	for _, req := range state.Requests {
 		requests[req.GenericFileIdentifier] = req
+		if req.RequestAccepted == false {
+			report.RequestsNotAccepted = append(report.RequestsNotAccepted, req.GenericFileIdentifier)
+		}
+		if report.EarliestRequest.IsZero() || req.RequestedAt.Before(report.EarliestRequest) {
+			report.EarliestRequest = req.RequestedAt
+		}
+		if report.LatestRequest.IsZero() || req.RequestedAt.After(report.LatestRequest) {
+			report.LatestRequest = req.RequestedAt
+		}
+		if report.EarliestExpiry.IsZero() || req.EstimatedDeletionFromS3.Before(report.EarliestExpiry) {
+			report.EarliestExpiry = req.EstimatedDeletionFromS3
+		}
+		if report.LatestExpiry.IsZero() || req.EstimatedDeletionFromS3.After(report.LatestExpiry) {
+			report.LatestExpiry = req.EstimatedDeletionFromS3
+		}
+	}
+	for _, gf := range genericFiles {
+		_, wasRequested := requests[gf.Identifier]
+		if wasRequested == false {
+			report.FilesNotRequested = append(report.FilesNotRequested, gf.Identifier)
+		}
 	}
 	return report
 }
