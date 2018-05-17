@@ -62,8 +62,9 @@ func (state *GlacierRestoreState) FindRequest(gfIdentifier string) *GlacierResto
 
 // GetReport returns a GlacierRequestReport describing what work
 // remains to be done, and how long we can expect the items to
-// remain in the S3 buckets.
-func (state *GlacierRestoreState) GetReport(genericFiles []*GenericFile) *GlacierRequestReport {
+// remain in the S3 buckets. Param gfIdentifiers is a slice of
+// GenericFile Identifiers.
+func (state *GlacierRestoreState) GetReport(gfIdentifiers []string) *GlacierRequestReport {
 	report := NewGlacierRequestReport()
 	report.FilesRequired = len(state.Requests)
 	requests := make(map[string]*GlacierRestoreRequest, len(state.Requests))
@@ -90,10 +91,10 @@ func (state *GlacierRestoreState) GetReport(genericFiles []*GenericFile) *Glacie
 			}
 		}
 	}
-	for _, gf := range genericFiles {
-		_, wasRequested := requests[gf.Identifier]
+	for _, identifier := range gfIdentifiers {
+		_, wasRequested := requests[identifier]
 		if wasRequested == false {
-			report.FilesNotRequested = append(report.FilesNotRequested, gf.Identifier)
+			report.FilesNotRequested = append(report.FilesNotRequested, identifier)
 		}
 	}
 	return report
