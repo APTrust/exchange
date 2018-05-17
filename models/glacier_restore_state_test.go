@@ -116,5 +116,23 @@ func TestNewGlacierRequestReport(t *testing.T) {
 }
 
 func TestAllRetrievalsInitiated(t *testing.T) {
+	state := getGlacierRestoreState()
+	require.NotNil(t, state)
+	fileIdentifiers := make([]string, 30)
+	for i := 0; i < 30; i++ {
+		identifier := fmt.Sprintf("test.edu/bag/file_%d", i)
+		fileIdentifiers[i] = identifier
+		state.Requests = append(state.Requests, getGlacierRestoreRequest(identifier, true))
+	}
 
+	report := state.GetReport(fileIdentifiers)
+	require.NotNil(t, report)
+	assert.True(t, report.AllRetrievalsInitiated())
+
+	fileIdentifiers = append(fileIdentifiers, "test.edu/bag/file_30")
+	fileIdentifiers = append(fileIdentifiers, "test.edu/bag/file_31")
+
+	report = state.GetReport(fileIdentifiers)
+	require.NotNil(t, report)
+	assert.False(t, report.AllRetrievalsInitiated())
 }
