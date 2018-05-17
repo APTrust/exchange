@@ -3,6 +3,7 @@ package models_test
 import (
 	"fmt"
 	"github.com/APTrust/exchange/models"
+	"github.com/APTrust/exchange/util"
 	"github.com/APTrust/exchange/util/testutil"
 	"github.com/satori/go.uuid"
 	"github.com/stretchr/testify/assert"
@@ -82,10 +83,36 @@ func TestGlacierRestoreStateGetReport(t *testing.T) {
 
 	report := state.GetReport(fileIdentifiers)
 	require.NotNil(t, report)
+
+	assert.Equal(t, len(fileIdentifiers), report.FilesRequired)
+	assert.Equal(t, len(fileIdentifiers)-2, report.FilesRequested)
+	assert.Equal(t, 2, len(report.FilesNotRequested))
+	assert.Equal(t, 5, len(report.RequestsNotAccepted))
+
+	assert.True(t, util.StringListContains(report.FilesNotRequested, "test.edu/bag/file_30"))
+	assert.True(t, util.StringListContains(report.FilesNotRequested, "test.edu/bag/file_31"))
+
+	assert.True(t, util.StringListContains(report.RequestsNotAccepted, "test.edu/bag/file_0"))
+	assert.True(t, util.StringListContains(report.RequestsNotAccepted, "test.edu/bag/file_6"))
+	assert.True(t, util.StringListContains(report.RequestsNotAccepted, "test.edu/bag/file_12"))
+	assert.True(t, util.StringListContains(report.RequestsNotAccepted, "test.edu/bag/file_18"))
+	assert.True(t, util.StringListContains(report.RequestsNotAccepted, "test.edu/bag/file_24"))
+
+	assert.Equal(t, firstRequestTime, report.EarliestRequest)
+	assert.Equal(t, firstRequestTime.Add(time.Minute*time.Duration(29)), report.LatestRequest)
+	// First request was marked as not accepted in the loop above,
+	// so second request will have the earliest S3 expiry time.
+	assert.Equal(t, firstDeletionTime.Add(time.Minute*time.Duration(1)), report.EarliestExpiry)
+	assert.Equal(t, firstDeletionTime.Add(time.Minute*time.Duration(29)), report.LatestExpiry)
 }
 
 func TestNewGlacierRequestReport(t *testing.T) {
-
+	report := models.NewGlacierRequestReport()
+	require.NotNil(t, report)
+	assert.NotNil(t, report.FilesNotRequested)
+	assert.Empty(t, report.FilesNotRequested)
+	assert.NotNil(t, report.RequestsNotAccepted)
+	assert.Empty(t, report.RequestsNotAccepted)
 }
 
 func TestAllRetrievalsInitiated(t *testing.T) {

@@ -66,7 +66,7 @@ func (state *GlacierRestoreState) FindRequest(gfIdentifier string) *GlacierResto
 // GenericFile Identifiers.
 func (state *GlacierRestoreState) GetReport(gfIdentifiers []string) *GlacierRequestReport {
 	report := NewGlacierRequestReport()
-	report.FilesRequired = len(state.Requests)
+	report.FilesRequired = len(gfIdentifiers)
 	requests := make(map[string]*GlacierRestoreRequest, len(state.Requests))
 	for _, req := range state.Requests {
 		requests[req.GenericFileIdentifier] = req
