@@ -8,6 +8,7 @@ import (
 	"github.com/APTrust/exchange/models"
 	"github.com/APTrust/exchange/util/fileutil"
 	"github.com/icrowley/fake"
+	"github.com/nsqio/go-nsq"
 	"github.com/satori/go.uuid"
 	"math"
 	"math/rand"
@@ -310,6 +311,14 @@ func MakePharosDPNBag() *models.PharosDPNBag {
 		CreatedAt:        RandomDateTime(),
 		UpdatedAt:        RandomDateTime(),
 	}
+}
+
+// MakeNsqMessage creates an NSQ Message with the specified body.
+// For our purposes, param body should be an integer in string format,
+// like "1234" or "999".
+func MakeNsqMessage(body string) *nsq.Message {
+	messageId := [nsq.MsgIDLength]byte{'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F'}
+	return nsq.NewMessage(messageId, []byte(body))
 }
 
 func RandomDateTime() time.Time {

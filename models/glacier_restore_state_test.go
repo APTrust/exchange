@@ -4,8 +4,8 @@ import (
 	"github.com/APTrust/exchange/models"
 	"github.com/APTrust/exchange/util/testutil"
 	"github.com/satori/go.uuid"
-	//"github.com/stretchr/testify/assert"
-	//"github.com/stretchr/testify/require"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"math/rand"
 	"testing"
 	"time"
@@ -30,7 +30,12 @@ func getRestoreRequest(gfIdentifier string, accepted bool) *models.GlacierRestor
 }
 
 func TestNewGlacierRestoreState(t *testing.T) {
-
+	nsqMessage := testutil.MakeNsqMessage("42")
+	workItem := testutil.MakeWorkItem()
+	state := models.NewGlacierRestoreState(nsqMessage, workItem)
+	require.NotNil(t, state)
+	assert.NotNil(t, state.WorkSummary)
+	assert.NotNil(t, state.Requests)
 }
 
 func TestGlacierRestoreStateFindRequest(t *testing.T) {
