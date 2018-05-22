@@ -167,7 +167,11 @@ type GlacierRestoreRequest struct {
 	// (usually a UUID, for APTrust).
 	GlacierKey string
 	// RequestAccepted indicates whether Glacier accepted
-	// our request to restore this object.
+	// our request to restore this object. This does not mean
+	// the request is complete. It can take several hours for
+	// AWS to push the file from Glacier to S3. Check the
+	// property IsAvailableInS3 to see if AWS has actually
+	// completed the request.
 	RequestAccepted bool
 	// RequestedAt is the timestamp of the last request to
 	// restore this object.
@@ -185,4 +189,9 @@ type GlacierRestoreRequest struct {
 	// reliable, because we don't know when the retrieval
 	// request occurred, or with what parameters.
 	SomeoneElseRequested bool
+	// IsAvailableInS3 describes whether the file has been
+	// made available in S3 for download, a process which typically
+	// takes 3-5 hours. If RequestAccepted is true and IsAvailableInS3
+	// is false, then the request is still in process.
+	IsAvailableInS3 bool
 }
