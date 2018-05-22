@@ -85,6 +85,15 @@ func (client *S3Head) Head(key string) {
 		client.ErrorMessage = err.Error()
 		return
 	}
+
+	// TODO for Glacier-only. PT #157517960
+	// TODO: Parse the Restore property of the response, which is a
+	// HeadObjectOutput object.
+	// https://docs.aws.amazon.com/sdk-for-go/api/service/s3/#HeadObjectOutput
+	//
+	// See x-amz-restore here:
+	// https://docs.aws.amazon.com/AmazonS3/latest/API/RESTObjectHEAD.html
+
 	client.Response = response
 }
 
