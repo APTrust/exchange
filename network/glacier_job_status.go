@@ -12,16 +12,14 @@ import (
 
 type GlacierJobStatus struct {
 	AWSRegion       string
-	BucketName      string
 	accessKeyId     string
 	secretAccessKey string
 	session         *session.Session
 }
 
-func NewGlacierJobStatus(accessKeyId, secretAccessKey, region, bucket string) *GlacierJobStatus {
+func NewGlacierJobStatus(accessKeyId, secretAccessKey, region string) *GlacierJobStatus {
 	return &GlacierJobStatus{
 		AWSRegion:       region,
-		BucketName:      bucket,
 		accessKeyId:     accessKeyId,
 		secretAccessKey: secretAccessKey,
 	}
@@ -37,6 +35,21 @@ func (client *GlacierJobStatus) GetSession() (*session.Session, error) {
 	return client.session, err
 }
 
-func (client *GlacierJobStatus) GetStatus(jobId string) (*glacier.JobDescription, error) {
-	return nil, nil
+func (client *GlacierJobStatus) GetStatus(vaultName, jobId string) (*glacier.JobDescription, error) {
+	_session, err := client.GetSession()
+	if err != nil {
+		return nil, err
+	}
+	// Note: AWS docs say setting AccountId to "-" tells
+	// Glacier to use the account id associated with
+	// the credentials we supplied with accessKeyId and secretAccessKey.
+	// https://docs.aws.amazon.com/sdk-for-go/api/service/glacier/#DescribeJobInput
+	accountId := "-"
+	glacierClient := glacier.New(_session)
+	input := &glacier.DescribeJobInput{
+		AccountId: &accountId,
+		JobId:     &jobId,
+		VaultName: &vaultName,
+	}
+	return glacierClient.DescribeJob(input)
 }
