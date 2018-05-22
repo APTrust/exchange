@@ -16,6 +16,8 @@ import (
 	"time"
 )
 
+// TODO: Move constants to config file?
+
 // Standard retrieval is 3-5 hours
 const RETRIEVAL_OPTION = "Standard"
 
@@ -27,8 +29,17 @@ const DAYS_TO_KEEP_IN_S3 = 5
 // Requests that an object be restored from Glacier to S3. This is
 // the first step toward restoring a Glacier-only bag.
 type APTGlacierRestoreInit struct {
-	Context        *context.Context
+	// Context includes logging, config, network connections, and
+	// other general resources for the worker.
+	Context *context.Context
+	// RequestChannel is for requesting an item be moved from Glacier
+	// into S3.
 	RequestChannel chan *models.GlacierRestoreState
+	// Checkup channel is for checking the progress of restore requests.
+	// It takes a few hours for AWS to move an item from Glacier into
+	// S3. This is where we check to see if the item has gotton to S3
+	// yet.
+	CheckupChannel chan *models.GlacierRestoreState
 	CleanupChannel chan *models.GlacierRestoreState
 }
 
@@ -41,11 +52,13 @@ func NewGlacierRestore(_context *context.Context) *APTGlacierRestoreInit {
 	workerBufferSize := _context.Config.GlacierRestoreWorker.Workers * 10
 	restorer.RequestChannel = make(chan *models.GlacierRestoreState, restorerBufferSize)
 	restorer.CleanupChannel = make(chan *models.GlacierRestoreState, workerBufferSize)
+	restorer.CheckupChannel = make(chan *models.GlacierRestoreState, workerBufferSize)
 	// Set up a limited number of go routines
 	for i := 0; i < _context.Config.GlacierRestoreWorker.NetworkConnections; i++ {
 		go restorer.requestRestore()
 	}
 	for i := 0; i < _context.Config.GlacierRestoreWorker.Workers; i++ {
+		go restorer.checkup()
 		go restorer.cleanup()
 	}
 	return restorer
@@ -94,6 +107,21 @@ func (restorer *APTGlacierRestoreInit) requestRestore() {
 		// Update GlacierRestoreState
 		// Push to CleanupChannel
 	}
+}
+
+func (restorer *APTGlacierRestoreInit) checkup() {
+	//for state := range restorer.RequestChannel {
+	// Check to see whether items have been moved to S3
+	// Update GlacierRestoreState
+	//for _, glacierRestoreRequest := range state.Requests {
+
+	//}
+	// Push to CleanupChannel
+	//}
+}
+
+func (restorer *APTGlacierRestoreInit) checkIfFileHasBeenMoved(request *models.GlacierRestoreRequest) {
+	//
 }
 
 func (restorer *APTGlacierRestoreInit) cleanup() {

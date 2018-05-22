@@ -194,4 +194,7 @@ type GlacierRestoreRequest struct {
 	// takes 3-5 hours. If RequestAccepted is true and IsAvailableInS3
 	// is false, then the request is still in process.
 	IsAvailableInS3 bool
+	// LastChecked is the date/time we last checked to see whether
+	// this file had been retrieved from Glacier in to S3.
+	LastChecked time.Time
 }
