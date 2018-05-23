@@ -36,3 +36,7 @@ func TestHead(t *testing.T) {
 	assert.NotNil(t, dpnStoredFile)
 
 }
+
+func testGetRestoreInfo(t *testing.T, client *network.S3Head) {
+	//client.Response.Restore = `ongoing-request="false", expiry-date="Fri, 23 Dec 2012 00:00:00 GMT"`
+}

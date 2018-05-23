@@ -95,15 +95,6 @@ func (client *S3Head) Head(key string) {
 		client.ErrorMessage = err.Error()
 		return
 	}
-
-	// TODO for Glacier-only. PT #157517960
-	// TODO: Parse the Restore property of the response, which is a
-	// HeadObjectOutput object.
-	// https://docs.aws.amazon.com/sdk-for-go/api/service/s3/#HeadObjectOutput
-	//
-	// See x-amz-restore here:
-	// https://docs.aws.amazon.com/AmazonS3/latest/API/RESTObjectHEAD.html
-
 	client.Response = response
 }
 
@@ -126,16 +117,15 @@ func (client *S3Head) GetRestoreRequestInfo() (*RestoreRequestInfo, error) {
 		RequestIsComplete: false,
 		S3ExpiryDate:      time.Time{},
 	}
-	header := client.GetHeaderMetadata("x-amz-restore")
-	if header == "" {
+	if client.Response == nil || util.PointerToString(client.Response.Restore) == "" {
 		return restoreRequestInfo, nil
 	}
 
-	headerParts := strings.SplitN(header, ",", 2)
+	restoreInfoParts := strings.SplitN(util.PointerToString(client.Response.Restore), ",", 2)
 
 	// The expiry section of the header may or may not exist.
-	if len(headerParts) > 1 {
-		expiry := strings.SplitN(headerParts[1], "=", 2)
+	if len(restoreInfoParts) > 1 {
+		expiry := strings.SplitN(restoreInfoParts[1], "=", 2)
 		if len(expiry) > 1 {
 			// dateString format is "Fri, 23 Dec 2012 00:00:00 GMT"
 			// We need to remove the quotes.
@@ -151,8 +141,8 @@ func (client *S3Head) GetRestoreRequestInfo() (*RestoreRequestInfo, error) {
 	}
 
 	// If the header is present, the ongoing-request section should be present.
-	if len(headerParts) > 0 {
-		ongoing := strings.SplitN(headerParts[0], "=", 2)
+	if len(restoreInfoParts) > 0 {
+		ongoing := strings.SplitN(restoreInfoParts[0], "=", 2)
 		if len(ongoing) > 1 && strings.Replace(ongoing[1], "\"", "", -1) == "true" {
 			restoreRequestInfo.RequestInProgress = true
 		}
