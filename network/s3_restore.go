@@ -17,6 +17,7 @@ type S3Restore struct {
 	ErrorMessage             string
 	Response                 *s3.RestoreObjectOutput
 	RestoreAlreadyInProgress bool
+	AlreadyInActiveTier      bool
 	session                  *session.Session
 	accessKeyId              string
 	secretAccessKey          string
@@ -54,6 +55,7 @@ func NewS3Restore(accessKeyId, secretAccessKey, region, bucket, key, tier string
 		Tier:       tier,
 		Days:       days,
 		RestoreAlreadyInProgress: false,
+		AlreadyInActiveTier:      false,
 		accessKeyId:              accessKeyId,
 		secretAccessKey:          secretAccessKey,
 	}
@@ -98,8 +100,9 @@ func (client *S3Restore) Restore() {
 	resp, err := service.RestoreObject(params)
 	client.Response = resp
 	if err != nil {
-		if err.(awserr.Error).Code() == s3.ErrCodeObjectAlreadyInActiveTierError ||
-			strings.Contains(err.Error(), "RestoreAlreadyInProgress") {
+		if err.(awserr.Error).Code() == s3.ErrCodeObjectAlreadyInActiveTierError {
+			client.AlreadyInActiveTier = true
+		} else if strings.Contains(err.Error(), "RestoreAlreadyInProgress") {
 			client.RestoreAlreadyInProgress = true
 		} else {
 			client.ErrorMessage = err.Error()

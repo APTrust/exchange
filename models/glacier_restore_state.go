@@ -166,8 +166,6 @@ type GlacierRestoreRequest struct {
 	// GlacierKey is the key we want to restore
 	// (usually a UUID, for APTrust).
 	GlacierKey string
-	// The Glacier JobId assigned by AWS to this request.
-	JobId string
 	// RequestAccepted indicates whether Glacier accepted
 	// our request to restore this object. This does not mean
 	// the request is complete. It can take several hours for
