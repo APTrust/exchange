@@ -95,17 +95,107 @@ func (restorer *APTGlacierRestoreInit) requestRestore() {
 		state.WorkSummary.Attempted = true
 		state.WorkSummary.AttemptNumber += 1
 		state.WorkSummary.Start()
-		// s3Client := network.NewS3Head(
-		// 	os.Getenv("AWS_ACCESS_KEY_ID"),
-		// 	os.Getenv("AWS_SECRET_ACCESS_KEY"),
-		// 	region,
-		// 	bucket)
-		// if WorkItem has a GenericFileIdentifier, this is a
-		// single-file restore. Otherwise, it's an object restore.
+
+		if state.WorkItem.GenericFileIdentifier != "" {
+			gf, err := restorer.getGenericFile(state)
+			if err != nil {
+				state.WorkSummary.AddError(err.Error())
+				restorer.CleanupChannel <- state
+				continue
+			}
+			restorer.requestFile(state, gf)
+		} else {
+			restorer.requestObject(state)
+		}
+
 		// Request retrieval from Glacier
 		// Update GlacierRestoreState
 		// Push to CleanupChannel
 	}
+}
+
+func (restorer *APTGlacierRestoreInit) requestObject(state *models.GlacierRestoreState) {
+	obj, err := restorer.getIntellectualObject(state)
+	if err != nil {
+		state.WorkSummary.AddError(err.Error())
+		return
+	}
+	for _, gf := range obj.GenericFiles {
+		needsRestoreRequest, err := restorer.restoreRequestNeeded(state, gf)
+		if err != nil {
+			state.WorkSummary.AddError(err.Error())
+			continue
+		}
+		if needsRestoreRequest {
+			err = restorer.requestRestoration(state, gf)
+			if err != nil {
+				state.WorkSummary.AddError(err.Error())
+			}
+		}
+	}
+}
+
+func (restorer *APTGlacierRestoreInit) restoreRequestNeeded(state *models.GlacierRestoreState, gf *models.GenericFile) (bool, error) {
+	needsRestoreRequest := false
+	s3Client, err := restorer.getS3HeadClient(gf.StorageOption)
+	if err != nil {
+		return needsRestoreRequest, err
+	}
+	fileUUID, err := gf.PreservationStorageFileName()
+	if err != nil {
+		return needsRestoreRequest, err
+	}
+	s3Client.Head(fileUUID)
+	if s3Client.ErrorMessage != "" {
+		err = fmt.Errorf("S3 HEAD request for file %s (%s) returned error: %s",
+			fileUUID, gf.Identifier, s3Client.ErrorMessage)
+		return needsRestoreRequest, err
+	}
+	restoreRequestInfo, err := s3Client.GetRestoreRequestInfo()
+	if err != nil {
+		return needsRestoreRequest, err
+	}
+
+	glacierRestoreRequest := state.FindRequest(gf.Identifier)
+	if glacierRestoreRequest == nil {
+		glacierRestoreRequest = &models.GlacierRestoreRequest{
+			GenericFileIdentifier: gf.Identifier,
+			GlacierBucket:         s3Client.BucketName,
+			GlacierKey:            fileUUID,
+		}
+		state.Requests = append(state.Requests, glacierRestoreRequest)
+	}
+
+	if restoreRequestInfo.RequestInProgress {
+		// TODO: log and go on
+
+	} else if restoreRequestInfo.RequestIsComplete {
+		// TODO: log and update expiry date
+		glacierRestoreRequest.IsAvailableInS3 = true
+		glacierRestoreRequest.EstimatedDeletionFromS3 = restoreRequestInfo.S3ExpiryDate
+	} else {
+		// TODO: log
+		needsRestoreRequest = true
+	}
+	return needsRestoreRequest, nil
+}
+
+func (restorer *APTGlacierRestoreInit) requestRestoration(state *models.GlacierRestoreState, gf *models.GenericFile) error {
+	// TODO: Implement this
+	return nil
+}
+
+func (restorer *APTGlacierRestoreInit) getS3HeadClient(storageOption string) (*network.S3Head, error) {
+	region, bucket, err := restorer.Context.Config.StorageRegionAndBucketFor(storageOption)
+	if err != nil {
+		return nil, err
+	}
+	client := network.NewS3Head(
+		os.Getenv("AWS_ACCESS_KEY_ID"),
+		os.Getenv("AWS_SECRET_ACCESS_KEY"),
+		region,
+		bucket)
+	return client, nil
 }
 
 func (restorer *APTGlacierRestoreInit) getIntellectualObject(state *models.GlacierRestoreState) (*models.IntellectualObject, error) {
@@ -133,7 +223,6 @@ func (restorer *APTGlacierRestoreInit) getGenericFile(state *models.GlacierResto
 			state.WorkItem.GenericFileIdentifier)
 	}
 	return gf, nil
-
 }
 
 func (restorer *APTGlacierRestoreInit) cleanup() {
