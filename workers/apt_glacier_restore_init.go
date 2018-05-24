@@ -35,11 +35,7 @@ type APTGlacierRestoreInit struct {
 	// RequestChannel is for requesting an item be moved from Glacier
 	// into S3.
 	RequestChannel chan *models.GlacierRestoreState
-	// Checkup channel is for checking the progress of restore requests.
-	// It takes a few hours for AWS to move an item from Glacier into
-	// S3. This is where we check to see if the item has gotton to S3
-	// yet.
-	CheckupChannel chan *models.GlacierRestoreState
+	// CleanupChannel is for housekeeping, like updating NSQ.
 	CleanupChannel chan *models.GlacierRestoreState
 }
 
@@ -52,13 +48,11 @@ func NewGlacierRestore(_context *context.Context) *APTGlacierRestoreInit {
 	workerBufferSize := _context.Config.GlacierRestoreWorker.Workers * 10
 	restorer.RequestChannel = make(chan *models.GlacierRestoreState, restorerBufferSize)
 	restorer.CleanupChannel = make(chan *models.GlacierRestoreState, workerBufferSize)
-	restorer.CheckupChannel = make(chan *models.GlacierRestoreState, workerBufferSize)
 	// Set up a limited number of go routines
 	for i := 0; i < _context.Config.GlacierRestoreWorker.NetworkConnections; i++ {
 		go restorer.requestRestore()
 	}
 	for i := 0; i < _context.Config.GlacierRestoreWorker.Workers; i++ {
-		go restorer.checkup()
 		go restorer.cleanup()
 	}
 	return restorer
@@ -101,6 +95,11 @@ func (restorer *APTGlacierRestoreInit) requestRestore() {
 		state.WorkSummary.Attempted = true
 		state.WorkSummary.AttemptNumber += 1
 		state.WorkSummary.Start()
+		// s3Client := network.NewS3Head(
+		// 	os.Getenv("AWS_ACCESS_KEY_ID"),
+		// 	os.Getenv("AWS_SECRET_ACCESS_KEY"),
+		// 	region,
+		// 	bucket)
 		// if WorkItem has a GenericFileIdentifier, this is a
 		// single-file restore. Otherwise, it's an object restore.
 		// Request retrieval from Glacier
@@ -109,19 +108,32 @@ func (restorer *APTGlacierRestoreInit) requestRestore() {
 	}
 }
 
-func (restorer *APTGlacierRestoreInit) checkup() {
-	//for state := range restorer.RequestChannel {
-	// Check to see whether items have been moved to S3
-	// Update GlacierRestoreState
-	//for _, glacierRestoreRequest := range state.Requests {
-
-	//}
-	// Push to CleanupChannel
-	//}
+func (restorer *APTGlacierRestoreInit) getIntellectualObject(state *models.GlacierRestoreState) (*models.IntellectualObject, error) {
+	// Get object with files (second param) but no events (third param)
+	resp := restorer.Context.PharosClient.IntellectualObjectGet(state.WorkItem.ObjectIdentifier, true, false)
+	if resp.Error != nil {
+		return nil, resp.Error
+	}
+	obj := resp.IntellectualObject()
+	if obj == nil {
+		return nil, fmt.Errorf("Pharos returned nil for IntellectualObject %s",
+			state.WorkItem.ObjectIdentifier)
+	}
+	return obj, nil
 }
 
-func (restorer *APTGlacierRestoreInit) checkIfFileHasBeenMoved(request *models.GlacierRestoreRequest) {
-	//
+func (restorer *APTGlacierRestoreInit) getGenericFile(state *models.GlacierRestoreState) (*models.GenericFile, error) {
+	resp := restorer.Context.PharosClient.GenericFileGet(state.WorkItem.GenericFileIdentifier, false)
+	if resp.Error != nil {
+		return nil, resp.Error
+	}
+	gf := resp.GenericFile()
+	if gf == nil {
+		return nil, fmt.Errorf("Pharos returned nil for GenericFile %s",
+			state.WorkItem.GenericFileIdentifier)
+	}
+	return gf, nil
+
 }
 
 func (restorer *APTGlacierRestoreInit) cleanup() {
