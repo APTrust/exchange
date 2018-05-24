@@ -3,6 +3,7 @@ package models
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/APTrust/exchange/constants"
 	"github.com/APTrust/exchange/util/fileutil"
 	"github.com/op/go-logging"
 	"os"
@@ -454,6 +455,25 @@ func (config *Config) createDirectories() error {
 		}
 	}
 	return nil
+}
+
+func (config *Config) StorageRegionAndBucketFor(storageOption string) (region string, bucket string, err error) {
+	if storageOption == constants.StorageStandard {
+		region = config.APTrustS3Region
+		bucket = config.PreservationBucket
+	} else if storageOption == constants.StorageGlacierVA {
+		region = config.GlacierRegionVA
+		bucket = config.GlacierBucketVA
+	} else if storageOption == constants.StorageGlacierOH {
+		region = config.GlacierRegionOH
+		bucket = config.GlacierBucketOH
+	} else if storageOption == constants.StorageGlacierOR {
+		region = config.GlacierRegionOR
+		bucket = config.GlacierBucketOR
+	} else {
+		err = fmt.Errorf("Unknown Storage Option: %s", storageOption)
+	}
+	return region, bucket, err
 }
 
 // DefaultMetadata includes mostly static information about bags

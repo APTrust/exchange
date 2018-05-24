@@ -1,6 +1,7 @@
 package models_test
 
 import (
+	"github.com/APTrust/exchange/constants"
 	"github.com/APTrust/exchange/models"
 	"github.com/APTrust/exchange/util/fileutil"
 	"github.com/stretchr/testify/assert"
@@ -140,4 +141,36 @@ func TestEnsureLogDir(t *testing.T) {
 	assert.True(t, fileutil.FileExists(config.ReplicationDirectory))
 	assert.True(t, fileutil.FileExists(config.DPN.LogDirectory))
 	assert.True(t, fileutil.FileExists(config.DPN.StagingDirectory))
+}
+
+func TestStorageRegionAndBucketFor(t *testing.T) {
+	configFile := filepath.Join("config", "test.json")
+	config, err := models.LoadConfigFile(configFile)
+	require.Nil(t, err)
+
+	region, bucket, err := config.StorageRegionAndBucketFor(constants.StorageStandard)
+	assert.Equal(t, config.APTrustS3Region, region)
+	assert.Equal(t, config.PreservationBucket, bucket)
+	assert.Nil(t, err)
+
+	region, bucket, err = config.StorageRegionAndBucketFor(constants.StorageGlacierVA)
+	assert.Equal(t, config.GlacierRegionVA, region)
+	assert.Equal(t, config.GlacierBucketVA, bucket)
+	assert.Nil(t, err)
+
+	region, bucket, err = config.StorageRegionAndBucketFor(constants.StorageGlacierOH)
+	assert.Equal(t, config.GlacierRegionOH, region)
+	assert.Equal(t, config.GlacierBucketOH, bucket)
+	assert.Nil(t, err)
+
+	region, bucket, err = config.StorageRegionAndBucketFor(constants.StorageGlacierOR)
+	assert.Equal(t, config.GlacierRegionOR, region)
+	assert.Equal(t, config.GlacierBucketOR, bucket)
+	assert.Nil(t, err)
+
+	region, bucket, err = config.StorageRegionAndBucketFor("Spongebob")
+	assert.Equal(t, "", region)
+	assert.Equal(t, "", bucket)
+	require.NotNil(t, err)
+	assert.True(t, strings.Contains(err.Error(), "Unknown Storage Option"))
 }
