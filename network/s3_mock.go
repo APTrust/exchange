@@ -53,7 +53,7 @@ func getRestoreHeaders() map[string]string {
 		"Content-Length":            "0",
 		"Server":                    "AmazonS3",
 		"x-amz-request-charged":     "false",
-		"x-amz-restore-output-path": "https://blah.blah/blah.txt",
+		"x-amz-restore-output-path": "js-test-s3/qE8nk5M0XIj-LuZE2HXNw6empQm3znLkHlMWInRYPS-Orl2W0uj6LyYm-neTvm1-btz3wbBxfMhPykd3jkl-lvZE7w42/",
 	}
 }
 
@@ -78,7 +78,15 @@ func S3RestoreInProgressHandler(w http.ResponseWriter, r *http.Request) {
 	// Must return 409 to indicate the request conflicts
 	// with one already in progress
 	w.WriteHeader(http.StatusConflict)
-	fmt.Fprintln(w, "")
+	w.Header().Set("Content-Type", "application/xml")
+	content := `<?xml version="1.0" encoding="UTF-8"?>
+<Error>
+  <Code>RestoreAlreadyInProgress</Code>
+  <Message>Chill out, my man. We're working on it!</Message>
+  <Resource>/mybucket/myfoto.jpg</Resource>
+  <RequestId>9F341CD3C4BA79E0</RequestId>
+</Error>`
+	fmt.Fprintln(w, content)
 }
 
 // Handles a request to restore a Glacier object to S3,
