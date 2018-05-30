@@ -80,4 +80,8 @@ func testGeneralRestoreHeaders(t *testing.T, resp *http.Response) {
 	assert.Equal(t, "Wed, 30 May 2018 22:32:00 GMT", resp.Header.Get("Date"))
 	assert.Equal(t, "0", resp.Header.Get("Content-Length"))
 	assert.Equal(t, "AmazonS3", resp.Header.Get("Server"))
+	assert.Equal(t, "false", resp.Header.Get("x-amz-request-charged"))
+
+	// Not supported in our version of S3?
+	//assert.Equal(t, "https://blah.blah/blah.txt", resp.Header.Get("x-amz-restore-output-path"))
 }
