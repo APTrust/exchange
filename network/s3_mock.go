@@ -52,7 +52,7 @@ func S3HeadRestoreCompletedHandler(w http.ResponseWriter, r *http.Request) {
 
 func getRestoreHeaders() map[string]string {
 	return map[string]string{
-		"x-amz-id-2":       "GFihv3y6+kE7KG11GEkQhU7/2/cHR3Yb2fCb2S04nxI423Dqwg2XiQ0B/UZlzYQvPiBlZNRcovw=",
+		"x-amz-id-2":       "GFihv3y6+kE7KG11GEkQhU7=",
 		"x-amz-request-id": "9F341CD3C4BA79E0",
 		"Date":             "Wed, 30 May 2018 22:32:00 GMT",
 		"Content-Length":   "0",
