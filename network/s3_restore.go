@@ -3,6 +3,7 @@ package network
 import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
+	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
 	"strings"
@@ -21,6 +22,10 @@ type S3Restore struct {
 	session                  *session.Session
 	accessKeyId              string
 	secretAccessKey          string
+
+	// TestURL is the URL of a mock S3 server
+	// for use in unit tests only.
+	TestURL string
 }
 
 // Sets up as S3 restore request, which is for S3 items
@@ -64,14 +69,34 @@ func NewS3Restore(accessKeyId, secretAccessKey, region, bucket, key, tier string
 // Returns an S3 session for this restore request.
 func (client *S3Restore) GetSession() *session.Session {
 	if client.session == nil {
-		var err error
-		client.session, err = GetS3Session(client.AWSRegion,
-			client.accessKeyId, client.secretAccessKey)
-		if err != nil {
-			client.ErrorMessage = err.Error()
+		if client.TestURL == "" {
+			client.getSession()
+		} else {
+			client.getTestSession()
 		}
 	}
 	return client.session
+}
+
+func (client *S3Restore) getSession() {
+	var err error
+	client.session, err = GetS3Session(client.AWSRegion,
+		client.accessKeyId, client.secretAccessKey)
+	if err != nil {
+		client.ErrorMessage = err.Error()
+	}
+}
+
+func (client *S3Restore) getTestSession() {
+	creds := credentials.NewEnvCredentials()
+	client.session = session.New(&aws.Config{
+		Region:      aws.String(client.AWSRegion),
+		Credentials: creds,
+		Endpoint:    &client.TestURL,
+	})
+	if client.session == nil {
+		client.ErrorMessage = "AWS Session (with TestURL) returned nil"
+	}
 }
 
 // Restore the archived file from Glacier to S3.
