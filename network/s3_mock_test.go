@@ -15,6 +15,30 @@ func TestS3HeadHandler(t *testing.T) {
 
 	resp, err := http.Head(testServer.URL)
 	require.Nil(t, err)
+	testGeneralHeaders(t, resp)
+}
+
+func TestS3HeadRestoreInProgressHandler(t *testing.T) {
+	testServer := httptest.NewServer(http.HandlerFunc(network.S3HeadRestoreInProgressHandler))
+	defer testServer.Close()
+
+	resp, err := http.Head(testServer.URL)
+	require.Nil(t, err)
+	testGeneralHeaders(t, resp)
+	assert.Equal(t, `ongoing-request="true"`, resp.Header.Get("x-amz-restore"))
+}
+
+func TestS3HeadRestoreCompletedHandler(t *testing.T) {
+	testServer := httptest.NewServer(http.HandlerFunc(network.S3HeadRestoreCompletedHandler))
+	defer testServer.Close()
+
+	resp, err := http.Head(testServer.URL)
+	require.Nil(t, err)
+	testGeneralHeaders(t, resp)
+	assert.Equal(t, `ongoing-request="false", expiry-date="Fri, 1 Jun 2018 04:00:00 GMT"`, resp.Header.Get("x-amz-restore"))
+}
+
+func testGeneralHeaders(t *testing.T, resp *http.Response) {
 	assert.Equal(t, "ef8yU9AS1ed4OpIszj7UDNEHGran", resp.Header.Get("x-amz-id-2"))
 	assert.Equal(t, "318BC8BC143432E5", resp.Header.Get("x-amz-request-id"))
 	assert.Equal(t, "3HL4kqtJlcpXroDTDmjVBH40Nrjfkd", resp.Header.Get("x-amz-version-id"))

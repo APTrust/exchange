@@ -32,20 +32,25 @@ func S3HeadHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintln(w, "")
 }
 
+// Handles an S3 Head request and replies that a restore is already in progress.
+func S3HeadRestoreInProgressHandler(w http.ResponseWriter, r *http.Request) {
+	for key, value := range getBasicHeaders() {
+		w.Header().Set(key, value)
+	}
+	w.Header().Set("x-amz-restore", `ongoing-request="true"`)
+	fmt.Fprintln(w, "")
+}
+
+// Handles an S3 Head request and replies that a restore is complete.
+func S3HeadRestoreCompletedHandler(w http.ResponseWriter, r *http.Request) {
+	for key, value := range getBasicHeaders() {
+		w.Header().Set(key, value)
+	}
+	w.Header().Set("x-amz-restore", `ongoing-request="false", expiry-date="Fri, 1 Jun 2018 04:00:00 GMT"`)
+	fmt.Fprintln(w, "")
+}
+
 // Handles a request to restore a Glacier object to S3.
 func S3RestoreHandler(w http.ResponseWriter, r *http.Request) {
-
-}
-
-// Handles a request to restore a Glacier object to S3,
-// and replies that the restore is already in progress.
-func S3RestoreInProgressHandler(w http.ResponseWriter, r *http.Request) {
-
-}
-
-// Handles a request to restore a Glacier object to S3,
-// and replies that the item has already been moved
-// from Glacier to S3.
-func S3RestoreCompletedHandler(w http.ResponseWriter, r *http.Request) {
 
 }
