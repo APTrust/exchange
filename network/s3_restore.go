@@ -88,7 +88,7 @@ func (client *S3Restore) getSession() {
 }
 
 func (client *S3Restore) getTestSession() {
-	creds := credentials.NewEnvCredentials()
+	creds := credentials.NewStaticCredentials(client.accessKeyId, client.secretAccessKey, "")
 	client.session = session.New(&aws.Config{
 		Region:      aws.String(client.AWSRegion),
 		Credentials: creds,

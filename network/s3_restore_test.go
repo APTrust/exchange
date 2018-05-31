@@ -12,9 +12,17 @@ import (
 )
 
 func getS3RestoreClient() *network.S3Restore {
+	accessKeyId := os.Getenv("AWS_ACCESS_KEY_ID")
+	secretKey := os.Getenv("AWS_SECRET_ACCESS_KEY")
+	if accessKeyId == "" {
+		accessKeyId = "int_test_access_key_id"
+	}
+	if secretKey == "" {
+		secretKey = "int_test_secret_key"
+	}
 	return network.NewS3Restore(
-		os.Getenv("AWS_ACCESS_KEY_ID"),
-		os.Getenv("AWS_SECRET_ACCESS_KEY"),
+		accessKeyId,
+		secretKey,
 		"us-east-1",
 		"", // bucket must be empty for tests
 		"my-file.txt",
