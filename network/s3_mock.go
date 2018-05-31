@@ -64,7 +64,6 @@ func S3RestoreHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	// Must return 202 to indicate the request was accepted
 	w.WriteHeader(http.StatusAccepted)
-	fmt.Fprintln(w, "")
 }
 
 // Handles a request to restore a Glacier object to S3,
@@ -77,16 +76,16 @@ func S3RestoreInProgressHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	// Must return 409 to indicate the request conflicts
 	// with one already in progress
-	w.WriteHeader(http.StatusConflict)
 	w.Header().Set("Content-Type", "application/xml")
-	content := `<?xml version="1.0" encoding="UTF-8"?>
+	w.WriteHeader(http.StatusConflict)
+	xml := `<?xml version="1.0" encoding="UTF-8"?>
 <Error>
   <Code>RestoreAlreadyInProgress</Code>
-  <Message>Chill out, my man. We're working on it!</Message>
+  <Message>Object restore is already in progress.</Message>
   <Resource>/mybucket/myfoto.jpg</Resource>
-  <RequestId>9F341CD3C4BA79E0</RequestId>
+  <RequestId>4442587FB7D0A2F9</RequestId>
 </Error>`
-	fmt.Fprintln(w, content)
+	fmt.Fprintln(w, xml)
 }
 
 // Handles a request to restore a Glacier object to S3,
@@ -99,5 +98,4 @@ func S3RestoreCompletedHandler(w http.ResponseWriter, r *http.Request) {
 	// Must return 200 to indicate item has already
 	// been restored to S3
 	w.WriteHeader(http.StatusOK)
-	fmt.Fprintln(w, "")
 }
