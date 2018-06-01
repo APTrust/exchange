@@ -225,15 +225,16 @@ func (restorer *APTGlacierRestoreInit) cleanup() {
 			restorer.finishWithError(state)
 		} else {
 			// Need generic file or intel object here.
-			// report := state.GetReport()
-			// if report.AllItemsInS3() {
-			// 	// Can go to next queue
-			// } else if report.AllRetrievalsInitiated() {
-			// 	// Requeue, with timeout based on last request time in report
-			// } else {
-			// 	// Need to request more files from Glacier.
-			// 	// Requeue with timeout of one minute
-			// }
+			gfIdentifiers := state.GetFileIdentifiers()
+			report := state.GetReport(gfIdentifiers)
+			if report.AllItemsInS3() {
+				// TODO: Can go to next queue
+			} else if report.AllRetrievalsInitiated() {
+				// TODO: Requeue, with timeout based on last request time in report
+			} else {
+				// TODO: Need to request more files from Glacier.
+				// Requeue with timeout of one minute
+			}
 		}
 		// Update WorkItem in Pharos
 		// Push to NSQ's restoration channel for packaging, etc.
@@ -241,15 +242,15 @@ func (restorer *APTGlacierRestoreInit) cleanup() {
 }
 
 func (restorer *APTGlacierRestoreInit) finishWithError(state *models.GlacierRestoreState) {
-
+	// TODO: Implement this
 }
 
 func (restorer *APTGlacierRestoreInit) finishWithRequeue(state *models.GlacierRestoreState) {
-
+	// TODO: Implement this
 }
 
 func (restorer *APTGlacierRestoreInit) finishWithSuccess(state *models.GlacierRestoreState) {
-
+	// TODO: Implement this
 }
 
 func (restorer *APTGlacierRestoreInit) requestAllFiles(state *models.GlacierRestoreState) {

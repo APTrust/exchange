@@ -176,3 +176,22 @@ func TestAllItemsInS3(t *testing.T) {
 	assert.False(t, report.AllItemsInS3())
 	assert.Equal(t, 2, len(report.FilesNotYetInS3))
 }
+
+func TestGetFileIdentifiers(t *testing.T) {
+	state := getGlacierRestoreState()
+	require.NotNil(t, state)
+
+	assert.Empty(t, state.GetFileIdentifiers())
+
+	state.GenericFile = testutil.MakeGenericFile(0, 0, "test.edu/bag")
+	gfIdentifiers := state.GetFileIdentifiers()
+	assert.Equal(t, 1, len(gfIdentifiers))
+	assert.Equal(t, state.GenericFile.Identifier, gfIdentifiers[0])
+
+	state = getGlacierRestoreState()
+	require.NotNil(t, state)
+
+	state.IntellectualObject = testutil.MakeIntellectualObject(20, 0, 0, 0)
+	gfIdentifiers = state.GetFileIdentifiers()
+	assert.Equal(t, 20, len(gfIdentifiers))
+}

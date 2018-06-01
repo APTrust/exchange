@@ -111,6 +111,19 @@ func (state *GlacierRestoreState) GetReport(gfIdentifiers []string) *GlacierRequ
 	return report
 }
 
+func (state *GlacierRestoreState) GetFileIdentifiers() []string {
+	gfIdentifiers := make([]string, 0)
+	if state.GenericFile != nil {
+		gfIdentifiers = append(gfIdentifiers, state.GenericFile.Identifier)
+	} else if state.IntellectualObject != nil {
+		gfIdentifiers = make([]string, len(state.IntellectualObject.GenericFiles))
+		for i, gf := range state.IntellectualObject.GenericFiles {
+			gfIdentifiers[i] = gf.Identifier
+		}
+	}
+	return gfIdentifiers
+}
+
 // GlacierRequestReport provides information on whether all Glacier
 // files have been requested, which ones still need to be requested,
 // and how long the files should remain available in S3.
