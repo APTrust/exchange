@@ -6,13 +6,8 @@ import (
 	"github.com/APTrust/exchange/context"
 	"github.com/APTrust/exchange/models"
 	"github.com/APTrust/exchange/network"
-	//	"github.com/APTrust/exchange/util"
-	//	"github.com/APTrust/exchange/util/fileutil"
-	//	"github.com/APTrust/exchange/util/storage"
-	//	"github.com/APTrust/exchange/validation"
 	"github.com/nsqio/go-nsq"
 	"os"
-	//	"strings"
 	"time"
 )
 
@@ -60,7 +55,6 @@ func NewGlacierRestore(_context *context.Context) *APTGlacierRestoreInit {
 
 // This is the callback that NSQ workers use to handle messages from NSQ.
 func (restorer *APTGlacierRestoreInit) HandleMessage(message *nsq.Message) error {
-	// TODO: Set up GlacierRestoreState
 	workItem, err := GetWorkItem(message, restorer.Context)
 	if err != nil {
 		restorer.Context.MessageLog.Error(err.Error())
