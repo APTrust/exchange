@@ -136,3 +136,43 @@ func TestAllRetrievalsInitiated(t *testing.T) {
 	require.NotNil(t, report)
 	assert.False(t, report.AllRetrievalsInitiated())
 }
+
+func TestAllItemsInS3(t *testing.T) {
+	state := getGlacierRestoreState()
+	require.NotNil(t, state)
+	fileIdentifiers := make([]string, 30)
+	for i := 0; i < 30; i++ {
+		identifier := fmt.Sprintf("test.edu/bag/file_%d", i)
+		fileIdentifiers[i] = identifier
+		req := getGlacierRestoreRequest(identifier, true)
+		req.IsAvailableInS3 = true
+		state.Requests = append(state.Requests, req)
+	}
+
+	report := state.GetReport(fileIdentifiers)
+	require.NotNil(t, report)
+	assert.True(t, report.AllItemsInS3())
+	assert.Empty(t, report.FilesNotRequested)
+	assert.Empty(t, report.RequestsNotAccepted)
+	assert.Empty(t, report.FilesNotYetInS3)
+
+	fileIdentifiers = append(fileIdentifiers, "test.edu/bag/file_30")
+	fileIdentifiers = append(fileIdentifiers, "test.edu/bag/file_31")
+
+	report = state.GetReport(fileIdentifiers)
+	require.NotNil(t, report)
+	assert.False(t, report.AllItemsInS3())
+
+	req := getGlacierRestoreRequest("ned/flanders", true)
+	req.IsAvailableInS3 = false
+	state.Requests = append(state.Requests, req)
+
+	req = getGlacierRestoreRequest("maude/flanders", true)
+	req.IsAvailableInS3 = false
+	state.Requests = append(state.Requests, req)
+
+	report = state.GetReport(fileIdentifiers)
+	require.NotNil(t, report)
+	assert.False(t, report.AllItemsInS3())
+	assert.Equal(t, 2, len(report.FilesNotYetInS3))
+}

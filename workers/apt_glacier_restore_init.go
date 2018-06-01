@@ -102,9 +102,8 @@ func (restorer *APTGlacierRestoreInit) requestRestore() {
 			restorer.requestObject(state)
 		}
 
-		// Request retrieval from Glacier
-		// Update GlacierRestoreState
-		// Push to CleanupChannel
+		state.WorkSummary.Finish()
+		restorer.CleanupChannel <- state
 	}
 }
 
@@ -174,6 +173,7 @@ func (restorer *APTGlacierRestoreInit) restoreRequestNeeded(state *models.Glacie
 			gf.Identifier, s3Client.BucketName, fileUUID)
 		needsRestoreRequest = true
 	}
+	glacierRestoreRequest.LastChecked = time.Now().UTC()
 	return needsRestoreRequest, nil
 }
 
@@ -218,10 +218,36 @@ func (restorer *APTGlacierRestoreInit) getGenericFile(state *models.GlacierResto
 }
 
 func (restorer *APTGlacierRestoreInit) cleanup() {
-	//for restoreState := range restorer.RequestChannel {
-	// Update WorkItem in Pharos
-	// Push to NSQ's restoration channel for packaging, etc.
-	//}
+	for state := range restorer.RequestChannel {
+		if state.WorkSummary.HasErrors() {
+			restorer.finishWithError(state)
+		} else {
+			// Need generic file or intel object here.
+			// report := state.GetReport()
+			// if report.AllItemsInS3() {
+			// 	// Can go to next queue
+			// } else if report.AllRetrievalsInitiated() {
+			// 	// Requeue, with timeout based on last request time in report
+			// } else {
+			// 	// Need to request more files from Glacier.
+			// 	// Requeue with timeout of one minute
+			// }
+		}
+		// Update WorkItem in Pharos
+		// Push to NSQ's restoration channel for packaging, etc.
+	}
+}
+
+func (restorer *APTGlacierRestoreInit) finishWithError(state *models.GlacierRestoreState) {
+
+}
+
+func (restorer *APTGlacierRestoreInit) finishWithRequeue(state *models.GlacierRestoreState) {
+
+}
+
+func (restorer *APTGlacierRestoreInit) finishWithSuccess(state *models.GlacierRestoreState) {
+
 }
 
 func (restorer *APTGlacierRestoreInit) requestAllFiles(state *models.GlacierRestoreState) {
@@ -270,7 +296,11 @@ func (restorer *APTGlacierRestoreInit) requestFile(state *models.GlacierRestoreS
 	glacierRestoreRequest := restorer.getRequestRecord(state, gf, details)
 	if glacierRestoreRequest.RequestAccepted {
 		// Prior request was accepted and is in progress.
-		restorer.Context.MessageLog.Info("Skipping %s: retrieval request was accepted earlier.", gf.Identifier)
+		if glacierRestoreRequest.IsAvailableInS3 {
+			restorer.Context.MessageLog.Info("Skipping %s: item is already in S3.", gf.Identifier)
+		} else {
+			restorer.Context.MessageLog.Info("Skipping %s: retrieval request was accepted earlier.", gf.Identifier)
+		}
 	} else {
 		// Make a note if we're re-attempting.
 		if !glacierRestoreRequest.RequestedAt.IsZero() {

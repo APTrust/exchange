@@ -74,6 +74,9 @@ func (state *GlacierRestoreState) GetReport(gfIdentifiers []string) *GlacierRequ
 		if req.RequestAccepted == false {
 			report.RequestsNotAccepted = append(report.RequestsNotAccepted, req.GenericFileIdentifier)
 		}
+		if req.IsAvailableInS3 == false {
+			report.FilesNotYetInS3 = append(report.FilesNotYetInS3, req.GenericFileIdentifier)
+		}
 		if report.EarliestRequest.IsZero() || req.RequestedAt.Before(report.EarliestRequest) {
 			report.EarliestRequest = req.RequestedAt
 		}
@@ -122,6 +125,11 @@ type GlacierRequestReport struct {
 	// we requested from Glacier that were denied (or errored).
 	// We should retry these.
 	RequestsNotAccepted []string
+	// FilesNotYetInS3 contains a list of files which are not yet
+	// available in S3, either because we haven't requested their
+	// restoration, the request wasn't accepted, or the request
+	// hasn't completed.
+	FilesNotYetInS3 []string
 	// EarliestRequest is the timestamp on the earliest Glacier retrieval
 	// request for this job.
 	EarliestRequest time.Time
@@ -145,13 +153,20 @@ func NewGlacierRequestReport() *GlacierRequestReport {
 	return &GlacierRequestReport{
 		FilesNotRequested:   make([]string, 0),
 		RequestsNotAccepted: make([]string, 0),
+		FilesNotYetInS3:     make([]string, 0),
 	}
 }
 
 // AllRetrievalsInitialed returns true if we have initiated the retrieval
-// process for all of the files we were suppsed to retrieve.
+// process for all of the files we were supposed to retrieve.
 func (report *GlacierRequestReport) AllRetrievalsInitiated() bool {
 	return len(report.FilesNotRequested) == 0 && len(report.RequestsNotAccepted) == 0
+}
+
+// AllItemsInS3 returns true if all items have been moved from Glacier
+// into S3.
+func (report *GlacierRequestReport) AllItemsInS3() bool {
+	return len(report.FilesNotRequested) == 0 && len(report.FilesNotYetInS3) == 0
 }
 
 // GlacierRestoreRequest describes a request to restore a file
