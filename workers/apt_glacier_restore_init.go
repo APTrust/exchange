@@ -161,14 +161,20 @@ func (restorer *APTGlacierRestoreInit) restoreRequestNeeded(state *models.Glacie
 	}
 
 	if restoreRequestInfo.RequestInProgress {
-		// TODO: log and go on
-
+		// Log and go on
+		restorer.Context.MessageLog.Info("Already in progress: %s (%s/%s)",
+			gf.Identifier, s3Client.BucketName, fileUUID)
 	} else if restoreRequestInfo.RequestIsComplete {
-		// TODO: log and update expiry date
+		// Log and update expiry date
 		glacierRestoreRequest.IsAvailableInS3 = true
 		glacierRestoreRequest.EstimatedDeletionFromS3 = restoreRequestInfo.S3ExpiryDate
+		restorer.Context.MessageLog.Info("Already restored to S3: %s (%s/%s)",
+			gf.Identifier, s3Client.BucketName, fileUUID)
 	} else {
-		// TODO: log
+		// Not restored yet and not even requested.
+		// We need to make a request for this now.
+		restorer.Context.MessageLog.Info("Needs Glacier retrieval request: %s (%s/%s)",
+			gf.Identifier, s3Client.BucketName, fileUUID)
 		needsRestoreRequest = true
 	}
 	return needsRestoreRequest, nil
