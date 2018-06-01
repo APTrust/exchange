@@ -97,6 +97,7 @@ func (restorer *APTGlacierRestoreInit) requestRestore() {
 				restorer.CleanupChannel <- state
 				continue
 			}
+			state.GenericFile = gf
 			restorer.requestFile(state, gf)
 		} else {
 			restorer.requestObject(state)
@@ -113,6 +114,7 @@ func (restorer *APTGlacierRestoreInit) requestObject(state *models.GlacierRestor
 		state.WorkSummary.AddError(err.Error())
 		return
 	}
+	state.IntellectualObject = obj
 	for _, gf := range obj.GenericFiles {
 		needsRestoreRequest, err := restorer.restoreRequestNeeded(state, gf)
 		if err != nil {

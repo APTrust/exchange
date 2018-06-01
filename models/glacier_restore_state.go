@@ -28,6 +28,14 @@ type GlacierRestoreState struct {
 	// WorkSummary contains information about whether/when
 	// we requested this object(s) be restored from Glacier.
 	WorkSummary *WorkSummary
+	// GenericFile is the file to be restored. This will
+	// be nil if we're restoring an entire object. This item
+	// is not serialized to JSON.
+	GenericFile *GenericFile `json:"-"`
+	// IntellectualObject is the object to be restored. This will
+	// be nil if we're only restoring a single file. This item
+	// is not serialized to JSON.
+	IntellectualObject *IntellectualObject `json:"-"`
 	// Requests are the requests we've made (or need to make)
 	// to Glacier to retrieve the objects we need to retrieve.
 	Requests []*GlacierRestoreRequest
