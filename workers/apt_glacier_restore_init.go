@@ -121,10 +121,7 @@ func (restorer *APTGlacierRestoreInit) requestObject(state *models.GlacierRestor
 			continue
 		}
 		if needsRestoreRequest {
-			err = restorer.requestRestoration(state, gf)
-			if err != nil {
-				state.WorkSummary.AddError(err.Error())
-			}
+			restorer.requestFile(state, gf)
 		}
 	}
 }
@@ -178,11 +175,6 @@ func (restorer *APTGlacierRestoreInit) restoreRequestNeeded(state *models.Glacie
 		needsRestoreRequest = true
 	}
 	return needsRestoreRequest, nil
-}
-
-func (restorer *APTGlacierRestoreInit) requestRestoration(state *models.GlacierRestoreState, gf *models.GenericFile) error {
-	// TODO: Implement this
-	return nil
 }
 
 func (restorer *APTGlacierRestoreInit) getS3HeadClient(storageOption string) (*network.S3Head, error) {
@@ -276,13 +268,23 @@ func (restorer *APTGlacierRestoreInit) requestFile(state *models.GlacierRestoreS
 	}
 
 	glacierRestoreRequest := restorer.getRequestRecord(state, gf, details)
-	if glacierRestoreRequest == nil {
-		// Prior request was accepted and is in progress
-		return
+	if glacierRestoreRequest.RequestAccepted {
+		// Prior request was accepted and is in progress.
+		restorer.Context.MessageLog.Info("Skipping %s: retrieval request was accepted earlier.", gf.Identifier)
+	} else {
+		// Make a note if we're re-attempting.
+		if !glacierRestoreRequest.RequestedAt.IsZero() {
+			restorer.Context.MessageLog.Info("File %s (%s/%s) was requested from Glacier at %s, "+
+				"but that request was not accepted. Trying again.",
+				gf.Identifier, details["bucket"], details["fileUUID"],
+				glacierRestoreRequest.RequestedAt.Format(time.RFC3339))
+		}
+		restorer.initializeRetrieval(state, gf, details, glacierRestoreRequest)
 	}
-	restorer.initializeRetrieval(state, gf, details, glacierRestoreRequest)
 }
 
+// This returns the info we'll need to ask AWS to move
+// the file from Glacier to S3.
 func (restorer *APTGlacierRestoreInit) getRequestDetails(gf *models.GenericFile) (map[string]string, error) {
 	details := make(map[string]string)
 	fileUUID, err := gf.PreservationStorageFileName()
@@ -306,14 +308,7 @@ func (restorer *APTGlacierRestoreInit) getRequestDetails(gf *models.GenericFile)
 
 func (restorer *APTGlacierRestoreInit) getRequestRecord(state *models.GlacierRestoreState, gf *models.GenericFile, details map[string]string) *models.GlacierRestoreRequest {
 	glacierRestoreRequest := state.FindRequest(gf.Identifier)
-	if glacierRestoreRequest != nil {
-		if glacierRestoreRequest.RequestAccepted {
-			restorer.Context.MessageLog.Info("Skipping %s: retrieval request was accepted earlier.", gf.Identifier)
-			return nil
-		} else {
-			restorer.Context.MessageLog.Info("Retrying existing request for %s, which was not previously accepted", gf.Identifier)
-		}
-	} else {
+	if glacierRestoreRequest == nil {
 		restorer.Context.MessageLog.Info("Creating new request for %s", gf.Identifier)
 		glacierRestoreRequest = &models.GlacierRestoreRequest{
 			GenericFileIdentifier: gf.Identifier,
@@ -342,23 +337,21 @@ func (restorer *APTGlacierRestoreInit) initializeRetrieval(state *models.Glacier
 		DAYS_TO_KEEP_IN_S3)
 	now := time.Now().UTC()
 	estimatedDeletionFromS3 := now.AddDate(0, 0, DAYS_TO_KEEP_IN_S3)
-	someoneElseRequested := false
 	restoreClient.Restore()
 	if restoreClient.ErrorMessage != "" {
-		if restoreClient.RestoreAlreadyInProgress {
-			// Although we checked for this above, this case can occur when
-			// an outside service requests Glacier retrieval.
-			restorer.Context.MessageLog.Info("Retrieval of %s was requested earlier (probably by someone else) and is already in progress.", gf.Identifier)
-			someoneElseRequested = true
-		} else {
-			state.WorkSummary.AddError("Glacier retrieval request returned an error for %s at %s: %v", gf.Identifier, gf.URI, restoreClient.ErrorMessage)
-			return
-		}
+		state.WorkSummary.AddError("Glacier retrieval request returned an error for %s at %s: %v",
+			gf.Identifier, gf.URI, restoreClient.ErrorMessage)
 	}
 
 	// Update this info. It's a pointer, so it will be saved with GlacierRestoreState.
 	glacierRestoreRequest.RequestAccepted = (restoreClient.ErrorMessage == "")
 	glacierRestoreRequest.RequestedAt = now
 	glacierRestoreRequest.EstimatedDeletionFromS3 = estimatedDeletionFromS3
-	glacierRestoreRequest.SomeoneElseRequested = someoneElseRequested
+
+	// If we're requesting this now, it's because we think
+	// we haven't requested it yet. But if it's already in
+	// progress, someone else (or some other process) must
+	// have requested the restoration. Do we still need to
+	// track this bit of info? Do we care who requested it?
+	glacierRestoreRequest.SomeoneElseRequested = restoreClient.RestoreAlreadyInProgress
 }
