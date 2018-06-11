@@ -60,18 +60,27 @@ func (restorer *APTGlacierRestoreInit) HandleMessage(message *nsq.Message) error
 		restorer.Context.MessageLog.Error(err.Error())
 		return err
 	}
+	state, err := restorer.getGlacierRestoreState(message, workItem)
+	if err != nil {
+		restorer.Context.MessageLog.Error("Error getting WorkItemState for WorkItem %d: %s",
+			workItem.Id, err.Error())
+		return err
+	}
+	restorer.RequestChannel <- state
+	return nil
+}
+
+func (restorer *APTGlacierRestoreInit) getGlacierRestoreState(message *nsq.Message, workItem *models.WorkItem) (*models.GlacierRestoreState, error) {
 	var state *models.GlacierRestoreState
 	if workItem.WorkItemStateId != nil && *workItem.WorkItemStateId != 0 {
 		workItemState, err := GetWorkItemState(workItem, restorer.Context, false)
 		if err != nil {
-			restorer.Context.MessageLog.Error(err.Error())
-			return err
+			return nil, err
 		}
 		if workItemState != nil && workItemState.HasData() {
 			state, err := workItemState.GlacierRestoreState()
 			if err != nil {
-				restorer.Context.MessageLog.Error(err.Error())
-				return err
+				return nil, err
 			}
 			state.NSQMessage = message
 			state.WorkItem = workItem
@@ -79,8 +88,7 @@ func (restorer *APTGlacierRestoreInit) HandleMessage(message *nsq.Message) error
 	} else {
 		state = models.NewGlacierRestoreState(message, workItem)
 	}
-	restorer.RequestChannel <- state
-	return nil
+	return state, nil
 }
 
 func (restorer *APTGlacierRestoreInit) requestRestore() {
@@ -237,15 +245,27 @@ func (restorer *APTGlacierRestoreInit) cleanup() {
 			}
 		}
 		// Update WorkItem in Pharos
-		// Push to NSQ's restoration channel for packaging, etc.
 	}
 }
 
+func (restorer *APTGlacierRestoreInit) saveWorkItemState(state *models.GlacierRestoreState) {
+
+}
+
 func (restorer *APTGlacierRestoreInit) finishWithError(state *models.GlacierRestoreState) {
-	// Set & log error
-	// Mark WorkSummary as finished
 	// Mark WorkItem with error
 	// Finish NSQ message
+	errMessage := state.WorkSummary.AllErrorsAsString()
+	workItemId := 0
+	if state.WorkItem != nil {
+		workItemId = state.WorkItem.Id
+	}
+	restorer.Context.MessageLog.Error("Error processing WorkItem %d: %s", workItemId, errMessage)
+	state.WorkItem.Note = errMessage
+	state.WorkItem.Status = constants.StatusFailed
+	state.WorkItem.Retry = false
+	state.WorkItem.NeedsAdminReview = true
+	state.NSQMessage.Finish()
 }
 
 func (restorer *APTGlacierRestoreInit) requeueForAdditionalRequests(state *models.GlacierRestoreState) {

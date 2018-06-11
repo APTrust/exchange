@@ -190,48 +190,6 @@ func InitWorkItemState(workItem *models.WorkItem) (*models.WorkItemState, error)
 	return workItemState, nil
 }
 
-// --------------------------------------------------------------------------------
-// TODO - Remove this
-// --------------------------------------------------------------------------------
-// SetBasicObjectInfo sets initial essential properties on the
-// IntellectualObject associated with an ingestState
-// (ingestState.IngestManifest.Object). This is only used by
-// apt_fetcher and is only ever called during the fetch stage.
-// func SetBasicObjectInfo(ingestState *models.IngestState, _context *context.Context) {
-// 	// instIdentifier is, e.g., virginia.edu, ncsu.edu, etc.
-// 	// We'll download the tar file from the receiving bucket to
-// 	// something like /mnt/apt/data/virginia.edu/name_of_bag.tar
-// 	// See IngestTarFilePath below.
-// 	obj := ingestState.IngestManifest.Object
-// 	instIdentifier := util.OwnerOf(ingestState.IngestManifest.S3Bucket)
-// 	obj.BagName = util.CleanBagName(ingestState.IngestManifest.S3Key)
-// 	obj.Institution = instIdentifier
-// 	obj.InstitutionId = ingestState.WorkItem.InstitutionId
-// 	obj.IngestS3Bucket = ingestState.IngestManifest.S3Bucket
-// 	obj.IngestS3Key = ingestState.IngestManifest.S3Key
-// 	obj.IngestTarFilePath = filepath.Join(
-// 		_context.Config.TarDirectory,
-// 		instIdentifier, ingestState.IngestManifest.S3Key)
-// 	obj.ETag = ingestState.WorkItem.ETag
-
-// 	// If this IntellectualObject was created by our validator and VirtualBag,
-// 	// the identifier will be the bag name (minus the .tar extension).
-// 	// That's fine for cases where depositors or other organizations are
-// 	// using the validator outside of APTrust's repository environment, but
-// 	// APTrust requires that we add the Institution name and a slash to
-// 	// the beginning of the identifier. So make sure it's there, and propagate
-// 	// the change all the way down to the GenericFiles.
-// 	if !strings.HasPrefix(obj.Identifier, obj.Institution+"/") {
-// 		obj.Identifier = fmt.Sprintf("%s/%s", obj.Institution, obj.Identifier)
-// 		for _, gf := range obj.GenericFiles {
-// 			if !strings.HasPrefix(gf.Identifier, obj.Identifier) {
-// 				gf.IntellectualObjectIdentifier = obj.Identifier
-// 				gf.Identifier = fmt.Sprintf("%s/%s", obj.Institution, gf.Identifier)
-// 			}
-// 		}
-// 	}
-// }
-
 // RecordWorkItemState saves the WorkItemState for this task. We drop a
 // copy into our JSON log as a backup, and update the WorkItemState in
 // Pharos, so the next worker knows what to do with this item.
