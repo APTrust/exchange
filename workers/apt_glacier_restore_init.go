@@ -46,10 +46,10 @@ func NewGlacierRestore(_context *context.Context) *APTGlacierRestoreInit {
 	restorer.CleanupChannel = make(chan *models.GlacierRestoreState, workerBufferSize)
 	// Set up a limited number of go routines
 	for i := 0; i < _context.Config.GlacierRestoreWorker.NetworkConnections; i++ {
-		go restorer.requestRestore()
+		go restorer.RequestRestore()
 	}
 	for i := 0; i < _context.Config.GlacierRestoreWorker.Workers; i++ {
-		go restorer.cleanup()
+		go restorer.Cleanup()
 	}
 	return restorer
 }
@@ -61,7 +61,7 @@ func (restorer *APTGlacierRestoreInit) HandleMessage(message *nsq.Message) error
 		restorer.Context.MessageLog.Error(err.Error())
 		return err
 	}
-	state, err := restorer.getGlacierRestoreState(message, workItem)
+	state, err := restorer.GetGlacierRestoreState(message, workItem)
 	if err != nil {
 		restorer.Context.MessageLog.Error("Error getting WorkItemState for WorkItem %d: %s",
 			workItem.Id, err.Error())
@@ -71,7 +71,7 @@ func (restorer *APTGlacierRestoreInit) HandleMessage(message *nsq.Message) error
 	return nil
 }
 
-func (restorer *APTGlacierRestoreInit) getGlacierRestoreState(message *nsq.Message, workItem *models.WorkItem) (*models.GlacierRestoreState, error) {
+func (restorer *APTGlacierRestoreInit) GetGlacierRestoreState(message *nsq.Message, workItem *models.WorkItem) (*models.GlacierRestoreState, error) {
 	var state *models.GlacierRestoreState
 	if workItem.WorkItemStateId != nil && *workItem.WorkItemStateId != 0 {
 		workItemState, err := GetWorkItemState(workItem, restorer.Context, false)
@@ -92,7 +92,7 @@ func (restorer *APTGlacierRestoreInit) getGlacierRestoreState(message *nsq.Messa
 	return state, nil
 }
 
-func (restorer *APTGlacierRestoreInit) requestRestore() {
+func (restorer *APTGlacierRestoreInit) RequestRestore() {
 	for state := range restorer.RequestChannel {
 		state.WorkSummary.ClearErrors()
 		state.WorkSummary.Attempted = true
@@ -100,16 +100,16 @@ func (restorer *APTGlacierRestoreInit) requestRestore() {
 		state.WorkSummary.Start()
 
 		if state.WorkItem.GenericFileIdentifier != "" {
-			gf, err := restorer.getGenericFile(state)
+			gf, err := restorer.GetGenericFile(state)
 			if err != nil {
 				state.WorkSummary.AddError(err.Error())
 				restorer.CleanupChannel <- state
 				continue
 			}
 			state.GenericFile = gf
-			restorer.requestFile(state, gf)
+			restorer.RequestFile(state, gf)
 		} else {
-			restorer.requestObject(state)
+			restorer.RequestObject(state)
 		}
 
 		state.WorkSummary.Finish()
@@ -117,28 +117,28 @@ func (restorer *APTGlacierRestoreInit) requestRestore() {
 	}
 }
 
-func (restorer *APTGlacierRestoreInit) requestObject(state *models.GlacierRestoreState) {
-	obj, err := restorer.getIntellectualObject(state)
+func (restorer *APTGlacierRestoreInit) RequestObject(state *models.GlacierRestoreState) {
+	obj, err := restorer.GetIntellectualObject(state)
 	if err != nil {
 		state.WorkSummary.AddError(err.Error())
 		return
 	}
 	state.IntellectualObject = obj
 	for _, gf := range obj.GenericFiles {
-		needsRestoreRequest, err := restorer.restoreRequestNeeded(state, gf)
+		needsRestoreRequest, err := restorer.RestoreRequestNeeded(state, gf)
 		if err != nil {
 			state.WorkSummary.AddError(err.Error())
 			continue
 		}
 		if needsRestoreRequest {
-			restorer.requestFile(state, gf)
+			restorer.RequestFile(state, gf)
 		}
 	}
 }
 
-func (restorer *APTGlacierRestoreInit) restoreRequestNeeded(state *models.GlacierRestoreState, gf *models.GenericFile) (bool, error) {
+func (restorer *APTGlacierRestoreInit) RestoreRequestNeeded(state *models.GlacierRestoreState, gf *models.GenericFile) (bool, error) {
 	needsRestoreRequest := false
-	s3Client, err := restorer.getS3HeadClient(gf.StorageOption)
+	s3Client, err := restorer.GetS3HeadClient(gf.StorageOption)
 	if err != nil {
 		return needsRestoreRequest, err
 	}
@@ -188,7 +188,7 @@ func (restorer *APTGlacierRestoreInit) restoreRequestNeeded(state *models.Glacie
 	return needsRestoreRequest, nil
 }
 
-func (restorer *APTGlacierRestoreInit) getS3HeadClient(storageOption string) (*network.S3Head, error) {
+func (restorer *APTGlacierRestoreInit) GetS3HeadClient(storageOption string) (*network.S3Head, error) {
 	region, bucket, err := restorer.Context.Config.StorageRegionAndBucketFor(storageOption)
 	if err != nil {
 		return nil, err
@@ -201,7 +201,7 @@ func (restorer *APTGlacierRestoreInit) getS3HeadClient(storageOption string) (*n
 	return client, nil
 }
 
-func (restorer *APTGlacierRestoreInit) getIntellectualObject(state *models.GlacierRestoreState) (*models.IntellectualObject, error) {
+func (restorer *APTGlacierRestoreInit) GetIntellectualObject(state *models.GlacierRestoreState) (*models.IntellectualObject, error) {
 	// Get object with files (second param) but no events (third param)
 	resp := restorer.Context.PharosClient.IntellectualObjectGet(state.WorkItem.ObjectIdentifier, true, false)
 	if resp.Error != nil {
@@ -215,7 +215,7 @@ func (restorer *APTGlacierRestoreInit) getIntellectualObject(state *models.Glaci
 	return obj, nil
 }
 
-func (restorer *APTGlacierRestoreInit) getGenericFile(state *models.GlacierRestoreState) (*models.GenericFile, error) {
+func (restorer *APTGlacierRestoreInit) GetGenericFile(state *models.GlacierRestoreState) (*models.GenericFile, error) {
 	resp := restorer.Context.PharosClient.GenericFileGet(state.WorkItem.GenericFileIdentifier, false)
 	if resp.Error != nil {
 		return nil, resp.Error
@@ -228,10 +228,10 @@ func (restorer *APTGlacierRestoreInit) getGenericFile(state *models.GlacierResto
 	return gf, nil
 }
 
-func (restorer *APTGlacierRestoreInit) cleanup() {
+func (restorer *APTGlacierRestoreInit) Cleanup() {
 	for state := range restorer.RequestChannel {
 		if state.WorkSummary.HasErrors() {
-			restorer.finishWithError(state)
+			restorer.FinishWithError(state)
 		} else {
 			// Need generic file or intel object here.
 			gfIdentifiers := state.GetFileIdentifiers()
@@ -245,13 +245,13 @@ func (restorer *APTGlacierRestoreInit) cleanup() {
 				// Requeue with timeout of one minute
 			}
 		}
-		restorer.saveWorkItemState(state)
-		restorer.updateWorkItem(state)
+		restorer.SaveWorkItemState(state)
+		restorer.UpdateWorkItem(state)
 	}
 }
 
 // updateWorkItem saves the updated WorkItem in Pharos
-func (restorer *APTGlacierRestoreInit) updateWorkItem(state *models.GlacierRestoreState) {
+func (restorer *APTGlacierRestoreInit) UpdateWorkItem(state *models.GlacierRestoreState) {
 	// By the time we call this, we've done as much as possible
 	// with this WorkItem, and we're telling Pharos the state
 	// of this task. One of the methods below should have set
@@ -268,7 +268,7 @@ func (restorer *APTGlacierRestoreInit) updateWorkItem(state *models.GlacierResto
 // in Pharos' WorkItemState table. We do this primarily so an admin can
 // review this info and trace evidence on problem cases. The WorkItemState
 // JSON is visible on the WorkItem detail page of the Pharos UI.
-func (restorer *APTGlacierRestoreInit) saveWorkItemState(state *models.GlacierRestoreState) {
+func (restorer *APTGlacierRestoreInit) SaveWorkItemState(state *models.GlacierRestoreState) {
 	if state.WorkItem == nil {
 		restorer.Context.MessageLog.Warning("Can't set WorkItemState on nil WorkItem")
 		return
@@ -290,9 +290,7 @@ func (restorer *APTGlacierRestoreInit) saveWorkItemState(state *models.GlacierRe
 	}
 }
 
-func (restorer *APTGlacierRestoreInit) finishWithError(state *models.GlacierRestoreState) {
-	// Mark WorkItem with error
-	// Finish NSQ message
+func (restorer *APTGlacierRestoreInit) FinishWithError(state *models.GlacierRestoreState) {
 	errMessage := state.WorkSummary.AllErrorsAsString()
 	workItemId := 0
 	if state.WorkItem != nil {
@@ -313,7 +311,7 @@ func (restorer *APTGlacierRestoreInit) finishWithError(state *models.GlacierRest
 // queue and reprocess it, requesting Glacier-to-S3 restoration for
 // any files still needing to be restored. We can requeue with a
 // one-minute timeout.
-func (restorer *APTGlacierRestoreInit) requeueForAdditionalRequests(state *models.GlacierRestoreState) {
+func (restorer *APTGlacierRestoreInit) RequeueForAdditionalRequests(state *models.GlacierRestoreState) {
 	restorer.Context.MessageLog.Error("Requeueing WorkItem %d: Needs additional Glacier restore requests.",
 		state.WorkItem.Id)
 	state.WorkItem.Note = "Requeued to make additional Glacier restore requests."
@@ -330,7 +328,7 @@ func (restorer *APTGlacierRestoreInit) requeueForAdditionalRequests(state *model
 // have all been accepted.
 // It typically takes 3-5 hours to get all the
 // files into S3.
-func (restorer *APTGlacierRestoreInit) requeueToCheckState(state *models.GlacierRestoreState) {
+func (restorer *APTGlacierRestoreInit) RequeueToCheckState(state *models.GlacierRestoreState) {
 	restorer.Context.MessageLog.Error("Requeueing WorkItem %d to check on restoration progress: "+
 		"All restore requests accepted.", state.WorkItem.Id)
 	state.WorkItem.Note = "Requeued to check on status of Glacier restore requests."
@@ -346,7 +344,7 @@ func (restorer *APTGlacierRestoreInit) requeueToCheckState(state *models.Glacier
 // process can follow the normal S3 restoration process. So we'll
 // close out this WorkItem and open a new one, which will go into
 // the apt_restore queue.
-func (restorer *APTGlacierRestoreInit) createRestoreWorkItem(state *models.GlacierRestoreState) {
+func (restorer *APTGlacierRestoreInit) CreateRestoreWorkItem(state *models.GlacierRestoreState) {
 	restorer.Context.MessageLog.Info("Files for WorkItem %d are all in S3.", state.WorkItem.Id)
 	newWorkItem := &models.WorkItem{}
 	newWorkItem.ObjectIdentifier = state.WorkItem.ObjectIdentifier
@@ -379,7 +377,7 @@ func (restorer *APTGlacierRestoreInit) createRestoreWorkItem(state *models.Glaci
 	state.NSQMessage.Finish()
 }
 
-func (restorer *APTGlacierRestoreInit) requestAllFiles(state *models.GlacierRestoreState) {
+func (restorer *APTGlacierRestoreInit) RequestAllFiles(state *models.GlacierRestoreState) {
 	if state.WorkItem.GenericFileIdentifier != "" {
 		gfIdentifier := state.WorkItem.GenericFileIdentifier
 		resp := restorer.Context.PharosClient.GenericFileGet(gfIdentifier, false)
@@ -392,7 +390,7 @@ func (restorer *APTGlacierRestoreInit) requestAllFiles(state *models.GlacierRest
 			state.WorkSummary.AddError("Pharos returned nil for GenericFile %s", gfIdentifier)
 			return
 		}
-		restorer.requestFile(state, genericFile)
+		restorer.RequestFile(state, genericFile)
 	} else if state.WorkItem.ObjectIdentifier != "" {
 		objIdentifier := state.WorkItem.ObjectIdentifier
 		resp := restorer.Context.PharosClient.IntellectualObjectGet(objIdentifier, true, false)
@@ -407,7 +405,7 @@ func (restorer *APTGlacierRestoreInit) requestAllFiles(state *models.GlacierRest
 		}
 		restorer.Context.MessageLog.Info("Object %s has %d files", obj.Identifier, len(obj.GenericFiles))
 		for _, genericFile := range obj.GenericFiles {
-			restorer.requestFile(state, genericFile)
+			restorer.RequestFile(state, genericFile)
 		}
 	} else {
 		state.WorkSummary.AddError("Cannot process WorkItem %d: no file identifier or object identifier.", state.WorkItem.Id)
@@ -415,14 +413,14 @@ func (restorer *APTGlacierRestoreInit) requestAllFiles(state *models.GlacierRest
 	}
 }
 
-func (restorer *APTGlacierRestoreInit) requestFile(state *models.GlacierRestoreState, gf *models.GenericFile) {
-	details, err := restorer.getRequestDetails(gf)
+func (restorer *APTGlacierRestoreInit) RequestFile(state *models.GlacierRestoreState, gf *models.GenericFile) {
+	details, err := restorer.GetRequestDetails(gf)
 	if err != nil {
 		state.WorkSummary.AddError(err.Error())
 		return
 	}
 
-	glacierRestoreRequest := restorer.getRequestRecord(state, gf, details)
+	glacierRestoreRequest := restorer.GetRequestRecord(state, gf, details)
 	if glacierRestoreRequest.RequestAccepted {
 		// Prior request was accepted and is in progress.
 		if glacierRestoreRequest.IsAvailableInS3 {
@@ -438,13 +436,13 @@ func (restorer *APTGlacierRestoreInit) requestFile(state *models.GlacierRestoreS
 				gf.Identifier, details["bucket"], details["fileUUID"],
 				glacierRestoreRequest.RequestedAt.Format(time.RFC3339))
 		}
-		restorer.initializeRetrieval(state, gf, details, glacierRestoreRequest)
+		restorer.InitializeRetrieval(state, gf, details, glacierRestoreRequest)
 	}
 }
 
 // This returns the info we'll need to ask AWS to move
 // the file from Glacier to S3.
-func (restorer *APTGlacierRestoreInit) getRequestDetails(gf *models.GenericFile) (map[string]string, error) {
+func (restorer *APTGlacierRestoreInit) GetRequestDetails(gf *models.GenericFile) (map[string]string, error) {
 	details := make(map[string]string)
 	fileUUID, err := gf.PreservationStorageFileName()
 	if err != nil {
@@ -465,7 +463,7 @@ func (restorer *APTGlacierRestoreInit) getRequestDetails(gf *models.GenericFile)
 	return details, nil
 }
 
-func (restorer *APTGlacierRestoreInit) getRequestRecord(state *models.GlacierRestoreState, gf *models.GenericFile, details map[string]string) *models.GlacierRestoreRequest {
+func (restorer *APTGlacierRestoreInit) GetRequestRecord(state *models.GlacierRestoreState, gf *models.GenericFile, details map[string]string) *models.GlacierRestoreRequest {
 	glacierRestoreRequest := state.FindRequest(gf.Identifier)
 	if glacierRestoreRequest == nil {
 		restorer.Context.MessageLog.Info("Creating new request for %s", gf.Identifier)
@@ -481,7 +479,7 @@ func (restorer *APTGlacierRestoreInit) getRequestRecord(state *models.GlacierRes
 	return glacierRestoreRequest
 }
 
-func (restorer *APTGlacierRestoreInit) initializeRetrieval(state *models.GlacierRestoreState, gf *models.GenericFile, details map[string]string, glacierRestoreRequest *models.GlacierRestoreRequest) {
+func (restorer *APTGlacierRestoreInit) InitializeRetrieval(state *models.GlacierRestoreState, gf *models.GenericFile, details map[string]string, glacierRestoreRequest *models.GlacierRestoreRequest) {
 
 	restorer.Context.MessageLog.Info("Requesting Glacier retrieval of %s at %s (%s)",
 		gf.Identifier, gf.URI, gf.StorageOption)
