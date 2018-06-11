@@ -260,7 +260,7 @@ func (restorer *APTGlacierRestoreInit) updateWorkItem(state *models.GlacierResto
 	// reqeueToCheckState, createRestoreWorkItem.
 	resp := restorer.Context.PharosClient.WorkItemSave(state.WorkItem)
 	if resp.Error != nil {
-		restorer.Context.MessageLog.Error("Error updating WorkItem %d: %v", state.WorkItem.Id, err)
+		restorer.Context.MessageLog.Error("Error updating WorkItem %d: %v", state.WorkItem.Id, resp.Error)
 	}
 }
 
@@ -306,18 +306,77 @@ func (restorer *APTGlacierRestoreInit) finishWithError(state *models.GlacierRest
 	state.NSQMessage.Finish()
 }
 
+// requeueForAdditionalRequests: We call this when we know we didn't
+// issue Glacier restore requests for some of the files we'll need to
+// restore (or maybe we issued the requests, but AWS/Glacier didn't
+// accept them). In this case, we put the item back in the current
+// queue and reprocess it, requesting Glacier-to-S3 restoration for
+// any files still needing to be restored. We can requeue with a
+// one-minute timeout.
 func (restorer *APTGlacierRestoreInit) requeueForAdditionalRequests(state *models.GlacierRestoreState) {
-	// Requeue with one minute timeout
+	restorer.Context.MessageLog.Error("Requeueing WorkItem %d: Needs additional Glacier restore requests.",
+		state.WorkItem.Id)
+	state.WorkItem.Note = "Requeued to make additional Glacier restore requests."
+	// Don't revert status to Pending, or this may get queued
+	// again by apt_queue.
+	state.WorkItem.Status = constants.StatusStarted
+	state.WorkItem.Retry = true
+	state.WorkItem.NeedsAdminReview = false
+	state.NSQMessage.Requeue(1 * time.Minute)
 }
 
+// requeueToCheckState: We call this when we know we've requested
+// Glacier-to-S3 restoration of all required files, and those requests
+// have all been accepted.
+// It typically takes 3-5 hours to get all the
+// files into S3.
 func (restorer *APTGlacierRestoreInit) requeueToCheckState(state *models.GlacierRestoreState) {
-	// Requeue first with four hour timeout, then with one hour timeout.
+	restorer.Context.MessageLog.Error("Requeueing WorkItem %d to check on restoration progress: "+
+		"All restore requests accepted.", state.WorkItem.Id)
+	state.WorkItem.Note = "Requeued to check on status of Glacier restore requests."
+	state.WorkItem.Status = constants.StatusStarted
+	state.WorkItem.Retry = true
+	state.WorkItem.NeedsAdminReview = false
+	state.NSQMessage.Requeue(2 * time.Hour)
 }
 
+// createRestoreWorkItem: We call this to create a normal WorkItem
+// with action='Restore 'when we know all files have been restored
+// from Glacier to S3. Once all files are in S3, the apt_restore
+// process can follow the normal S3 restoration process. So we'll
+// close out this WorkItem and open a new one, which will go into
+// the apt_restore queue.
 func (restorer *APTGlacierRestoreInit) createRestoreWorkItem(state *models.GlacierRestoreState) {
-	// All items have been restored from Glacier to S3.
-	// Create a restore WorkItem for this file/bag.
-	// From here, it can follow the normal S3 restoration process.
+	restorer.Context.MessageLog.Info("Files for WorkItem %d are all in S3.", state.WorkItem.Id)
+	newWorkItem := &models.WorkItem{}
+	newWorkItem.ObjectIdentifier = state.WorkItem.ObjectIdentifier
+	newWorkItem.GenericFileIdentifier = state.WorkItem.GenericFileIdentifier
+	newWorkItem.Name = state.WorkItem.Name
+	newWorkItem.Bucket = state.WorkItem.Bucket
+	newWorkItem.ETag = state.WorkItem.ETag
+	newWorkItem.Size = state.WorkItem.Size
+	newWorkItem.BagDate = state.WorkItem.BagDate
+	newWorkItem.InstitutionId = state.WorkItem.InstitutionId
+	newWorkItem.User = state.WorkItem.User
+	newWorkItem.Action = constants.ActionRestore
+	newWorkItem.Stage = constants.StageRequested
+	newWorkItem.Status = constants.StatusPending
+	newWorkItem.Retry = true
+	resp := restorer.Context.PharosClient.WorkItemSave(newWorkItem)
+	if resp.Error != nil {
+		restorer.Context.MessageLog.Error("WorkItem %d: Error creating new Restore WorkItem",
+			state.WorkItem.Id, resp.Error)
+		state.WorkItem.Note = fmt.Sprintf("All files have been restored from Glacier to S3, "+
+			"but received the following error from Pharos when trying to create a new "+
+			"Restore WorkItem to finish the restoration job: %v", resp.Error)
+		state.WorkItem.Status = constants.StatusFailed
+	} else {
+		newSavedWorkItem := resp.WorkItem()
+		state.WorkItem.Note = fmt.Sprintf("All files have been moved from Glacier to S3. "+
+			"Created new WorkItem #%d to finish restoration.", newSavedWorkItem.Id)
+		state.WorkItem.Status = constants.StatusSuccess
+	}
+	state.NSQMessage.Finish()
 }
 
 func (restorer *APTGlacierRestoreInit) requestAllFiles(state *models.GlacierRestoreState) {

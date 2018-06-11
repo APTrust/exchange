@@ -67,8 +67,8 @@ const (
 	StageRequested = "Requested"
 	StageReceive   = "Receive"
 	StageFetch     = "Fetch"
-	StageUnpack    = "Unpack"   // TODO: Delete if we're no longer using this.
-	StageValidate  = "Validate" // TODO: Delete if we're no longer using this.
+	StageUnpack    = "Unpack" // TODO: Delete if we're no longer using this.
+	StageValidate  = "Validate"
 	StageStore     = "Store"
 	StageRecord    = "Record"
 	StageCleanup   = "Cleanup"
