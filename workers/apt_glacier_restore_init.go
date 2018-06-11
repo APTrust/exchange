@@ -1,6 +1,7 @@
 package workers
 
 import (
+	"encoding/json"
 	"fmt"
 	"github.com/APTrust/exchange/constants"
 	"github.com/APTrust/exchange/context"
@@ -249,7 +250,25 @@ func (restorer *APTGlacierRestoreInit) cleanup() {
 }
 
 func (restorer *APTGlacierRestoreInit) saveWorkItemState(state *models.GlacierRestoreState) {
-
+	if state.WorkItem == nil {
+		restorer.Context.MessageLog.Warning("Can't set WorkItemState on nil WorkItem")
+		return
+	}
+	jsonData, err := json.Marshal(state)
+	if err != nil {
+		msg := fmt.Sprintf(" Error converting GlacierRestoreState to JSON for "+
+			"WorkItemState (WorkItem %d): %v", state.WorkItem.Id, err)
+		restorer.Context.MessageLog.Error(msg)
+		state.WorkItem.Note += msg
+		return
+	}
+	workItemState := models.NewWorkItemState(state.WorkItem.Id, constants.ActionGlacierRestore, string(jsonData))
+	resp := restorer.Context.PharosClient.WorkItemStateSave(workItemState)
+	if resp.Error != nil {
+		msg := fmt.Sprintf("Error saving WorkItemState for WorkItem %d: %v", state.WorkItem.Id, err)
+		restorer.Context.MessageLog.Error(msg)
+		state.WorkItem.Note += msg
+	}
 }
 
 func (restorer *APTGlacierRestoreInit) finishWithError(state *models.GlacierRestoreState) {
