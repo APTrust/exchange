@@ -242,15 +242,24 @@ func (restorer *APTGlacierRestoreInit) cleanup() {
 }
 
 func (restorer *APTGlacierRestoreInit) finishWithError(state *models.GlacierRestoreState) {
-	// TODO: Implement this
+	// Set & log error
+	// Mark WorkSummary as finished
+	// Mark WorkItem with error
+	// Finish NSQ message
 }
 
-func (restorer *APTGlacierRestoreInit) finishWithRequeue(state *models.GlacierRestoreState) {
-	// TODO: Implement this
+func (restorer *APTGlacierRestoreInit) requeueForAdditionalRequests(state *models.GlacierRestoreState) {
+	// Requeue with one minute timeout
 }
 
-func (restorer *APTGlacierRestoreInit) finishWithSuccess(state *models.GlacierRestoreState) {
-	// TODO: Implement this
+func (restorer *APTGlacierRestoreInit) requeueToCheckState(state *models.GlacierRestoreState) {
+	// Requeue first with four hour timeout, then with one hour timeout.
+}
+
+func (restorer *APTGlacierRestoreInit) createRestoreWorkItem(state *models.GlacierRestoreState) {
+	// All items have been restored from Glacier to S3.
+	// Create a restore WorkItem for this file/bag.
+	// From here, it can follow the normal S3 restoration process.
 }
 
 func (restorer *APTGlacierRestoreInit) requestAllFiles(state *models.GlacierRestoreState) {
