@@ -233,16 +233,19 @@ func (restorer *APTGlacierRestoreInit) Cleanup() {
 		if state.WorkSummary.HasErrors() {
 			restorer.FinishWithError(state)
 		} else {
-			// Need generic file or intel object here.
 			gfIdentifiers := state.GetFileIdentifiers()
 			report := state.GetReport(gfIdentifiers)
 			if report.AllItemsInS3() {
-				// TODO: Can go to next queue
+				// Can finish this queue item and create a new
+				// WorkItem with action = 'Restore'. From there,
+				// it will go into the restore queue, where
+				// the normal apt_restore worker can handle it.
+				restorer.CreateRestoreWorkItem(state)
 			} else if report.AllRetrievalsInitiated() {
-				// TODO: Requeue, with timeout based on last request time in report
+				restorer.RequeueToCheckState(state)
 			} else {
-				// TODO: Need to request more files from Glacier.
-				// Requeue with timeout of one minute
+				// Not all restore requests accepted by Glacier.
+				restorer.RequeueForAdditionalRequests(state)
 			}
 		}
 		restorer.SaveWorkItemState(state)
