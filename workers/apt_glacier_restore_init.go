@@ -245,10 +245,29 @@ func (restorer *APTGlacierRestoreInit) cleanup() {
 				// Requeue with timeout of one minute
 			}
 		}
-		// Update WorkItem in Pharos
+		restorer.saveWorkItemState(state)
+		restorer.updateWorkItem(state)
 	}
 }
 
+// updateWorkItem saves the updated WorkItem in Pharos
+func (restorer *APTGlacierRestoreInit) updateWorkItem(state *models.GlacierRestoreState) {
+	// By the time we call this, we've done as much as possible
+	// with this WorkItem, and we're telling Pharos the state
+	// of this task. One of the methods below should have set
+	// all of the WorkItem properties before this is called.
+	// Methods: finishWithError, requeueForAdditionalRequests,
+	// reqeueToCheckState, createRestoreWorkItem.
+	resp := restorer.Context.PharosClient.WorkItemSave(state.WorkItem)
+	if resp.Error != nil {
+		restorer.Context.MessageLog.Error("Error updating WorkItem %d: %v", state.WorkItem.Id, err)
+	}
+}
+
+// saveWorkItemState saves a JSON representation of the GlacierRestoreState
+// in Pharos' WorkItemState table. We do this primarily so an admin can
+// review this info and trace evidence on problem cases. The WorkItemState
+// JSON is visible on the WorkItem detail page of the Pharos UI.
 func (restorer *APTGlacierRestoreInit) saveWorkItemState(state *models.GlacierRestoreState) {
 	if state.WorkItem == nil {
 		restorer.Context.MessageLog.Warning("Can't set WorkItemState on nil WorkItem")
