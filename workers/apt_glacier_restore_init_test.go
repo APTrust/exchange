@@ -27,6 +27,7 @@ func getGlacierRestoreWorker(t *testing.T) *workers.APTGlacierRestoreInit {
 }
 
 func getObjectWorkItem(id int, objectIdentifier string) *models.WorkItem {
+	workItemStateId := 9999
 	return &models.WorkItem{
 		Id:                    id,
 		ObjectIdentifier:      objectIdentifier,
@@ -47,6 +48,7 @@ func getObjectWorkItem(id int, objectIdentifier string) *models.WorkItem {
 		Node:             "",
 		Pid:              0,
 		NeedsAdminReview: false,
+		WorkItemStateId:  &workItemStateId,
 	}
 }
 
@@ -78,25 +80,19 @@ func TestGetGlacierRestoreState(t *testing.T) {
 	workItem := getObjectWorkItem(id, objIdentifier)
 	nsqMessage := testutil.MakeNsqMessage(fmt.Sprintf("%d", id))
 
+	// This test server returns an empty WorkItemState
 	glacierRestore.Context.PharosClient = getPharosClientForTest(workItemStateServer_1000.URL)
 	glacierRestoreState, err := glacierRestore.GetGlacierRestoreState(nsqMessage, workItem)
-	require.NotNil(t, glacierRestoreState)
 	require.Nil(t, err)
+	require.NotNil(t, glacierRestoreState)
 	assert.NotNil(t, glacierRestoreState.WorkSummary)
 	assert.Empty(t, glacierRestoreState.Requests)
 
+	// This test server returns a WorkItemState with four request records
 	glacierRestore.Context.PharosClient = getPharosClientForTest(workItemStateServer_1001.URL)
-
-	// DEBUG
-	// resp := glacierRestore.Context.PharosClient.WorkItemStateGet(1001)
-	// assert.Nil(t, resp.Error)
-	// assert.Equal(t, "", resp.Request.URL)
-	// assert.Nil(t, resp.WorkItemState())
-	// DEBUG
-
 	glacierRestoreState, err = glacierRestore.GetGlacierRestoreState(nsqMessage, workItem)
-	require.NotNil(t, glacierRestoreState)
 	require.Nil(t, err)
+	require.NotNil(t, glacierRestoreState)
 	assert.NotNil(t, glacierRestoreState.WorkSummary)
 	require.NotEmpty(t, glacierRestoreState.Requests)
 	assert.Equal(t, 4, len(glacierRestoreState.Requests))

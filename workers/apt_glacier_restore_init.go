@@ -72,22 +72,20 @@ func (restorer *APTGlacierRestoreInit) HandleMessage(message *nsq.Message) error
 }
 
 func (restorer *APTGlacierRestoreInit) GetGlacierRestoreState(message *nsq.Message, workItem *models.WorkItem) (*models.GlacierRestoreState, error) {
-	var state *models.GlacierRestoreState
+	state := models.NewGlacierRestoreState(message, workItem)
 	if workItem.WorkItemStateId != nil && *workItem.WorkItemStateId != 0 {
 		workItemState, err := GetWorkItemState(workItem, restorer.Context, false)
 		if err != nil {
 			return nil, err
 		}
 		if workItemState != nil && workItemState.HasData() {
-			state, err := workItemState.GlacierRestoreState()
+			state, err = workItemState.GlacierRestoreState()
 			if err != nil {
 				return nil, err
 			}
 			state.NSQMessage = message
 			state.WorkItem = workItem
 		}
-	} else {
-		state = models.NewGlacierRestoreState(message, workItem)
 	}
 	return state, nil
 }
