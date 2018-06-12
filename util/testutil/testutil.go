@@ -313,6 +313,21 @@ func MakePharosDPNBag() *models.PharosDPNBag {
 	}
 }
 
+func MakeGlacierRestoreRequest(fileIdentifier string, accepted bool) *models.GlacierRestoreRequest {
+	now := time.Now().UTC()
+	return &models.GlacierRestoreRequest{
+		GenericFileIdentifier:   fileIdentifier,
+		GlacierBucket:           "",
+		GlacierKey:              "",
+		RequestAccepted:         accepted,
+		RequestedAt:             now,
+		EstimatedDeletionFromS3: now.Add(time.Hour * 24 * 5),
+		SomeoneElseRequested:    false,
+		IsAvailableInS3:         false,
+		LastChecked:             now,
+	}
+}
+
 // MakeNsqMessage creates an NSQ Message with the specified body.
 // For our purposes, param body should be an integer in string format,
 // like "1234" or "999".

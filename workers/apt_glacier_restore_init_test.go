@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/APTrust/exchange/constants"
 	"github.com/APTrust/exchange/models"
+	"github.com/APTrust/exchange/network"
 	"github.com/APTrust/exchange/util/testutil"
 	"github.com/APTrust/exchange/workers"
 	"github.com/stretchr/testify/assert"
@@ -16,7 +17,8 @@ import (
 )
 
 var workItemTestServer = httptest.NewServer(http.HandlerFunc(workItemGetHandler))
-var workItemStateTestServer = httptest.NewServer(http.HandlerFunc(workItemStateGetHandler))
+var workItemStateServer_1000 = httptest.NewServer(http.HandlerFunc(workItemStateGetHandler_1000))
+var workItemStateServer_1001 = httptest.NewServer(http.HandlerFunc(workItemStateGetHandler_1001))
 
 func getGlacierRestoreWorker(t *testing.T) *workers.APTGlacierRestoreInit {
 	_context, err := testutil.GetContext("integration.json")
@@ -54,6 +56,11 @@ func getFileWorkItem(id int, objectIdentifier, fileIdentifier string) *models.Wo
 	return workItem
 }
 
+func getPharosClientForTest(url string) *network.PharosClient {
+	client, _ := network.NewPharosClient(url, "v2", "frankzappa", "abcxyz")
+	return client
+}
+
 func TestNewGlacierRestore(t *testing.T) {
 	glacierRestore := getGlacierRestoreWorker(t)
 	require.NotNil(t, glacierRestore)
@@ -71,10 +78,28 @@ func TestGetGlacierRestoreState(t *testing.T) {
 	workItem := getObjectWorkItem(id, objIdentifier)
 	nsqMessage := testutil.MakeNsqMessage(fmt.Sprintf("%d", id))
 
-	glacierRestore.Context.Config.PharosURL = workItemTestServer.URL
+	glacierRestore.Context.PharosClient = getPharosClientForTest(workItemStateServer_1000.URL)
 	glacierRestoreState, err := glacierRestore.GetGlacierRestoreState(nsqMessage, workItem)
 	require.NotNil(t, glacierRestoreState)
 	require.Nil(t, err)
+	assert.NotNil(t, glacierRestoreState.WorkSummary)
+	assert.Empty(t, glacierRestoreState.Requests)
+
+	glacierRestore.Context.PharosClient = getPharosClientForTest(workItemStateServer_1001.URL)
+
+	// DEBUG
+	// resp := glacierRestore.Context.PharosClient.WorkItemStateGet(1001)
+	// assert.Nil(t, resp.Error)
+	// assert.Equal(t, "", resp.Request.URL)
+	// assert.Nil(t, resp.WorkItemState())
+	// DEBUG
+
+	glacierRestoreState, err = glacierRestore.GetGlacierRestoreState(nsqMessage, workItem)
+	require.NotNil(t, glacierRestoreState)
+	require.Nil(t, err)
+	assert.NotNil(t, glacierRestoreState.WorkSummary)
+	require.NotEmpty(t, glacierRestoreState.Requests)
+	assert.Equal(t, 4, len(glacierRestoreState.Requests))
 }
 
 func TestHandleMessage(t *testing.T) {
@@ -183,18 +208,35 @@ func workItemGetHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintln(w, string(objJson))
 }
 
-func workItemStateGetHandler(w http.ResponseWriter, r *http.Request) {
-	data, err := getRequestData(r)
+func workItemStateGetHandler_1000(w http.ResponseWriter, r *http.Request) {
+	obj := testutil.MakeWorkItemState()
+	obj.WorkItemId = 1000
+	obj.Action = constants.ActionGlacierRestore
+	obj.State = ""
+	objJson, _ := json.Marshal(obj)
+	w.Header().Set("Content-Type", "application/json")
+	fmt.Fprintln(w, string(objJson))
+}
+
+func workItemStateGetHandler_1001(w http.ResponseWriter, r *http.Request) {
+	obj := testutil.MakeWorkItemState()
+	obj.WorkItemId = 1001
+	obj.Action = constants.ActionGlacierRestore
+	obj.State = ""
+	state := &models.GlacierRestoreState{}
+	state.WorkSummary = testutil.MakeWorkSummary()
+	for i := 0; i < 4; i++ {
+		fileIdentifier := fmt.Sprintf("test.edu/glacier_bag/file_%d.pdf", i+1)
+		request := testutil.MakeGlacierRestoreRequest(fileIdentifier, true)
+		state.Requests = append(state.Requests, request)
+	}
+	jsonBytes, err := json.Marshal(state)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error decoding JSON data: %v", err)
+		fmt.Fprintf(os.Stderr, "Error encoding JSON data: %v", err)
 		fmt.Fprintln(w, err.Error())
 		return
 	}
-	obj := testutil.MakeWorkItemState()
-	obj.WorkItemId = data["id"].(int)
-	obj.Action = constants.ActionGlacierRestore
-	obj.State = ""
-
+	obj.State = string(jsonBytes)
 	objJson, _ := json.Marshal(obj)
 	w.Header().Set("Content-Type", "application/json")
 	fmt.Fprintln(w, string(objJson))
