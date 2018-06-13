@@ -19,11 +19,9 @@ import (
 	"testing"
 )
 
-// var instead of const so we can get pointer address
-var (
-	ID_WITHOUT_REQUESTS = 1000
-	ID_WITH_REQUESTS    = 1001
-)
+var NumberOfRequestsToIncludeInState = 0
+
+const TEST_ID = 1000
 
 // Regex to extract ID from URL
 var URL_ID_REGEX = regexp.MustCompile(`\/(\d+)\/`)
@@ -87,11 +85,10 @@ func TestGetGlacierRestoreState(t *testing.T) {
 	require.NotNil(t, glacierRestore)
 
 	objIdentifier := "test.edu/glacier_bag"
-	workItem := getObjectWorkItem(ID_WITHOUT_REQUESTS, objIdentifier)
-	workItem.WorkItemStateId = &ID_WITHOUT_REQUESTS
-	nsqMessage := testutil.MakeNsqMessage(fmt.Sprintf("%d", ID_WITHOUT_REQUESTS))
+	workItem := getObjectWorkItem(TEST_ID, objIdentifier)
+	nsqMessage := testutil.MakeNsqMessage(fmt.Sprintf("%d", TEST_ID))
 
-	// ID_WITHOUT_REQUESTS should return a GlacierRestoreState with no request records
+	NumberOfRequestsToIncludeInState = 0
 	glacierRestore.Context.PharosClient = getPharosClientForTest(pharosTestServer.URL)
 	glacierRestoreState, err := glacierRestore.GetGlacierRestoreState(nsqMessage, workItem)
 	require.Nil(t, err)
@@ -99,15 +96,13 @@ func TestGetGlacierRestoreState(t *testing.T) {
 	assert.NotNil(t, glacierRestoreState.WorkSummary)
 	assert.Empty(t, glacierRestoreState.Requests)
 
-	// ID_WITH_REQUESTS should return a GlacierRestoreState with 4 request records
-	workItem.WorkItemStateId = &ID_WITH_REQUESTS
-	nsqMessage = testutil.MakeNsqMessage(fmt.Sprintf("%d", ID_WITH_REQUESTS))
+	NumberOfRequestsToIncludeInState = 10
 	glacierRestoreState, err = glacierRestore.GetGlacierRestoreState(nsqMessage, workItem)
 	require.Nil(t, err)
 	require.NotNil(t, glacierRestoreState)
 	assert.NotNil(t, glacierRestoreState.WorkSummary)
 	require.NotEmpty(t, glacierRestoreState.Requests)
-	assert.Equal(t, 4, len(glacierRestoreState.Requests))
+	assert.Equal(t, NumberOfRequestsToIncludeInState, len(glacierRestoreState.Requests))
 }
 
 func TestRequestObject(t *testing.T) {
@@ -116,9 +111,8 @@ func TestRequestObject(t *testing.T) {
 	glacierRestore.Context.PharosClient = getPharosClientForTest(pharosTestServer.URL)
 
 	objIdentifier := "test.edu/glacier_bag"
-	workItem := getObjectWorkItem(ID_WITHOUT_REQUESTS, objIdentifier)
-	workItem.WorkItemStateId = &ID_WITHOUT_REQUESTS
-	nsqMessage := testutil.MakeNsqMessage(fmt.Sprintf("%d", ID_WITHOUT_REQUESTS))
+	workItem := getObjectWorkItem(TEST_ID, objIdentifier)
+	nsqMessage := testutil.MakeNsqMessage(fmt.Sprintf("%d", TEST_ID))
 
 	glacierRestoreState, err := glacierRestore.GetGlacierRestoreState(nsqMessage, workItem)
 	require.Nil(t, err)
@@ -251,20 +245,18 @@ func workItemStateGetHandler(w http.ResponseWriter, r *http.Request) {
 	state.WorkSummary = testutil.MakeWorkSummary()
 
 	// Add some Glacier request records to this object, if necessary
-	if id == ID_WITH_REQUESTS {
-		for i := 0; i < 4; i++ {
-			fileIdentifier := fmt.Sprintf("test.edu/glacier_bag/file_%d.pdf", i+1)
-			request := testutil.MakeGlacierRestoreRequest(fileIdentifier, true)
-			state.Requests = append(state.Requests, request)
-		}
-		jsonBytes, err := json.Marshal(state)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error encoding JSON data: %v", err)
-			fmt.Fprintln(w, err.Error())
-			return
-		}
-		obj.State = string(jsonBytes)
+	for i := 0; i < NumberOfRequestsToIncludeInState; i++ {
+		fileIdentifier := fmt.Sprintf("test.edu/glacier_bag/file_%d.pdf", i+1)
+		request := testutil.MakeGlacierRestoreRequest(fileIdentifier, true)
+		state.Requests = append(state.Requests, request)
 	}
+	jsonBytes, err := json.Marshal(state)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error encoding JSON data: %v", err)
+		fmt.Fprintln(w, err.Error())
+		return
+	}
+	obj.State = string(jsonBytes)
 
 	objJson, _ := json.Marshal(obj)
 	w.Header().Set("Content-Type", "application/json")
@@ -316,4 +308,8 @@ func pharosHandler(w http.ResponseWriter, r *http.Request) {
 	} else {
 		panic(fmt.Sprintf("Don't know how to handle request for %s", url))
 	}
+}
+
+func s3Handler(w http.ResponseWriter, r *http.Request) {
+
 }
