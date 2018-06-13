@@ -224,6 +224,10 @@ type GlacierRestoreRequest struct {
 	// If this is true, EstimatedDeletionFromS3 may not be
 	// reliable, because we don't know when the retrieval
 	// request occurred, or with what parameters.
+	//
+	// We should be able to get rid of this, because headers
+	// on either the S3 head request or the Glacier restore
+	// request tell us when the S3 file expires.
 	SomeoneElseRequested bool
 	// IsAvailableInS3 describes whether the file has been
 	// made available in S3 for download, a process which typically

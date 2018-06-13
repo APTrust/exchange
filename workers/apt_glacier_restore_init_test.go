@@ -17,6 +17,7 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+	"time"
 )
 
 // The following package-level vars tell the HTTP test handlers
@@ -163,9 +164,24 @@ func TestRestoreRequestNeeded(t *testing.T) {
 	// reply that this restore has not been requested yet for this item.
 	DescribeRestoreStateAs = NotStarted
 	gf := testutil.MakeGenericFile(0, 0, objIdentifier)
+	fileUUID, _ := gf.PreservationStorageFileName()
 	requestNeeded, err := glacierRestore.RestoreRequestNeeded(glacierRestoreState, gf)
 	require.Nil(t, err)
 	assert.True(t, requestNeeded)
+
+	// Make sure the GlacierRestore worker created a
+	// GlacierRestoreRequest record for this file.
+	// In the test environment, glacierRestoreRequest.GlacierBucket
+	// will be an empty string.
+	glacierRestoreRequest := glacierRestoreState.FindRequest(gf.Identifier)
+	require.NotNil(t, glacierRestoreRequest)
+	assert.Equal(t, fileUUID, glacierRestoreRequest.GlacierKey)
+	// Request cannot have been accepted, because it hasn't been issued.
+	assert.False(t, glacierRestoreRequest.RequestAccepted)
+	assert.False(t, glacierRestoreRequest.IsAvailableInS3)
+	assert.False(t, glacierRestoreRequest.SomeoneElseRequested)
+	assert.True(t, glacierRestoreRequest.RequestedAt.IsZero())
+	assert.WithinDuration(t, time.Now().UTC(), glacierRestoreRequest.LastChecked, 10*time.Second)
 }
 
 func TestGetS3HeadClient(t *testing.T) {
