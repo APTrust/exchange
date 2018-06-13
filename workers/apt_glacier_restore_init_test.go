@@ -13,12 +13,22 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"regexp"
+	"strconv"
+	"strings"
 	"testing"
 )
 
-var workItemTestServer = httptest.NewServer(http.HandlerFunc(workItemGetHandler))
-var workItemStateServer_1000 = httptest.NewServer(http.HandlerFunc(workItemStateGetHandler_1000))
-var workItemStateServer_1001 = httptest.NewServer(http.HandlerFunc(workItemStateGetHandler_1001))
+// var instead of const so we can get pointer address
+var (
+	ID_WITHOUT_REQUESTS = 1000
+	ID_WITH_REQUESTS    = 1001
+)
+
+// Regex to extract ID from URL
+var URL_ID_REGEX = regexp.MustCompile(`\/(\d+)\/`)
+
+var pharosTestServer = httptest.NewServer(http.HandlerFunc(pharosHandler))
 
 func getGlacierRestoreWorker(t *testing.T) *workers.APTGlacierRestoreInit {
 	_context, err := testutil.GetContext("integration.json")
@@ -27,7 +37,7 @@ func getGlacierRestoreWorker(t *testing.T) *workers.APTGlacierRestoreInit {
 }
 
 func getObjectWorkItem(id int, objectIdentifier string) *models.WorkItem {
-	workItemStateId := 9999
+	workItemStateId := 1000
 	return &models.WorkItem{
 		Id:                    id,
 		ObjectIdentifier:      objectIdentifier,
@@ -75,21 +85,22 @@ func TestGetGlacierRestoreState(t *testing.T) {
 	glacierRestore := getGlacierRestoreWorker(t)
 	require.NotNil(t, glacierRestore)
 
-	id := 1000
 	objIdentifier := "test.edu/glacier_bag"
-	workItem := getObjectWorkItem(id, objIdentifier)
-	nsqMessage := testutil.MakeNsqMessage(fmt.Sprintf("%d", id))
+	workItem := getObjectWorkItem(ID_WITHOUT_REQUESTS, objIdentifier)
+	workItem.WorkItemStateId = &ID_WITHOUT_REQUESTS
+	nsqMessage := testutil.MakeNsqMessage(fmt.Sprintf("%d", ID_WITHOUT_REQUESTS))
 
-	// This test server returns an empty WorkItemState
-	glacierRestore.Context.PharosClient = getPharosClientForTest(workItemStateServer_1000.URL)
+	// ID_WITHOUT_REQUESTS should return a GlacierRestoreState with no request records
+	glacierRestore.Context.PharosClient = getPharosClientForTest(pharosTestServer.URL)
 	glacierRestoreState, err := glacierRestore.GetGlacierRestoreState(nsqMessage, workItem)
 	require.Nil(t, err)
 	require.NotNil(t, glacierRestoreState)
 	assert.NotNil(t, glacierRestoreState.WorkSummary)
 	assert.Empty(t, glacierRestoreState.Requests)
 
-	// This test server returns a WorkItemState with four request records
-	glacierRestore.Context.PharosClient = getPharosClientForTest(workItemStateServer_1001.URL)
+	// ID_WITH_REQUESTS should return a GlacierRestoreState with 4 request records
+	workItem.WorkItemStateId = &ID_WITH_REQUESTS
+	nsqMessage = testutil.MakeNsqMessage(fmt.Sprintf("%d", ID_WITH_REQUESTS))
 	glacierRestoreState, err = glacierRestore.GetGlacierRestoreState(nsqMessage, workItem)
 	require.Nil(t, err)
 	require.NotNil(t, glacierRestoreState)
@@ -197,6 +208,15 @@ func getRequestData(r *http.Request) (map[string]interface{}, error) {
 	return data, err
 }
 
+func getIdFromUrl(url string) int {
+	id := 1000
+	matches := URL_ID_REGEX.FindAllStringSubmatch(url, 1)
+	if len(matches[0]) > 0 {
+		id, _ = strconv.Atoi(matches[0][1])
+	}
+	return id
+}
+
 func workItemGetHandler(w http.ResponseWriter, r *http.Request) {
 	obj := testutil.MakeWorkItem()
 	objJson, _ := json.Marshal(obj)
@@ -204,36 +224,59 @@ func workItemGetHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintln(w, string(objJson))
 }
 
-func workItemStateGetHandler_1000(w http.ResponseWriter, r *http.Request) {
+func workItemPutHandler(w http.ResponseWriter, r *http.Request) {
+	// TODO: Implement this.
+}
+
+func workItemStateGetHandler(w http.ResponseWriter, r *http.Request) {
+	id := getIdFromUrl(r.URL.String())
 	obj := testutil.MakeWorkItemState()
-	obj.WorkItemId = 1000
+	obj.WorkItemId = id
 	obj.Action = constants.ActionGlacierRestore
 	obj.State = ""
+	state := &models.GlacierRestoreState{}
+	state.WorkSummary = testutil.MakeWorkSummary()
+
+	// Add some Glacier request records to this object, if necessary
+	if id == ID_WITH_REQUESTS {
+		for i := 0; i < 4; i++ {
+			fileIdentifier := fmt.Sprintf("test.edu/glacier_bag/file_%d.pdf", i+1)
+			request := testutil.MakeGlacierRestoreRequest(fileIdentifier, true)
+			state.Requests = append(state.Requests, request)
+		}
+		jsonBytes, err := json.Marshal(state)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error encoding JSON data: %v", err)
+			fmt.Fprintln(w, err.Error())
+			return
+		}
+		obj.State = string(jsonBytes)
+	}
+
 	objJson, _ := json.Marshal(obj)
 	w.Header().Set("Content-Type", "application/json")
 	fmt.Fprintln(w, string(objJson))
 }
 
-func workItemStateGetHandler_1001(w http.ResponseWriter, r *http.Request) {
-	obj := testutil.MakeWorkItemState()
-	obj.WorkItemId = 1001
-	obj.Action = constants.ActionGlacierRestore
-	obj.State = ""
-	state := &models.GlacierRestoreState{}
-	state.WorkSummary = testutil.MakeWorkSummary()
-	for i := 0; i < 4; i++ {
-		fileIdentifier := fmt.Sprintf("test.edu/glacier_bag/file_%d.pdf", i+1)
-		request := testutil.MakeGlacierRestoreRequest(fileIdentifier, true)
-		state.Requests = append(state.Requests, request)
+func workItemStatePutHandler(w http.ResponseWriter, r *http.Request) {
+	// TODO: Implement this.
+}
+
+func pharosHandler(w http.ResponseWriter, r *http.Request) {
+	url := r.URL.String()
+	if strings.Contains(url, "/item_state/") {
+		if r.Method == http.MethodGet {
+			workItemStateGetHandler(w, r)
+		} else {
+			workItemStatePutHandler(w, r)
+		}
+	} else if strings.Contains(url, "/items/") {
+		if r.Method == http.MethodGet {
+			workItemGetHandler(w, r)
+		} else {
+			workItemPutHandler(w, r)
+		}
+	} else {
+		panic(fmt.Sprintf("Don't know how to handle request for %s", url))
 	}
-	jsonBytes, err := json.Marshal(state)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error encoding JSON data: %v", err)
-		fmt.Fprintln(w, err.Error())
-		return
-	}
-	obj.State = string(jsonBytes)
-	objJson, _ := json.Marshal(obj)
-	w.Header().Set("Content-Type", "application/json")
-	fmt.Fprintln(w, string(objJson))
 }
