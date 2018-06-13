@@ -110,12 +110,24 @@ func TestGetGlacierRestoreState(t *testing.T) {
 	assert.Equal(t, 4, len(glacierRestoreState.Requests))
 }
 
-func TestHandleMessage(t *testing.T) {
-
-}
-
 func TestRequestObject(t *testing.T) {
+	glacierRestore := getGlacierRestoreWorker(t)
+	require.NotNil(t, glacierRestore)
+	glacierRestore.Context.PharosClient = getPharosClientForTest(pharosTestServer.URL)
 
+	objIdentifier := "test.edu/glacier_bag"
+	workItem := getObjectWorkItem(ID_WITHOUT_REQUESTS, objIdentifier)
+	workItem.WorkItemStateId = &ID_WITHOUT_REQUESTS
+	nsqMessage := testutil.MakeNsqMessage(fmt.Sprintf("%d", ID_WITHOUT_REQUESTS))
+
+	glacierRestoreState, err := glacierRestore.GetGlacierRestoreState(nsqMessage, workItem)
+	require.Nil(t, err)
+	require.NotNil(t, glacierRestoreState)
+	require.Nil(t, glacierRestoreState.IntellectualObject)
+
+	glacierRestore.RequestObject(glacierRestoreState)
+	require.NotNil(t, glacierRestoreState.IntellectualObject)
+	require.NotEmpty(t, glacierRestoreState.IntellectualObject.GenericFiles)
 }
 
 func TestRestoreRequestNeeded(t *testing.T) {
