@@ -182,6 +182,52 @@ func TestRestoreRequestNeeded(t *testing.T) {
 	assert.False(t, glacierRestoreRequest.SomeoneElseRequested)
 	assert.True(t, glacierRestoreRequest.RequestedAt.IsZero())
 	assert.WithinDuration(t, time.Now().UTC(), glacierRestoreRequest.LastChecked, 10*time.Second)
+
+	// Check to see if we need to issue a Glacier restore
+	// request for a file that we've already requested and whose
+	// restoration is currently in progress. Tell the s3 test server to
+	// reply that restore is in progress for this item.
+	DescribeRestoreStateAs = InProgress
+	gf = testutil.MakeGenericFile(0, 0, objIdentifier)
+	fileUUID, _ = gf.PreservationStorageFileName()
+	requestNeeded, err = glacierRestore.RestoreRequestNeeded(glacierRestoreState, gf)
+	require.Nil(t, err)
+	assert.False(t, requestNeeded)
+
+	// Make sure the GlacierRestore worker created a
+	// GlacierRestoreRequest record for this file.
+	glacierRestoreRequest = glacierRestoreState.FindRequest(gf.Identifier)
+	require.NotNil(t, glacierRestoreRequest)
+	assert.Equal(t, fileUUID, glacierRestoreRequest.GlacierKey)
+	// Request must have been accepted, because the restore is in progress.
+	assert.True(t, glacierRestoreRequest.RequestAccepted)
+	assert.False(t, glacierRestoreRequest.IsAvailableInS3)
+	assert.False(t, glacierRestoreRequest.SomeoneElseRequested)
+	assert.False(t, glacierRestoreRequest.RequestedAt.IsZero())
+	assert.WithinDuration(t, time.Now().UTC(), glacierRestoreRequest.LastChecked, 10*time.Second)
+
+	// Check to see if we need to issue a Glacier restore
+	// request for a file that's already been restored to S3.
+	// Tell the s3 test server to reply that restore is complete for this item.
+	DescribeRestoreStateAs = Completed
+	gf = testutil.MakeGenericFile(0, 0, objIdentifier)
+	fileUUID, _ = gf.PreservationStorageFileName()
+	requestNeeded, err = glacierRestore.RestoreRequestNeeded(glacierRestoreState, gf)
+	require.Nil(t, err)
+	assert.False(t, requestNeeded)
+
+	// Make sure the GlacierRestore worker created a
+	// GlacierRestoreRequest record for this file.
+	glacierRestoreRequest = glacierRestoreState.FindRequest(gf.Identifier)
+	require.NotNil(t, glacierRestoreRequest)
+	assert.Equal(t, fileUUID, glacierRestoreRequest.GlacierKey)
+	// Request must have been accepted, because the restore is in progress.
+	assert.True(t, glacierRestoreRequest.RequestAccepted)
+	assert.True(t, glacierRestoreRequest.IsAvailableInS3)
+	assert.False(t, glacierRestoreRequest.SomeoneElseRequested)
+	assert.False(t, glacierRestoreRequest.RequestedAt.IsZero())
+	assert.False(t, glacierRestoreRequest.EstimatedDeletionFromS3.IsZero())
+	assert.WithinDuration(t, time.Now().UTC(), glacierRestoreRequest.LastChecked, 10*time.Second)
 }
 
 func TestGetS3HeadClient(t *testing.T) {
