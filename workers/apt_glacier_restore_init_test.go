@@ -28,6 +28,7 @@ var (
 // Regex to extract ID from URL
 var URL_ID_REGEX = regexp.MustCompile(`\/(\d+)\/`)
 
+// Test server to handle Pharos requests
 var pharosTestServer = httptest.NewServer(http.HandlerFunc(pharosHandler))
 
 func getGlacierRestoreWorker(t *testing.T) *workers.APTGlacierRestoreInit {
@@ -262,6 +263,26 @@ func workItemStatePutHandler(w http.ResponseWriter, r *http.Request) {
 	// TODO: Implement this.
 }
 
+func intellectualObjectGetHandler(w http.ResponseWriter, r *http.Request) {
+	obj := testutil.MakeIntellectualObject(12, 0, 0, 0)
+	obj.StorageOption = constants.StorageGlacierOH
+	for i, gf := range obj.GenericFiles {
+		gf.Identifier = fmt.Sprintf("%s/file_%d.txt", obj.Identifier, i)
+		gf.StorageOption = constants.StorageGlacierOH
+	}
+	objJson, _ := json.Marshal(obj)
+	w.Header().Set("Content-Type", "application/json")
+	fmt.Fprintln(w, string(objJson))
+}
+
+func genericFileGetHandler(w http.ResponseWriter, r *http.Request) {
+	obj := testutil.MakeGenericFile(0, 2, "test.edu/glacier_bag")
+	obj.StorageOption = constants.StorageGlacierOH
+	objJson, _ := json.Marshal(obj)
+	w.Header().Set("Content-Type", "application/json")
+	fmt.Fprintln(w, string(objJson))
+}
+
 func pharosHandler(w http.ResponseWriter, r *http.Request) {
 	url := r.URL.String()
 	if strings.Contains(url, "/item_state/") {
@@ -276,6 +297,10 @@ func pharosHandler(w http.ResponseWriter, r *http.Request) {
 		} else {
 			workItemPutHandler(w, r)
 		}
+	} else if strings.Contains(url, "/objects/") {
+		intellectualObjectGetHandler(w, r)
+	} else if strings.Contains(url, "/files/") {
+		genericFileGetHandler(w, r)
 	} else {
 		panic(fmt.Sprintf("Don't know how to handle request for %s", url))
 	}
