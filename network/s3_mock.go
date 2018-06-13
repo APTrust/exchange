@@ -41,7 +41,7 @@ func S3HeadRestoreCompletedHandler(w http.ResponseWriter, r *http.Request) {
 	for key, value := range getBasicHeaders() {
 		w.Header().Set(key, value)
 	}
-	w.Header().Set("x-amz-restore", `ongoing-request="false", expiry-date="Fri, 1 Jun 2018 04:00:00 GMT"`)
+	w.Header().Set("x-amz-restore", `ongoing-request="false", expiry-date="Fri, 01 Jun 2018 04:00:00 GMT"`)
 	fmt.Fprintln(w, "")
 }
 

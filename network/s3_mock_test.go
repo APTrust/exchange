@@ -32,7 +32,7 @@ func TestS3HeadRestoreCompletedHandler(t *testing.T) {
 	resp, err := http.Head(testServer.URL)
 	require.Nil(t, err)
 	testGeneralHeaders(t, resp)
-	assert.Equal(t, `ongoing-request="false", expiry-date="Fri, 1 Jun 2018 04:00:00 GMT"`, resp.Header.Get("x-amz-restore"))
+	assert.Equal(t, `ongoing-request="false", expiry-date="Fri, 01 Jun 2018 04:00:00 GMT"`, resp.Header.Get("x-amz-restore"))
 }
 
 func testGeneralHeaders(t *testing.T, resp *http.Response) {
