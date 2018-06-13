@@ -33,6 +33,11 @@ type APTGlacierRestoreInit struct {
 	RequestChannel chan *models.GlacierRestoreState
 	// CleanupChannel is for housekeeping, like updating NSQ.
 	CleanupChannel chan *models.GlacierRestoreState
+	// S3Url is a custom URL that the S3 client should connect to.
+	// We use this only in testing, when we want the client to talk
+	// to a local test server. This should not be set in demo or
+	// production.
+	S3Url string
 }
 
 func NewGlacierRestore(_context *context.Context) *APTGlacierRestoreInit {
@@ -196,6 +201,15 @@ func (restorer *APTGlacierRestoreInit) GetS3HeadClient(storageOption string) (*n
 		os.Getenv("AWS_SECRET_ACCESS_KEY"),
 		region,
 		bucket)
+	// Hack for testing: Tell the client to talk to our own
+	// local S3 test server, and clear the bucket name,
+	// because that gets prepended to the URL.
+	if restorer.S3Url != "" {
+		restorer.Context.MessageLog.Warning("Setting S3 URL to %s. This should happen only in testing!",
+			restorer.S3Url)
+		client.SetSessionEndpoint(restorer.S3Url)
+		client.BucketName = ""
+	}
 	return client, nil
 }
 

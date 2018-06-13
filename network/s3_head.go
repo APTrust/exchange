@@ -62,6 +62,15 @@ func (client *S3Head) GetSession() *session.Session {
 	return client.session
 }
 
+// SetSessionUrl is a hack that allows us to override the URL
+// endpoint that the S3 client talks to. We do this only during
+// testing, when we want our client to talk to a local test
+// server.
+func (client *S3Head) SetSessionEndpoint(url string) {
+	session := client.GetSession()
+	session.Config.Endpoint = &url
+}
+
 // Head sends a HEAD request to S3 for the specified key.
 // After calling this, check client.ErrorMessage and client.Response,
 // which contains a HeadObjectOutput struct. See the docs here:
