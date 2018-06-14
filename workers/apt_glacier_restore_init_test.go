@@ -155,31 +155,34 @@ func TestRequestObject(t *testing.T) {
 }
 
 func TestRestoreRequestNeeded(t *testing.T) {
-	glacierRestore := getGlacierRestoreWorker(t)
-	require.NotNil(t, glacierRestore)
+	// glacierRestore := getGlacierRestoreWorker(t)
+	// require.NotNil(t, glacierRestore)
 
-	// Tell the worker to talk to our S3 test server and Pharos
-	// test server, defined below
-	glacierRestore.S3Url = s3TestServer.URL
-	glacierRestore.Context.PharosClient = getPharosClientForTest(pharosTestServer.URL)
+	// // Tell the worker to talk to our S3 test server and Pharos
+	// // test server, defined below
+	// glacierRestore.S3Url = s3TestServer.URL
+	// glacierRestore.Context.PharosClient = getPharosClientForTest(pharosTestServer.URL)
 
-	// Set up the GlacierRestoreStateObject
-	objIdentifier := "test.edu/glacier_bag"
-	workItem := getObjectWorkItem(TEST_ID, objIdentifier)
-	nsqMessage := testutil.MakeNsqMessage(fmt.Sprintf("%d", TEST_ID))
+	// // Set up the GlacierRestoreStateObject
+	// objIdentifier := "test.edu/glacier_bag"
+	// workItem := getObjectWorkItem(TEST_ID, objIdentifier)
+	// nsqMessage := testutil.MakeNsqMessage(fmt.Sprintf("%d", TEST_ID))
 
-	glacierRestoreState, err := glacierRestore.GetGlacierRestoreState(nsqMessage, workItem)
-	require.Nil(t, err)
-	require.NotNil(t, glacierRestoreState)
-	require.Nil(t, glacierRestoreState.IntellectualObject)
+	// glacierRestoreState, err := glacierRestore.GetGlacierRestoreState(nsqMessage, workItem)
+	// require.Nil(t, err)
+	// require.NotNil(t, glacierRestoreState)
+	// require.Nil(t, glacierRestoreState.IntellectualObject)
+
+	worker, state := getTestComponents(t, "object")
+	require.Nil(t, state.IntellectualObject)
 
 	// Now let's check to see if we need to issue a Glacier restore
 	// request for the following file. Tell the s3 test server to
 	// reply that this restore has not been requested yet for this item.
 	DescribeRestoreStateAs = NotStarted
-	gf := testutil.MakeGenericFile(0, 0, objIdentifier)
+	gf := testutil.MakeGenericFile(0, 0, state.WorkItem.ObjectIdentifier)
 	fileUUID, _ := gf.PreservationStorageFileName()
-	requestNeeded, err := glacierRestore.RestoreRequestNeeded(glacierRestoreState, gf)
+	requestNeeded, err := worker.RestoreRequestNeeded(state, gf)
 	require.Nil(t, err)
 	assert.True(t, requestNeeded)
 
@@ -187,7 +190,7 @@ func TestRestoreRequestNeeded(t *testing.T) {
 	// GlacierRestoreRequest record for this file.
 	// In the test environment, glacierRestoreRequest.GlacierBucket
 	// will be an empty string.
-	glacierRestoreRequest := glacierRestoreState.FindRequest(gf.Identifier)
+	glacierRestoreRequest := state.FindRequest(gf.Identifier)
 	require.NotNil(t, glacierRestoreRequest)
 	assert.Equal(t, fileUUID, glacierRestoreRequest.GlacierKey)
 	// Request cannot have been accepted, because it hasn't been issued.
@@ -202,15 +205,15 @@ func TestRestoreRequestNeeded(t *testing.T) {
 	// restoration is currently in progress. Tell the s3 test server to
 	// reply that restore is in progress for this item.
 	DescribeRestoreStateAs = InProgress
-	gf = testutil.MakeGenericFile(0, 0, objIdentifier)
+	gf = testutil.MakeGenericFile(0, 0, state.WorkItem.ObjectIdentifier)
 	fileUUID, _ = gf.PreservationStorageFileName()
-	requestNeeded, err = glacierRestore.RestoreRequestNeeded(glacierRestoreState, gf)
+	requestNeeded, err = worker.RestoreRequestNeeded(state, gf)
 	require.Nil(t, err)
 	assert.False(t, requestNeeded)
 
 	// Make sure the GlacierRestore worker created a
 	// GlacierRestoreRequest record for this file.
-	glacierRestoreRequest = glacierRestoreState.FindRequest(gf.Identifier)
+	glacierRestoreRequest = state.FindRequest(gf.Identifier)
 	require.NotNil(t, glacierRestoreRequest)
 	assert.Equal(t, fileUUID, glacierRestoreRequest.GlacierKey)
 	// Request must have been accepted, because the restore is in progress.
@@ -224,15 +227,15 @@ func TestRestoreRequestNeeded(t *testing.T) {
 	// request for a file that's already been restored to S3.
 	// Tell the s3 test server to reply that restore is complete for this item.
 	DescribeRestoreStateAs = Completed
-	gf = testutil.MakeGenericFile(0, 0, objIdentifier)
+	gf = testutil.MakeGenericFile(0, 0, state.WorkItem.ObjectIdentifier)
 	fileUUID, _ = gf.PreservationStorageFileName()
-	requestNeeded, err = glacierRestore.RestoreRequestNeeded(glacierRestoreState, gf)
+	requestNeeded, err = worker.RestoreRequestNeeded(state, gf)
 	require.Nil(t, err)
 	assert.False(t, requestNeeded)
 
 	// Make sure the GlacierRestore worker created a
 	// GlacierRestoreRequest record for this file.
-	glacierRestoreRequest = glacierRestoreState.FindRequest(gf.Identifier)
+	glacierRestoreRequest = state.FindRequest(gf.Identifier)
 	require.NotNil(t, glacierRestoreRequest)
 	assert.Equal(t, fileUUID, glacierRestoreRequest.GlacierKey)
 	// Request must have been accepted, because the restore is in progress.
@@ -245,71 +248,71 @@ func TestRestoreRequestNeeded(t *testing.T) {
 }
 
 func TestGetS3HeadClient(t *testing.T) {
-	glacierRestore := getGlacierRestoreWorker(t)
-	require.NotNil(t, glacierRestore)
+	worker := getGlacierRestoreWorker(t)
+	require.NotNil(t, worker)
 
 	// Standard
-	client, err := glacierRestore.GetS3HeadClient(constants.StorageStandard)
+	client, err := worker.GetS3HeadClient(constants.StorageStandard)
 	require.Nil(t, err)
 	require.NotNil(t, client)
-	assert.Equal(t, glacierRestore.Context.Config.APTrustS3Region, client.AWSRegion)
-	assert.Equal(t, glacierRestore.Context.Config.PreservationBucket, client.BucketName)
+	assert.Equal(t, worker.Context.Config.APTrustS3Region, client.AWSRegion)
+	assert.Equal(t, worker.Context.Config.PreservationBucket, client.BucketName)
 
 	// Glacier OH
-	client, err = glacierRestore.GetS3HeadClient(constants.StorageGlacierOH)
+	client, err = worker.GetS3HeadClient(constants.StorageGlacierOH)
 	require.Nil(t, err)
 	require.NotNil(t, client)
-	assert.Equal(t, glacierRestore.Context.Config.GlacierRegionOH, client.AWSRegion)
-	assert.Equal(t, glacierRestore.Context.Config.GlacierBucketOH, client.BucketName)
+	assert.Equal(t, worker.Context.Config.GlacierRegionOH, client.AWSRegion)
+	assert.Equal(t, worker.Context.Config.GlacierBucketOH, client.BucketName)
 
 	// Glacier OR
-	client, err = glacierRestore.GetS3HeadClient(constants.StorageGlacierOR)
+	client, err = worker.GetS3HeadClient(constants.StorageGlacierOR)
 	require.Nil(t, err)
 	require.NotNil(t, client)
-	assert.Equal(t, glacierRestore.Context.Config.GlacierRegionOR, client.AWSRegion)
-	assert.Equal(t, glacierRestore.Context.Config.GlacierBucketOR, client.BucketName)
+	assert.Equal(t, worker.Context.Config.GlacierRegionOR, client.AWSRegion)
+	assert.Equal(t, worker.Context.Config.GlacierBucketOR, client.BucketName)
 
 	// Glacier VA
-	client, err = glacierRestore.GetS3HeadClient(constants.StorageGlacierVA)
+	client, err = worker.GetS3HeadClient(constants.StorageGlacierVA)
 	require.Nil(t, err)
 	require.NotNil(t, client)
-	assert.Equal(t, glacierRestore.Context.Config.GlacierRegionVA, client.AWSRegion)
-	assert.Equal(t, glacierRestore.Context.Config.GlacierBucketVA, client.BucketName)
+	assert.Equal(t, worker.Context.Config.GlacierRegionVA, client.AWSRegion)
+	assert.Equal(t, worker.Context.Config.GlacierBucketVA, client.BucketName)
 }
 
 func TestGetIntellectualObject(t *testing.T) {
-	glacierRestore := getGlacierRestoreWorker(t)
-	require.NotNil(t, glacierRestore)
+	worker := getGlacierRestoreWorker(t)
+	require.NotNil(t, worker)
 
 	// Tell the worker to talk to our S3 test server and Pharos
 	// test server, defined below
-	glacierRestore.S3Url = s3TestServer.URL
-	glacierRestore.Context.PharosClient = getPharosClientForTest(pharosTestServer.URL)
+	worker.S3Url = s3TestServer.URL
+	worker.Context.PharosClient = getPharosClientForTest(pharosTestServer.URL)
 
 	// Set up the GlacierRestoreStateObject
 	objIdentifier := "test.edu/glacier_bag"
 	workItem := getObjectWorkItem(TEST_ID, objIdentifier)
 	nsqMessage := testutil.MakeNsqMessage(fmt.Sprintf("%d", TEST_ID))
 
-	glacierRestoreState, err := glacierRestore.GetGlacierRestoreState(nsqMessage, workItem)
+	state, err := worker.GetGlacierRestoreState(nsqMessage, workItem)
 	require.Nil(t, err)
-	require.NotNil(t, glacierRestoreState)
-	require.Nil(t, glacierRestoreState.IntellectualObject)
+	require.NotNil(t, state)
+	require.Nil(t, state.IntellectualObject)
 
-	obj, err := glacierRestore.GetIntellectualObject(glacierRestoreState)
+	obj, err := worker.GetIntellectualObject(state)
 	assert.Nil(t, err)
 	require.NotNil(t, obj)
 	assert.Equal(t, 12, len(obj.GenericFiles))
 }
 
 func TestGetGenericFile(t *testing.T) {
-	glacierRestore := getGlacierRestoreWorker(t)
-	require.NotNil(t, glacierRestore)
+	worker := getGlacierRestoreWorker(t)
+	require.NotNil(t, worker)
 
 	// Tell the worker to talk to our S3 test server and Pharos
 	// test server, defined below
-	glacierRestore.S3Url = s3TestServer.URL
-	glacierRestore.Context.PharosClient = getPharosClientForTest(pharosTestServer.URL)
+	worker.S3Url = s3TestServer.URL
+	worker.Context.PharosClient = getPharosClientForTest(pharosTestServer.URL)
 
 	// Set up the GlacierRestoreStateObject
 	objIdentifier := "test.edu/glacier_bag"
@@ -318,12 +321,12 @@ func TestGetGenericFile(t *testing.T) {
 	workItem := getFileWorkItem(TEST_ID, objIdentifier, objIdentifier+"/file1.txt")
 	nsqMessage := testutil.MakeNsqMessage(fmt.Sprintf("%d", TEST_ID))
 
-	glacierRestoreState, err := glacierRestore.GetGlacierRestoreState(nsqMessage, workItem)
+	state, err := worker.GetGlacierRestoreState(nsqMessage, workItem)
 	require.Nil(t, err)
-	require.NotNil(t, glacierRestoreState)
-	require.Nil(t, glacierRestoreState.GenericFile)
+	require.NotNil(t, state)
+	require.Nil(t, state.GenericFile)
 
-	gf, err := glacierRestore.GetGenericFile(glacierRestoreState)
+	gf, err := worker.GetGenericFile(state)
 	assert.Nil(t, err)
 	require.NotNil(t, gf)
 	assert.NotEmpty(t, gf.Identifier)
@@ -332,13 +335,13 @@ func TestGetGenericFile(t *testing.T) {
 }
 
 func TestUpdateWorkItem(t *testing.T) {
-	glacierRestore := getGlacierRestoreWorker(t)
-	require.NotNil(t, glacierRestore)
+	worker := getGlacierRestoreWorker(t)
+	require.NotNil(t, worker)
 
 	// Tell the worker to talk to our S3 test server and Pharos
 	// test server, defined below
-	glacierRestore.S3Url = s3TestServer.URL
-	glacierRestore.Context.PharosClient = getPharosClientForTest(pharosTestServer.URL)
+	worker.S3Url = s3TestServer.URL
+	worker.Context.PharosClient = getPharosClientForTest(pharosTestServer.URL)
 
 	// Set up the GlacierRestoreStateObject
 	objIdentifier := "test.edu/glacier_bag"
@@ -347,17 +350,17 @@ func TestUpdateWorkItem(t *testing.T) {
 	workItem := getFileWorkItem(TEST_ID, objIdentifier, objIdentifier+"/file1.txt")
 	nsqMessage := testutil.MakeNsqMessage(fmt.Sprintf("%d", TEST_ID))
 
-	glacierRestoreState, err := glacierRestore.GetGlacierRestoreState(nsqMessage, workItem)
+	state, err := worker.GetGlacierRestoreState(nsqMessage, workItem)
 	require.Nil(t, err)
-	require.NotNil(t, glacierRestoreState)
+	require.NotNil(t, state)
 
-	glacierRestoreState.WorkItem.Note = "Updated note"
-	glacierRestoreState.WorkItem.Node = "blah-blah-blah"
-	glacierRestoreState.WorkItem.Pid = 9800
-	glacierRestoreState.WorkItem.Status = constants.StatusSuccess
+	state.WorkItem.Note = "Updated note"
+	state.WorkItem.Node = "blah-blah-blah"
+	state.WorkItem.Pid = 9800
+	state.WorkItem.Status = constants.StatusSuccess
 
-	updatedWorkItem := glacierRestore.UpdateWorkItem(glacierRestoreState)
-	assert.Empty(t, glacierRestoreState.WorkSummary.Errors)
+	updatedWorkItem := worker.UpdateWorkItem(state)
+	assert.Empty(t, state.WorkSummary.Errors)
 	assert.Equal(t, "Updated note", updatedWorkItem.Note)
 	assert.Equal(t, "blah-blah-blah", updatedWorkItem.Node)
 	assert.Equal(t, 9800, updatedWorkItem.Pid)
