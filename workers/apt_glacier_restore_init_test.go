@@ -89,6 +89,35 @@ func getPharosClientForTest(url string) *network.PharosClient {
 	return client
 }
 
+func getTestComponents(t *testing.T, fileOrObject string) (*workers.APTGlacierRestoreInit, *models.GlacierRestoreState) {
+	worker := getGlacierRestoreWorker(t)
+	require.NotNil(t, worker)
+
+	// Tell the worker to talk to our S3 test server and Pharos
+	// test server, defined below
+	worker.S3Url = s3TestServer.URL
+	worker.Context.PharosClient = getPharosClientForTest(pharosTestServer.URL)
+
+	// Set up the GlacierRestoreStateObject
+	objIdentifier := "test.edu/glacier_bag"
+
+	// Note that we're getting a WorkItem that has a GenericFileIdentifier
+	var workItem *models.WorkItem
+	if fileOrObject == "object" {
+		workItem = getObjectWorkItem(TEST_ID, objIdentifier)
+	} else {
+		workItem = getFileWorkItem(TEST_ID, objIdentifier, objIdentifier+"/file1.txt")
+	}
+	nsqMessage := testutil.MakeNsqMessage(fmt.Sprintf("%d", TEST_ID))
+
+	state, err := worker.GetGlacierRestoreState(nsqMessage, workItem)
+	require.Nil(t, err)
+	require.NotNil(t, state)
+	return worker, state
+}
+
+// ------ TESTS --------
+
 func TestNewGlacierRestore(t *testing.T) {
 	glacierRestore := getGlacierRestoreWorker(t)
 	require.NotNil(t, glacierRestore)
