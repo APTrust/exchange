@@ -318,7 +318,7 @@ func (dpnQueue *DPNQueue) queueTransfer(dpnWorkItem *apt_models.DPNWorkItem, tas
 		dpnWorkItem.QueuedAt = &utcNow
 		resp := dpnQueue.Context.PharosClient.DPNWorkItemSave(dpnWorkItem)
 		if resp.Error != nil {
-			dpnQueue.err("Error updating DPNWorkItem %d for %s %s to %s: %v",
+			dpnQueue.err("Error marking DPNWorkItem %d for %s %s as queued: %v",
 				dpnWorkItem.Id, taskType, dpnWorkItem.Identifier, resp.Error)
 			return
 		}

@@ -801,7 +801,7 @@ func (storer *APTStorer) initUploader(storageSummary *models.StorageSummary, sen
 		bucket = storer.Context.Config.GlacierBucketOR
 	} else {
 		storageSummary.StoreResult.AddError("Cannot save %s to %s because "+
-			"storer doesn't know where %s is", gf.Identifier, sendWhere)
+			"storer doesn't know where %s is", gf.Identifier, sendWhere, sendWhere)
 		storageSummary.StoreResult.ErrorIsFatal = true
 		return nil
 	}

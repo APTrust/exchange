@@ -599,7 +599,7 @@ func (validator *Validator) parseManifest(reader io.Reader, fileSummary *fileuti
 			gfIdentifier := fmt.Sprintf("%s/%s", validator.ObjIdentifier, filePath)
 			genericFile, err := validator.db.GetGenericFile(gfIdentifier)
 			if err != nil {
-				validator.summary.AddError("Error finding generic file '%s' in db: %v", gfIdentifier)
+				validator.summary.AddError("Error finding generic file '%s' in db: %v", gfIdentifier, err)
 			}
 			if genericFile == nil {
 				validator.summary.AddError(
@@ -691,7 +691,7 @@ func (validator *Validator) verifyFileSpecs() {
 func (validator *Validator) verifyTagSpecs() {
 	obj, err := validator.getIntellectualObject()
 	if err != nil {
-		validator.summary.AddError("Cannot get object metadata from db: %v")
+		validator.summary.AddError("Cannot get object metadata from db: %v", err)
 		return
 	}
 	for tagName, tagSpec := range validator.BagValidationConfig.TagSpecs {
