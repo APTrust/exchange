@@ -45,16 +45,6 @@ var pharosTestServer = httptest.NewServer(http.HandlerFunc(pharosHandler))
 // Test server to handle S3 requests
 var s3TestServer = httptest.NewServer(http.HandlerFunc(s3Handler))
 
-func setAwsEnvKeys() {
-	os.Setenv("AWS_ACCESS_KEY_ID", "testing")
-	os.Setenv("AWS_ACCESS_SECRET_KEY", "testing")
-}
-
-func unsetAwsEnvKeys() {
-	os.Setenv("AWS_ACCESS_KEY_ID", "")
-	os.Setenv("AWS_ACCESS_SECRET_KEY", "")
-}
-
 func getGlacierRestoreWorker(t *testing.T) *workers.APTGlacierRestoreInit {
 	_context, err := testutil.GetContext("integration.json")
 	require.Nil(t, err)
@@ -151,10 +141,6 @@ func TestRequestObject(t *testing.T) {
 }
 
 func TestRestoreRequestNeeded(t *testing.T) {
-	// More hackery. We need to clean this up.
-	setAwsEnvKeys()
-	defer unsetAwsEnvKeys()
-
 	glacierRestore := getGlacierRestoreWorker(t)
 	require.NotNil(t, glacierRestore)
 

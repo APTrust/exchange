@@ -8,7 +8,6 @@ import (
 	"github.com/APTrust/exchange/models"
 	"github.com/APTrust/exchange/network"
 	"github.com/nsqio/go-nsq"
-	"os"
 	"time"
 )
 
@@ -205,8 +204,8 @@ func (restorer *APTGlacierRestoreInit) GetS3HeadClient(storageOption string) (*n
 		return nil, err
 	}
 	client := network.NewS3Head(
-		os.Getenv("AWS_ACCESS_KEY_ID"),
-		os.Getenv("AWS_SECRET_ACCESS_KEY"),
+		restorer.Context.Config.GetAWSAccessKeyId(),
+		restorer.Context.Config.GetAWSSecretAccessKey(),
 		region,
 		bucket)
 	// Hack for testing: Tell the client to talk to our own
@@ -508,8 +507,8 @@ func (restorer *APTGlacierRestoreInit) InitializeRetrieval(state *models.Glacier
 		gf.Identifier, gf.URI, gf.StorageOption)
 
 	restoreClient := network.NewS3Restore(
-		os.Getenv("AWS_ACCESS_KEY_ID"),
-		os.Getenv("AWS_SECRET_ACCESS_KEY"),
+		restorer.Context.Config.GetAWSAccessKeyId(),
+		restorer.Context.Config.GetAWSSecretAccessKey(),
 		details["region"],
 		details["bucket"],
 		details["fileUUID"],
