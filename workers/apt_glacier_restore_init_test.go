@@ -231,7 +231,36 @@ func TestRestoreRequestNeeded(t *testing.T) {
 }
 
 func TestGetS3HeadClient(t *testing.T) {
+	glacierRestore := getGlacierRestoreWorker(t)
+	require.NotNil(t, glacierRestore)
 
+	// Standard
+	client, err := glacierRestore.GetS3HeadClient(constants.StorageStandard)
+	require.Nil(t, err)
+	require.NotNil(t, client)
+	assert.Equal(t, glacierRestore.Context.Config.APTrustS3Region, client.AWSRegion)
+	assert.Equal(t, glacierRestore.Context.Config.PreservationBucket, client.BucketName)
+
+	// Glacier OH
+	client, err = glacierRestore.GetS3HeadClient(constants.StorageGlacierOH)
+	require.Nil(t, err)
+	require.NotNil(t, client)
+	assert.Equal(t, glacierRestore.Context.Config.GlacierRegionOH, client.AWSRegion)
+	assert.Equal(t, glacierRestore.Context.Config.GlacierBucketOH, client.BucketName)
+
+	// Glacier OR
+	client, err = glacierRestore.GetS3HeadClient(constants.StorageGlacierOR)
+	require.Nil(t, err)
+	require.NotNil(t, client)
+	assert.Equal(t, glacierRestore.Context.Config.GlacierRegionOR, client.AWSRegion)
+	assert.Equal(t, glacierRestore.Context.Config.GlacierBucketOR, client.BucketName)
+
+	// Glacier VA
+	client, err = glacierRestore.GetS3HeadClient(constants.StorageGlacierVA)
+	require.Nil(t, err)
+	require.NotNil(t, client)
+	assert.Equal(t, glacierRestore.Context.Config.GlacierRegionVA, client.AWSRegion)
+	assert.Equal(t, glacierRestore.Context.Config.GlacierBucketVA, client.BucketName)
 }
 
 func TestGetIntellectualObject(t *testing.T) {
