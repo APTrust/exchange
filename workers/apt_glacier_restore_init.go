@@ -268,12 +268,14 @@ func (restorer *APTGlacierRestoreInit) Cleanup() {
 			}
 		}
 		restorer.SaveWorkItemState(state)
-		restorer.UpdateWorkItem(state)
+		_ = restorer.UpdateWorkItem(state)
 	}
 }
 
-// updateWorkItem saves the updated WorkItem in Pharos
-func (restorer *APTGlacierRestoreInit) UpdateWorkItem(state *models.GlacierRestoreState) {
+// updateWorkItem saves the updated WorkItem in Pharos.
+// The returned WorkItem is for testing only. This function internally
+// sets state.WorkItem to the WorkItem returned by Pharos.
+func (restorer *APTGlacierRestoreInit) UpdateWorkItem(state *models.GlacierRestoreState) *models.WorkItem {
 	// By the time we call this, we've done as much as possible
 	// with this WorkItem, and we're telling Pharos the state
 	// of this task. One of the methods below should have set
@@ -282,8 +284,11 @@ func (restorer *APTGlacierRestoreInit) UpdateWorkItem(state *models.GlacierResto
 	// reqeueToCheckState, createRestoreWorkItem.
 	resp := restorer.Context.PharosClient.WorkItemSave(state.WorkItem)
 	if resp.Error != nil {
-		restorer.Context.MessageLog.Error("Error updating WorkItem %d: %v", state.WorkItem.Id, resp.Error)
+		state.WorkSummary.AddError("Error updating WorkItem %d: %v", state.WorkItem.Id, resp.Error)
+	} else {
+		state.WorkItem = resp.WorkItem()
 	}
+	return resp.WorkItem()
 }
 
 // saveWorkItemState saves a JSON representation of the GlacierRestoreState

@@ -10,6 +10,7 @@ import (
 	"github.com/APTrust/exchange/workers"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -307,7 +308,7 @@ func TestGetGenericFile(t *testing.T) {
 	glacierRestoreState, err := glacierRestore.GetGlacierRestoreState(nsqMessage, workItem)
 	require.Nil(t, err)
 	require.NotNil(t, glacierRestoreState)
-	require.Nil(t, glacierRestoreState.IntellectualObject)
+	require.Nil(t, glacierRestoreState.GenericFile)
 
 	gf, err := glacierRestore.GetGenericFile(glacierRestoreState)
 	assert.Nil(t, err)
@@ -318,7 +319,36 @@ func TestGetGenericFile(t *testing.T) {
 }
 
 func TestUpdateWorkItem(t *testing.T) {
+	glacierRestore := getGlacierRestoreWorker(t)
+	require.NotNil(t, glacierRestore)
 
+	// Tell the worker to talk to our S3 test server and Pharos
+	// test server, defined below
+	glacierRestore.S3Url = s3TestServer.URL
+	glacierRestore.Context.PharosClient = getPharosClientForTest(pharosTestServer.URL)
+
+	// Set up the GlacierRestoreStateObject
+	objIdentifier := "test.edu/glacier_bag"
+
+	// Note that we're getting a WorkItem that has a GenericFileIdentifier
+	workItem := getFileWorkItem(TEST_ID, objIdentifier, objIdentifier+"/file1.txt")
+	nsqMessage := testutil.MakeNsqMessage(fmt.Sprintf("%d", TEST_ID))
+
+	glacierRestoreState, err := glacierRestore.GetGlacierRestoreState(nsqMessage, workItem)
+	require.Nil(t, err)
+	require.NotNil(t, glacierRestoreState)
+
+	glacierRestoreState.WorkItem.Note = "Updated note"
+	glacierRestoreState.WorkItem.Node = "blah-blah-blah"
+	glacierRestoreState.WorkItem.Pid = 9800
+	glacierRestoreState.WorkItem.Status = constants.StatusSuccess
+
+	updatedWorkItem := glacierRestore.UpdateWorkItem(glacierRestoreState)
+	assert.Empty(t, glacierRestoreState.WorkSummary.Errors)
+	assert.Equal(t, "Updated note", updatedWorkItem.Note)
+	assert.Equal(t, "blah-blah-blah", updatedWorkItem.Node)
+	assert.Equal(t, 9800, updatedWorkItem.Pid)
+	assert.Equal(t, constants.StatusSuccess, updatedWorkItem.Status)
 }
 
 func TestSaveWorkItemState(t *testing.T) {
@@ -408,8 +438,19 @@ func workItemGetHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintln(w, string(objJson))
 }
 
+// Simulate updating of WorkItem. Pharos returns the updated WorkItem,
+// so this mock can just return the JSON as-is, and then the test
+// code can check that to see whether the worker sent the right data
+// to Pharos.
 func workItemPutHandler(w http.ResponseWriter, r *http.Request) {
-	// TODO: Implement this.
+	defer r.Body.Close()
+	body, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		fmt.Fprintln(w, err.Error())
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	fmt.Fprintln(w, string(body))
 }
 
 func workItemStateGetHandler(w http.ResponseWriter, r *http.Request) {
