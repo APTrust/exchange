@@ -264,11 +264,57 @@ func TestGetS3HeadClient(t *testing.T) {
 }
 
 func TestGetIntellectualObject(t *testing.T) {
+	glacierRestore := getGlacierRestoreWorker(t)
+	require.NotNil(t, glacierRestore)
 
+	// Tell the worker to talk to our S3 test server and Pharos
+	// test server, defined below
+	glacierRestore.S3Url = s3TestServer.URL
+	glacierRestore.Context.PharosClient = getPharosClientForTest(pharosTestServer.URL)
+
+	// Set up the GlacierRestoreStateObject
+	objIdentifier := "test.edu/glacier_bag"
+	workItem := getObjectWorkItem(TEST_ID, objIdentifier)
+	nsqMessage := testutil.MakeNsqMessage(fmt.Sprintf("%d", TEST_ID))
+
+	glacierRestoreState, err := glacierRestore.GetGlacierRestoreState(nsqMessage, workItem)
+	require.Nil(t, err)
+	require.NotNil(t, glacierRestoreState)
+	require.Nil(t, glacierRestoreState.IntellectualObject)
+
+	obj, err := glacierRestore.GetIntellectualObject(glacierRestoreState)
+	assert.Nil(t, err)
+	require.NotNil(t, obj)
+	assert.Equal(t, 12, len(obj.GenericFiles))
 }
 
 func TestGetGenericFile(t *testing.T) {
+	glacierRestore := getGlacierRestoreWorker(t)
+	require.NotNil(t, glacierRestore)
 
+	// Tell the worker to talk to our S3 test server and Pharos
+	// test server, defined below
+	glacierRestore.S3Url = s3TestServer.URL
+	glacierRestore.Context.PharosClient = getPharosClientForTest(pharosTestServer.URL)
+
+	// Set up the GlacierRestoreStateObject
+	objIdentifier := "test.edu/glacier_bag"
+
+	// Note that we're getting a WorkItem that has a GenericFileIdentifier
+	workItem := getFileWorkItem(TEST_ID, objIdentifier, objIdentifier+"/file1.txt")
+	nsqMessage := testutil.MakeNsqMessage(fmt.Sprintf("%d", TEST_ID))
+
+	glacierRestoreState, err := glacierRestore.GetGlacierRestoreState(nsqMessage, workItem)
+	require.Nil(t, err)
+	require.NotNil(t, glacierRestoreState)
+	require.Nil(t, glacierRestoreState.IntellectualObject)
+
+	gf, err := glacierRestore.GetGenericFile(glacierRestoreState)
+	assert.Nil(t, err)
+	require.NotNil(t, gf)
+	assert.NotEmpty(t, gf.Identifier)
+	assert.NotEmpty(t, gf.StorageOption)
+	assert.NotEmpty(t, gf.URI)
 }
 
 func TestUpdateWorkItem(t *testing.T) {
