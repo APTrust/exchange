@@ -127,47 +127,31 @@ func TestNewGlacierRestore(t *testing.T) {
 }
 
 func TestGetGlacierRestoreState(t *testing.T) {
-	glacierRestore := getGlacierRestoreWorker(t)
-	require.NotNil(t, glacierRestore)
-
-	objIdentifier := "test.edu/glacier_bag"
-	workItem := getObjectWorkItem(TEST_ID, objIdentifier)
-	nsqMessage := testutil.MakeNsqMessage(fmt.Sprintf("%d", TEST_ID))
+	worker, state := getTestComponents(t, "object")
 
 	NumberOfRequestsToIncludeInState = 0
-	glacierRestore.Context.PharosClient = getPharosClientForTest(pharosTestServer.URL)
-	glacierRestoreState, err := glacierRestore.GetGlacierRestoreState(nsqMessage, workItem)
+	worker.Context.PharosClient = getPharosClientForTest(pharosTestServer.URL)
+	state, err := worker.GetGlacierRestoreState(state.NSQMessage, state.WorkItem)
 	require.Nil(t, err)
-	require.NotNil(t, glacierRestoreState)
-	assert.NotNil(t, glacierRestoreState.WorkSummary)
-	assert.Empty(t, glacierRestoreState.Requests)
+	require.NotNil(t, state)
+	assert.NotNil(t, state.WorkSummary)
+	assert.Empty(t, state.Requests)
 
 	NumberOfRequestsToIncludeInState = 10
-	glacierRestoreState, err = glacierRestore.GetGlacierRestoreState(nsqMessage, workItem)
+	state, err = worker.GetGlacierRestoreState(state.NSQMessage, state.WorkItem)
 	require.Nil(t, err)
-	require.NotNil(t, glacierRestoreState)
-	assert.NotNil(t, glacierRestoreState.WorkSummary)
-	require.NotEmpty(t, glacierRestoreState.Requests)
-	assert.Equal(t, NumberOfRequestsToIncludeInState, len(glacierRestoreState.Requests))
+	require.NotNil(t, state)
+	assert.NotNil(t, state.WorkSummary)
+	require.NotEmpty(t, state.Requests)
+	assert.Equal(t, NumberOfRequestsToIncludeInState, len(state.Requests))
 }
 
 func TestRequestObject(t *testing.T) {
-	glacierRestore := getGlacierRestoreWorker(t)
-	require.NotNil(t, glacierRestore)
-	glacierRestore.Context.PharosClient = getPharosClientForTest(pharosTestServer.URL)
-
-	objIdentifier := "test.edu/glacier_bag"
-	workItem := getObjectWorkItem(TEST_ID, objIdentifier)
-	nsqMessage := testutil.MakeNsqMessage(fmt.Sprintf("%d", TEST_ID))
-
-	glacierRestoreState, err := glacierRestore.GetGlacierRestoreState(nsqMessage, workItem)
-	require.Nil(t, err)
-	require.NotNil(t, glacierRestoreState)
-	require.Nil(t, glacierRestoreState.IntellectualObject)
-
-	glacierRestore.RequestObject(glacierRestoreState)
-	require.NotNil(t, glacierRestoreState.IntellectualObject)
-	require.NotEmpty(t, glacierRestoreState.IntellectualObject.GenericFiles)
+	worker, state := getTestComponents(t, "object")
+	require.Nil(t, state.IntellectualObject)
+	worker.RequestObject(state)
+	require.NotNil(t, state.IntellectualObject)
+	require.NotEmpty(t, state.IntellectualObject.GenericFiles)
 }
 
 func TestRestoreRequestNeeded(t *testing.T) {
