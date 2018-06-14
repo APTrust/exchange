@@ -2,6 +2,7 @@ package models
 
 import (
 	"encoding/json"
+	"flag"
 	"fmt"
 	"github.com/APTrust/exchange/constants"
 	"github.com/APTrust/exchange/util/fileutil"
@@ -474,6 +475,36 @@ func (config *Config) StorageRegionAndBucketFor(storageOption string) (region st
 		err = fmt.Errorf("Unknown Storage Option: %s", storageOption)
 	}
 	return region, bucket, err
+}
+
+// TestsAreRunning returns true if we're running unit or integration
+// tests; false otherwise.
+func (config *Config) TestsAreRunning() bool {
+	return flag.Lookup("test.v") != nil
+}
+
+// GetAWSAccessKeyId returns the AWS Access Key ID from the environment,
+// or an empty string if the ENV var isn't set. In test context, this
+// returns a dummy key id so we don't get an error in the Travis CI
+// environment.
+func (config *Config) GetAWSAccessKeyId() string {
+	keyId := os.Getenv("AWS_ACCESS_KEY_ID")
+	if keyId == "" && config.TestsAreRunning() {
+		keyId = "TestKeyId"
+	}
+	return keyId
+}
+
+// GetAWSAccessSecretAccessKey returns the AWS Secret Access Key
+// from the environment, or an empty string if the ENV var isn't set.
+// In test context, this returns a dummy key id so we don't get an
+// error in the Travis CI environment.
+func (config *Config) GetAWSSecretAccessKey() string {
+	secretKey := os.Getenv("AWS_SECRET_ACCESS_KEY")
+	if secretKey == "" && config.TestsAreRunning() {
+		secretKey = "TestSecretKey"
+	}
+	return secretKey
 }
 
 // DefaultMetadata includes mostly static information about bags

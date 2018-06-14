@@ -174,3 +174,32 @@ func TestStorageRegionAndBucketFor(t *testing.T) {
 	require.NotNil(t, err)
 	assert.True(t, strings.Contains(err.Error(), "Unknown Storage Option"))
 }
+
+func TestTestsAreRunning(t *testing.T) {
+	configFile := filepath.Join("config", "test.json")
+	config, err := models.LoadConfigFile(configFile)
+	require.Nil(t, err)
+	assert.True(t, config.TestsAreRunning())
+}
+
+func TestGetAWSAccessKeyId(t *testing.T) {
+	configFile := filepath.Join("config", "test.json")
+	config, err := models.LoadConfigFile(configFile)
+	require.Nil(t, err)
+	if os.Getenv("AWS_ACCESS_KEY_ID") != "" {
+		assert.Equal(t, os.Getenv("AWS_ACCESS_KEY_ID"), config.GetAWSAccessKeyId())
+	} else {
+		assert.Equal(t, "TestKeyId", config.GetAWSAccessKeyId())
+	}
+}
+
+func TestGetAWSSecretAccessKey(t *testing.T) {
+	configFile := filepath.Join("config", "test.json")
+	config, err := models.LoadConfigFile(configFile)
+	require.Nil(t, err)
+	if os.Getenv("AWS_SECRET_ACCESS_KEY") != "" {
+		assert.Equal(t, os.Getenv("AWS_SECRET_ACCESS_KEY"), config.GetAWSSecretAccessKey())
+	} else {
+		assert.Equal(t, "TestSecretKey", config.GetAWSSecretAccessKey())
+	}
+}
