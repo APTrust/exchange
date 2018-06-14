@@ -155,24 +155,6 @@ func TestRequestObject(t *testing.T) {
 }
 
 func TestRestoreRequestNeeded(t *testing.T) {
-	// glacierRestore := getGlacierRestoreWorker(t)
-	// require.NotNil(t, glacierRestore)
-
-	// // Tell the worker to talk to our S3 test server and Pharos
-	// // test server, defined below
-	// glacierRestore.S3Url = s3TestServer.URL
-	// glacierRestore.Context.PharosClient = getPharosClientForTest(pharosTestServer.URL)
-
-	// // Set up the GlacierRestoreStateObject
-	// objIdentifier := "test.edu/glacier_bag"
-	// workItem := getObjectWorkItem(TEST_ID, objIdentifier)
-	// nsqMessage := testutil.MakeNsqMessage(fmt.Sprintf("%d", TEST_ID))
-
-	// glacierRestoreState, err := glacierRestore.GetGlacierRestoreState(nsqMessage, workItem)
-	// require.Nil(t, err)
-	// require.NotNil(t, glacierRestoreState)
-	// require.Nil(t, glacierRestoreState.IntellectualObject)
-
 	worker, state := getTestComponents(t, "object")
 	require.Nil(t, state.IntellectualObject)
 
@@ -281,22 +263,9 @@ func TestGetS3HeadClient(t *testing.T) {
 }
 
 func TestGetIntellectualObject(t *testing.T) {
-	worker := getGlacierRestoreWorker(t)
-	require.NotNil(t, worker)
+	worker, state := getTestComponents(t, "object")
+	require.Nil(t, state.IntellectualObject)
 
-	// Tell the worker to talk to our S3 test server and Pharos
-	// test server, defined below
-	worker.S3Url = s3TestServer.URL
-	worker.Context.PharosClient = getPharosClientForTest(pharosTestServer.URL)
-
-	// Set up the GlacierRestoreStateObject
-	objIdentifier := "test.edu/glacier_bag"
-	workItem := getObjectWorkItem(TEST_ID, objIdentifier)
-	nsqMessage := testutil.MakeNsqMessage(fmt.Sprintf("%d", TEST_ID))
-
-	state, err := worker.GetGlacierRestoreState(nsqMessage, workItem)
-	require.Nil(t, err)
-	require.NotNil(t, state)
 	require.Nil(t, state.IntellectualObject)
 
 	obj, err := worker.GetIntellectualObject(state)
@@ -306,22 +275,10 @@ func TestGetIntellectualObject(t *testing.T) {
 }
 
 func TestGetGenericFile(t *testing.T) {
-	worker := getGlacierRestoreWorker(t)
-	require.NotNil(t, worker)
+	worker, state := getTestComponents(t, "file")
+	require.Nil(t, state.IntellectualObject)
 
-	// Tell the worker to talk to our S3 test server and Pharos
-	// test server, defined below
-	worker.S3Url = s3TestServer.URL
-	worker.Context.PharosClient = getPharosClientForTest(pharosTestServer.URL)
-
-	// Set up the GlacierRestoreStateObject
-	objIdentifier := "test.edu/glacier_bag"
-
-	// Note that we're getting a WorkItem that has a GenericFileIdentifier
-	workItem := getFileWorkItem(TEST_ID, objIdentifier, objIdentifier+"/file1.txt")
-	nsqMessage := testutil.MakeNsqMessage(fmt.Sprintf("%d", TEST_ID))
-
-	state, err := worker.GetGlacierRestoreState(nsqMessage, workItem)
+	state, err := worker.GetGlacierRestoreState(state.NSQMessage, state.WorkItem)
 	require.Nil(t, err)
 	require.NotNil(t, state)
 	require.Nil(t, state.GenericFile)
@@ -335,24 +292,8 @@ func TestGetGenericFile(t *testing.T) {
 }
 
 func TestUpdateWorkItem(t *testing.T) {
-	worker := getGlacierRestoreWorker(t)
-	require.NotNil(t, worker)
-
-	// Tell the worker to talk to our S3 test server and Pharos
-	// test server, defined below
-	worker.S3Url = s3TestServer.URL
-	worker.Context.PharosClient = getPharosClientForTest(pharosTestServer.URL)
-
-	// Set up the GlacierRestoreStateObject
-	objIdentifier := "test.edu/glacier_bag"
-
-	// Note that we're getting a WorkItem that has a GenericFileIdentifier
-	workItem := getFileWorkItem(TEST_ID, objIdentifier, objIdentifier+"/file1.txt")
-	nsqMessage := testutil.MakeNsqMessage(fmt.Sprintf("%d", TEST_ID))
-
-	state, err := worker.GetGlacierRestoreState(nsqMessage, workItem)
-	require.Nil(t, err)
-	require.NotNil(t, state)
+	worker, state := getTestComponents(t, "object")
+	require.Nil(t, state.IntellectualObject)
 
 	state.WorkItem.Note = "Updated note"
 	state.WorkItem.Node = "blah-blah-blah"
