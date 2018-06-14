@@ -327,11 +327,7 @@ func (restorer *APTGlacierRestoreInit) SaveWorkItemState(state *models.GlacierRe
 
 func (restorer *APTGlacierRestoreInit) FinishWithError(state *models.GlacierRestoreState) {
 	errMessage := state.WorkSummary.AllErrorsAsString()
-	workItemId := 0
-	if state.WorkItem != nil {
-		workItemId = state.WorkItem.Id
-	}
-	restorer.Context.MessageLog.Error("Error processing WorkItem %d: %s", workItemId, errMessage)
+	restorer.Context.MessageLog.Error("Error processing WorkItem %d: %s", state.WorkItem.Id, errMessage)
 	state.WorkItem.Note = errMessage
 	state.WorkItem.Status = constants.StatusFailed
 	state.WorkItem.Retry = false
