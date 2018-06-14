@@ -267,7 +267,7 @@ func (restorer *APTGlacierRestoreInit) Cleanup() {
 				restorer.RequeueForAdditionalRequests(state)
 			}
 		}
-		restorer.SaveWorkItemState(state)
+		_ = restorer.SaveWorkItemState(state)
 		_ = restorer.UpdateWorkItem(state)
 	}
 }
@@ -295,10 +295,13 @@ func (restorer *APTGlacierRestoreInit) UpdateWorkItem(state *models.GlacierResto
 // in Pharos' WorkItemState table. We do this primarily so an admin can
 // review this info and trace evidence on problem cases. The WorkItemState
 // JSON is visible on the WorkItem detail page of the Pharos UI.
-func (restorer *APTGlacierRestoreInit) SaveWorkItemState(state *models.GlacierRestoreState) {
+//
+// For testing purposes, this returns the WorkItemState object that was saved.
+// In production, we don't need or use the return value.
+func (restorer *APTGlacierRestoreInit) SaveWorkItemState(state *models.GlacierRestoreState) *models.WorkItemState {
 	if state.WorkItem == nil {
 		restorer.Context.MessageLog.Warning("Can't set WorkItemState on nil WorkItem")
-		return
+		return nil
 	}
 	jsonData, err := json.Marshal(state)
 	if err != nil {
@@ -306,7 +309,7 @@ func (restorer *APTGlacierRestoreInit) SaveWorkItemState(state *models.GlacierRe
 			"WorkItemState (WorkItem %d): %v", state.WorkItem.Id, err)
 		restorer.Context.MessageLog.Error(msg)
 		state.WorkItem.Note += msg
-		return
+		return nil
 	}
 	workItemState := models.NewWorkItemState(state.WorkItem.Id, constants.ActionGlacierRestore, string(jsonData))
 	resp := restorer.Context.PharosClient.WorkItemStateSave(workItemState)
@@ -314,7 +317,12 @@ func (restorer *APTGlacierRestoreInit) SaveWorkItemState(state *models.GlacierRe
 		msg := fmt.Sprintf("Error saving WorkItemState for WorkItem %d: %v", state.WorkItem.Id, err)
 		restorer.Context.MessageLog.Error(msg)
 		state.WorkItem.Note += msg
+		return nil
 	}
+	// Saved item should now have an ID
+	workItemState = resp.WorkItemState()
+	state.WorkItem.WorkItemStateId = &workItemState.Id
+	return workItemState
 }
 
 func (restorer *APTGlacierRestoreInit) FinishWithError(state *models.GlacierRestoreState) {

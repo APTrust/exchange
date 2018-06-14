@@ -276,7 +276,7 @@ func TestGetIntellectualObject(t *testing.T) {
 
 func TestGetGenericFile(t *testing.T) {
 	worker, state := getTestComponents(t, "file")
-	require.Nil(t, state.IntellectualObject)
+	require.Nil(t, state.GenericFile)
 
 	state, err := worker.GetGlacierRestoreState(state.NSQMessage, state.WorkItem)
 	require.Nil(t, err)
@@ -293,7 +293,6 @@ func TestGetGenericFile(t *testing.T) {
 
 func TestUpdateWorkItem(t *testing.T) {
 	worker, state := getTestComponents(t, "object")
-	require.Nil(t, state.IntellectualObject)
 
 	state.WorkItem.Note = "Updated note"
 	state.WorkItem.Node = "blah-blah-blah"
@@ -309,7 +308,20 @@ func TestUpdateWorkItem(t *testing.T) {
 }
 
 func TestSaveWorkItemState(t *testing.T) {
-
+	worker, state := getTestComponents(t, "object")
+	requestCount := len(state.Requests)
+	for i := 0; i < 10; i++ {
+		request := &models.GlacierRestoreRequest{
+			GenericFileIdentifier: fmt.Sprintf("%s/file%d.txt", state.WorkItem.ObjectIdentifier, i),
+		}
+		state.Requests = append(state.Requests, request)
+	}
+	workItemState := worker.SaveWorkItemState(state)
+	require.NotNil(t, workItemState)
+	require.True(t, workItemState.HasData())
+	glacierRestoreState, err := workItemState.GlacierRestoreState()
+	require.Nil(t, err)
+	assert.Equal(t, requestCount+10, len(glacierRestoreState.Requests))
 }
 
 func TestFinishWithError(t *testing.T) {
@@ -395,11 +407,7 @@ func workItemGetHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintln(w, string(objJson))
 }
 
-// Simulate updating of WorkItem. Pharos returns the updated WorkItem,
-// so this mock can just return the JSON as-is, and then the test
-// code can check that to see whether the worker sent the right data
-// to Pharos.
-func workItemPutHandler(w http.ResponseWriter, r *http.Request) {
+func httpJsonEchoHandler(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 	body, err := ioutil.ReadAll(r.Body)
 	if err != nil {
@@ -408,6 +416,14 @@ func workItemPutHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("Content-Type", "application/json")
 	fmt.Fprintln(w, string(body))
+}
+
+// Simulate updating of WorkItem. Pharos returns the updated WorkItem,
+// so this mock can just return the JSON as-is, and then the test
+// code can check that to see whether the worker sent the right data
+// to Pharos.
+func workItemPutHandler(w http.ResponseWriter, r *http.Request) {
+	httpJsonEchoHandler(w, r)
 }
 
 func workItemStateGetHandler(w http.ResponseWriter, r *http.Request) {
@@ -438,8 +454,9 @@ func workItemStateGetHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintln(w, string(objJson))
 }
 
+// Send back the same JSON we received.
 func workItemStatePutHandler(w http.ResponseWriter, r *http.Request) {
-	// TODO: Implement this.
+	httpJsonEchoHandler(w, r)
 }
 
 func intellectualObjectGetHandler(w http.ResponseWriter, r *http.Request) {
