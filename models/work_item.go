@@ -168,6 +168,7 @@ func (item *WorkItem) SerializeForPharos() ([]byte, error) {
 		"pid":                item.Pid,
 		"needs_admin_review": item.NeedsAdminReview,
 		"queued_at":          item.QueuedAt,
+		"user":               item.User,
 	})
 }
 
