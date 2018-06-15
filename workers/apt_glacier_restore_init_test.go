@@ -11,13 +11,15 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"io/ioutil"
-	"net"
+	//"net"
+	"github.com/nsqio/go-nsq"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"regexp"
 	"strconv"
 	"strings"
+	//"sync"
 	"testing"
 	"time"
 )
@@ -30,9 +32,10 @@ var NumberOfRequestsToIncludeInState = 0
 
 // This stores the content of the last request to our dummy
 // NSQ server.
-var ContentOfLastNSQRequest = ""
-var MockNSQServer net.Listener
-var NSQServerIsRunning = false
+//var ContentOfLastNSQRequest = ""
+
+// WaitGroup for NSQ/TCP requests.
+//var wg sync.WaitGroup
 
 const (
 	NotStarted = 0
@@ -53,9 +56,19 @@ var pharosTestServer = httptest.NewServer(http.HandlerFunc(pharosHandler))
 // Test server to handle S3 requests
 var s3TestServer = httptest.NewServer(http.HandlerFunc(s3Handler))
 
-func clearContentOfLastNSQRequest() {
-	ContentOfLastNSQRequest = ""
-}
+// Function to capture messages sent by GlacierRestoreInit worker to NSQ.
+// func tcpCaptureMessage(conn net.Conn) {
+// 	ContentOfLastNSQRequest = ""
+// 	buf := make([]byte, 1024)
+// 	_, err := conn.Read(buf)
+// 	if err != nil {
+// 		panic(fmt.Sprintf("Error reading tcp connection: %v", err.Error()))
+// 	}
+// 	ContentOfLastNSQRequest = string(buf)
+// 	conn.Write([]byte("OK"))
+// 	conn.Close()
+// 	wg.Done()
+// }
 
 func getGlacierRestoreWorker(t *testing.T) *workers.APTGlacierRestoreInit {
 	_context, err := testutil.GetContext("integration.json")
@@ -336,7 +349,18 @@ func TestSaveWorkItemState(t *testing.T) {
 }
 
 func TestFinishWithError(t *testing.T) {
+	//tcpTestServer := network.NewTCPTestServer("127.0.0.1:0", tcpCaptureMessage)
+	//defer tcpTestServer.Close()
 
+	worker, state := getTestComponents(t, "object")
+	delegate := NewNSQTestDelegate()
+	state.NSQMessage.Delegate = delegate
+	//state.NSQMessage.NSQDAddress = tcpTestServer.Addr().String()
+	//wg.Add(1)
+	worker.FinishWithError(state)
+	//wg.Wait()
+	//assert.Equal(t, "xx", ContentOfLastNSQRequest)
+	assert.Equal(t, "finish", delegate.Operation)
 }
 
 func TestRequeueForAdditionalRequests(t *testing.T) {
@@ -528,34 +552,62 @@ func s3Handler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// TODO: Break this out into its own type under /network
-// TODO: Create a channel inside the struct to handle stop conditions.
+// // TODO: Break this out into its own type under /network
+// // TODO: Create a channel inside the struct to handle stop conditions.
 
-func startNSQMockServer() {
-	addr, _ := net.ResolveTCPAddr("tcp", "127.0.0.1:0")
-	listener, err := net.Listen("tcp", addr.String())
-	if err != nil {
-		panic(fmt.Sprintf("Error listening tcp server: %v", err.Error()))
-	}
-	MockNSQServer = listener
-	NSQServerIsRunning = true
-	for {
-		conn, err := listener.Accept()
-		if err != nil {
-			panic(fmt.Sprintf("Error accepting tcp connection: %v", err.Error()))
-		}
-		go handleNSQRequest(conn)
-	}
-	listener.Close()
+// func startNSQMockServer() {
+// 	addr, _ := net.ResolveTCPAddr("tcp", "127.0.0.1:0")
+// 	listener, err := net.Listen("tcp", addr.String())
+// 	if err != nil {
+// 		panic(fmt.Sprintf("Error listening tcp server: %v", err.Error()))
+// 	}
+// 	MockNSQServer = listener
+// 	NSQServerIsRunning = true
+// 	for {
+// 		conn, err := listener.Accept()
+// 		if err != nil {
+// 			panic(fmt.Sprintf("Error accepting tcp connection: %v", err.Error()))
+// 		}
+// 		go handleNSQRequest(conn)
+// 	}
+// 	listener.Close()
+// }
+
+// func handleNSQRequest(conn net.Conn) {
+// 	buf := make([]byte, 1024)
+// 	_, err := conn.Read(buf)
+// 	if err != nil {
+// 		panic(fmt.Sprintf("Error reading tcp connection: %v", err.Error()))
+// 	}
+// 	ContentOfLastNSQRequest = string(buf)
+// 	conn.Write([]byte("OK"))
+// 	conn.Close()
+// }
+
+type NSQTestDelegate struct {
+	Message   *nsq.Message
+	Delay     time.Duration
+	Backoff   bool
+	Operation string
 }
 
-func handleNSQRequest(conn net.Conn) {
-	buf := make([]byte, 1024)
-	_, err := conn.Read(buf)
-	if err != nil {
-		panic(fmt.Sprintf("Error reading tcp connection: %v", err.Error()))
-	}
-	ContentOfLastNSQRequest = string(buf)
-	conn.Write([]byte("OK"))
-	conn.Close()
+func NewNSQTestDelegate() *NSQTestDelegate {
+	return &NSQTestDelegate{}
+}
+
+func (delegate *NSQTestDelegate) OnFinish(message *nsq.Message) {
+	delegate.Message = message
+	delegate.Operation = "finish"
+}
+
+func (delegate *NSQTestDelegate) OnRequeue(message *nsq.Message, delay time.Duration, backoff bool) {
+	delegate.Message = message
+	delegate.Delay = delay
+	delegate.Backoff = backoff
+	delegate.Operation = "finish"
+}
+
+func (delegate *NSQTestDelegate) OnTouch(message *nsq.Message) {
+	delegate.Message = message
+	delegate.Operation = "touch"
 }

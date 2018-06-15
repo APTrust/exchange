@@ -40,6 +40,10 @@ func (server *TCPTestServer) Close() {
 	server.isListening = false
 }
 
+func (server *TCPTestServer) Addr() net.Addr {
+	return server.listener.Addr()
+}
+
 func (server *TCPTestServer) IsListening() bool {
 	return server.isListening
 }
