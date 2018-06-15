@@ -376,7 +376,19 @@ func TestCreateRestoreWorkItem(t *testing.T) {
 	assert.Equal(t, "finish", delegate.Operation)
 	assert.Equal(t, constants.StatusSuccess, state.WorkItem.Status)
 
-	// TEST NEW WORK ITEM
+	assert.Equal(t, state.WorkItem.ObjectIdentifier, updatedWorkItem.ObjectIdentifier)
+	assert.Equal(t, state.WorkItem.GenericFileIdentifier, updatedWorkItem.GenericFileIdentifier)
+	assert.Equal(t, state.WorkItem.Name, updatedWorkItem.Name)
+	assert.Equal(t, state.WorkItem.Bucket, updatedWorkItem.Bucket)
+	assert.Equal(t, state.WorkItem.ETag, updatedWorkItem.ETag)
+	assert.Equal(t, state.WorkItem.Size, updatedWorkItem.Size)
+	assert.Equal(t, state.WorkItem.BagDate, updatedWorkItem.BagDate)
+	assert.Equal(t, state.WorkItem.InstitutionId, updatedWorkItem.InstitutionId)
+	assert.Equal(t, state.WorkItem.User, updatedWorkItem.User)
+	assert.Equal(t, constants.ActionRestore, updatedWorkItem.Action)
+	assert.Equal(t, constants.StageRequested, updatedWorkItem.Stage)
+	assert.Equal(t, constants.StatusPending, updatedWorkItem.Status)
+	assert.True(t, updatedWorkItem.Retry)
 }
 
 func TestRequestAllFiles(t *testing.T) {
@@ -445,17 +457,6 @@ func workItemGetHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	fmt.Fprintln(w, string(objJson))
 }
-
-// func httpJsonEchoHandler(w http.ResponseWriter, r *http.Request) {
-// 	defer r.Body.Close()
-// 	body, err := ioutil.ReadAll(r.Body)
-// 	if err != nil {
-// 		fmt.Fprintln(w, err.Error())
-// 		return
-// 	}
-// 	w.Header().Set("Content-Type", "application/json")
-// 	fmt.Fprintln(w, string(body))
-// }
 
 // Simulate updating of WorkItem. Pharos returns the updated WorkItem,
 // so this mock can just return the JSON as-is, and then the test
