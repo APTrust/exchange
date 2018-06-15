@@ -267,15 +267,13 @@ func (restorer *APTGlacierRestoreInit) Cleanup() {
 				restorer.RequeueForAdditionalRequests(state)
 			}
 		}
-		_ = restorer.SaveWorkItemState(state)
-		_ = restorer.UpdateWorkItem(state)
+		restorer.SaveWorkItemState(state)
+		restorer.UpdateWorkItem(state)
 	}
 }
 
 // updateWorkItem saves the updated WorkItem in Pharos.
-// The returned WorkItem is for testing only. This function internally
-// sets state.WorkItem to the WorkItem returned by Pharos.
-func (restorer *APTGlacierRestoreInit) UpdateWorkItem(state *models.GlacierRestoreState) *models.WorkItem {
+func (restorer *APTGlacierRestoreInit) UpdateWorkItem(state *models.GlacierRestoreState) {
 	// By the time we call this, we've done as much as possible
 	// with this WorkItem, and we're telling Pharos the state
 	// of this task. One of the methods below should have set
@@ -288,20 +286,16 @@ func (restorer *APTGlacierRestoreInit) UpdateWorkItem(state *models.GlacierResto
 	} else {
 		state.WorkItem = resp.WorkItem()
 	}
-	return resp.WorkItem()
 }
 
 // saveWorkItemState saves a JSON representation of the GlacierRestoreState
 // in Pharos' WorkItemState table. We do this primarily so an admin can
 // review this info and trace evidence on problem cases. The WorkItemState
 // JSON is visible on the WorkItem detail page of the Pharos UI.
-//
-// For testing purposes, this returns the WorkItemState object that was saved.
-// In production, we don't need or use the return value.
-func (restorer *APTGlacierRestoreInit) SaveWorkItemState(state *models.GlacierRestoreState) *models.WorkItemState {
+func (restorer *APTGlacierRestoreInit) SaveWorkItemState(state *models.GlacierRestoreState) {
 	if state.WorkItem == nil {
 		restorer.Context.MessageLog.Warning("Can't set WorkItemState on nil WorkItem")
-		return nil
+		return
 	}
 	jsonData, err := json.Marshal(state)
 	if err != nil {
@@ -309,7 +303,7 @@ func (restorer *APTGlacierRestoreInit) SaveWorkItemState(state *models.GlacierRe
 			"WorkItemState (WorkItem %d): %v", state.WorkItem.Id, err)
 		restorer.Context.MessageLog.Error(msg)
 		state.WorkItem.Note += msg
-		return nil
+		return
 	}
 	workItemState := models.NewWorkItemState(state.WorkItem.Id, constants.ActionGlacierRestore, string(jsonData))
 	resp := restorer.Context.PharosClient.WorkItemStateSave(workItemState)
@@ -317,12 +311,11 @@ func (restorer *APTGlacierRestoreInit) SaveWorkItemState(state *models.GlacierRe
 		msg := fmt.Sprintf("Error saving WorkItemState for WorkItem %d: %v", state.WorkItem.Id, err)
 		restorer.Context.MessageLog.Error(msg)
 		state.WorkItem.Note += msg
-		return nil
+		return
 	}
 	// Saved item should now have an ID
 	workItemState = resp.WorkItemState()
 	state.WorkItem.WorkItemStateId = &workItemState.Id
-	return workItemState
 }
 
 func (restorer *APTGlacierRestoreInit) FinishWithError(state *models.GlacierRestoreState) {

@@ -38,6 +38,9 @@ var DescribeRestoreStateAs = NotStarted
 
 const TEST_ID = 1000
 
+var updatedWorkItem = &models.WorkItem{}
+var updatedWorkItemState = &models.WorkItemState{}
+
 // Regex to extract ID from URL
 var URL_ID_REGEX = regexp.MustCompile(`\/(\d+)\/`)
 
@@ -300,7 +303,7 @@ func TestUpdateWorkItem(t *testing.T) {
 	state.WorkItem.Pid = 9800
 	state.WorkItem.Status = constants.StatusSuccess
 
-	updatedWorkItem := worker.UpdateWorkItem(state)
+	worker.UpdateWorkItem(state)
 	assert.Empty(t, state.WorkSummary.Errors)
 	assert.Equal(t, "Updated note", updatedWorkItem.Note)
 	assert.Equal(t, "blah-blah-blah", updatedWorkItem.Node)
@@ -317,10 +320,10 @@ func TestSaveWorkItemState(t *testing.T) {
 		}
 		state.Requests = append(state.Requests, request)
 	}
-	workItemState := worker.SaveWorkItemState(state)
-	require.NotNil(t, workItemState)
-	require.True(t, workItemState.HasData())
-	glacierRestoreState, err := workItemState.GlacierRestoreState()
+	worker.SaveWorkItemState(state)
+	require.NotNil(t, updatedWorkItemState)
+	require.True(t, updatedWorkItemState.HasData())
+	glacierRestoreState, err := updatedWorkItemState.GlacierRestoreState()
 	require.Nil(t, err)
 	assert.Equal(t, requestCount+10, len(glacierRestoreState.Requests))
 }
@@ -366,7 +369,14 @@ func TestRequeueToCheckState(t *testing.T) {
 }
 
 func TestCreateRestoreWorkItem(t *testing.T) {
+	worker, state := getTestComponents(t, "object")
+	delegate := NewNSQTestDelegate()
+	state.NSQMessage.Delegate = delegate
+	worker.CreateRestoreWorkItem(state)
+	assert.Equal(t, "finish", delegate.Operation)
+	assert.Equal(t, constants.StatusSuccess, state.WorkItem.Status)
 
+	// TEST NEW WORK ITEM
 }
 
 func TestRequestAllFiles(t *testing.T) {
@@ -436,23 +446,31 @@ func workItemGetHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintln(w, string(objJson))
 }
 
-func httpJsonEchoHandler(w http.ResponseWriter, r *http.Request) {
-	defer r.Body.Close()
-	body, err := ioutil.ReadAll(r.Body)
-	if err != nil {
-		fmt.Fprintln(w, err.Error())
-		return
-	}
-	w.Header().Set("Content-Type", "application/json")
-	fmt.Fprintln(w, string(body))
-}
+// func httpJsonEchoHandler(w http.ResponseWriter, r *http.Request) {
+// 	defer r.Body.Close()
+// 	body, err := ioutil.ReadAll(r.Body)
+// 	if err != nil {
+// 		fmt.Fprintln(w, err.Error())
+// 		return
+// 	}
+// 	w.Header().Set("Content-Type", "application/json")
+// 	fmt.Fprintln(w, string(body))
+// }
 
 // Simulate updating of WorkItem. Pharos returns the updated WorkItem,
 // so this mock can just return the JSON as-is, and then the test
 // code can check that to see whether the worker sent the right data
 // to Pharos.
 func workItemPutHandler(w http.ResponseWriter, r *http.Request) {
-	httpJsonEchoHandler(w, r)
+	defer r.Body.Close()
+	body, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		fmt.Fprintln(w, err.Error())
+		return
+	}
+	_ = json.Unmarshal(body, updatedWorkItem)
+	w.Header().Set("Content-Type", "application/json")
+	fmt.Fprintln(w, string(body))
 }
 
 func workItemStateGetHandler(w http.ResponseWriter, r *http.Request) {
@@ -485,7 +503,15 @@ func workItemStateGetHandler(w http.ResponseWriter, r *http.Request) {
 
 // Send back the same JSON we received.
 func workItemStatePutHandler(w http.ResponseWriter, r *http.Request) {
-	httpJsonEchoHandler(w, r)
+	defer r.Body.Close()
+	body, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		fmt.Fprintln(w, err.Error())
+		return
+	}
+	_ = json.Unmarshal(body, updatedWorkItemState)
+	w.Header().Set("Content-Type", "application/json")
+	fmt.Fprintln(w, string(body))
 }
 
 func intellectualObjectGetHandler(w http.ResponseWriter, r *http.Request) {
