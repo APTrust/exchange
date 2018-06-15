@@ -334,14 +334,35 @@ func TestFinishWithError(t *testing.T) {
 	worker.FinishWithError(state)
 	assert.Equal(t, "finish", delegate.Operation)
 	assert.Equal(t, state.WorkSummary.AllErrorsAsString(), state.WorkItem.Note)
+	assert.Equal(t, constants.StatusFailed, state.WorkItem.Status)
+	assert.False(t, state.WorkItem.Retry)
+	assert.True(t, state.WorkItem.NeedsAdminReview)
 }
 
 func TestRequeueForAdditionalRequests(t *testing.T) {
-
+	worker, state := getTestComponents(t, "object")
+	delegate := NewNSQTestDelegate()
+	state.NSQMessage.Delegate = delegate
+	worker.RequeueForAdditionalRequests(state)
+	assert.Equal(t, "requeue", delegate.Operation)
+	assert.Equal(t, 1*time.Minute, delegate.Delay)
+	assert.Equal(t, "Requeued to make additional Glacier restore requests.", state.WorkItem.Note)
+	assert.Equal(t, constants.StatusStarted, state.WorkItem.Status)
+	assert.True(t, state.WorkItem.Retry)
+	assert.False(t, state.WorkItem.NeedsAdminReview)
 }
 
 func TestRequeueToCheckState(t *testing.T) {
-
+	worker, state := getTestComponents(t, "object")
+	delegate := NewNSQTestDelegate()
+	state.NSQMessage.Delegate = delegate
+	worker.RequeueToCheckState(state)
+	assert.Equal(t, "requeue", delegate.Operation)
+	assert.Equal(t, 2*time.Hour, delegate.Delay)
+	assert.Equal(t, "Requeued to check on status of Glacier restore requests.", state.WorkItem.Note)
+	assert.Equal(t, constants.StatusStarted, state.WorkItem.Status)
+	assert.True(t, state.WorkItem.Retry)
+	assert.False(t, state.WorkItem.NeedsAdminReview)
 }
 
 func TestCreateRestoreWorkItem(t *testing.T) {
@@ -545,7 +566,7 @@ func (delegate *NSQTestDelegate) OnRequeue(message *nsq.Message, delay time.Dura
 	delegate.Message = message
 	delegate.Delay = delay
 	delegate.Backoff = backoff
-	delegate.Operation = "finish"
+	delegate.Operation = "requeue"
 }
 
 func (delegate *NSQTestDelegate) OnTouch(message *nsq.Message) {
