@@ -531,11 +531,6 @@ func (storer *APTStorer) copyToLongTermStorage(storageSummary *models.StorageSum
 	for attemptNumber := 1; attemptNumber <= MAX_UPLOAD_ATTEMPTS; attemptNumber++ {
 		storer.doUpload(storageSummary, sendWhere, attemptNumber)
 		// Stop trying if storage succeeded
-		//
-		// if sendWhere == "s3" && gf.IngestStoredAt.IsZero() == false {
-		// 	break
-		// } else
-		//
 		if sendWhere == "glacier" && gf.IngestReplicatedAt.IsZero() == false {
 			break
 		} else if sendWhere != "glacier" && gf.IngestStoredAt.IsZero() == false {

@@ -402,7 +402,62 @@ func TestRequestFile(t *testing.T) {
 }
 
 func TestGetRequestDetails(t *testing.T) {
+	worker, state := getTestComponents(t, "file")
+	require.Nil(t, state.GenericFile)
 
+	state, err := worker.GetGlacierRestoreState(state.NSQMessage, state.WorkItem)
+	require.Nil(t, err)
+	require.NotNil(t, state)
+	require.Nil(t, state.GenericFile)
+
+	gf, err := worker.GetGenericFile(state)
+	assert.Nil(t, err)
+	require.NotNil(t, gf)
+
+	fileUUID, err := gf.PreservationStorageFileName()
+	require.Nil(t, err)
+
+	// Glacier Ohio
+	gf.StorageOption = constants.StorageGlacierOH
+	details, err := worker.GetRequestDetails(gf)
+	require.Nil(t, err)
+	require.NotNil(t, details)
+	assert.Equal(t, fileUUID, details["fileUUID"])
+	assert.Equal(t, worker.Context.Config.GlacierRegionOH, details["region"])
+	assert.Equal(t, worker.Context.Config.GlacierBucketOH, details["bucket"])
+
+	// Glacier Oregon
+	gf.StorageOption = constants.StorageGlacierOR
+	details, err = worker.GetRequestDetails(gf)
+	require.Nil(t, err)
+	require.NotNil(t, details)
+	assert.Equal(t, fileUUID, details["fileUUID"])
+	assert.Equal(t, worker.Context.Config.GlacierRegionOR, details["region"])
+	assert.Equal(t, worker.Context.Config.GlacierBucketOR, details["bucket"])
+
+	// Glacier Virginia
+	gf.StorageOption = constants.StorageGlacierVA
+	details, err = worker.GetRequestDetails(gf)
+	require.Nil(t, err)
+	require.NotNil(t, details)
+	assert.Equal(t, fileUUID, details["fileUUID"])
+	assert.Equal(t, worker.Context.Config.GlacierRegionVA, details["region"])
+	assert.Equal(t, worker.Context.Config.GlacierBucketVA, details["bucket"])
+
+	// Standard storage
+	gf.StorageOption = constants.StorageStandard
+	details, err = worker.GetRequestDetails(gf)
+	require.Nil(t, err)
+	require.NotNil(t, details)
+	assert.Equal(t, fileUUID, details["fileUUID"])
+	assert.Equal(t, worker.Context.Config.APTrustGlacierRegion, details["region"])
+	assert.Equal(t, worker.Context.Config.ReplicationBucket, details["bucket"])
+
+	// Bogus storage - should cause error
+	gf.StorageOption = "ThumbDrive"
+	details, err = worker.GetRequestDetails(gf)
+	require.NotNil(t, err)
+	require.Nil(t, details)
 }
 
 func TestGetRequestRecord(t *testing.T) {

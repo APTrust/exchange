@@ -83,10 +83,10 @@ type Config struct {
 	// in use.
 	ActiveConfig string
 
-	// The name of the AWS region that hosts APTrust's S3 files.
+	// The name of the AWS region that hosts APTrust's Glacier files.
 	APTrustGlacierRegion string
 
-	// The name of the AWS region that hosts APTrust's Glacier files.
+	// The name of the AWS region that hosts APTrust's S3 files.
 	APTrustS3Region string
 
 	// Config options specific to DPN services.
