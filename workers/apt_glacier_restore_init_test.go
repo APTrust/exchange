@@ -461,7 +461,51 @@ func TestGetRequestDetails(t *testing.T) {
 }
 
 func TestGetRequestRecord(t *testing.T) {
+	worker, state := getTestComponents(t, "file")
+	require.Nil(t, state.GenericFile)
 
+	state, err := worker.GetGlacierRestoreState(state.NSQMessage, state.WorkItem)
+	require.Nil(t, err)
+	require.NotNil(t, state)
+	require.Nil(t, state.GenericFile)
+
+	gf, err := worker.GetGenericFile(state)
+	assert.Nil(t, err)
+	require.NotNil(t, gf)
+	assert.NotEmpty(t, gf.Identifier)
+
+	gf.StorageOption = constants.StorageGlacierOH
+	details, err := worker.GetRequestDetails(gf)
+	require.Nil(t, err)
+	require.NotNil(t, details)
+
+	fileUUID, err := gf.PreservationStorageFileName()
+	require.Nil(t, err)
+
+	// Should create a new request with correct information
+	glacierRestoreRequest := worker.GetRequestRecord(state, gf, details)
+	assert.Equal(t, gf.Identifier, glacierRestoreRequest.GenericFileIdentifier)
+	assert.Equal(t, worker.Context.Config.GlacierBucketOH, glacierRestoreRequest.GlacierBucket)
+	assert.Equal(t, fileUUID, glacierRestoreRequest.GlacierKey)
+	assert.False(t, glacierRestoreRequest.RequestAccepted)
+	assert.True(t, glacierRestoreRequest.RequestedAt.IsZero())
+
+	// Should retrieve an exising request.
+	gf = testutil.MakeGenericFile(0, 0, "test.edu/bag-of-glass")
+	request := &models.GlacierRestoreRequest{
+		GenericFileIdentifier: gf.Identifier,
+		GlacierBucket:         "6-piece fried chicken bucket",
+		GlacierKey:            "extra crispy",
+		RequestAccepted:       true,
+		SomeoneElseRequested:  true,
+	}
+	state.Requests = append(state.Requests, request)
+	glacierRestoreRequest = worker.GetRequestRecord(state, gf, details)
+	assert.Equal(t, request.GenericFileIdentifier, glacierRestoreRequest.GenericFileIdentifier)
+	assert.Equal(t, request.GlacierBucket, glacierRestoreRequest.GlacierBucket)
+	assert.Equal(t, request.GlacierKey, glacierRestoreRequest.GlacierKey)
+	assert.Equal(t, request.RequestAccepted, glacierRestoreRequest.RequestAccepted)
+	assert.Equal(t, request.SomeoneElseRequested, glacierRestoreRequest.SomeoneElseRequested)
 }
 
 func TestInitializeRetrieval(t *testing.T) {
