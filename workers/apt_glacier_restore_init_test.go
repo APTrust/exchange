@@ -29,12 +29,14 @@ import (
 var NumberOfRequestsToIncludeInState = 0
 
 const (
-	NotStarted = 0
-	InProgress = 1
-	Completed  = 2
+	NotStartedHead      = 0
+	NotStartedAcceptNow = 1
+	InProgressHead      = 2
+	InProgressGlacier   = 3
+	Completed           = 4
 )
 
-var DescribeRestoreStateAs = NotStarted
+var DescribeRestoreStateAs = NotStartedHead
 
 const TEST_ID = 1000
 
@@ -165,7 +167,7 @@ func TestRestoreRequestNeeded(t *testing.T) {
 	// Now let's check to see if we need to issue a Glacier restore
 	// request for the following file. Tell the s3 test server to
 	// reply that this restore has not been requested yet for this item.
-	DescribeRestoreStateAs = NotStarted
+	DescribeRestoreStateAs = NotStartedHead
 	gf := testutil.MakeGenericFile(0, 0, state.WorkItem.ObjectIdentifier)
 	fileUUID, _ := gf.PreservationStorageFileName()
 	requestNeeded, err := worker.RestoreRequestNeeded(state, gf)
@@ -190,7 +192,7 @@ func TestRestoreRequestNeeded(t *testing.T) {
 	// request for a file that we've already requested and whose
 	// restoration is currently in progress. Tell the s3 test server to
 	// reply that restore is in progress for this item.
-	DescribeRestoreStateAs = InProgress
+	DescribeRestoreStateAs = InProgressHead
 	gf = testutil.MakeGenericFile(0, 0, state.WorkItem.ObjectIdentifier)
 	fileUUID, _ = gf.PreservationStorageFileName()
 	requestNeeded, err = worker.RestoreRequestNeeded(state, gf)
@@ -408,7 +410,49 @@ func TestGetRequestRecord(t *testing.T) {
 }
 
 func TestInitializeRetrieval(t *testing.T) {
+	worker, state := getTestComponents(t, "file")
+	require.Nil(t, state.GenericFile)
 
+	state, err := worker.GetGlacierRestoreState(state.NSQMessage, state.WorkItem)
+	require.Nil(t, err)
+	require.NotNil(t, state)
+	require.Nil(t, state.GenericFile)
+
+	gf, err := worker.GetGenericFile(state)
+	assert.Nil(t, err)
+	require.NotNil(t, gf)
+	assert.NotEmpty(t, gf.Identifier)
+	assert.NotEmpty(t, gf.StorageOption)
+	assert.NotEmpty(t, gf.URI)
+
+	details, err := worker.GetRequestDetails(gf)
+	require.Nil(t, err)
+	require.NotNil(t, details)
+
+	glacierRestoreRequest := worker.GetRequestRecord(state, gf, details)
+	assert.False(t, glacierRestoreRequest.RequestAccepted)
+	assert.True(t, glacierRestoreRequest.RequestedAt.IsZero())
+
+	// Set our S3 mock responder to accept a Glacier restore request,
+	// and then test InitializeRetrieval to ensure it sets
+	// properties correctly for an accepted request.
+	DescribeRestoreStateAs = NotStartedAcceptNow
+	worker.InitializeRetrieval(state, gf, details, glacierRestoreRequest)
+	assert.Empty(t, state.WorkSummary.Errors)
+	assert.True(t, glacierRestoreRequest.RequestAccepted)
+	assert.False(t, glacierRestoreRequest.RequestedAt.IsZero())
+
+	// Reset these properties...
+	glacierRestoreRequest.RequestAccepted = false
+	glacierRestoreRequest.RequestedAt = time.Time{}
+
+	// And then make sure InitializeRetrieval sets them correctly
+	// on a restore that's already in progress.
+	DescribeRestoreStateAs = InProgressGlacier
+	worker.InitializeRetrieval(state, gf, details, glacierRestoreRequest)
+	assert.Empty(t, state.WorkSummary.Errors)
+	assert.True(t, glacierRestoreRequest.RequestAccepted)
+	assert.False(t, glacierRestoreRequest.RequestedAt.IsZero())
 }
 
 // -------------------------------------------------------------------------
@@ -564,11 +608,24 @@ func pharosHandler(w http.ResponseWriter, r *http.Request) {
 // worker would send to S3 (including requests to move Glacier objects
 // back into S3).
 func s3Handler(w http.ResponseWriter, r *http.Request) {
-	if DescribeRestoreStateAs == NotStarted {
+	if DescribeRestoreStateAs == NotStartedHead {
+		// S3 HEAD handler will tell us this item is in Glacier, but not yet S3
 		network.S3HeadHandler(w, r)
-	} else if DescribeRestoreStateAs == InProgress {
+	} else if DescribeRestoreStateAs == NotStartedAcceptNow {
+		// Restore handler accepts a Glacier restore requests
+		network.S3RestoreHandler(w, r)
+	} else if DescribeRestoreStateAs == InProgressHead {
+		// This handler is an S3 call that tells us the Glacier restore
+		// is in progress, but not yet complete.
 		network.S3HeadRestoreInProgressHandler(w, r)
+	} else if DescribeRestoreStateAs == InProgressGlacier {
+		// This is a Glacier API call that tells us the restore is
+		// in progress, but not yet complete.
+		network.S3RestoreInProgressHandler(w, r)
 	} else if DescribeRestoreStateAs == Completed {
+		// This is an S3 API call, where the HEAD response includes
+		// info saying the restore is complete and the item will be
+		// available in S3 until a specific date/time.
 		network.S3HeadRestoreCompletedHandler(w, r)
 	}
 }

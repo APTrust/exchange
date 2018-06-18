@@ -516,6 +516,12 @@ func (restorer *APTGlacierRestoreInit) InitializeRetrieval(state *models.Glacier
 		details["fileUUID"],
 		RETRIEVAL_OPTION,
 		DAYS_TO_KEEP_IN_S3)
+	if restorer.S3Url != "" {
+		restorer.Context.MessageLog.Warning("Setting S3 URL to %s. This should happen only in testing!",
+			restorer.S3Url)
+		restoreClient.TestURL = restorer.S3Url
+		restoreClient.BucketName = ""
+	}
 	now := time.Now().UTC()
 	estimatedDeletionFromS3 := now.AddDate(0, 0, DAYS_TO_KEEP_IN_S3)
 	restoreClient.Restore()
