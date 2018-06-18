@@ -167,12 +167,12 @@ func (restorer *APTGlacierRestoreInit) RestoreRequestNeeded(state *models.Glacie
 
 	glacierRestoreRequest := state.FindRequest(gf.Identifier)
 	if glacierRestoreRequest == nil {
-		glacierRestoreRequest = &models.GlacierRestoreRequest{
-			GenericFileIdentifier: gf.Identifier,
-			GlacierBucket:         s3Client.BucketName,
-			GlacierKey:            fileUUID,
+		details, err := restorer.GetRequestDetails(gf)
+		if err != nil {
+			state.WorkSummary.AddError(err.Error())
+			return true, err
 		}
-		state.Requests = append(state.Requests, glacierRestoreRequest)
+		glacierRestoreRequest = restorer.GetRequestRecord(state, gf, details)
 	}
 
 	if restoreRequestInfo.RequestInProgress {
@@ -422,19 +422,9 @@ func (restorer *APTGlacierRestoreInit) RequestAllFiles(state *models.GlacierRest
 		}
 		restorer.RequestFile(state, genericFile)
 	} else if state.WorkItem.ObjectIdentifier != "" {
-		objIdentifier := state.WorkItem.ObjectIdentifier
-		resp := restorer.Context.PharosClient.IntellectualObjectGet(objIdentifier, true, false)
-		if resp.Error != nil {
-			state.WorkSummary.AddError("Error getting IntellectualObject %s from Pharos: %v", objIdentifier, resp.Error)
-			return
-		}
-		obj := resp.IntellectualObject()
-		if obj == nil {
-			state.WorkSummary.AddError("Pharos returned nil for IntellectualObject %s", objIdentifier)
-			return
-		}
-		restorer.Context.MessageLog.Info("Object %s has %d files", obj.Identifier, len(obj.GenericFiles))
-		for _, genericFile := range obj.GenericFiles {
+		restorer.Context.MessageLog.Info("Object %s has %d files",
+			state.IntellectualObject.Identifier, len(state.IntellectualObject.GenericFiles))
+		for _, genericFile := range state.IntellectualObject.GenericFiles {
 			restorer.RequestFile(state, genericFile)
 		}
 	} else {

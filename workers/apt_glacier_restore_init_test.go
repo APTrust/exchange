@@ -154,11 +154,38 @@ func TestGetGlacierRestoreState(t *testing.T) {
 }
 
 func TestRequestObject(t *testing.T) {
+	NumberOfRequestsToIncludeInState = 0
+	DescribeRestoreStateAs = NotStartedHead
+
 	worker, state := getTestComponents(t, "object")
 	require.Nil(t, state.IntellectualObject)
 	worker.RequestObject(state)
 	require.NotNil(t, state.IntellectualObject)
 	require.NotEmpty(t, state.IntellectualObject.GenericFiles)
+	// Should be 12 of each
+	assert.Equal(t, len(state.IntellectualObject.GenericFiles), len(state.Requests))
+	for _, req := range state.Requests {
+		assert.NotEmpty(t, req.GenericFileIdentifier)
+		assert.NotEmpty(t, req.GlacierBucket)
+		assert.NotEmpty(t, req.GlacierKey)
+		assert.False(t, req.RequestedAt.IsZero())
+		assert.False(t, req.RequestAccepted)
+		assert.False(t, req.IsAvailableInS3)
+	}
+
+	DescribeRestoreStateAs = NotStartedAcceptNow
+	worker, state = getTestComponents(t, "object")
+	require.Nil(t, state.IntellectualObject)
+	worker.RequestObject(state)
+	assert.Equal(t, len(state.IntellectualObject.GenericFiles), len(state.Requests))
+	for _, req := range state.Requests {
+		assert.NotEmpty(t, req.GenericFileIdentifier)
+		assert.NotEmpty(t, req.GlacierBucket)
+		assert.NotEmpty(t, req.GlacierKey)
+		assert.False(t, req.RequestedAt.IsZero())
+		assert.True(t, req.RequestAccepted)
+		assert.False(t, req.IsAvailableInS3)
+	}
 }
 
 func TestRestoreRequestNeeded(t *testing.T) {
@@ -395,7 +422,24 @@ func TestCreateRestoreWorkItem(t *testing.T) {
 }
 
 func TestRequestAllFiles(t *testing.T) {
+	NumberOfRequestsToIncludeInState = 0
+	DescribeRestoreStateAs = NotStartedAcceptNow
 
+	worker, state := getTestComponents(t, "object")
+	state.IntellectualObject = testutil.MakeIntellectualObject(12, 0, 0, 0)
+	DescribeRestoreStateAs = NotStartedAcceptNow
+	worker.RequestAllFiles(state)
+	assert.Empty(t, state.WorkSummary.Errors)
+	assert.NotNil(t, state.IntellectualObject)
+	assert.Equal(t, 12, len(state.Requests))
+	for _, req := range state.Requests {
+		assert.NotEmpty(t, req.GenericFileIdentifier)
+		assert.NotEmpty(t, req.GlacierBucket)
+		assert.NotEmpty(t, req.GlacierKey)
+		assert.False(t, req.RequestedAt.IsZero())
+		assert.True(t, req.RequestAccepted)
+		assert.False(t, req.IsAvailableInS3)
+	}
 }
 
 func TestRequestFile(t *testing.T) {
@@ -437,7 +481,6 @@ func TestRequestFile(t *testing.T) {
 	require.NotNil(t, glacierRestoreRequest)
 	assert.True(t, glacierRestoreRequest.LastChecked.IsZero())
 	assert.False(t, glacierRestoreRequest.IsAvailableInS3)
-
 }
 
 func TestGetRequestDetails(t *testing.T) {
