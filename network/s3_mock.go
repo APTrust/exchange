@@ -57,13 +57,22 @@ func getRestoreHeaders() map[string]string {
 	}
 }
 
-// Handles a request to restore a Glacier object to S3.
+// Accepts a request to restore a Glacier object to S3.
 func S3RestoreHandler(w http.ResponseWriter, r *http.Request) {
 	for key, value := range getRestoreHeaders() {
 		w.Header().Set(key, value)
 	}
 	// Must return 202 to indicate the request was accepted
 	w.WriteHeader(http.StatusAccepted)
+}
+
+// Rejects a request to restore a Glacier object to S3.
+func S3RestoreRejectHandler(w http.ResponseWriter, r *http.Request) {
+	for key, value := range getRestoreHeaders() {
+		w.Header().Set(key, value)
+	}
+	// Must return 503 to indicate Glacier rejects the request.
+	w.WriteHeader(http.StatusServiceUnavailable)
 }
 
 // Handles a request to restore a Glacier object to S3,

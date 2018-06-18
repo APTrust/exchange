@@ -56,6 +56,15 @@ func TestS3RestoreHandler(t *testing.T) {
 	testGeneralRestoreHeaders(t, resp)
 }
 
+func TestS3RestoreRejectHandler(t *testing.T) {
+	testServer := httptest.NewServer(http.HandlerFunc(network.S3RestoreRejectHandler))
+	defer testServer.Close()
+	resp, err := http.Head(testServer.URL)
+	require.Nil(t, err)
+	assert.Equal(t, http.StatusServiceUnavailable, resp.StatusCode)
+	testGeneralRestoreHeaders(t, resp)
+}
+
 func TestS3RestoreInProgressHandler(t *testing.T) {
 	testServer := httptest.NewServer(http.HandlerFunc(network.S3RestoreInProgressHandler))
 	defer testServer.Close()
