@@ -31,9 +31,10 @@ var NumberOfRequestsToIncludeInState = 0
 const (
 	NotStartedHead      = 0
 	NotStartedAcceptNow = 1
-	InProgressHead      = 2
-	InProgressGlacier   = 3
-	Completed           = 4
+	NotStartedRejectNow = 2
+	InProgressHead      = 3
+	InProgressGlacier   = 4
+	Completed           = 5
 )
 
 var DescribeRestoreStateAs = NotStartedHead
@@ -398,6 +399,44 @@ func TestRequestAllFiles(t *testing.T) {
 }
 
 func TestRequestFile(t *testing.T) {
+	worker, state := getTestComponents(t, "file")
+	delegate := NewNSQTestDelegate()
+	state.NSQMessage.Delegate = delegate
+
+	gf, err := worker.GetGenericFile(state)
+	assert.Nil(t, err)
+	require.NotNil(t, gf)
+
+	// Call RequestFile then check the state of the
+	// GlacierRestoreRequest for that file.
+	DescribeRestoreStateAs = NotStartedRejectNow
+	worker.RequestFile(state, gf)
+	glacierRestoreRequest := worker.GetRequestRecord(state, gf, make(map[string]string))
+	timeOfFirstRequest := glacierRestoreRequest.RequestedAt
+	require.NotNil(t, glacierRestoreRequest)
+	assert.False(t, glacierRestoreRequest.RequestedAt.IsZero())
+	assert.True(t, glacierRestoreRequest.LastChecked.IsZero())
+	assert.False(t, glacierRestoreRequest.RequestAccepted)
+	assert.False(t, glacierRestoreRequest.IsAvailableInS3)
+
+	// Now accept the request and make sure the request record
+	// was properly updated.
+	DescribeRestoreStateAs = NotStartedAcceptNow
+	worker.RequestFile(state, gf)
+	glacierRestoreRequest = worker.GetRequestRecord(state, gf, make(map[string]string))
+	require.NotNil(t, glacierRestoreRequest)
+	assert.True(t, glacierRestoreRequest.LastChecked.IsZero())
+	assert.True(t, glacierRestoreRequest.RequestedAt.After(timeOfFirstRequest))
+	assert.False(t, glacierRestoreRequest.IsAvailableInS3)
+
+	// Make sure LastChecked is updated when we do a status check
+	// via S3 Head on a file whose restoration request was accepted by Glacier.
+	DescribeRestoreStateAs = InProgressGlacier
+	worker.RequestFile(state, gf)
+	glacierRestoreRequest = worker.GetRequestRecord(state, gf, make(map[string]string))
+	require.NotNil(t, glacierRestoreRequest)
+	assert.True(t, glacierRestoreRequest.LastChecked.IsZero())
+	assert.False(t, glacierRestoreRequest.IsAvailableInS3)
 
 }
 
@@ -713,6 +752,9 @@ func s3Handler(w http.ResponseWriter, r *http.Request) {
 	} else if DescribeRestoreStateAs == NotStartedAcceptNow {
 		// Restore handler accepts a Glacier restore requests
 		network.S3RestoreHandler(w, r)
+	} else if DescribeRestoreStateAs == NotStartedRejectNow {
+		// Reject handler reject a Glacier restore requests
+		network.S3RestoreRejectHandler(w, r)
 	} else if DescribeRestoreStateAs == InProgressHead {
 		// This handler is an S3 call that tells us the Glacier restore
 		// is in progress, but not yet complete.

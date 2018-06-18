@@ -109,7 +109,13 @@ func (restorer *APTGlacierRestoreInit) RequestRestore() {
 				continue
 			}
 			state.GenericFile = gf
-			restorer.RequestFile(state, gf)
+			needsRestoreRequest, err := restorer.RestoreRequestNeeded(state, gf)
+			if err != nil {
+				state.WorkSummary.AddError(err.Error())
+			}
+			if needsRestoreRequest {
+				restorer.RequestFile(state, gf)
+			}
 		} else {
 			restorer.RequestObject(state)
 		}
@@ -336,7 +342,7 @@ func (restorer *APTGlacierRestoreInit) FinishWithError(state *models.GlacierRest
 // any files still needing to be restored. We can requeue with a
 // one-minute timeout.
 func (restorer *APTGlacierRestoreInit) RequeueForAdditionalRequests(state *models.GlacierRestoreState) {
-	restorer.Context.MessageLog.Error("Requeueing WorkItem %d: Needs additional Glacier restore requests.",
+	restorer.Context.MessageLog.Warning("Requeueing WorkItem %d: Needs additional Glacier restore requests.",
 		state.WorkItem.Id)
 	state.WorkItem.Note = "Requeued to make additional Glacier restore requests."
 	// Don't revert status to Pending, or this may get queued
@@ -353,7 +359,7 @@ func (restorer *APTGlacierRestoreInit) RequeueForAdditionalRequests(state *model
 // It typically takes 3-5 hours to get all the
 // files into S3.
 func (restorer *APTGlacierRestoreInit) RequeueToCheckState(state *models.GlacierRestoreState) {
-	restorer.Context.MessageLog.Error("Requeueing WorkItem %d to check on restoration progress: "+
+	restorer.Context.MessageLog.Warning("Requeueing WorkItem %d to check on restoration progress: "+
 		"All restore requests accepted.", state.WorkItem.Id)
 	state.WorkItem.Note = "Requeued to check on status of Glacier restore requests."
 	state.WorkItem.Status = constants.StatusStarted
@@ -447,6 +453,8 @@ func (restorer *APTGlacierRestoreInit) RequestFile(state *models.GlacierRestoreS
 	glacierRestoreRequest := restorer.GetRequestRecord(state, gf, details)
 	if glacierRestoreRequest.RequestAccepted {
 		// Prior request was accepted and is in progress.
+		// We already gathered this info when we called
+		// RestoreRequestNeeded().
 		if glacierRestoreRequest.IsAvailableInS3 {
 			restorer.Context.MessageLog.Info("Skipping %s: item is already in S3.", gf.Identifier)
 		} else {
