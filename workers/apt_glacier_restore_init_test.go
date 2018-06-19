@@ -18,6 +18,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 )
@@ -654,6 +655,70 @@ func TestInitializeRetrieval(t *testing.T) {
 // Will need a customized Context object where URLs for NSQ,
 // Pharos, S3, and Glacier point to the mock services.
 // -------------------------------------------------------------------------
+
+func TestGlacierNotStarted(t *testing.T) {
+	NumberOfRequestsToIncludeInState = 0
+	DescribeRestoreStateAs = NotStartedHead
+
+	worker, state := getTestComponents(t, "object")
+	state.IntellectualObject = testutil.MakeIntellectualObject(12, 0, 0, 0)
+	delegate := NewNSQTestDelegate()
+	state.NSQMessage.Delegate = delegate
+
+	worker.PostTestChannel = make(chan *models.GlacierRestoreState)
+	var wg sync.WaitGroup
+	go func() {
+		wg.Add(1)
+		for state := range worker.PostTestChannel {
+			assert.Empty(t, state.WorkSummary.Errors)
+			assert.NotNil(t, state.IntellectualObject)
+			assert.Equal(t, 12, len(state.Requests))
+			for _, req := range state.Requests {
+				assert.NotEmpty(t, req.GenericFileIdentifier)
+				assert.NotEmpty(t, req.GlacierBucket)
+				assert.NotEmpty(t, req.GlacierKey)
+				assert.False(t, req.RequestedAt.IsZero())
+				assert.True(t, req.RequestAccepted)
+				assert.False(t, req.IsAvailableInS3)
+			}
+			wg.Done()
+		}
+	}()
+
+	// xxxxxxx
+	worker.RequestChannel <- state
+	wg.Wait()
+}
+
+func TestGlacierAcceptNow(t *testing.T) {
+	NumberOfRequestsToIncludeInState = 0
+	DescribeRestoreStateAs = NotStartedAcceptNow
+
+}
+
+func TestGlacierRejectNow(t *testing.T) {
+	NumberOfRequestsToIncludeInState = 0
+	DescribeRestoreStateAs = NotStartedRejectNow
+
+}
+
+func TestGlacierInProgressHead(t *testing.T) {
+	NumberOfRequestsToIncludeInState = 0
+	DescribeRestoreStateAs = InProgressHead
+
+}
+
+func TestGlacierInProgressGlacier(t *testing.T) {
+	NumberOfRequestsToIncludeInState = 0
+	DescribeRestoreStateAs = InProgressGlacier
+
+}
+
+func TestGlacierCompleted(t *testing.T) {
+	NumberOfRequestsToIncludeInState = 0
+	DescribeRestoreStateAs = Completed
+
+}
 
 // -------------------------------------------------------------------------
 // HTTP test handlers

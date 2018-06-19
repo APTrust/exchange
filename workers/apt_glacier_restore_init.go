@@ -32,6 +32,9 @@ type APTGlacierRestoreInit struct {
 	RequestChannel chan *models.GlacierRestoreState
 	// CleanupChannel is for housekeeping, like updating NSQ.
 	CleanupChannel chan *models.GlacierRestoreState
+	// PostTestChannel is for testing only. In production, nothing listens
+	// on this channel.
+	PostTestChannel chan *models.GlacierRestoreState
 	// S3Url is a custom URL that the S3 client should connect to.
 	// We use this only in testing, when we want the client to talk
 	// to a local test server. This should not be set in demo or
@@ -275,6 +278,12 @@ func (restorer *APTGlacierRestoreInit) Cleanup() {
 		}
 		restorer.SaveWorkItemState(state)
 		restorer.UpdateWorkItem(state)
+
+		// For testing only. The test code creates the PostTestChannel.
+		// When running in demo & production, this channel is nil.
+		if restorer.PostTestChannel != nil {
+			restorer.PostTestChannel <- state
+		}
 	}
 }
 
