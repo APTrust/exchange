@@ -8,6 +8,7 @@ import (
 	"github.com/APTrust/exchange/models"
 	"github.com/APTrust/exchange/network"
 	"github.com/nsqio/go-nsq"
+	"strings"
 	"time"
 )
 
@@ -122,7 +123,6 @@ func (restorer *APTGlacierRestoreInit) RequestRestore() {
 		} else {
 			restorer.RequestObject(state)
 		}
-
 		state.WorkSummary.Finish()
 		restorer.CleanupChannel <- state
 	}
@@ -158,7 +158,10 @@ func (restorer *APTGlacierRestoreInit) RestoreRequestNeeded(state *models.Glacie
 		return needsRestoreRequest, err
 	}
 	s3Client.Head(fileUUID)
-	if s3Client.ErrorMessage != "" {
+
+	// Status 409: Conflict is an expected response.
+	// It means a restore request has already been initiated.
+	if s3Client.ErrorMessage != "" && !strings.Contains(s3Client.ErrorMessage, "Conflict") {
 		err = fmt.Errorf("S3 HEAD request for file %s (%s) returned error: %s",
 			fileUUID, gf.Identifier, s3Client.ErrorMessage)
 		return needsRestoreRequest, err
@@ -257,7 +260,7 @@ func (restorer *APTGlacierRestoreInit) GetGenericFile(state *models.GlacierResto
 }
 
 func (restorer *APTGlacierRestoreInit) Cleanup() {
-	for state := range restorer.RequestChannel {
+	for state := range restorer.CleanupChannel {
 		if state.WorkSummary.HasErrors() {
 			restorer.FinishWithError(state)
 		} else {
