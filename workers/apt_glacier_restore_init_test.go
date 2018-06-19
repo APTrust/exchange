@@ -665,6 +665,8 @@ func TestGlacierNotStarted(t *testing.T) {
 	delegate := NewNSQTestDelegate()
 	state.NSQMessage.Delegate = delegate
 
+	// Create a post-test channel to check the state of various
+	// items after they've gone through the entire workflow.
 	worker.PostTestChannel = make(chan *models.GlacierRestoreState)
 	var wg sync.WaitGroup
 	go func() {
@@ -681,11 +683,16 @@ func TestGlacierNotStarted(t *testing.T) {
 				assert.True(t, req.RequestAccepted)
 				assert.False(t, req.IsAvailableInS3)
 			}
+			assert.Equal(t, "requeue", delegate.Operation)
+			assert.Equal(t, 1*time.Minute, delegate.Delay)
+			assert.Equal(t, "Requeued to make additional Glacier restore requests.", state.WorkItem.Note)
+			assert.Equal(t, constants.StatusStarted, state.WorkItem.Status)
+			assert.True(t, state.WorkItem.Retry)
+			assert.False(t, state.WorkItem.NeedsAdminReview)
 			wg.Done()
 		}
 	}()
 
-	// xxxxxxx
 	worker.RequestChannel <- state
 	wg.Wait()
 }
@@ -694,6 +701,39 @@ func TestGlacierAcceptNow(t *testing.T) {
 	NumberOfRequestsToIncludeInState = 0
 	DescribeRestoreStateAs = NotStartedAcceptNow
 
+	worker, state := getTestComponents(t, "object")
+	state.IntellectualObject = testutil.MakeIntellectualObject(12, 0, 0, 0)
+	delegate := NewNSQTestDelegate()
+	state.NSQMessage.Delegate = delegate
+
+	worker.PostTestChannel = make(chan *models.GlacierRestoreState)
+	var wg sync.WaitGroup
+	go func() {
+		wg.Add(1)
+		for state := range worker.PostTestChannel {
+			assert.Empty(t, state.WorkSummary.Errors)
+			assert.NotNil(t, state.IntellectualObject)
+			assert.Equal(t, 12, len(state.Requests))
+			for _, req := range state.Requests {
+				assert.NotEmpty(t, req.GenericFileIdentifier)
+				assert.NotEmpty(t, req.GlacierBucket)
+				assert.NotEmpty(t, req.GlacierKey)
+				assert.False(t, req.RequestedAt.IsZero())
+				assert.True(t, req.RequestAccepted)
+				assert.False(t, req.IsAvailableInS3)
+			}
+			assert.Equal(t, "requeue", delegate.Operation)
+			assert.Equal(t, 2*time.Hour, delegate.Delay)
+			assert.Equal(t, "Requeued to check on status of Glacier restore requests.", state.WorkItem.Note)
+			assert.Equal(t, constants.StatusStarted, state.WorkItem.Status)
+			assert.True(t, state.WorkItem.Retry)
+			assert.False(t, state.WorkItem.NeedsAdminReview)
+			wg.Done()
+		}
+	}()
+
+	worker.RequestChannel <- state
+	wg.Wait()
 }
 
 func TestGlacierRejectNow(t *testing.T) {
