@@ -43,6 +43,7 @@ var DescribeRestoreStateAs = NotStartedHead
 const TEST_ID = 1000
 
 var updatedWorkItem = &models.WorkItem{}
+var createdWorkItem = &models.WorkItem{}
 var updatedWorkItemState = &models.WorkItemState{}
 
 // Regex to extract ID from URL
@@ -400,6 +401,7 @@ func TestRequeueToCheckState(t *testing.T) {
 }
 
 func TestCreateRestoreWorkItem(t *testing.T) {
+	createdWorkItem = &models.WorkItem{}
 	worker, state := getTestComponents(t, "object")
 	delegate := NewNSQTestDelegate()
 	state.NSQMessage.Delegate = delegate
@@ -407,19 +409,19 @@ func TestCreateRestoreWorkItem(t *testing.T) {
 	assert.Equal(t, "finish", delegate.Operation)
 	assert.Equal(t, constants.StatusSuccess, state.WorkItem.Status)
 
-	assert.Equal(t, state.WorkItem.ObjectIdentifier, updatedWorkItem.ObjectIdentifier)
-	assert.Equal(t, state.WorkItem.GenericFileIdentifier, updatedWorkItem.GenericFileIdentifier)
-	assert.Equal(t, state.WorkItem.Name, updatedWorkItem.Name)
-	assert.Equal(t, state.WorkItem.Bucket, updatedWorkItem.Bucket)
-	assert.Equal(t, state.WorkItem.ETag, updatedWorkItem.ETag)
-	assert.Equal(t, state.WorkItem.Size, updatedWorkItem.Size)
-	assert.Equal(t, state.WorkItem.BagDate, updatedWorkItem.BagDate)
-	assert.Equal(t, state.WorkItem.InstitutionId, updatedWorkItem.InstitutionId)
-	assert.Equal(t, state.WorkItem.User, updatedWorkItem.User)
-	assert.Equal(t, constants.ActionRestore, updatedWorkItem.Action)
-	assert.Equal(t, constants.StageRequested, updatedWorkItem.Stage)
-	assert.Equal(t, constants.StatusPending, updatedWorkItem.Status)
-	assert.True(t, updatedWorkItem.Retry)
+	assert.Equal(t, state.WorkItem.ObjectIdentifier, createdWorkItem.ObjectIdentifier)
+	assert.Equal(t, state.WorkItem.GenericFileIdentifier, createdWorkItem.GenericFileIdentifier)
+	assert.Equal(t, state.WorkItem.Name, createdWorkItem.Name)
+	assert.Equal(t, state.WorkItem.Bucket, createdWorkItem.Bucket)
+	assert.Equal(t, state.WorkItem.ETag, createdWorkItem.ETag)
+	assert.Equal(t, state.WorkItem.Size, createdWorkItem.Size)
+	assert.Equal(t, state.WorkItem.BagDate, createdWorkItem.BagDate)
+	assert.Equal(t, state.WorkItem.InstitutionId, createdWorkItem.InstitutionId)
+	assert.Equal(t, state.WorkItem.User, createdWorkItem.User)
+	assert.Equal(t, constants.ActionRestore, createdWorkItem.Action)
+	assert.Equal(t, constants.StageRequested, createdWorkItem.Stage)
+	assert.Equal(t, constants.StatusPending, createdWorkItem.Status)
+	assert.True(t, createdWorkItem.Retry)
 }
 
 func TestRequestAllFiles(t *testing.T) {
@@ -847,6 +849,7 @@ func TestGlacierInProgressGlacier(t *testing.T) {
 func TestGlacierCompleted(t *testing.T) {
 	NumberOfRequestsToIncludeInState = 0
 	DescribeRestoreStateAs = Completed
+	createdWorkItem = &models.WorkItem{}
 
 	worker, state := getTestComponents(t, "object")
 	state.IntellectualObject = testutil.MakeIntellectualObject(12, 0, 0, 0)
@@ -875,9 +878,24 @@ func TestGlacierCompleted(t *testing.T) {
 			assert.True(t, state.WorkItem.Retry)
 			assert.False(t, state.WorkItem.NeedsAdminReview)
 
-			// **************************************************************
-			// TODO: Check that new work item was created for regular restore.
-			// **************************************************************
+			// Make sure that after all items are successfully moved from
+			// Glacier to S3, we create a normal Restore WorkItem, so
+			// we can restore the bag from S3 to the depositor's restore
+			// bucket.
+			assert.Equal(t, state.WorkItem.ObjectIdentifier, createdWorkItem.ObjectIdentifier)
+			assert.Equal(t, state.WorkItem.GenericFileIdentifier, createdWorkItem.GenericFileIdentifier)
+			assert.Equal(t, state.WorkItem.Name, createdWorkItem.Name)
+			assert.Equal(t, state.WorkItem.Bucket, createdWorkItem.Bucket)
+			assert.Equal(t, state.WorkItem.ETag, createdWorkItem.ETag)
+			assert.Equal(t, state.WorkItem.Size, createdWorkItem.Size)
+			assert.Equal(t, state.WorkItem.BagDate, createdWorkItem.BagDate)
+			assert.Equal(t, state.WorkItem.InstitutionId, createdWorkItem.InstitutionId)
+			assert.Equal(t, state.WorkItem.User, createdWorkItem.User)
+			assert.Equal(t, constants.ActionRestore, createdWorkItem.Action)
+			assert.Equal(t, constants.StageRequested, createdWorkItem.Stage)
+			assert.Equal(t, constants.StatusPending, createdWorkItem.Status)
+			assert.True(t, createdWorkItem.Retry)
+
 			wg.Done()
 		}
 	}()
@@ -926,6 +944,18 @@ func workItemPutHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	_ = json.Unmarshal(body, updatedWorkItem)
+	w.Header().Set("Content-Type", "application/json")
+	fmt.Fprintln(w, string(body))
+}
+
+func workItemPostHandler(w http.ResponseWriter, r *http.Request) {
+	defer r.Body.Close()
+	body, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		fmt.Fprintln(w, err.Error())
+		return
+	}
+	_ = json.Unmarshal(body, createdWorkItem)
 	w.Header().Set("Content-Type", "application/json")
 	fmt.Fprintln(w, string(body))
 }
@@ -1004,9 +1034,12 @@ func pharosHandler(w http.ResponseWriter, r *http.Request) {
 	} else if strings.Contains(url, "/items/") {
 		if r.Method == http.MethodGet {
 			workItemGetHandler(w, r)
-		} else {
+		} else if r.Method == http.MethodPut {
 			workItemPutHandler(w, r)
+		} else if r.Method == http.MethodPost {
+			workItemPostHandler(w, r)
 		}
+
 	} else if strings.Contains(url, "/objects/") {
 		intellectualObjectGetHandler(w, r)
 	} else if strings.Contains(url, "/files/") {
