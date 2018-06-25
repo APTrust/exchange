@@ -616,9 +616,15 @@ func (restorer *APTRestorer) writeAPTrustInfoFile(restoreState *models.RestoreSt
 			aptInfoPath, err)
 		return
 	}
+	if !util.StringListContains(constants.StorageOptions, restoreState.IntellectualObject.StorageOption) {
+		restorer.Context.MessageLog.Warning("Object %s has invalid StorageOption '%s'",
+			restoreState.IntellectualObject.Identifier,
+			restoreState.IntellectualObject.StorageOption)
+	}
 	fmt.Fprintln(aptInfoFile, "Title:", restoreState.IntellectualObject.Title)
 	fmt.Fprintln(aptInfoFile, "Access:", strings.Title(restoreState.IntellectualObject.Access))
 	fmt.Fprintln(aptInfoFile, "Description:", restoreState.IntellectualObject.Description)
+	fmt.Fprintln(aptInfoFile, "Storage-Option:", restoreState.IntellectualObject.StorageOption)
 	aptInfoFile.Close()
 	restorer.addFile(restoreState, aptInfoPath, "aptrust-info.txt")
 }

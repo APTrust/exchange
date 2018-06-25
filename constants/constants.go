@@ -109,7 +109,7 @@ var ActionTypes []string = []string{
 	ActionDelete,
 }
 
-// Storage types
+// Storage options
 
 const (
 	StorageStandard  = "Standard"
@@ -118,7 +118,7 @@ const (
 	StorageGlacierOR = "Glacier-OR"
 )
 
-var StorageTypes []string = []string{
+var StorageOptions []string = []string{
 	StorageStandard,
 	StorageGlacierVA,
 	StorageGlacierOH,
