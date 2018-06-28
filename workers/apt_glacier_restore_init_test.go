@@ -403,10 +403,7 @@ func TestRequeueToCheckState(t *testing.T) {
 func TestCreateRestoreWorkItem(t *testing.T) {
 	createdWorkItem = &models.WorkItem{}
 	worker, state := getTestComponents(t, "object")
-	delegate := NewNSQTestDelegate()
-	state.NSQMessage.Delegate = delegate
 	worker.CreateRestoreWorkItem(state)
-	assert.Equal(t, "finish", delegate.Operation)
 	assert.Equal(t, constants.StatusSuccess, state.WorkItem.Status)
 
 	assert.Equal(t, state.WorkItem.ObjectIdentifier, createdWorkItem.ObjectIdentifier)
