@@ -814,12 +814,18 @@ func (restorer *APTRestorer) fetchAllFiles(restoreState *models.RestoreState) {
 		return
 	}
 
+	region, bucket, err := restorer.Context.Config.StorageRegionAndBucketFor(restoreState.IntellectualObject.StorageOption)
+	if err != nil {
+		restoreState.PackageSummary.AddError("Cannot get region and bucket info for file: %v", err)
+		return
+	}
+
 	// Set up a downloader to fetch files from S3 long-term storage.
 	downloader := network.NewS3Download(
 		os.Getenv("AWS_ACCESS_KEY_ID"),
 		os.Getenv("AWS_SECRET_ACCESS_KEY"),
-		constants.AWSVirginia,
-		restorer.Context.Config.PreservationBucket,
+		region,
+		bucket,
 		"",   // s3 key to fetch - to be set below
 		"",   // local path at which to save the s3 file - set below
 		true, // calculate md5 for manifest
