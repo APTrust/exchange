@@ -420,6 +420,7 @@ func TestCreateRestoreWorkItem(t *testing.T) {
 	assert.Equal(t, constants.StatusPending, createdWorkItem.Status)
 	assert.Equal(t, "Restore requested. Files have been moved from Glacier to S3.", createdWorkItem.Note)
 	assert.Equal(t, "Not started", createdWorkItem.Outcome)
+	assert.False(t, createdWorkItem.Date.IsZero())
 	assert.True(t, createdWorkItem.Retry)
 }
 

@@ -405,6 +405,7 @@ func (restorer *APTGlacierRestoreInit) CreateRestoreWorkItem(state *models.Glaci
 	newWorkItem.Retry = true
 	newWorkItem.Note = "Restore requested. Files have been moved from Glacier to S3."
 	newWorkItem.Outcome = "Not started"
+	newWorkItem.Date = time.Now().UTC()
 	resp := restorer.Context.PharosClient.WorkItemSave(newWorkItem)
 	if resp.Error != nil {
 		restorer.Context.MessageLog.Error("WorkItem %d: Error creating new Restore WorkItem: %v",
