@@ -272,6 +272,7 @@ func (restorer *APTGlacierRestoreInit) Cleanup() {
 				// it will go into the restore queue, where
 				// the normal apt_restore worker can handle it.
 				restorer.CreateRestoreWorkItem(state)
+				state.NSQMessage.Finish()
 			} else if report.AllRetrievalsInitiated() {
 				restorer.RequeueToCheckState(state)
 			} else {
@@ -406,7 +407,7 @@ func (restorer *APTGlacierRestoreInit) CreateRestoreWorkItem(state *models.Glaci
 	newWorkItem.Outcome = "Not started"
 	resp := restorer.Context.PharosClient.WorkItemSave(newWorkItem)
 	if resp.Error != nil {
-		restorer.Context.MessageLog.Error("WorkItem %d: Error creating new Restore WorkItem",
+		restorer.Context.MessageLog.Error("WorkItem %d: Error creating new Restore WorkItem: %v",
 			state.WorkItem.Id, resp.Error)
 		state.WorkItem.Note = fmt.Sprintf("All files have been restored from Glacier to S3, "+
 			"but received the following error from Pharos when trying to create a new "+
@@ -418,7 +419,6 @@ func (restorer *APTGlacierRestoreInit) CreateRestoreWorkItem(state *models.Glaci
 			"Created new WorkItem #%d to finish restoration.", newSavedWorkItem.Id)
 		state.WorkItem.Status = constants.StatusSuccess
 	}
-	state.NSQMessage.Finish()
 }
 
 func (restorer *APTGlacierRestoreInit) RequestAllFiles(state *models.GlacierRestoreState) {
