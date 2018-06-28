@@ -299,7 +299,7 @@ func (restorer *APTGlacierRestoreInit) UpdateWorkItem(state *models.GlacierResto
 	// all of the WorkItem properties before this is called.
 	// Methods: finishWithError, requeueForAdditionalRequests,
 	// reqeueToCheckState, createRestoreWorkItem.
-	restorer.Context.MessageLog.Info("Updating WorkItem %d: %v", state.WorkItem.Id)
+	restorer.Context.MessageLog.Info("Updating WorkItem %d", state.WorkItem.Id)
 	resp := restorer.Context.PharosClient.WorkItemSave(state.WorkItem)
 	if resp.Error != nil {
 		state.WorkSummary.AddError("Error updating WorkItem %d: %v", state.WorkItem.Id, resp.Error)
@@ -340,7 +340,7 @@ func (restorer *APTGlacierRestoreInit) SaveWorkItemState(state *models.GlacierRe
 		workItemState.State = string(jsonData)
 	}
 
-	restorer.Context.MessageLog.Info("Saving WorkItemState for WorkItem %d: %v", state.WorkItem.Id)
+	restorer.Context.MessageLog.Info("Saving WorkItemState for WorkItem %d", state.WorkItem.Id)
 	resp := restorer.Context.PharosClient.WorkItemStateSave(workItemState)
 	if resp.Error != nil {
 		msg := fmt.Sprintf("Error saving WorkItemState for WorkItem %d: %v", state.WorkItem.Id, err)
