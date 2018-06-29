@@ -64,6 +64,7 @@ func NewGlacierRestore(_context *context.Context) *APTGlacierRestoreInit {
 
 // This is the callback that NSQ workers use to handle messages from NSQ.
 func (restorer *APTGlacierRestoreInit) HandleMessage(message *nsq.Message) error {
+	message.DisableAutoResponse()
 	workItem, err := GetWorkItem(message, restorer.Context)
 	if err != nil {
 		restorer.Context.MessageLog.Error(err.Error())
