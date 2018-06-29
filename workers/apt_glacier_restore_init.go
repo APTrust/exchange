@@ -395,8 +395,7 @@ func (restorer *APTGlacierRestoreInit) RequeueToCheckState(state *models.Glacier
 	state.WorkItem.Status = constants.StatusStarted
 	state.WorkItem.Retry = true
 	state.WorkItem.NeedsAdminReview = false
-	//state.NSQMessage.RequeueWithoutBackoff(2 * time.Hour)
-	state.NSQMessage.RequeueWithoutBackoff(1 * time.Minute)
+	state.NSQMessage.RequeueWithoutBackoff(2 * time.Hour)
 }
 
 // createRestoreWorkItem: We call this to create a normal WorkItem
