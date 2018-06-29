@@ -393,7 +393,8 @@ func TestRequeueToCheckState(t *testing.T) {
 	state.NSQMessage.Delegate = delegate
 	worker.RequeueToCheckState(state)
 	assert.Equal(t, "requeue", delegate.Operation)
-	assert.Equal(t, 2*time.Hour, delegate.Delay)
+	//assert.Equal(t, 2*time.Hour, delegate.Delay)
+	assert.Equal(t, 1*time.Minute, delegate.Delay)
 	assert.Equal(t, "Requeued to check on status of Glacier restore requests.", state.WorkItem.Note)
 	assert.Equal(t, constants.StatusStarted, state.WorkItem.Status)
 	assert.True(t, state.WorkItem.Retry)
@@ -713,7 +714,8 @@ func TestGlacierAcceptNow(t *testing.T) {
 				assert.False(t, req.IsAvailableInS3)
 			}
 			assert.Equal(t, "requeue", delegate.Operation)
-			assert.Equal(t, 2*time.Hour, delegate.Delay)
+			//assert.Equal(t, 2*time.Hour, delegate.Delay)
+			assert.Equal(t, 1*time.Minute, delegate.Delay)
 			assert.Equal(t, "Requeued to check on status of Glacier restore requests.", state.WorkItem.Note)
 			assert.Equal(t, constants.StatusStarted, state.WorkItem.Status)
 			assert.True(t, state.WorkItem.Retry)
@@ -794,7 +796,8 @@ func TestGlacierInProgressHead(t *testing.T) {
 				assert.False(t, req.IsAvailableInS3)
 			}
 			assert.Equal(t, "requeue", delegate.Operation)
-			assert.Equal(t, 2*time.Hour, delegate.Delay)
+			//assert.Equal(t, 2*time.Hour, delegate.Delay)
+			assert.Equal(t, 1*time.Minute, delegate.Delay)
 			assert.Equal(t, "Requeued to check on status of Glacier restore requests.", state.WorkItem.Note)
 			assert.Equal(t, constants.StatusStarted, state.WorkItem.Status)
 			assert.True(t, state.WorkItem.Retry)
@@ -833,7 +836,8 @@ func TestGlacierInProgressGlacier(t *testing.T) {
 				assert.False(t, req.IsAvailableInS3)
 			}
 			assert.Equal(t, "requeue", delegate.Operation)
-			assert.Equal(t, 2*time.Hour, delegate.Delay)
+			//assert.Equal(t, 2*time.Hour, delegate.Delay)
+			assert.Equal(t, 1*time.Minute, delegate.Delay)
 			assert.Equal(t, "Requeued to check on status of Glacier restore requests.", state.WorkItem.Note)
 			assert.Equal(t, constants.StatusStarted, state.WorkItem.Status)
 			assert.True(t, state.WorkItem.Retry)

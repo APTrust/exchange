@@ -380,7 +380,7 @@ func (restorer *APTGlacierRestoreInit) RequeueForAdditionalRequests(state *model
 	state.WorkItem.Status = constants.StatusStarted
 	state.WorkItem.Retry = true
 	state.WorkItem.NeedsAdminReview = false
-	state.NSQMessage.Requeue(1 * time.Minute)
+	state.NSQMessage.RequeueWithoutBackoff(1 * time.Minute)
 }
 
 // requeueToCheckState: We call this when we know we've requested
@@ -395,7 +395,8 @@ func (restorer *APTGlacierRestoreInit) RequeueToCheckState(state *models.Glacier
 	state.WorkItem.Status = constants.StatusStarted
 	state.WorkItem.Retry = true
 	state.WorkItem.NeedsAdminReview = false
-	state.NSQMessage.Requeue(2 * time.Hour)
+	//state.NSQMessage.RequeueWithoutBackoff(2 * time.Hour)
+	state.NSQMessage.RequeueWithoutBackoff(1 * time.Minute)
 }
 
 // createRestoreWorkItem: We call this to create a normal WorkItem
