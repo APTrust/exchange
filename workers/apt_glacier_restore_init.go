@@ -274,6 +274,8 @@ func (restorer *APTGlacierRestoreInit) Cleanup() {
 				// the normal apt_restore worker can handle it.
 				restorer.CreateRestoreWorkItem(state)
 				state.NSQMessage.Finish()
+			} else if state.WorkSummary.AttemptNumber >= restorer.Context.Config.GlacierRestoreWorker.MaxAttempts {
+				restorer.FinishWithMaxAttemptsExceeded(state, report)
 			} else if report.AllRetrievalsInitiated() {
 				restorer.RequeueToCheckState(state)
 			} else {
@@ -362,6 +364,17 @@ func (restorer *APTGlacierRestoreInit) FinishWithError(state *models.GlacierRest
 	state.WorkItem.Retry = false
 	state.WorkItem.NeedsAdminReview = true
 	state.NSQMessage.Finish()
+}
+
+func (restorer *APTGlacierRestoreInit) FinishWithMaxAttemptsExceeded(state *models.GlacierRestoreState, report *models.GlacierRequestReport) {
+	numberMovedToS3 := report.FilesRequired - len(report.FilesNotYetInS3)
+	state.WorkSummary.AddError("The system has not managed to move all files "+
+		"from Glacier to S3 after %d attempts. %d of %d files were requested from Glacier. "+
+		"%d have been moved into S3 for restoration. "+
+		"Administrator may manually restart this job.",
+		state.WorkSummary.AttemptNumber, report.FilesRequested, report.FilesRequired,
+		numberMovedToS3)
+	restorer.FinishWithError(state)
 }
 
 // requeueForAdditionalRequests: We call this when we know we didn't
