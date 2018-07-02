@@ -8,6 +8,7 @@ import (
 	"github.com/APTrust/exchange/models"
 	"github.com/APTrust/exchange/network"
 	"github.com/nsqio/go-nsq"
+	"net/url"
 	"strings"
 	"time"
 )
@@ -272,7 +273,9 @@ func (restorer *APTGlacierRestoreInit) Cleanup() {
 				// WorkItem with action = 'Restore'. From there,
 				// it will go into the restore queue, where
 				// the normal apt_restore worker can handle it.
-				restorer.CreateRestoreWorkItem(state)
+				if !restorer.HasPendingRestoreRequest(state) {
+					restorer.CreateRestoreWorkItem(state)
+				}
 				state.NSQMessage.Finish()
 			} else if state.WorkSummary.AttemptNumber >= restorer.Context.Config.GlacierRestoreWorker.MaxAttempts {
 				restorer.FinishWithMaxAttemptsExceeded(state, report)
@@ -593,4 +596,47 @@ func (restorer *APTGlacierRestoreInit) InitializeRetrieval(state *models.Glacier
 	// have requested the restoration. Do we still need to
 	// track this bit of info? Do we care who requested it?
 	glacierRestoreRequest.SomeoneElseRequested = restoreClient.RestoreAlreadyInProgress
+}
+
+// PT #158734805: Check to make sure no existing restore
+// request exists before we create a new one. If a pending
+// restore request exists for this same item, we don't
+// want to create a duplicate. This check allows us to
+// safely re-run a Glacier restore without creating unnecessary
+// extra work (the Restore request is a more heavyweight
+// operation). The bigger dange of creating duplicate Restore
+// requests is that if two workers are simultaneously restoring
+// they same item, they will overwrite each other's work and
+// cause errors. This returns true if there's a pending request.
+func (restorer *APTGlacierRestoreInit) HasPendingRestoreRequest(state *models.GlacierRestoreState) bool {
+	params := url.Values{}
+	params.Add("action", constants.ActionRestore)
+	params.Add("object_identifier", state.WorkItem.ObjectIdentifier)
+	if state.WorkItem.GenericFileIdentifier != "" {
+		params.Add("file_identifier", state.WorkItem.GenericFileIdentifier)
+	}
+
+	hasPendingRequest := false
+	resp := restorer.Context.PharosClient.WorkItemList(params)
+	if resp.Error != nil {
+		objName := state.WorkItem.ObjectIdentifier
+		if state.WorkItem.GenericFileIdentifier != "" {
+			objName = state.WorkItem.GenericFileIdentifier
+		}
+		restorer.Context.MessageLog.Warning(
+			"Worker will create a Restore request for %s (Work Item %d) because "+
+				"it can't determine whether one already exists. "+
+				"Attempt to query Pharos for existing item resulted in error: %v",
+			objName, state.WorkItem.Id, resp.Error)
+	}
+	items := resp.WorkItems()
+	if len(items) > 0 {
+		for _, item := range items {
+			if item.Status == constants.StatusStarted || item.Status == constants.StatusPending {
+				hasPendingRequest = true
+				break
+			}
+		}
+	}
+	return hasPendingRequest
 }
