@@ -610,7 +610,7 @@ func (restorer *APTGlacierRestoreInit) InitializeRetrieval(state *models.Glacier
 // cause errors. This returns true if there's a pending request.
 func (restorer *APTGlacierRestoreInit) HasPendingRestoreRequest(state *models.GlacierRestoreState) bool {
 	params := url.Values{}
-	params.Add("action", constants.ActionRestore)
+	params.Add("item_action", constants.ActionRestore)
 	params.Add("object_identifier", state.WorkItem.ObjectIdentifier)
 	if state.WorkItem.GenericFileIdentifier != "" {
 		params.Add("file_identifier", state.WorkItem.GenericFileIdentifier)
