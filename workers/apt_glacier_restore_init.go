@@ -449,8 +449,10 @@ func (restorer *APTGlacierRestoreInit) CreateRestoreWorkItem(state *models.Glaci
 		state.WorkItem.Status = constants.StatusFailed
 	} else {
 		newSavedWorkItem := resp.WorkItem()
-		state.WorkItem.Note = fmt.Sprintf("All files have been moved from Glacier to S3. "+
+		msg := fmt.Sprintf("All files have been moved from Glacier to S3. "+
 			"Created new WorkItem #%d to finish restoration.", newSavedWorkItem.Id)
+		restorer.Context.MessageLog.Info(msg)
+		state.WorkItem.Note = msg
 		state.WorkItem.Status = constants.StatusSuccess
 		state.WorkItem.Stage = constants.StageResolve
 	}
