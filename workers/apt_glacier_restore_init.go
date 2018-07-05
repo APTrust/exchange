@@ -421,7 +421,7 @@ func (restorer *APTGlacierRestoreInit) RequeueToCheckState(state *models.Glacier
 // close out this WorkItem and open a new one, which will go into
 // the apt_restore queue.
 func (restorer *APTGlacierRestoreInit) CreateRestoreWorkItem(state *models.GlacierRestoreState) {
-	restorer.Context.MessageLog.Info("Files for WorkItem %d are all in S3.", state.WorkItem.Id)
+	restorer.Context.MessageLog.Info("Files for WorkItem %d are all in S3. Creating new Restore WorkItem", state.WorkItem.Id)
 	newWorkItem := &models.WorkItem{}
 	newWorkItem.ObjectIdentifier = state.WorkItem.ObjectIdentifier
 	newWorkItem.GenericFileIdentifier = state.WorkItem.GenericFileIdentifier
@@ -616,13 +616,14 @@ func (restorer *APTGlacierRestoreInit) HasPendingRestoreRequest(state *models.Gl
 		params.Add("file_identifier", state.WorkItem.GenericFileIdentifier)
 	}
 
+	objName := state.WorkItem.ObjectIdentifier
+	if state.WorkItem.GenericFileIdentifier != "" {
+		objName = state.WorkItem.GenericFileIdentifier
+	}
+
 	hasPendingRequest := false
 	resp := restorer.Context.PharosClient.WorkItemList(params)
 	if resp.Error != nil {
-		objName := state.WorkItem.ObjectIdentifier
-		if state.WorkItem.GenericFileIdentifier != "" {
-			objName = state.WorkItem.GenericFileIdentifier
-		}
 		restorer.Context.MessageLog.Warning(
 			"Worker will create a Restore request for %s (Work Item %d) because "+
 				"it can't determine whether one already exists. "+
@@ -633,6 +634,8 @@ func (restorer *APTGlacierRestoreInit) HasPendingRestoreRequest(state *models.Gl
 	if len(items) > 0 {
 		for _, item := range items {
 			if item.Status == constants.StatusStarted || item.Status == constants.StatusPending {
+				restorer.Context.MessageLog.Info("Will not create restore WorkItem for %s because "+
+					"pending restore WorkItem %d already exists.", objName, item.Id)
 				hasPendingRequest = true
 				break
 			}
