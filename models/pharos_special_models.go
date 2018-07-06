@@ -8,32 +8,34 @@ import (
 // IntellectualObject in the format that Pharos accepts for
 // POST/create.
 type IntellectualObjectForPharos struct {
-	Identifier    string `json:"identifier"`
-	BagName       string `json:"bag_name"`
-	InstitutionId int    `json:"institution_id"`
-	Title         string `json:"title"`
-	Description   string `json:"description"`
-	AltIdentifier string `json:"alt_identifier"`
-	Access        string `json:"access"`
-	DPNUUID       string `json:"dpn_uuid"`
-	ETag          string `json:"etag"`
-	State         string `json:"state"`
-	StorageOption string `json:"storage_option"`
+	Identifier         string `json:"identifier"`
+	BagName            string `json:"bag_name"`
+	BagGroupIdentifier string `json:"bag_group_identifier"`
+	InstitutionId      int    `json:"institution_id"`
+	Title              string `json:"title"`
+	Description        string `json:"description"`
+	AltIdentifier      string `json:"alt_identifier"`
+	Access             string `json:"access"`
+	DPNUUID            string `json:"dpn_uuid"`
+	ETag               string `json:"etag"`
+	State              string `json:"state"`
+	StorageOption      string `json:"storage_option"`
 }
 
 func NewIntellectualObjectForPharos(obj *IntellectualObject) *IntellectualObjectForPharos {
 	return &IntellectualObjectForPharos{
-		Identifier:    obj.Identifier,
-		BagName:       obj.BagName,
-		InstitutionId: obj.InstitutionId,
-		Title:         obj.Title,
-		Description:   obj.Description,
-		AltIdentifier: obj.AltIdentifier,
-		Access:        strings.ToLower(obj.Access), // Note that Pharos wants lowercase
-		DPNUUID:       obj.DPNUUID,
-		ETag:          obj.ETag,
-		State:         obj.State,
-		StorageOption: obj.StorageOption,
+		Identifier:         obj.Identifier,
+		BagName:            obj.BagName,
+		BagGroupIdentifier: obj.BagGroupIdentifier,
+		InstitutionId:      obj.InstitutionId,
+		Title:              obj.Title,
+		Description:        obj.Description,
+		AltIdentifier:      obj.AltIdentifier,
+		Access:             strings.ToLower(obj.Access), // Note that Pharos wants lowercase
+		DPNUUID:            obj.DPNUUID,
+		ETag:               obj.ETag,
+		State:              obj.State,
+		StorageOption:      obj.StorageOption,
 	}
 }
 
