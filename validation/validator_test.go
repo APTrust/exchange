@@ -524,6 +524,7 @@ func TestValidator_SavesMinimumMetadata(t *testing.T) {
 	assert.NotEmpty(t, obj.AltIdentifier)
 	assert.NotEmpty(t, obj.IngestTarFilePath)
 	assert.NotEmpty(t, obj.IngestTopLevelDirNames)
+	assert.Equal(t, "Charley Horse", obj.BagGroupIdentifier)
 	assert.Equal(t, 10, len(obj.IngestTags))
 
 	for _, identifier := range gfIdentifiers {

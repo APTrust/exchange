@@ -564,6 +564,8 @@ func (validator *Validator) setIntelObjTagValue(obj *models.IntellectualObject, 
 			obj.Description = tag.Value
 		case "internal-sender-identifier":
 			obj.AltIdentifier = tag.Value
+		case "bag-group-identifier":
+			obj.BagGroupIdentifier = tag.Value
 		}
 	}
 }

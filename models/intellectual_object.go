@@ -2,7 +2,6 @@ package models
 
 import (
 	"encoding/json"
-	//	"fmt"
 	"github.com/APTrust/exchange/constants"
 	"strings"
 	"time"
@@ -33,6 +32,11 @@ type IntellectualObject struct {
 	// BagName is the name of the bag, without the institution
 	// identifier prefix. Example: "bag1234"
 	BagName string `json:"bag_name,omitempty"`
+
+	// BagGroupIdentifier (from the BagIt spec) describes a logical
+	// collection or group to which a bag belongs. This will be empty
+	// in many cases.
+	BagGroupIdentifier string `json:"bag_group_identifier,omitempty"`
 
 	// Institution is the institution identifier (the domain name)
 	// of the institution that owns this bag.
