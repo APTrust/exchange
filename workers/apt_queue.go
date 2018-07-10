@@ -177,7 +177,11 @@ func (aptQueue *APTQueue) getNSQTopic(workItem *models.WorkItem) string {
 	} else if workItem.Action == constants.ActionFixityCheck {
 		topic = config.FixityWorker.NsqTopic
 	} else if workItem.Action == constants.ActionRestore {
-		topic = config.RestoreWorker.NsqTopic
+		if workItem.GenericFileIdentifier != "" {
+			topic = config.FileRestoreWorker.NsqTopic
+		} else {
+			topic = config.RestoreWorker.NsqTopic
+		}
 	} else if workItem.Action == constants.ActionGlacierRestore {
 		topic = config.GlacierRestoreWorker.NsqTopic
 	} else if workItem.Action == constants.ActionDelete {
