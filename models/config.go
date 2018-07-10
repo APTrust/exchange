@@ -137,6 +137,9 @@ type Config struct {
 	// Configuration options for apt_file_delete
 	FileDeleteWorker WorkerConfig
 
+	// Configuration options for apt_file_restore
+	FileRestoreWorker WorkerConfig
+
 	// Configuration options for apt_fixity, which
 	// handles ongoing fixity checks.
 	FixityWorker WorkerConfig
