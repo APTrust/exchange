@@ -2,7 +2,9 @@ package models
 
 import (
 	"encoding/json"
+	"flag"
 	"fmt"
+	"github.com/APTrust/exchange/constants"
 	"github.com/APTrust/exchange/util/fileutil"
 	"github.com/op/go-logging"
 	"os"
@@ -81,10 +83,10 @@ type Config struct {
 	// in use.
 	ActiveConfig string
 
-	// The name of the AWS region that hosts APTrust's S3 files.
+	// The name of the AWS region that hosts APTrust's Glacier files.
 	APTrustGlacierRegion string
 
-	// The name of the AWS region that hosts APTrust's Glacier files.
+	// The name of the AWS region that hosts APTrust's S3 files.
 	APTrustS3Region string
 
 	// Config options specific to DPN services.
@@ -138,6 +140,32 @@ type Config struct {
 	// Configuration options for apt_fixity, which
 	// handles ongoing fixity checks.
 	FixityWorker WorkerConfig
+
+	// GlacierBucketVA is the name of the Glacier-only storage bucket in Virginia.
+	GlacierBucketVA string
+
+	// GlacierBucketOH is the name of the Glacier-only storage bucket in Ohio.
+	GlacierBucketOH string
+
+	// GlacierBucketOR is the name of the Glacier-only storage bucket in Oregon.
+	// This bucket is distinct from the regular APTrust Glacier preservation
+	// bucket in Oregon, since this one is for the Glacier-only storage class.
+	GlacierBucketOR string
+
+	// GlacierRegionVA is the name of the AWS region in which the Virginia
+	// Glacier-only storage bucket is located.
+	GlacierRegionVA string
+
+	// GlacierRegionOH is the name of the AWS region in which the Ohio
+	// Glacier-only storage bucket is located.
+	GlacierRegionOH string
+
+	// GlacierRegionOR is the name of the AWS region in which the Oregon
+	// Glacier-only storage bucket is located.
+	GlacierRegionOR string
+
+	// Configuration options for apt_glacier_restore
+	GlacierRestoreWorker WorkerConfig
 
 	// LogDirectory is where we'll write our log files.
 	LogDirectory string
@@ -428,6 +456,55 @@ func (config *Config) createDirectories() error {
 		}
 	}
 	return nil
+}
+
+func (config *Config) StorageRegionAndBucketFor(storageOption string) (region string, bucket string, err error) {
+	if storageOption == constants.StorageStandard {
+		region = config.APTrustS3Region
+		bucket = config.PreservationBucket
+	} else if storageOption == constants.StorageGlacierVA {
+		region = config.GlacierRegionVA
+		bucket = config.GlacierBucketVA
+	} else if storageOption == constants.StorageGlacierOH {
+		region = config.GlacierRegionOH
+		bucket = config.GlacierBucketOH
+	} else if storageOption == constants.StorageGlacierOR {
+		region = config.GlacierRegionOR
+		bucket = config.GlacierBucketOR
+	} else {
+		err = fmt.Errorf("Unknown Storage Option: %s", storageOption)
+	}
+	return region, bucket, err
+}
+
+// TestsAreRunning returns true if we're running unit or integration
+// tests; false otherwise.
+func (config *Config) TestsAreRunning() bool {
+	return flag.Lookup("test.v") != nil
+}
+
+// GetAWSAccessKeyId returns the AWS Access Key ID from the environment,
+// or an empty string if the ENV var isn't set. In test context, this
+// returns a dummy key id so we don't get an error in the Travis CI
+// environment.
+func (config *Config) GetAWSAccessKeyId() string {
+	keyId := os.Getenv("AWS_ACCESS_KEY_ID")
+	if keyId == "" && config.TestsAreRunning() {
+		keyId = "TestKeyId"
+	}
+	return keyId
+}
+
+// GetAWSAccessSecretAccessKey returns the AWS Secret Access Key
+// from the environment, or an empty string if the ENV var isn't set.
+// In test context, this returns a dummy key id so we don't get an
+// error in the Travis CI environment.
+func (config *Config) GetAWSSecretAccessKey() string {
+	secretKey := os.Getenv("AWS_SECRET_ACCESS_KEY")
+	if secretKey == "" && config.TestsAreRunning() {
+		secretKey = "TestSecretKey"
+	}
+	return secretKey
 }
 
 // DefaultMetadata includes mostly static information about bags

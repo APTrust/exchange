@@ -7,7 +7,7 @@
 	"SkipAlreadyProcessed": true,
 	"DeleteOnSuccess": true,
 	"LogToStderr": false,
-    "UseVolumeService": false,
+	"UseVolumeService": false,
 	"VolumeServicePort": 8898,
 	"LogLevel": 4,
 	"BucketReaderCacheHours": 24,
@@ -24,8 +24,14 @@
 
 	"APTrustS3Region": "us-east-1",
 	"APTrustGlacierRegion": "us-west-2",
+	"GlacierRegionVA": "us-east-1",
+	"GlacierRegionOH": "us-east-2",
+	"GlacierRegionOR": "us-west-2",
 	"PreservationBucket": "aptrust.preservation.storage",
 	"ReplicationBucket": "aptrust.preservation.oregon",
+	"GlacierBucketVA": "aptrust.preservation.glacier.va",
+	"GlacierBucketOH": "aptrust.preservation.glacier.oh",
+	"GlacierBucketOR": "aptrust.preservation.glacier.or",
 	"CustomRestoreBucket": "",
 	"RestoreToTestBuckets": false,
 	"MaxDaysSinceFixityCheck": 90,
@@ -95,6 +101,19 @@
 		"MessageTimeout": "720m"
 	},
 
+	"GlacierRestoreWorker": {
+		"NetworkConnections": 8,
+		"Workers": 4,
+		"NsqTopic": "apt_glacier_restore_topic",
+		"NsqChannel": "apt_glacier_restore_channel",
+		"MaxAttempts": 3,
+		"MaxInFlight": 20,
+		"HeartbeatInterval": "10s",
+		"ReadTimeout": "60s",
+		"WriteTimeout": "10s",
+		"MessageTimeout": "720m"
+	},
+
 	"FileDeleteWorker": {
 		"NetworkConnections": 12,
 		"Workers": 4,
@@ -140,7 +159,7 @@
 		"aptrust.receiving.nd.edu",
 		"aptrust.receiving.virginia.edu",
 		"aptrust.receiving.vt.edu",
-        "aptrust.receiving.vwu.edu"
+		"aptrust.receiving.vwu.edu"
 	],
 	"DPN": {
 		"LocalNode": "aptrust",

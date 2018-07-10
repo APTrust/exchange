@@ -616,9 +616,15 @@ func (restorer *APTRestorer) writeAPTrustInfoFile(restoreState *models.RestoreSt
 			aptInfoPath, err)
 		return
 	}
+	if !util.StringListContains(constants.StorageOptions, restoreState.IntellectualObject.StorageOption) {
+		restorer.Context.MessageLog.Warning("Object %s has invalid StorageOption '%s'",
+			restoreState.IntellectualObject.Identifier,
+			restoreState.IntellectualObject.StorageOption)
+	}
 	fmt.Fprintln(aptInfoFile, "Title:", restoreState.IntellectualObject.Title)
 	fmt.Fprintln(aptInfoFile, "Access:", strings.Title(restoreState.IntellectualObject.Access))
 	fmt.Fprintln(aptInfoFile, "Description:", restoreState.IntellectualObject.Description)
+	fmt.Fprintln(aptInfoFile, "Storage-Option:", restoreState.IntellectualObject.StorageOption)
 	aptInfoFile.Close()
 	restorer.addFile(restoreState, aptInfoPath, "aptrust-info.txt")
 }
@@ -637,19 +643,6 @@ func (restorer *APTRestorer) writeAPTrustInfoFile(restoreState *models.RestoreSt
 // depositors to put tags they want to preserve into other tag files.
 func (restorer *APTRestorer) writeBagInfoFile(restoreState *models.RestoreState) {
 	bagInfoPath := filepath.Join(restoreState.LocalBagDir, "bag-info.txt")
-	// ------------------------------------------------------------------------
-	// A.D. 2017-09-20: Commented out due to PT #151234118.
-	// We should remove this permanently in the coming months, unless
-	// someone brings up a strong reason to keep it.
-	// ------------------------------------------------------------------------
-	// if fileutil.FileExists(bagInfoPath) {
-	//	restorer.Context.MessageLog.Info("bag-info.txt already exists for %s",
-	//		restoreState.IntellectualObject.Identifier)
-	//	return
-	// } else {
-	//	restorer.Context.MessageLog.Info("Creating bag-info.txt for older bag %s",
-	//		restoreState.IntellectualObject.Identifier)
-	// }
 	bagInfoFile, err := os.Create(bagInfoPath)
 	if err != nil {
 		restoreState.PackageSummary.AddError("Cannot create bag-info.txt file %s: %v",
@@ -663,13 +656,16 @@ func (restorer *APTRestorer) writeBagInfoFile(restoreState *models.RestoreState)
 	// away from size limits, and we're going to restore bags all in one piece.
 	// So Bag-Count will be "1 of 1".
 
+	// TODO: Payload-Oxum
+
 	fmt.Fprintln(bagInfoFile, "Source-Organization:", restoreState.IntellectualObject.Institution)
 	fmt.Fprintln(bagInfoFile, "Bagging-Date:", time.Now().UTC().Format(time.RFC3339))
 	fmt.Fprintln(bagInfoFile, "Bag-Count:", "1 of 1")
-	fmt.Fprintln(bagInfoFile, "Bag-Group-Identifier:", "")
+	fmt.Fprintln(bagInfoFile, "Bag-Group-Identifier:", restoreState.IntellectualObject.BagGroupIdentifier)
 	fmt.Fprintln(bagInfoFile, "Internal-Sender-Description:", restoreState.IntellectualObject.Description)
 	fmt.Fprintln(bagInfoFile, "Internal-Sender-Identifier:", restoreState.IntellectualObject.AltIdentifier)
 	bagInfoFile.Close()
+
 	restorer.addFile(restoreState, bagInfoPath, "bag-info.txt")
 }
 
@@ -702,12 +698,34 @@ func (restorer *APTRestorer) addFile(restoreState *models.RestoreState, absPath,
 	}
 	gf.Checksums = append(gf.Checksums, checksumMd5)
 	gf.Checksums = append(gf.Checksums, checksumSha256)
-	restorer.Context.MessageLog.Info("Added file %s to bag. Abs path: %s. Relative path: %s",
-		gf.Identifier, absPath, relativePath)
 	//restorer.Context.MessageLog.Info("ObjIdentifer: %s, gf.OriginalPath: %s",
 	//	restoreState.IntellectualObject.Identifier, gf.OriginalPath())
+
+	// PT #158704126
+	// Because we have saved the bag-info.txt file for a number of bags,
+	// our IntellectualObject may have checksums for that original file.
+	// We need to get rid of those, so they don't show up in the tag-manifests.
+	if gf.OriginalPath() == "bag-info.txt" {
+		index := -1
+		for i, file := range restoreState.IntellectualObject.GenericFiles {
+			if file.OriginalPath() == "bag-info.txt" {
+				index = i
+				break
+			}
+		}
+		if index > -1 {
+			restorer.Context.MessageLog.Info("Deleting old bag-info.txt restoration record from %s so we can replace it with info about the newly generated bag-info.txt file.",
+				restoreState.IntellectualObject.Identifier)
+			files := restoreState.IntellectualObject.GenericFiles
+			copy(files[index:], files[index+1:])
+			files[len(files)-1] = nil // so we can garbage-collect the GenericFile we're deleting
+			restoreState.IntellectualObject.GenericFiles = files[:len(files)-1]
+		}
+	}
 	restoreState.IntellectualObject.GenericFiles = append(
 		restoreState.IntellectualObject.GenericFiles, gf)
+	restorer.Context.MessageLog.Info("Added file %s to bag. Abs path: %s. Relative path: %s",
+		gf.Identifier, absPath, relativePath)
 }
 
 // writeManifest writes the manifest-md5.txt file or the manifest-sha256.txt file
@@ -808,12 +826,18 @@ func (restorer *APTRestorer) fetchAllFiles(restoreState *models.RestoreState) {
 		return
 	}
 
+	region, bucket, err := restorer.Context.Config.StorageRegionAndBucketFor(restoreState.IntellectualObject.StorageOption)
+	if err != nil {
+		restoreState.PackageSummary.AddError("Cannot get region and bucket info for file: %v", err)
+		return
+	}
+
 	// Set up a downloader to fetch files from S3 long-term storage.
 	downloader := network.NewS3Download(
 		os.Getenv("AWS_ACCESS_KEY_ID"),
 		os.Getenv("AWS_SECRET_ACCESS_KEY"),
-		constants.AWSVirginia,
-		restorer.Context.Config.PreservationBucket,
+		region,
+		bucket,
 		"",   // s3 key to fetch - to be set below
 		"",   // local path at which to save the s3 file - set below
 		true, // calculate md5 for manifest

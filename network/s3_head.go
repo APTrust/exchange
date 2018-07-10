@@ -22,6 +22,16 @@ type S3Head struct {
 	secretAccessKey string
 }
 
+// Contains info parsed from x-amz-restore header,
+// if that header is present. The header will only exist
+// if we recently requested the item be retrieved from
+// Glacier into S3.
+type RestoreRequestInfo struct {
+	RequestInProgress bool
+	RequestIsComplete bool
+	S3ExpiryDate      time.Time
+}
+
 // Sets up a new S3 head request. Params:
 //
 // accessKeyId     - The AWS Access Key Id used to authenticate with AWS.
@@ -50,6 +60,15 @@ func (client *S3Head) GetSession() *session.Session {
 		}
 	}
 	return client.session
+}
+
+// SetSessionUrl is a hack that allows us to override the URL
+// endpoint that the S3 client talks to. We do this only during
+// testing, when we want our client to talk to a local test
+// server.
+func (client *S3Head) SetSessionEndpoint(url string) {
+	session := client.GetSession()
+	session.Config.Endpoint = &url
 }
 
 // Head sends a HEAD request to S3 for the specified key.
@@ -99,6 +118,45 @@ func (client *S3Head) GetHeaderMetadata(key string) string {
 		}
 	}
 	return value
+}
+
+func (client *S3Head) GetRestoreRequestInfo() (*RestoreRequestInfo, error) {
+	restoreRequestInfo := &RestoreRequestInfo{
+		RequestInProgress: false,
+		RequestIsComplete: false,
+		S3ExpiryDate:      time.Time{},
+	}
+	if client.Response == nil || util.PointerToString(client.Response.Restore) == "" {
+		return restoreRequestInfo, nil
+	}
+
+	restoreInfoParts := strings.SplitN(util.PointerToString(client.Response.Restore), ",", 2)
+
+	// The expiry section of the header may or may not exist.
+	if len(restoreInfoParts) > 1 {
+		expiry := strings.SplitN(restoreInfoParts[1], "=", 2)
+		if len(expiry) > 1 {
+			// dateString format is "Fri, 23 Dec 2012 00:00:00 GMT"
+			// We need to remove the quotes.
+			// See https://docs.aws.amazon.com/AmazonS3/latest/API/RESTObjectHEAD.html
+			dateString := strings.Replace(expiry[1], "\"", "", -1)
+			fileExpires, err := time.Parse(time.RFC1123, dateString)
+			if err != nil {
+				return nil, err
+			}
+			restoreRequestInfo.RequestIsComplete = true
+			restoreRequestInfo.S3ExpiryDate = fileExpires
+		}
+	}
+
+	// If the header is present, the ongoing-request section should be present.
+	if len(restoreInfoParts) > 0 {
+		ongoing := strings.SplitN(restoreInfoParts[0], "=", 2)
+		if len(ongoing) > 1 && strings.Replace(ongoing[1], "\"", "", -1) == "true" {
+			restoreRequestInfo.RequestInProgress = true
+		}
+	}
+	return restoreRequestInfo, nil
 }
 
 func (client *S3Head) StoredFile() *models.StoredFile {

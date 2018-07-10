@@ -86,3 +86,16 @@ func (state *WorkItemState) SetStateFromIngestManifest(manifest *IngestManifest)
 	}
 	return err
 }
+
+func (state *WorkItemState) GlacierRestoreState() (*GlacierRestoreState, error) {
+	if !state.HasData() {
+		return nil, fmt.Errorf("Cannot convert state to WorkSummary because state is empty.")
+	}
+	if state.Action != constants.ActionGlacierRestore {
+		return nil, fmt.Errorf("Cannot convert state to WorkSummary because action is '%s' "+
+			"and must be '%s'.", state.Action, constants.ActionGlacierRestore)
+	}
+	glacierRestoreState := &GlacierRestoreState{}
+	err := json.Unmarshal([]byte(state.State), glacierRestoreState)
+	return glacierRestoreState, err
+}

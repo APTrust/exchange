@@ -62,6 +62,7 @@ func TestSerializeObjectForPharos(t *testing.T) {
 	assert.Equal(t, "Photo Collection", pharosObj["alt_identifier"])
 	assert.Equal(t, "institution", pharosObj["access"])
 	assert.Equal(t, "12345678", pharosObj["etag"])
+	assert.Equal(t, "US Photos, 1940-1945", pharosObj["bag_group_identifier"])
 }
 
 func TestFindGenericFile(t *testing.T) {

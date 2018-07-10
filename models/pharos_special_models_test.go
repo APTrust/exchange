@@ -53,6 +53,7 @@ func TestNewIntellectualObjectForPharos(t *testing.T) {
 	assert.Equal(t, intelObj.DPNUUID, pharosObj.DPNUUID)
 	assert.Equal(t, intelObj.ETag, pharosObj.ETag)
 	assert.Equal(t, intelObj.State, pharosObj.State)
+	assert.Equal(t, "US Photos, 1940-1945", pharosObj.BagGroupIdentifier)
 	assert.Equal(t, "A", pharosObj.State)
 }
 

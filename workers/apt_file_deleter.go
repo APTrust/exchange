@@ -132,7 +132,7 @@ func (deleter *APTFileDeleter) deleteFromStorage(deleteState *models.DeleteState
 	} else {
 		deleteState.DeleteSummary.AddError("Cannot delete %s from %s because "+
 			"deleter doesn't know where %s is",
-			deleteState.GenericFile.Identifier, fromWhere)
+			deleteState.GenericFile.Identifier, fromWhere, fromWhere)
 		deleteState.DeleteSummary.ErrorIsFatal = true
 		return
 	}

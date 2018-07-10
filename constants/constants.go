@@ -67,8 +67,8 @@ const (
 	StageRequested = "Requested"
 	StageReceive   = "Receive"
 	StageFetch     = "Fetch"
-	StageUnpack    = "Unpack"   // TODO: Delete if we're no longer using this.
-	StageValidate  = "Validate" // TODO: Delete if we're no longer using this.
+	StageUnpack    = "Unpack" // TODO: Delete if we're no longer using this.
+	StageValidate  = "Validate"
 	StageStore     = "Store"
 	StageRecord    = "Record"
 	StageCleanup   = "Cleanup"
@@ -93,18 +93,36 @@ var StageTypes []string = []string{
 // https://github.com/APTrust/fluctus/blob/develop/config/application.rb
 
 const (
-	ActionIngest      = "Ingest"
-	ActionFixityCheck = "Fixity Check"
-	ActionRestore     = "Restore"
-	ActionDelete      = "Delete"
-	ActionDPN         = "DPN"
+	ActionIngest         = "Ingest"
+	ActionFixityCheck    = "Fixity Check"
+	ActionGlacierRestore = "Glacier Restore"
+	ActionRestore        = "Restore"
+	ActionDelete         = "Delete"
+	ActionDPN            = "DPN"
 )
 
 var ActionTypes []string = []string{
 	ActionIngest,
 	ActionFixityCheck,
+	ActionGlacierRestore,
 	ActionRestore,
 	ActionDelete,
+}
+
+// Storage options
+
+const (
+	StorageStandard  = "Standard"
+	StorageGlacierVA = "Glacier-VA"
+	StorageGlacierOH = "Glacier-OH"
+	StorageGlacierOR = "Glacier-OR"
+)
+
+var StorageOptions []string = []string{
+	StorageStandard,
+	StorageGlacierVA,
+	StorageGlacierOH,
+	StorageGlacierOR,
 }
 
 // DPN task types
@@ -146,6 +164,7 @@ var AccessRights []string = []string{
 // AWS Regions (the ones we're using for storage)
 const (
 	AWSVirginia = "us-east-1"
+	AWSOhio     = "us-east-2"
 	AWSOregon   = "us-west-2"
 )
 

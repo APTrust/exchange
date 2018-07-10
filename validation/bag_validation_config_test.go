@@ -29,7 +29,7 @@ func TestLoadBagValidationConfig(t *testing.T) {
 	assert.True(t, conf.AllowMiscDirectories)
 	assert.True(t, conf.TopLevelDirMustMatchBagName)
 	assert.Equal(t, 7, len(conf.FileSpecs))
-	assert.Equal(t, 3, len(conf.TagSpecs))
+	assert.Equal(t, 4, len(conf.TagSpecs))
 	assert.Equal(t, 2, len(conf.FixityAlgorithms))
 
 	// Spot checks

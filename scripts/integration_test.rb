@@ -180,9 +180,9 @@ class IntegrationTest
 	  @service.app_start(@context.apps['apt_volume_service'])
 	  sleep 5
 	  @service.app_start(@context.apps['apt_fetch'])
-	  sleep 50  # let nsq store topic fill before client connects
+	  sleep 40  # let nsq store topic fill before client connects
 	  @service.app_start(@context.apps['apt_store'])
-	  sleep 50  # let nsq record topic fill before client connects
+	  sleep 40  # let nsq record topic fill before client connects
 	  @service.app_start(@context.apps['apt_record'])
 	  sleep 40  # allow fetch/store/record time to finish
 
@@ -197,12 +197,18 @@ class IntegrationTest
 	  # Now get an updated bag from the special bucket and
 	  # ingest that so we can run our update integration tests.
 	  @service.run_bucket_reader_for_update()
+	  puts 'Done with bucket reader. Allowing time to process updated files.'
+
+	  # This is a problem: tests pass or fail depending on how
+	  # long we sleep here and above. Tests that pass on one
+	  # system may fail on a system with a slower internet
+	  # connection.
 	  sleep 50
 	  @results['apt_update_test'] = run('apt_update_post_test.go')
 
 	  @service.stop_everything unless more_tests_follow
 	  sleep 5
-      print_results unless more_tests_follow
+	  print_results unless more_tests_follow
 
 	  # Return value should say whether any tests failed
 	  return (@results['apt_fetch_test'] &&
@@ -279,7 +285,7 @@ class IntegrationTest
 
 	  # Run the post tests.
 	  @results['apt_restore_test'] = run('apt_restore_post_test.go')
-      puts "apt_delete_post_test is currently disabled per PT #156321235"
+	  puts "apt_delete_post_test is currently disabled per PT #156321235"
 	  # @results['apt_delete_test'] = run('apt_delete_post_test.go')
 	end
   end

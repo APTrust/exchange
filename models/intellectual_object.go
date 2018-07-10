@@ -2,7 +2,6 @@ package models
 
 import (
 	"encoding/json"
-	//	"fmt"
 	"github.com/APTrust/exchange/constants"
 	"strings"
 	"time"
@@ -33,6 +32,11 @@ type IntellectualObject struct {
 	// BagName is the name of the bag, without the institution
 	// identifier prefix. Example: "bag1234"
 	BagName string `json:"bag_name,omitempty"`
+
+	// BagGroupIdentifier (from the BagIt spec) describes a logical
+	// collection or group to which a bag belongs. This will be empty
+	// in many cases.
+	BagGroupIdentifier string `json:"bag_group_identifier,omitempty"`
 
 	// Institution is the institution identifier (the domain name)
 	// of the institution that owns this bag.
@@ -80,6 +84,9 @@ type IntellectualObject struct {
 
 	// State of the object. A = active, D = deleted.
 	State string `json:"state"`
+
+	// Storage option: Standard, Glacier-OH, Glacier-OR, Glacier-VA.
+	StorageOption string `json:"storage_option"`
 
 	// CreatedAt is the Pharos timestamp describing when this
 	// IntellectualObject was first recorded in our database.
@@ -206,6 +213,7 @@ func NewIntellectualObject() *IntellectualObject {
 		IngestFilesIgnored: make([]string, 0),
 		IngestTags:         make([]*Tag, 0),
 		State:              "A",
+		StorageOption:      constants.StorageStandard,
 	}
 }
 

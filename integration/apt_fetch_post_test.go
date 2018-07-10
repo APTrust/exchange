@@ -1,6 +1,8 @@
 package integration_test
 
 import (
+	"github.com/APTrust/exchange/constants"
+	"github.com/APTrust/exchange/context"
 	"github.com/APTrust/exchange/models"
 	"github.com/APTrust/exchange/util"
 	"github.com/APTrust/exchange/util/storage"
@@ -45,13 +47,13 @@ func TestFetchResults(t *testing.T) {
 			fetcherTestSpecifics(t, ingestManifest)
 		}
 	}
-	for _, bagName := range testutil.INTEGRATION_BAD_BAGS {
+	for _, bagName := range testutil.INTEGRATION_GLACIER_BAGS {
 		ingestManifest, err := testutil.FindIngestManifestInLog(pathToJsonLog, bagName)
 		require.Nil(t, err, bagName)
 		require.NotNil(t, ingestManifest, bagName)
 		fetcherTestCommon(t, bagName, ingestManifest)
 		// TODO: Test WorkItem (stage, status, etc.) below
-		fetcherTestBadBagResult(t, bagName, ingestManifest)
+		fetcherTestGoodBagResult(t, bagName, ingestManifest)
 	}
 }
 
@@ -120,21 +122,7 @@ func fetcherTestGoodBagResult(t *testing.T, bagName string, ingestManifest *mode
 		assert.NotEmpty(t, gf.IngestSha256VerifiedAt, "Bag %s file %s IngestSha256VerifiedAt is missing", bagName)
 		assert.NotEmpty(t, gf.IngestUUID, "Bag %s file %s UUID is missing", bagName, gfIdentifier)
 		assert.NotEmpty(t, gf.IngestUUIDGeneratedAt, "Bag %s file %s UUIDGeneratedAt is missing", bagName, gfIdentifier)
-		// IngestNeedsSave will be true after apt_fetch, but not after apt_store,
-		// because by then, the item has been saved. This test runs after apt_store
-		// has completed.
-		//assert.True(t, gf.IngestNeedsSave, "Bag %s file %s IngestNeedsSave should be true", bagName, gfIdentifier)
 	}
-}
-
-func fetcherTestBadBagResult(t *testing.T, bagName string, ingestManifest *models.IngestManifest) {
-	// These files are invalid, and should show fatal validation errors.
-	assert.NotEmpty(t, ingestManifest.ValidateResult.Errors,
-		"ValidateResult.Errors should not be empty for %s", bagName)
-	assert.True(t, ingestManifest.ValidateResult.ErrorIsFatal,
-		"ValidateResult.ErrorIsFatal should be true for %s", bagName)
-	assert.False(t, ingestManifest.ValidateResult.Retry,
-		"ValidateResult.Retry should be false for %s", bagName)
 }
 
 func fetcherTestCommon(t *testing.T, bagName string, ingestManifest *models.IngestManifest) {
@@ -168,18 +156,6 @@ func fetcherTestCommon(t *testing.T, bagName string, ingestManifest *models.Inge
 		"BagPath should not be empty for %s", bagName)
 	assert.NotEmpty(t, ingestManifest.DBPath,
 		"DBPath should not be empty for %s", bagName)
-
-	// *** Post tests run after apt_record, which deletes these files.
-	// -----------------------------------------------------------------------
-	// For good bags, both the tar file and the .valdb file should
-	// remain on disk after fetch. For bad bags, both should be gone.
-	// if util.StringListContains(testutil.INTEGRATION_GOOD_BAGS, bagName) {
-	//	assert.True(t, fileutil.FileExists(ingestManifest.BagPath), bagName)
-	//	assert.True(t, fileutil.FileExists(ingestManifest.DBPath), bagName)
-	// } else {
-	//	assert.False(t, fileutil.FileExists(ingestManifest.BagPath), bagName)
-	//	assert.False(t, fileutil.FileExists(ingestManifest.DBPath), bagName)
-	// }
 }
 
 func fetcherTestSpecifics(t *testing.T, ingestManifest *models.IngestManifest) {
@@ -212,7 +188,7 @@ func fetcherTestSpecifics(t *testing.T, ingestManifest *models.IngestManifest) {
 	assert.Equal(t, "Bag-Group-Identifier", obj.IngestTags[5].Label)
 	assert.Equal(t, "Charley Horse", obj.IngestTags[5].Value)
 
-	assert.NotEmpty(t, obj.PremisEvents)
+	assert.NotEmpty(t, obj.PremisEvents, "Failed object id: %s", obj.Identifier)
 
 	// -----------------------------------------------------------------------
 	// Iterate through keys...
@@ -251,4 +227,32 @@ func fetcherTestSpecifics(t *testing.T, ingestManifest *models.IngestManifest) {
 	assert.True(t, gf.IngestNeedsSave)
 	assert.EqualValues(t, 502, gf.IngestFileUid)
 	assert.EqualValues(t, 20, gf.IngestFileGid)
+}
+
+func fetcherTestWorkItem(t *testing.T, bagName string, ingestManifest *models.IngestManifest) {
+	// Show that we recorded basic data.
+	require.NotEmpty(t, ingestManifest.WorkItemId, "WorkItemId should not be empty for %s", bagName)
+
+	// Load config
+	configFile := filepath.Join("config", "integration.json")
+	config, err := models.LoadConfigFile(configFile)
+	require.Nil(t, err)
+	config.ExpandFilePaths()
+	_context := context.NewContext(config)
+
+	resp := _context.PharosClient.WorkItemGet(ingestManifest.WorkItemId)
+	assert.Nil(t, resp.Error)
+	workItem := resp.WorkItem()
+	assert.NotNil(t, workItem)
+
+	// This test runs after apt_store and apt_record,
+	// so the WorkItem will be in a completed state.
+	// All items should have run to completion (Success or Failure).
+	// Nothing should be stuck in an intermediate state.
+	assert.Equal(t, constants.ActionIngest, workItem.Action)
+	if util.StringListContains(testutil.INTEGRATION_BAD_BAGS, bagName) {
+		assert.Equal(t, constants.StatusFailed, workItem.Status)
+	} else {
+		assert.Equal(t, constants.StatusSuccess, workItem.Status)
+	}
 }

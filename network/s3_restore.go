@@ -3,6 +3,7 @@ package network
 import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
+	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
 	"strings"
@@ -17,9 +18,14 @@ type S3Restore struct {
 	ErrorMessage             string
 	Response                 *s3.RestoreObjectOutput
 	RestoreAlreadyInProgress bool
+	AlreadyInActiveTier      bool
 	session                  *session.Session
 	accessKeyId              string
 	secretAccessKey          string
+
+	// TestURL is the URL of a mock S3 server
+	// for use in unit tests only.
+	TestURL string
 }
 
 // Sets up as S3 restore request, which is for S3 items
@@ -54,6 +60,7 @@ func NewS3Restore(accessKeyId, secretAccessKey, region, bucket, key, tier string
 		Tier:       tier,
 		Days:       days,
 		RestoreAlreadyInProgress: false,
+		AlreadyInActiveTier:      false,
 		accessKeyId:              accessKeyId,
 		secretAccessKey:          secretAccessKey,
 	}
@@ -62,14 +69,34 @@ func NewS3Restore(accessKeyId, secretAccessKey, region, bucket, key, tier string
 // Returns an S3 session for this restore request.
 func (client *S3Restore) GetSession() *session.Session {
 	if client.session == nil {
-		var err error
-		client.session, err = GetS3Session(client.AWSRegion,
-			client.accessKeyId, client.secretAccessKey)
-		if err != nil {
-			client.ErrorMessage = err.Error()
+		if client.TestURL == "" {
+			client.getSession()
+		} else {
+			client.getTestSession()
 		}
 	}
 	return client.session
+}
+
+func (client *S3Restore) getSession() {
+	var err error
+	client.session, err = GetS3Session(client.AWSRegion,
+		client.accessKeyId, client.secretAccessKey)
+	if err != nil {
+		client.ErrorMessage = err.Error()
+	}
+}
+
+func (client *S3Restore) getTestSession() {
+	creds := credentials.NewStaticCredentials(client.accessKeyId, client.secretAccessKey, "")
+	client.session = session.New(&aws.Config{
+		Region:      aws.String(client.AWSRegion),
+		Credentials: creds,
+		Endpoint:    &client.TestURL,
+	})
+	if client.session == nil {
+		client.ErrorMessage = "AWS Session (with TestURL) returned nil"
+	}
 }
 
 // Restore the archived file from Glacier to S3.
@@ -97,12 +124,53 @@ func (client *S3Restore) Restore() {
 	}
 	resp, err := service.RestoreObject(params)
 	client.Response = resp
-	if err != nil {
-		if err.(awserr.Error).Code() == s3.ErrCodeObjectAlreadyInActiveTierError ||
-			strings.Contains(err.Error(), "RestoreAlreadyInProgress") {
-			client.RestoreAlreadyInProgress = true
-		} else {
-			client.ErrorMessage = err.Error()
+	client.checkError(err)
+}
+
+func (client *S3Restore) checkError(err error) {
+	if err == nil {
+		return
+	}
+
+	// The first two conditions, indicating that the
+	// item is already in the active tier, or the
+	// restore is currently in progress, should happen
+	// often. We don't want to treat these as errors,
+	// even though the S3 service may indicate them
+	// as such. We do want to let the caller know what
+	// state the restore request is in.
+	if client.isActiveTierError(err) {
+		client.AlreadyInActiveTier = true
+	} else if client.isRestoreInProgressError(err) {
+		client.RestoreAlreadyInProgress = true
+	} else {
+		// This is not a normal or expected condition,
+		// so we do consider this an error.
+		client.ErrorMessage = err.Error()
+	}
+}
+
+// We cannot test this with our unit test because AlreadyInActiveTier
+// is indicated by an HTTP 200 status code, and s3.RestoreObjectOutput
+// gives us no access to the underlying HTTP response or its status code.
+// https://docs.aws.amazon.com/AmazonS3/latest/API/RESTObjectPOSTrestore.html#RESTObjectPOSTrestore-responses
+func (client *S3Restore) isActiveTierError(err error) bool {
+	isActive := false
+	if awsErr, ok := err.(awserr.Error); ok {
+		if awsErr.Code() == s3.ErrCodeObjectAlreadyInActiveTierError {
+			isActive = true
 		}
 	}
+	return isActive
+}
+
+func (client *S3Restore) isRestoreInProgressError(err error) bool {
+	isInProgress := false
+	lcErrorMessage := strings.ToLower(err.Error())
+	if strings.Contains(lcErrorMessage, "restorealreadyinprogress") ||
+		strings.Contains(lcErrorMessage, "conflict") ||
+		strings.Contains(lcErrorMessage, "status code: 409") {
+		isInProgress = true
+	}
+	return isInProgress
 }

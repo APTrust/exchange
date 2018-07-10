@@ -417,6 +417,16 @@ func (fetcher *APTFetcher) buildObject(downloader *network.S3Download, ingestSta
 	obj.IngestRemoteMd5 = *downloader.Response.ETag
 	obj.IngestLocalMd5 = downloader.Md5Digest
 
+	// Standard storage is the default. The Storage-Option tag in
+	// aptrust-info.txt can override this when the validator parses
+	// the bag, and the StorageOption on the existing IntellectualObject
+	// in Pharos (if there is one) overrides everything. If a bag
+	// exists and we're updating it, we force the StorageOption to
+	// match the StorageOption of the original ingest, so we don't
+	// wind up with multiple versions of a file in different preservation
+	// buckets.
+	obj.StorageOption = constants.StorageStandard
+
 	// The ETag for S3 object uploaded via single-part upload is
 	// the file's md5 digest. For objects uploaded via multi-part
 	// upload, the ETag is calculated differently and includes a

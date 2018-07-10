@@ -8,6 +8,7 @@ import (
 	"github.com/APTrust/exchange/models"
 	"github.com/APTrust/exchange/util/fileutil"
 	"github.com/icrowley/fake"
+	"github.com/nsqio/go-nsq"
 	"github.com/satori/go.uuid"
 	"math"
 	"math/rand"
@@ -35,6 +36,12 @@ var INTEGRATION_GOOD_BAGS = []string{
 	"aptrust.integration.test/virginia.edu.uva-lib_2278801.tar",
 }
 
+var INTEGRATION_GLACIER_BAGS = []string{
+	"aptrust.integration.test/example.edu.sample_glacier_oh.tar",
+	"aptrust.integration.test/example.edu.sample_glacier_or.tar",
+	"aptrust.integration.test/example.edu.sample_glacier_va.tar",
+}
+
 var INTEGRATION_BAD_BAGS = []string{
 	"aptrust.integration.test/example.edu.tagsample_bad.tar",
 	"aptrust.integration.test/s3_upload_test.tar",
@@ -42,6 +49,15 @@ var INTEGRATION_BAD_BAGS = []string{
 	"aptrust.integration.test/test.edu.bag2.tar",
 	"aptrust.integration.test/test.edu.bag6.tar",
 }
+
+// Integration tests ingest a second, updated version of these bags.
+const (
+	UPDATED_BAG_IDENTIFIER = "test.edu/example.edu.tagsample_good"
+	UPDATED_BAG_ETAG       = "ec520876f7c87e24f926a8efea390b26"
+
+	UPDATED_GLACIER_BAG_IDENTIFIER = "test.edu/example.edu.sample_glacier_oh"
+	UPDATED_GLACIER_BAG_ETAG       = "bf01126663915a4f5d135a37443b8349"
+)
 
 func ShouldRunIntegrationTests() bool {
 	return os.Getenv("RUN_EXCHANGE_INTEGRATION") == "true"
@@ -86,6 +102,8 @@ func MakeGenericFile(eventCount, checksumCount int, objIdentifier string) *model
 		FileFormat:                   RandomFileFormat(),
 		URI:                          fmt.Sprintf("%s/%s.%s/%s", constants.S3UriPrefix, constants.ReceiveTestBucketPrefix, inst, objName),
 		Size:                         int64(rand.Intn(5000000) + 1),
+		State:                        "A",
+		StorageOption:                constants.StorageStandard,
 		FileCreated:                  RandomDateTime(),
 		FileModified:                 RandomDateTime(),
 		CreatedAt:                    RandomDateTime(),
@@ -152,6 +170,8 @@ func MakeIntellectualObject(fileCount, eventCount, checksumCount, tagCount int) 
 		UpdatedAt:           RandomDateTime(),
 		DPNUUID:             uuid.NewV4().String(),
 		ETag:                fake.Word(),
+		State:               "A",
+		StorageOption:       constants.StorageStandard,
 		IngestS3Bucket:      fmt.Sprintf("%s.%s", constants.ReceiveTestBucketPrefix, inst),
 		IngestS3Key:         fmt.Sprintf("%s.tar", objName),
 		IngestTarFilePath:   fmt.Sprintf("/mnt/aptrust/data/%s/%s.tar", inst, objName),
@@ -291,6 +311,29 @@ func MakePharosDPNBag() *models.PharosDPNBag {
 		CreatedAt:        RandomDateTime(),
 		UpdatedAt:        RandomDateTime(),
 	}
+}
+
+func MakeGlacierRestoreRequest(fileIdentifier string, accepted bool) *models.GlacierRestoreRequest {
+	now := time.Now().UTC()
+	return &models.GlacierRestoreRequest{
+		GenericFileIdentifier:   fileIdentifier,
+		GlacierBucket:           "",
+		GlacierKey:              "",
+		RequestAccepted:         accepted,
+		RequestedAt:             now,
+		EstimatedDeletionFromS3: now.Add(time.Hour * 24 * 5),
+		SomeoneElseRequested:    false,
+		IsAvailableInS3:         false,
+		LastChecked:             now,
+	}
+}
+
+// MakeNsqMessage creates an NSQ Message with the specified body.
+// For our purposes, param body should be an integer in string format,
+// like "1234" or "999".
+func MakeNsqMessage(body string) *nsq.Message {
+	messageId := [nsq.MsgIDLength]byte{'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F'}
+	return nsq.NewMessage(messageId, []byte(body))
 }
 
 func RandomDateTime() time.Time {

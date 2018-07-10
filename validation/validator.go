@@ -179,6 +179,9 @@ func (validator *Validator) readBag() {
 	// Parse the files that can be parsed (manifests & plaintext tag files)
 	validator.parseFiles()
 
+	// We can't set the storage type until after we've parsed the tag files.
+	validator.setStorageOption()
+
 	err = validator.db.Save(obj.Identifier, obj)
 	if err != nil {
 		validator.summary.AddError("Could not save intelObj metadata: %v", err)
@@ -432,6 +435,39 @@ func (validator *Validator) parseFiles() {
 	}
 }
 
+func (validator *Validator) setStorageOption() {
+	obj, err := validator.getIntellectualObject()
+	if err != nil {
+		validator.summary.AddError("Error getting IntelObj from validation db: %v", err)
+		return
+	}
+	obj.StorageOption = constants.StorageStandard
+	storageOptionTag := obj.FindTag("Storage-Option")
+	if storageOptionTag != nil && len(storageOptionTag) > 0 && storageOptionTag[0].Value != "" {
+		obj.StorageOption = storageOptionTag[0].Value
+	}
+
+	// Save obj with new StorageOption
+	err = validator.db.Save(obj.Identifier, obj)
+	if err != nil {
+		validator.summary.AddError("Error saving IntelObj '%s' to db: %v", obj.Identifier, err)
+	}
+
+	gfIdentifiers := validator.db.FileIdentifiers()
+	for _, gfIdentifier := range gfIdentifiers {
+		gf, err := validator.db.GetGenericFile(gfIdentifier)
+		if err != nil {
+			validator.summary.AddError("Error getting file %s from validation db: %v", gfIdentifier, err)
+			return
+		}
+		gf.StorageOption = obj.StorageOption
+		err = validator.db.Save(gfIdentifier, gf)
+		if err != nil {
+			validator.summary.AddError("Error saving generic file '%s' to db: %v", gfIdentifier, err)
+		}
+	}
+}
+
 // parseFile parses a file's contents if the file is a manifest,
 // tag manifest, or parsable plain-text tag file. If the file
 // doesn't match either of these cases, we skip it, and this is
@@ -528,6 +564,8 @@ func (validator *Validator) setIntelObjTagValue(obj *models.IntellectualObject, 
 			obj.Description = tag.Value
 		case "internal-sender-identifier":
 			obj.AltIdentifier = tag.Value
+		case "bag-group-identifier":
+			obj.BagGroupIdentifier = tag.Value
 		}
 	}
 }
@@ -563,7 +601,7 @@ func (validator *Validator) parseManifest(reader io.Reader, fileSummary *fileuti
 			gfIdentifier := fmt.Sprintf("%s/%s", validator.ObjIdentifier, filePath)
 			genericFile, err := validator.db.GetGenericFile(gfIdentifier)
 			if err != nil {
-				validator.summary.AddError("Error finding generic file '%s' in db: %v", gfIdentifier)
+				validator.summary.AddError("Error finding generic file '%s' in db: %v", gfIdentifier, err)
 			}
 			if genericFile == nil {
 				validator.summary.AddError(
@@ -655,7 +693,7 @@ func (validator *Validator) verifyFileSpecs() {
 func (validator *Validator) verifyTagSpecs() {
 	obj, err := validator.getIntellectualObject()
 	if err != nil {
-		validator.summary.AddError("Cannot get object metadata from db: %v")
+		validator.summary.AddError("Cannot get object metadata from db: %v", err)
 		return
 	}
 	for tagName, tagSpec := range validator.BagValidationConfig.TagSpecs {

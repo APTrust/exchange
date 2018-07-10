@@ -17,6 +17,8 @@
         "Title": {"FilePath": "aptrust-info.txt", "Presence": "required", "EmptyOK": false },
         "Access": {"FilePath": "aptrust-info.txt", "Presence": "required", "EmptyOK": false,
                   "AllowedValues": ["Consortia", "Institution", "Restricted"]},
-        "Description": {"FilePath": "aptrust-info.txt", "Presence": "optional", "EmptyOK": true }
+        "Description": {"FilePath": "aptrust-info.txt", "Presence": "optional", "EmptyOK": true },
+        "Storage-Option": {"FilePath": "aptrust-info.txt", "Presence": "optional", "EmptyOK": true,
+                           "AllowedValues": ["Standard", "Glacier-OH", "Glacier-OR", "Glacier-VA"]}
     }
 }

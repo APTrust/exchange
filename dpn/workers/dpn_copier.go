@@ -171,7 +171,7 @@ func (copier *DPNCopier) calculateTagManifestDigest(manifest *models.Replication
 	tarFileIterator, err := fileutil.NewTarFileIterator(manifest.LocalPath)
 	if err != nil {
 		manifest.CopySummary.AddError("Can't get TarFileIterator for %s: %v",
-			manifest.LocalPath, err.Error)
+			manifest.LocalPath, err.Error())
 		return
 	}
 	// DPN BagIt spec says that the top-level dir inside the bag should
@@ -183,7 +183,7 @@ func (copier *DPNCopier) calculateTagManifestDigest(manifest *models.Replication
 		defer readCloser.Close()
 	}
 	if err != nil {
-		manifest.CopySummary.AddError("Can't get tagmanifest from bag: %v", err.Error)
+		manifest.CopySummary.AddError("Can't get tagmanifest from bag: %v", err.Error())
 		return
 	}
 	nonce := ""
@@ -196,7 +196,7 @@ func (copier *DPNCopier) calculateTagManifestDigest(manifest *models.Replication
 	digest, err := copier.calculateSha256(readCloser, nonce)
 	if err != nil {
 		manifest.CopySummary.AddError("Error calculating tagmanifest digest: %v",
-			err.Error)
+			err.Error())
 		return
 	}
 	manifest.ReplicationTransfer.FixityValue = digest

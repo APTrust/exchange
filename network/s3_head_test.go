@@ -8,6 +8,7 @@ import (
 	"os"
 	"strings"
 	"testing"
+	"time"
 )
 
 func TestHead(t *testing.T) {
@@ -35,4 +36,33 @@ func TestHead(t *testing.T) {
 	dpnStoredFile := client.StoredFile()
 	assert.NotNil(t, dpnStoredFile)
 
+}
+
+func testGetRestoreInfo(t *testing.T, client *network.S3Head) {
+	//client.Response.Restore = `ongoing-request="false", expiry-date="Fri, 23 Dec 2012 00:00:00 GMT"`
+	restoreRequestInfo, err := client.GetRestoreRequestInfo()
+	assert.Nil(t, err)
+	require.NotNil(t, restoreRequestInfo)
+	assert.False(t, restoreRequestInfo.RequestInProgress)
+	assert.False(t, restoreRequestInfo.RequestIsComplete)
+	assert.True(t, restoreRequestInfo.S3ExpiryDate.IsZero())
+
+	ongoing := `ongoing-request="true"`
+	client.Response.Restore = &ongoing
+	restoreRequestInfo, err = client.GetRestoreRequestInfo()
+	assert.Nil(t, err)
+	require.NotNil(t, restoreRequestInfo)
+	assert.True(t, restoreRequestInfo.RequestInProgress)
+	assert.False(t, restoreRequestInfo.RequestIsComplete)
+	assert.True(t, restoreRequestInfo.S3ExpiryDate.IsZero())
+
+	completed := `ongoing-request="false", expiry-date="Fri, 23 Dec 2012 00:00:00 GMT"`
+	expiryDate, _ := time.Parse(time.RFC1123, "Fri, 23 Dec 2012 00:00:00 GMT")
+	client.Response.Restore = &completed
+	restoreRequestInfo, err = client.GetRestoreRequestInfo()
+	assert.Nil(t, err)
+	require.NotNil(t, restoreRequestInfo)
+	assert.False(t, restoreRequestInfo.RequestInProgress)
+	assert.True(t, restoreRequestInfo.RequestIsComplete)
+	assert.Equal(t, expiryDate, restoreRequestInfo.S3ExpiryDate)
 }
