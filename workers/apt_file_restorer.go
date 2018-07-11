@@ -5,9 +5,10 @@ import (
 	"github.com/APTrust/exchange/constants"
 	"github.com/APTrust/exchange/context"
 	"github.com/APTrust/exchange/models"
-	//	"github.com/APTrust/exchange/network"
+	"github.com/APTrust/exchange/network"
+	"github.com/APTrust/exchange/util"
 	"github.com/nsqio/go-nsq"
-	// "os"
+	"os"
 	"time"
 )
 
@@ -20,7 +21,7 @@ type APTFileRestorer struct {
 	// from primary and secondary storage.
 	RestoreChannel chan *models.FileRestoreState
 	// PostProcess channel is for the goroutines that record
-	// the outcome of the deletion in Pharos and finish or
+	// the outcome of the restoration in Pharos and finish or
 	// requeue the NSQ message.
 	PostProcessChannel chan *models.FileRestoreState
 }
@@ -67,14 +68,18 @@ func (restorer *APTFileRestorer) restore() {
 		restoreState.RestoreSummary.AttemptNumber += 1
 		restoreState.RestoreSummary.Start()
 
-		//
-		// *** TODO ***
-		//
-		// 1. Make sure the file has not already been restored. Check the
-		//    name and etag of the item in the restoration bucket, if it
-		//    exists.
-		// 2. If file has not already been restored, copy it to the depositor's
-		//    restoration bucket now.
+		region, bucket, err := restorer.Context.Config.StorageRegionAndBucketFor(restoreState.GenericFile.StorageOption)
+		if err != nil {
+			restoreState.RestoreSummary.AddError(err.Error())
+		} else {
+			if restorer.alreadyRestored(restoreState) {
+				restorationBucket := util.RestorationBucketFor(restoreState.IntellectualObject.Institution)
+				restorer.Context.MessageLog.Info("File %s has already been restored to %s",
+					restoreState.GenericFile.Identifier, restorationBucket)
+			} else {
+				restorer.copyToRestorationBucket(restoreState, region, bucket)
+			}
+		}
 
 		restoreState.RestoreSummary.Finish()
 		restorer.PostProcessChannel <- restoreState
@@ -91,21 +96,47 @@ func (restorer *APTFileRestorer) postProcess() {
 	}
 }
 
-func (restorer *APTFileRestorer) copyToRestorationBucket(restoreState *models.FileRestoreState, fromWhere string) {
-	// Find the key we'll need to restore.
-	// key, err := restoreState.GenericFile.PreservationStorageFileName()
-	// if err != nil {
-	// 	restoreState.RestoreSummary.AddError("For file %s: %v", restoreState.GenericFile.Identifier, err)
-	// 	restoreState.RestoreSummary.ErrorIsFatal = true
-	// 	return
-	// }
+func (restorer *APTFileRestorer) copyToRestorationBucket(restoreState *models.FileRestoreState, region, bucket string) {
+	restorationBucket := util.RestorationBucketFor(restoreState.IntellectualObject.Institution)
+	fileUUID, err := restoreState.GenericFile.PreservationStorageFileName()
+	if err != nil {
+		restoreState.RestoreSummary.AddError("Error getting file UUID: %v", err)
+		return
+	}
+	copier := network.NewS3Copy(
+		os.Getenv("AWS_ACCESS_KEY_ID"),
+		os.Getenv("AWS_SECRET_ACCESS_KEY"),
+		region,
+		bucket,
+		fileUUID,
+		restorationBucket,
+		restoreState.GenericFile.Identifier)
+	copier.Copy()
+	if copier.ErrorMessage != "" {
+		restoreState.RestoreSummary.AddError("Error copying to restoration bucket: %s",
+			copier.ErrorMessage)
+		return
+	}
+	restoreState.RestoredToURL = fmt.Sprintf("%s%s/%s", constants.S3UriPrefix, restorationBucket, restoreState.GenericFile.Identifier)
+	restoreState.CopiedToRestorationAt = time.Now().UTC()
+}
 
-	// Set up the proper S3 or Glacier client
-	// 1. Determine region and bucket name based on GenericFile StorageOption.
-	// 2. Create a client to copy from that region.
-	// 3. Run the S3 bucket-to-bucket copy, renaming the file (?) from
-	//    the UUID name to the GenericFile.Identifier
-	// 4. Set FileRestoreState.RestoredToURL and FileRestoreState.CopiedToRestorationAt
+func (restorer *APTFileRestorer) alreadyRestored(restoreState *models.FileRestoreState) bool {
+	restorationBucket := util.RestorationBucketFor(restoreState.IntellectualObject.Institution)
+	client := network.NewS3Head(
+		os.Getenv("AWS_ACCESS_KEY_ID"),
+		os.Getenv("AWS_SECRET_ACCESS_KEY"),
+		restorer.Context.Config.APTrustS3Region,
+		restorationBucket)
+	client.Head(restoreState.GenericFile.Identifier)
+	if client.Response != nil && client.ErrorMessage == "" {
+		sizeInS3 := int64(-1)
+		if client.Response.ContentLength != nil {
+			sizeInS3 = *client.Response.ContentLength
+		}
+		return restoreState.GenericFile.Size == sizeInS3
+	}
+	return false
 }
 
 func (restorer *APTFileRestorer) buildState(message *nsq.Message) (*models.FileRestoreState, error) {
@@ -119,6 +150,8 @@ func (restorer *APTFileRestorer) buildState(message *nsq.Message) (*models.FileR
 		return nil, fmt.Errorf("WorkItem %d is missing generic file identifier",
 			workItem.Id)
 	}
+
+	// Get the GenericFile
 	resp := restorer.Context.PharosClient.GenericFileGet(workItem.GenericFileIdentifier, false)
 	if resp.Error != nil {
 		return nil, fmt.Errorf("Error getting generic file '%s': %v",
@@ -130,6 +163,21 @@ func (restorer *APTFileRestorer) buildState(message *nsq.Message) (*models.FileR
 			workItem.GenericFileIdentifier)
 	}
 	restoreState.GenericFile = gf
+
+	// Get the IntellectualObject of which the file is a part.
+	// We need this primarily for the Institution identifier.
+	resp = restorer.Context.PharosClient.IntellectualObjectGet(workItem.ObjectIdentifier, false, false)
+	if resp.Error != nil {
+		return nil, fmt.Errorf("Error getting intellectual object '%s': %v",
+			workItem.ObjectIdentifier, resp.Error)
+	}
+	obj := resp.IntellectualObject()
+	if obj == nil {
+		return nil, fmt.Errorf("Pharos client got nil for intellectual object '%s'",
+			workItem.ObjectIdentifier)
+	}
+	restoreState.IntellectualObject = obj
+
 	return restoreState, nil
 }
 
@@ -163,7 +211,7 @@ func (restorer *APTFileRestorer) finishWithError(restoreState *models.FileRestor
 	restorer.Context.MessageLog.Error(restoreState.RestoreSummary.AllErrorsAsString())
 
 	if restoreState.RestoreSummary.ErrorIsFatal {
-		restorer.Context.MessageLog.Error("Deletion of %s failed",
+		restorer.Context.MessageLog.Error("Restoration of %s failed",
 			restoreState.GenericFile.Identifier)
 		restoreState.NSQMessage.Finish()
 	} else {

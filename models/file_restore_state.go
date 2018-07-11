@@ -20,6 +20,8 @@ type FileRestoreState struct {
 	// GenericFile is the file we're going to restore. We don't
 	// serialize this. We fetch it fresh from Pharos each time.
 	GenericFile *GenericFile `json:"-"`
+	// IntellectualObject is the object to which the file belongs.
+	IntellectualObject *IntellectualObject `json:"-"`
 	// RestoreSummary contains information about the restore operation,
 	// such as when it started and completed, whether there were errors,
 	// etc.
