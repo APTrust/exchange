@@ -1,0 +1,6 @@
+-------- BEGIN test.edu/example.edu.tagsample_good/data/datastream-MARC | WorkItem: 1043272375 | Time: 2018-07-12T20:59:33Z -------- 
+ {"RestoreSummary":{"Attempted":true,"AttemptNumber":1,"ErrorIsFatal":false,"Errors":[],"StartedAt":"2018-07-12T20:59:32.368375751Z","FinishedAt":"2018-07-12T20:59:32.829622171Z","Retry":true},"RestoredToURL":"","CopiedToRestorationAt":"0001-01-01T00:00:00Z"} 
+ -------- END test.edu/example.edu.tagsample_good/data/datastream-MARC | WorkItem: 1043272375 | Time: 2018-07-12T20:59:33Z --------
+-------- BEGIN test.edu/example.edu.tagsample_good/data/datastream-DC | WorkItem: 1043272374 | Time: 2018-07-12T20:59:33Z -------- 
+ {"RestoreSummary":{"Attempted":true,"AttemptNumber":1,"ErrorIsFatal":false,"Errors":[],"StartedAt":"2018-07-12T20:59:33.092441495Z","FinishedAt":"2018-07-12T20:59:33.121605288Z","Retry":true},"RestoredToURL":"","CopiedToRestorationAt":"0001-01-01T00:00:00Z"} 
+ -------- END test.edu/example.edu.tagsample_good/data/datastream-DC | WorkItem: 1043272374 | Time: 2018-07-12T20:59:33Z --------

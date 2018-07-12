@@ -203,7 +203,7 @@ class IntegrationTest
 	  # long we sleep here and above. Tests that pass on one
 	  # system may fail on a system with a slower internet
 	  # connection.
-	  sleep 50
+	  sleep 60
 	  @results['apt_update_test'] = run('apt_update_post_test.go')
 
 	  @service.stop_everything unless more_tests_follow
@@ -266,6 +266,7 @@ class IntegrationTest
   def apt_restore(more_tests_follow)
 	run_suite(more_tests_follow) do
 	  @build.build(@context.apps['apt_restore'])
+      @build.build(@context.apps['apt_file_restore'])
 	  @build.build(@context.apps['apt_file_delete'])
 
 	  # Run the prerequisite process (with tests)
@@ -280,6 +281,7 @@ class IntegrationTest
 
 	  # Start services required for this specific set of tests.
 	  @service.app_start(@context.apps['apt_restore'])
+	  @service.app_start(@context.apps['apt_file_restore'])
 	  @service.app_start(@context.apps['apt_file_delete'])
 	  sleep 60
 

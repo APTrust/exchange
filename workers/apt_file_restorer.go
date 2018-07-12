@@ -1,6 +1,7 @@
 package workers
 
 import (
+	"encoding/json"
 	"fmt"
 	"github.com/APTrust/exchange/constants"
 	"github.com/APTrust/exchange/context"
@@ -57,7 +58,7 @@ func (restorer *APTFileRestorer) HandleMessage(message *nsq.Message) error {
 	restoreState.WorkItem.Note = "Starting file restore process"
 	restoreState.WorkItem.SetNodeAndPid()
 	restoreState.WorkItem.Status = constants.StatusStarted
-	restorer.saveWorkItem(restoreState)
+	restorer.saveWorkItem(restoreState, false)
 	restorer.RestoreChannel <- restoreState
 	return nil
 }
@@ -206,7 +207,7 @@ func (restorer *APTFileRestorer) finishWithError(restoreState *models.FileRestor
 	restoreState.WorkItem.Pid = 0
 	restoreState.WorkItem.StageStartedAt = nil
 
-	restorer.saveWorkItem(restoreState)
+	restorer.saveWorkItem(restoreState, true)
 
 	restorer.Context.MessageLog.Error(restoreState.RestoreSummary.AllErrorsAsString())
 
@@ -232,11 +233,11 @@ func (restorer *APTFileRestorer) finishWithSuccess(restoreState *models.FileRest
 	restoreState.WorkItem.Pid = 0
 	restoreState.WorkItem.Status = constants.StatusSuccess
 	restoreState.WorkItem.Stage = constants.StageResolve
-	restorer.saveWorkItem(restoreState)
+	restorer.saveWorkItem(restoreState, true)
 	restoreState.NSQMessage.Finish()
 }
 
-func (restorer *APTFileRestorer) saveWorkItem(restoreState *models.FileRestoreState) {
+func (restorer *APTFileRestorer) saveWorkItem(restoreState *models.FileRestoreState, logJson bool) {
 	resp := restorer.Context.PharosClient.WorkItemSave(restoreState.WorkItem)
 	// We can proceed if this call fails. Pharos just won't show users
 	// the current state of processing for this item.
@@ -249,4 +250,30 @@ func (restorer *APTFileRestorer) saveWorkItem(restoreState *models.FileRestoreSt
 			restoreState.WorkItem.GenericFileIdentifier,
 			resp.Error)
 	}
+	if logJson {
+		stateJson, err := json.Marshal(restoreState)
+		if err != nil {
+			errMessage := fmt.Sprintf("Cannot marshal restoreState JSON: %v", err)
+			restorer.Context.MessageLog.Error(errMessage)
+		} else {
+			restorer.logJson(restoreState, string(stateJson))
+		}
+	}
+}
+
+// LogJson dumps the WorkItemState.State into the JSON log, surrounded by
+// markers that make it easy to find.
+func (restorer *APTFileRestorer) logJson(restoreState *models.FileRestoreState, jsonString string) {
+	if restoreState == nil || restoreState.GenericFile == nil {
+		restorer.Context.MessageLog.Warning("Can't log JSON state because state or generic file is nil for WorkItem %d", restoreState.WorkItem.Id)
+		return
+	}
+	timestamp := time.Now().UTC().Format(time.RFC3339)
+	startMessage := fmt.Sprintf("-------- BEGIN %s | WorkItem: %d | Time: %s --------",
+		restoreState.GenericFile.Identifier, restoreState.WorkItem.Id, timestamp)
+	endMessage := fmt.Sprintf("-------- END %s | WorkItem: %d | Time: %s --------",
+		restoreState.GenericFile.Identifier, restoreState.WorkItem.Id, timestamp)
+	restorer.Context.JsonLog.Println(startMessage, "\n",
+		jsonString, "\n",
+		endMessage)
 }

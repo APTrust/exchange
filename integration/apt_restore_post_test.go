@@ -46,6 +46,29 @@ func TestRetoreResults(t *testing.T) {
 		// TODO: Check for file existence in S3
 		restoreTestCommon(t, objIdentifier, restoreState, config)
 	}
+
+	files := []string{
+		"test.edu/example.edu.tagsample_good/data/datastream-DC",
+		"test.edu/example.edu.tagsample_good/data/datastream-MARC",
+	}
+	pathToJsonLog = filepath.Join(config.LogDirectory, "apt_file_restore.json")
+	for _, gfIdentifier := range files {
+		restoreState, err := testutil.FindFileRestoreStateInLog(pathToJsonLog, gfIdentifier)
+		assert.Nil(t, err)
+		if err != nil {
+			testFailed = true
+			continue
+		}
+		assert.False(t, restoreState.RestoreSummary.FinishedAt.IsZero(),
+			"FinishedAt should be non-empty for %s", gfIdentifier)
+		assert.Empty(t, restoreState.RestoreSummary.Errors,
+			"Errors should be empty for %s", gfIdentifier)
+		assert.False(t, restoreState.CopiedToRestorationAt.IsZero(),
+			"CopiedToRestorationAt should be non-empty for %s", gfIdentifier)
+		assert.NotEmpty(t, restoreState.RestoredToURL,
+			"RestoredToURL should not be empty for %s", gfIdentifier)
+
+	}
 	require.False(t, testFailed, "One or more tests failed")
 }
 

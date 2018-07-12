@@ -1,10 +1,13 @@
 package integration_test
 
 import (
+	"github.com/APTrust/exchange/constants"
 	"github.com/APTrust/exchange/context"
 	"github.com/APTrust/exchange/models"
+	"github.com/APTrust/exchange/network"
 	"github.com/APTrust/exchange/util/testutil"
 	"github.com/stretchr/testify/require"
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -40,6 +43,7 @@ func TestMarkForRestore(t *testing.T) {
 		"test.edu/example.edu.tagsample_good/data/datastream-MARC",
 	}
 	for _, gfIdentifier := range files {
+		deleteOldRestoredFile(gfIdentifier)
 		resp := _context.PharosClient.GenericFileRequestRestore(gfIdentifier)
 		workItem := resp.WorkItem()
 		require.Nil(t, resp.Error)
@@ -47,4 +51,14 @@ func TestMarkForRestore(t *testing.T) {
 		_context.MessageLog.Info("Created restore request WorkItem #%d for file %s",
 			workItem.Id, gfIdentifier)
 	}
+}
+
+func deleteOldRestoredFile(gfIdentifier string) {
+	s3ObjectDelete := network.NewS3ObjectDelete(
+		os.Getenv("AWS_ACCESS_KEY_ID"),
+		os.Getenv("AWS_SECRET_ACCESS_KEY"),
+		constants.AWSVirginia,
+		"aptrust.restore.test.test.edu",
+		[]string{gfIdentifier})
+	s3ObjectDelete.DeleteList()
 }
