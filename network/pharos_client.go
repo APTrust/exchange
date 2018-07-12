@@ -455,6 +455,33 @@ func (client *PharosClient) GenericFileSaveBatch(objList []*models.GenericFile) 
 	return resp
 }
 
+// GenericFileRequestRestore creates a restore request in Pharos for
+// the file with the specified identifier. This is used in integration
+// testing to create restore requests.
+func (client *PharosClient) GenericFileRequestRestore(identifier string) *PharosResponse {
+	// Set up the response object
+	resp := NewPharosResponse(PharosWorkItem)
+	resp.workItems = make([]*models.WorkItem, 1)
+
+	// Build the url and the request object
+	relativeUrl := fmt.Sprintf("/api/%s/files/restore/%s", client.apiVersion, url.QueryEscape(identifier))
+	absoluteUrl := client.BuildUrl(relativeUrl)
+
+	// Run the request.
+	client.DoRequest(resp, "PUT", absoluteUrl, nil)
+	if resp.Error != nil {
+		return resp
+	}
+
+	// Note that we're getting a WorkItem back.
+	workItem := &models.WorkItem{}
+	resp.Error = json.Unmarshal(resp.data, workItem)
+	if resp.Error == nil {
+		resp.workItems[0] = workItem
+	}
+	return resp
+}
+
 // ChecksumGet returns the checksum with the specified id
 func (client *PharosClient) ChecksumGet(id int) *PharosResponse {
 	// Set up the response object
