@@ -21,6 +21,8 @@ func TestMarkForRestore(t *testing.T) {
 	config, err := models.LoadConfigFile(configFile)
 	require.Nil(t, err)
 	_context := context.NewContext(config)
+
+	// Request a few objects for restore.
 	for _, s3Key := range testutil.INTEGRATION_GOOD_BAGS[0:8] {
 		identifier := strings.Replace(s3Key, "aptrust.integration.test", "test.edu", 1)
 		identifier = strings.Replace(identifier, ".tar", "", 1)
@@ -28,7 +30,21 @@ func TestMarkForRestore(t *testing.T) {
 		workItem := resp.WorkItem()
 		require.Nil(t, resp.Error)
 		require.NotNil(t, workItem)
-		_context.MessageLog.Info("Created restore request WorkItem #%d for %s",
+		_context.MessageLog.Info("Created restore request WorkItem #%d for object %s",
 			workItem.Id, workItem.ObjectIdentifier)
+	}
+
+	// And request a few files too.
+	files := []string{
+		"test.edu/example.edu.tagsample_good/data/datastream-DC",
+		"test.edu/example.edu.tagsample_good/data/datastream-MARC",
+	}
+	for _, gfIdentifier := range files {
+		resp := _context.PharosClient.GenericFileRequestRestore(gfIdentifier)
+		workItem := resp.WorkItem()
+		require.Nil(t, resp.Error)
+		require.NotNil(t, workItem)
+		_context.MessageLog.Info("Created restore request WorkItem #%d for file %s",
+			workItem.Id, gfIdentifier)
 	}
 }
