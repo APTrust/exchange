@@ -1,6 +1,7 @@
 package integration_test
 
 import (
+	"fmt"
 	"github.com/APTrust/exchange/constants"
 	"github.com/APTrust/exchange/context"
 	"github.com/APTrust/exchange/models"
@@ -60,5 +61,6 @@ func deleteOldRestoredFile(gfIdentifier string) {
 		constants.AWSVirginia,
 		"aptrust.restore.test.test.edu",
 		[]string{gfIdentifier})
+	fmt.Println("Deleting old restored file", gfIdentifier)
 	s3ObjectDelete.DeleteList()
 }
