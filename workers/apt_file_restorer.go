@@ -46,6 +46,7 @@ func NewAPTFileRestorer(_context *context.Context) *APTFileRestorer {
 
 // This is the callback that NSQ workers use to handle messages from NSQ.
 func (restorer *APTFileRestorer) HandleMessage(message *nsq.Message) error {
+	message.DisableAutoResponse()
 	// Build the FileRestoreState object by fetching WorkItem and IntellectualObject
 	// from Pharos.
 	restoreState, err := restorer.buildState(message)
@@ -78,7 +79,9 @@ func (restorer *APTFileRestorer) restore() {
 				restorer.Context.MessageLog.Info("File %s has already been restored to %s",
 					restoreState.GenericFile.Identifier, restorationBucket)
 			} else {
+				restoreState.NSQMessage.Touch()
 				restorer.copyToRestorationBucket(restoreState, region, bucket)
+				restoreState.NSQMessage.Touch()
 			}
 		}
 
