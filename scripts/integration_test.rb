@@ -203,7 +203,7 @@ class IntegrationTest
 	  # long we sleep here and above. Tests that pass on one
 	  # system may fail on a system with a slower internet
 	  # connection.
-      sleep 75
+	  sleep 75
 	  @results['apt_update_test'] = run('apt_update_post_test.go')
 
 	  @service.stop_everything unless more_tests_follow
