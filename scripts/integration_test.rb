@@ -641,10 +641,11 @@ class IntegrationTest
     max_retries = max_timeout / interval || 1
     found = false
     max_retries.times do |i|
-      if i % 5 == 0
+      if i % 5 == 0 || i == max_retries
         puts "[#{i * interval}s]Checking #{file} for #{string}"
       end
-      if File.readlines(file).grep(string).size > 0
+      if File.readlines(file).grep(Regexp.new(string)).size > 0
+        puts "Found #{string}"
         found = true
         break
       end
