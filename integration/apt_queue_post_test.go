@@ -92,7 +92,7 @@ func testItemsQueued(t *testing.T, expected *stats.APTQueueStats, actual *stats.
 	for _, itemList := range expected.ItemsQueued {
 		for _, item := range itemList {
 			matchingItem, topic := actual.FindQueuedItemByName(item.Name)
-			assert.NotNil(t, matchingItem, "WorkItem %s missing from ItemsQueued", item.Name)
+			require.NotNil(t, matchingItem, "WorkItem %s missing from ItemsQueued", item.Name)
 			if matchingItem.GenericFileIdentifier != "" {
 				assert.Equal(t, "apt_file_restore_topic", topic)
 			} else {

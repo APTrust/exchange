@@ -6,6 +6,7 @@ import (
 	"github.com/APTrust/exchange/context"
 	"github.com/APTrust/exchange/models"
 	"github.com/APTrust/exchange/network"
+	"github.com/APTrust/exchange/util"
 	"github.com/APTrust/exchange/util/testutil"
 	"github.com/stretchr/testify/require"
 	"os"

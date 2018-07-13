@@ -28,7 +28,7 @@ def run
   if (diff > 60)
 	mins = (diff / 60).to_i
 	secs = (diff % 60).to_i
-	secs = "0" + secs if secs < 10
+	secs = "0" + secs.to_s if secs < 10
 	running_time = "#{mins}:#{secs}"
   end
   puts "Tests finished in #{running_time}"
