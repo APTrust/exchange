@@ -70,19 +70,14 @@ func (restorer *APTFileRestorer) restore() {
 		restoreState.RestoreSummary.AttemptNumber += 1
 		restoreState.RestoreSummary.Start()
 
-		region, bucket, err := restorer.Context.Config.StorageRegionAndBucketFor(restoreState.GenericFile.StorageOption)
-		if err != nil {
-			restoreState.RestoreSummary.AddError(err.Error())
+		if restorer.alreadyRestored(restoreState) {
+			restorationBucket := util.RestorationBucketFor(restoreState.IntellectualObject.Institution)
+			restorer.Context.MessageLog.Info("File %s has already been restored to %s",
+				restoreState.GenericFile.Identifier, restorationBucket)
 		} else {
-			if restorer.alreadyRestored(restoreState) {
-				restorationBucket := util.RestorationBucketFor(restoreState.IntellectualObject.Institution)
-				restorer.Context.MessageLog.Info("File %s has already been restored to %s",
-					restoreState.GenericFile.Identifier, restorationBucket)
-			} else {
-				restoreState.NSQMessage.Touch()
-				restorer.copyToRestorationBucket(restoreState, region, bucket)
-				restoreState.NSQMessage.Touch()
-			}
+			restoreState.NSQMessage.Touch()
+			restorer.copyToRestorationBucket(restoreState)
+			restoreState.NSQMessage.Touch()
 		}
 
 		restoreState.RestoreSummary.Finish()
@@ -100,18 +95,28 @@ func (restorer *APTFileRestorer) postProcess() {
 	}
 }
 
-func (restorer *APTFileRestorer) copyToRestorationBucket(restoreState *models.FileRestoreState, region, bucket string) {
+func (restorer *APTFileRestorer) copyToRestorationBucket(restoreState *models.FileRestoreState) {
+	sourceRegion, sourceBucket, err := restorer.Context.Config.StorageRegionAndBucketFor(restoreState.GenericFile.StorageOption)
+	if err != nil {
+		restoreState.RestoreSummary.AddError(err.Error())
+		return
+	}
 	restorationBucket := util.RestorationBucketFor(restoreState.IntellectualObject.Institution)
+	// PT #159115778: Get a client for the S3 restoration region, since
+	// this is the region we're writing to.
+	restorationRegion := restorer.Context.Config.APTrustS3Region
 	fileUUID, err := restoreState.GenericFile.PreservationStorageFileName()
 	if err != nil {
 		restoreState.RestoreSummary.AddError("Error getting file UUID: %v", err)
 		return
 	}
+	restorer.Context.MessageLog.Info("Copying %s from %s to %s", restoreState.GenericFile.Identifier,
+		sourceRegion, restorationRegion)
 	copier := network.NewS3Copy(
 		os.Getenv("AWS_ACCESS_KEY_ID"),
 		os.Getenv("AWS_SECRET_ACCESS_KEY"),
-		region,
-		bucket,
+		restorationRegion, // PT #159115778: Not source region!
+		sourceBucket,
 		fileUUID,
 		restorationBucket,
 		restoreState.GenericFile.Identifier)
