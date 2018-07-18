@@ -103,6 +103,24 @@ func TestFindRestoreStateInLog(t *testing.T) {
 	assert.Nil(t, restoreState)
 }
 
+func TestFindFileRestoreStateInLog(t *testing.T) {
+	pathToLogFile, _ := fileutil.RelativeToAbsPath(
+		filepath.Join("testdata", "integration_results", "apt_file_restore.json"))
+
+	// Should get a RestoreState object
+	restoreState, err := testutil.FindFileRestoreStateInLog(pathToLogFile,
+		"test.edu/example.edu.tagsample_good/data/datastream-MARC")
+	assert.Nil(t, err)
+	assert.NotNil(t, restoreState)
+	assert.NotNil(t, restoreState.RestoreSummary)
+
+	// Should get an error if the item does not exist
+	restoreState, err = testutil.FindFileRestoreStateInLog(pathToLogFile,
+		"test.edu/example.edu.tagsample_good/data/does_not_exist.txt")
+	assert.NotNil(t, err)
+	assert.Nil(t, restoreState)
+}
+
 func TestExtractJson(t *testing.T) {
 	// APTrust Ingest - tests apt_fetch.json, but apt_store.json and
 	// apt_record.json record the same JSON structure. We don't have

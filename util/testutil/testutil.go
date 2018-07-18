@@ -51,6 +51,7 @@ var INTEGRATION_BAD_BAGS = []string{
 }
 
 // Integration tests ingest a second, updated version of these bags.
+// Note that scripts/integration_test.rb checks for the two etags below.
 const (
 	UPDATED_BAG_IDENTIFIER = "test.edu/example.edu.tagsample_good"
 	UPDATED_BAG_ETAG       = "ec520876f7c87e24f926a8efea390b26"

@@ -66,25 +66,38 @@ func TestRestorationQueue(t *testing.T) {
 	require.Nil(t, err, "Could not create context")
 	stats, err := _context.NSQClient.GetStats()
 	require.Nil(t, err)
-	foundTopic := false
+	foundObjectTopic := false
+	foundFileTopic := false
 	for _, topic := range stats.Data.Topics {
 		if topic.TopicName == _context.Config.RestoreWorker.NsqTopic {
-			// Should have 7 items. See apt_mark_for_restore_test.go
-			foundTopic = true
+			// Should have 8 items. See apt_mark_for_restore_test.go
+			foundObjectTopic = true
 			assert.EqualValues(t, uint64(8), topic.MessageCount,
 				"NSQ restore topic should have 8 items")
 		}
+		if topic.TopicName == _context.Config.FileRestoreWorker.NsqTopic {
+			// Should have 2 items. See apt_mark_for_restore_test.go
+			foundFileTopic = true
+			assert.EqualValues(t, uint64(2), topic.MessageCount,
+				"NSQ file restore topic should have 2 items")
+		}
 	}
-	assert.True(t, foundTopic, "Nothing was queued in %s",
+	assert.True(t, foundObjectTopic, "Nothing was queued in %s",
 		_context.Config.RestoreWorker.NsqTopic)
+	assert.True(t, foundFileTopic, "Nothing was queued in %s",
+		_context.Config.FileRestoreWorker.NsqTopic)
 }
 
 func testItemsQueued(t *testing.T, expected *stats.APTQueueStats, actual *stats.APTQueueStats) {
 	for _, itemList := range expected.ItemsQueued {
 		for _, item := range itemList {
 			matchingItem, topic := actual.FindQueuedItemByName(item.Name)
-			assert.NotNil(t, matchingItem, "WorkItem %s missing from ItemsQueued", item.Name)
-			assert.Equal(t, "apt_restore_topic", topic)
+			require.NotNil(t, matchingItem, "WorkItem %s missing from ItemsQueued", item.Name)
+			if matchingItem.GenericFileIdentifier != "" {
+				assert.Equal(t, "apt_file_restore_topic", topic)
+			} else {
+				assert.Equal(t, "apt_restore_topic", topic)
+			}
 		}
 	}
 }

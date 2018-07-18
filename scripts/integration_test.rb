@@ -180,11 +180,11 @@ class IntegrationTest
 	  @service.app_start(@context.apps['apt_volume_service'])
 	  sleep 5
 	  @service.app_start(@context.apps['apt_fetch'])
-	  sleep 40  # let nsq store topic fill before client connects
+	  sleep 30  # let nsq store topic fill before client connects
 	  @service.app_start(@context.apps['apt_store'])
-	  sleep 40  # let nsq record topic fill before client connects
+	  sleep 30  # let nsq record topic fill before client connects
 	  @service.app_start(@context.apps['apt_record'])
-	  sleep 40  # allow fetch/store/record time to finish
+	  sleep 30  # allow fetch/store/record time to finish
 
 	  # Run the post tests. This is where we check to see if the
 	  # ingest services (fetch, store, record) correctly performed
@@ -203,7 +203,14 @@ class IntegrationTest
 	  # long we sleep here and above. Tests that pass on one
 	  # system may fail on a system with a slower internet
 	  # connection.
-	  sleep 50
+	  #sleep 75
+
+      # Wail for the following two etags to appear in the log file.
+      # These are defined in util/testutil/testutil.go as
+      # UPDATED_BAG_ETAG and UPDATED_GLACIER_BAG_ETAG.
+      log_file = File.join(@context.log_dir, 'apt_record.json')
+      wait_for_match(log_file, 'ec520876f7c87e24f926a8efea390b26', 90)
+      wait_for_match(log_file, 'bf01126663915a4f5d135a37443b8349', 90)
 	  @results['apt_update_test'] = run('apt_update_post_test.go')
 
 	  @service.stop_everything unless more_tests_follow
@@ -266,6 +273,7 @@ class IntegrationTest
   def apt_restore(more_tests_follow)
 	run_suite(more_tests_follow) do
 	  @build.build(@context.apps['apt_restore'])
+      @build.build(@context.apps['apt_file_restore'])
 	  @build.build(@context.apps['apt_file_delete'])
 
 	  # Run the prerequisite process (with tests)
@@ -280,6 +288,7 @@ class IntegrationTest
 
 	  # Start services required for this specific set of tests.
 	  @service.app_start(@context.apps['apt_restore'])
+	  @service.app_start(@context.apps['apt_file_restore'])
 	  @service.app_start(@context.apps['apt_file_delete'])
 	  sleep 60
 
@@ -622,6 +631,27 @@ class IntegrationTest
 	  return false unless passed
 	end
 	return true
+  end
+
+  # wait_for_match keeps checking file for the presence of
+  # string until timeout seconds have passed. If it finds
+  # the string within timeout seconds, it returns true.
+  def wait_for_match(file, string, max_timeout)
+    interval = 5
+    max_retries = max_timeout / interval || 1
+    found = false
+    max_retries.times do |i|
+      if i % 5 == 0 || i == max_retries
+        puts "[#{i * interval}s]Checking #{file} for #{string}"
+      end
+      if File.readlines(file).grep(Regexp.new(string)).size > 0
+        puts "Found #{string}"
+        found = true
+        break
+      end
+      sleep interval
+    end
+    return found
   end
 
   # run_all_unit_tests runs all of the APTrust and DPN unit tests.

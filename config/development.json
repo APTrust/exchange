@@ -106,6 +106,19 @@
 		"MessageTimeout": "180m"
 	},
 
+	"FileRestoreWorker": {
+		"NetworkConnections": 8,
+		"Workers": 4,
+		"NsqTopic": "apt_file_restore_topic",
+		"NsqChannel": "apt_file_restore_channel",
+		"MaxAttempts": 3,
+		"MaxInFlight": 20,
+		"HeartbeatInterval": "10s",
+		"ReadTimeout": "60s",
+		"WriteTimeout": "10s",
+		"MessageTimeout": "180m"
+	},
+
 	"GlacierRestoreWorker": {
 		"NetworkConnections": 8,
 		"Workers": 4,

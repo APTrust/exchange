@@ -473,6 +473,35 @@ func TestGenericFileSaveBatch(t *testing.T) {
 	}
 }
 
+func TestGenericFileRequestRestore(t *testing.T) {
+	// We just need a handler that returns a WorkItem object.
+	testServer := httptest.NewServer(http.HandlerFunc(workItemGetHandler))
+	defer testServer.Close()
+
+	client, err := network.NewPharosClient(testServer.URL, "v2", "user", "key")
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	// This method is used only in integration tests.
+	response := client.GenericFileRequestRestore("college.edu/object/data/file.txt")
+
+	// Check the request URL and method.
+	assert.Equal(t, "PUT", response.Request.Method)
+	assert.Equal(t, "/api/v2/files/restore/college.edu%2Fobject%2Fdata%2Ffile.txt",
+		response.Request.URL.Opaque)
+
+	// Basic sanity check on response values
+	assert.Nil(t, response.Error)
+
+	assert.EqualValues(t, "WorkItem", response.ObjectType())
+	item := response.WorkItem()
+	require.NotNil(t, item)
+	assert.NotEqual(t, 0, item.Id)
+	assert.NotEqual(t, "", item.ObjectIdentifier)
+}
+
 func TestCheckumGet(t *testing.T) {
 	testServer := httptest.NewServer(http.HandlerFunc(checksumGetHandler))
 	defer testServer.Close()

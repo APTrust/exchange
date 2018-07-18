@@ -84,6 +84,24 @@ func FindRestoreStateInLog(pathToLogFile, objIdentifier string) (restoreState *a
 	return restoreState, err
 }
 
+// FindFileRestoreStateInLog returns the FileRestoreState for the specified
+// GenericFile identifier in the specified JSON log file.
+func FindFileRestoreStateInLog(pathToLogFile, gfIdentifier string) (restoreState *apt_models.FileRestoreState, err error) {
+	file, err := os.Open(pathToLogFile)
+	if err != nil {
+		return nil, err
+	}
+	defer file.Close()
+	jsonString := findJsonString(file, gfIdentifier)
+	if len(jsonString) == 0 {
+		err = fmt.Errorf("File %s not found in %s", gfIdentifier, pathToLogFile)
+	} else {
+		restoreState = &apt_models.FileRestoreState{}
+		err = json.Unmarshal([]byte(jsonString), restoreState)
+	}
+	return restoreState, err
+}
+
 // ExtractJson extracts the last JSON record for the specified
 // bag from the specified JSON log file. JSON records may appear more
 // than once in a JSON log, if the system attempted to process the item
