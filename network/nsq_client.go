@@ -57,7 +57,7 @@ func (client *NSQClient) Enqueue(topic string, workItemId int) error {
 
 // EnqueueString posts string data to the specified NSQ topic
 func (client *NSQClient) EnqueueString(topic string, data string) error {
-	url := fmt.Sprintf("%s/put?topic=%s", client.URL, topic)
+	url := fmt.Sprintf("%s/pub?topic=%s", client.URL, topic)
 	resp, err := http.Post(url, "text/html", bytes.NewBuffer([]byte(data)))
 	if err != nil {
 		return fmt.Errorf("Nsqd returned an error when queuing data: %v", err)
