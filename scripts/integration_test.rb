@@ -209,8 +209,8 @@ class IntegrationTest
       # These are defined in util/testutil/testutil.go as
       # UPDATED_BAG_ETAG and UPDATED_GLACIER_BAG_ETAG.
       log_file = File.join(@context.log_dir, 'apt_record.json')
-      wait_for_match(log_file, 'ec520876f7c87e24f926a8efea390b26', 90)
-      wait_for_match(log_file, 'bf01126663915a4f5d135a37443b8349', 90)
+      wait_for_match(log_file, 'ec520876f7c87e24f926a8efea390b26', 120)
+      wait_for_match(log_file, 'bf01126663915a4f5d135a37443b8349', 120)
 	  @results['apt_update_test'] = run('apt_update_post_test.go')
 
 	  @service.stop_everything unless more_tests_follow
@@ -641,7 +641,7 @@ class IntegrationTest
     max_retries = max_timeout / interval || 1
     found = false
     max_retries.times do |i|
-      if i % 5 == 0 || i == max_retries
+      if i % 2 == 0 || i == max_retries
         puts "[#{i * interval}s]Checking #{file} for #{string}"
       end
       if File.readlines(file).grep(Regexp.new(string)).size > 0

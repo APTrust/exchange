@@ -92,7 +92,7 @@ func TestIngestStoreItemsQueued(t *testing.T) {
 	stats, err := _context.NSQClient.GetStats()
 	require.Nil(t, err)
 	foundTopic := false
-	for _, topic := range stats.Data.Topics {
+	for _, topic := range stats.Topics {
 		if topic.TopicName == _context.Config.DPN.DPNIngestRecordWorker.NsqTopic {
 			// All 7 stored bags should show up in the record queue
 			foundTopic = true

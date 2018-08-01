@@ -10,21 +10,14 @@ import (
 	"strconv"
 )
 
-// NSQStats contains info about the status of NSQ and its topics
-// and queues. This info comes from a GET call to the /stats endpoint.
-type NSQStats struct {
-	StatusCode int          `json:"status_code"`
-	StatusText string       `json:"status_txt"`
-	Data       NSQStatsData `json:"data"`
-}
-
 // NSQStatsData contains the important info returned by a call
 // to NSQ's /stats endpoint, including the number of items in each
 // topic and queue.
 type NSQStatsData struct {
-	Version string            `json:"version"`
-	Health  string            `json:"status_code"`
-	Topics  []nsqd.TopicStats `json:"topics"`
+	Version   string            `json:"version"`
+	Health    string            `json:"status_code"`
+	StartTime uint64            `json:"start_time"`
+	Topics    []nsqd.TopicStats `json:"topics"`
 }
 
 // NSQClient provides methods for queueing items and querying
@@ -90,7 +83,7 @@ func (client *NSQClient) EnqueueString(topic string, data string) error {
 // param, but this doesn't seem to be working in NSQ 0.3.0, so we're just
 // returning stats for all topics right now. Also note that requests to
 // /stats/ (with trailing slash) produce a 404.
-func (client *NSQClient) GetStats() (*NSQStats, error) {
+func (client *NSQClient) GetStats() (*NSQStatsData, error) {
 	url := fmt.Sprintf("%s/stats?format=json", client.URL)
 	resp, err := http.Get(url)
 	if err != nil {
@@ -105,7 +98,7 @@ func (client *NSQClient) GetStats() (*NSQStats, error) {
 		return nil, fmt.Errorf("NSQ returned status code %d, body: %s",
 			resp.StatusCode, body)
 	}
-	stats := &NSQStats{}
+	stats := &NSQStatsData{}
 	err = json.Unmarshal(body, stats)
 	if err != nil {
 		return nil, err

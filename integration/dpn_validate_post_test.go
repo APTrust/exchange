@@ -42,7 +42,7 @@ func TestValidItemInStorageQueue(t *testing.T) {
 	stats, err := _context.NSQClient.GetStats()
 	require.Nil(t, err)
 	foundTopic := false
-	for _, topic := range stats.Data.Topics {
+	for _, topic := range stats.Topics {
 		if topic.TopicName == _context.Config.DPN.DPNReplicationStoreWorker.NsqTopic {
 			// All 4 of the valid bags should appear in the store queue.
 			foundTopic = true

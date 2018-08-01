@@ -101,7 +101,7 @@ func TestValidationQueue(t *testing.T) {
 	stats, err := _context.NSQClient.GetStats()
 	require.Nil(t, err)
 	foundTopic := false
-	for _, topic := range stats.Data.Topics {
+	for _, topic := range stats.Topics {
 		if topic.TopicName == _context.Config.DPN.DPNValidationWorker.NsqTopic {
 			// Should have 4 items. One from each remote node.
 			foundTopic = true

@@ -68,7 +68,7 @@ func TestRestorationQueue(t *testing.T) {
 	require.Nil(t, err)
 	foundObjectTopic := false
 	foundFileTopic := false
-	for _, topic := range stats.Data.Topics {
+	for _, topic := range stats.Topics {
 		if topic.TopicName == _context.Config.RestoreWorker.NsqTopic {
 			// Should have 8 items. See apt_mark_for_restore_test.go
 			foundObjectTopic = true

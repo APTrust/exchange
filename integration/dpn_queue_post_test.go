@@ -63,7 +63,7 @@ func TestWorkItemsCreatedAndQueued(t *testing.T) {
 	foundFetchTopic := false
 	foundStoreTopic := false
 	foundRecordTopic := false
-	for _, topic := range stats.Data.Topics {
+	for _, topic := range stats.Topics {
 		if topic.TopicName == _context.Config.FetchWorker.NsqTopic {
 			// We fetch 17 bags in our integration tests, plus one that gets
 			// updated (ingested a second time) and two invalid text files
@@ -153,7 +153,7 @@ func TestDPNWorkItemsCreatedAndQueued(t *testing.T) {
 	foundPackageTopic := false
 	foundCopyTopic := false
 	foundRestoreTopic := false
-	for _, topic := range stats.Data.Topics {
+	for _, topic := range stats.Topics {
 		if topic.TopicName == _context.Config.DPN.DPNPackageWorker.NsqTopic {
 			// apps/test_push_to_dpn.go requests that items
 			// testutil.INTEGRATION_GOOD_BAGS[0:7] be sent to DPN,
