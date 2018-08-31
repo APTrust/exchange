@@ -12,7 +12,7 @@ type DPNGlacierRestoreState struct {
 	// NSQMessage is the NSQ message being processed in this restore
 	// request. Not serialized because it will change each time we
 	// try to process a request.
-	NSQMessage *nsq.Message
+	NSQMessage *nsq.Message `json:"-"`
 	// DPNWorkItem is the DPNWorkItem being processed. This object
 	// comes from Pharos.
 	DPNWorkItem *apt_models.DPNWorkItem
