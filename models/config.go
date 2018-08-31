@@ -584,6 +584,9 @@ type DPNConfig struct {
 	// from other nodes.
 	DPNValidationWorker WorkerConfig
 
+	// DPNGlacierRestoreWorker processed RestoreTransfer requests.
+	DPNGlacierRestoreWorker WorkerConfig
+
 	// LocalNode is the namespace of the node this code is running on.
 	// E.g. "aptrust", "chron", "hathi", "tdr", "sdr"
 	LocalNode string

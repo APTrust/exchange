@@ -296,6 +296,18 @@
 			"ReadTimeout": "60s",
 			"WriteTimeout": "10s",
 			"MessageTimeout": "180m"
-		}
+		},
+	    "DPNGlacierRestoreWorker": {
+		    "NetworkConnections": 8,
+		    "Workers": 4,
+		    "NsqTopic": "apt_glacier_restore_topic",
+		    "NsqChannel": "apt_glacier_restore_channel",
+		    "MaxAttempts": 3,
+		    "MaxInFlight": 20,
+		    "HeartbeatInterval": "10s",
+		    "ReadTimeout": "60s",
+		    "WriteTimeout": "10s",
+		    "MessageTimeout": "180m"
+	    }
 	}
 }
