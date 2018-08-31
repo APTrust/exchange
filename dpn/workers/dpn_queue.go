@@ -55,11 +55,15 @@ func NewDPNQueue(_context *context.Context, hours int) (*DPNQueue, error) {
 		_context.Config.DPN.LocalNode,
 		_context.Config.DPN)
 	if err != nil {
-		return nil, fmt.Errorf("Error creating local DPN REST client: %v", err)
+		message := fmt.Sprintf("Error creating local DPN REST client: %v", err)
+		_context.MessageLog.Error(message)
+		return nil, fmt.Errorf(message)
 	}
 	remoteClients, err := localClient.GetRemoteClients()
 	if err != nil {
-		return nil, fmt.Errorf("Error creating remote DPN REST client: %v", err)
+		message := fmt.Sprintf("Error creating remote DPN REST client: %v", err)
+		_context.MessageLog.Error(message)
+		return nil, fmt.Errorf(message)
 	}
 	sinceWhen := time.Now().UTC().Add(time.Duration(-1*hours) * time.Hour)
 	_context.MessageLog.Info("Checking records since %d hours ago (%s)",
