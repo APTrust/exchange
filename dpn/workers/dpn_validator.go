@@ -296,8 +296,11 @@ func (validator *DPNValidator) logStartingValidation(manifest *dpn_models.Replic
 }
 
 func (validator *DPNValidator) logItemAlreadyInProcess(manifest *dpn_models.ReplicationManifest) {
+	node := "unknown"
+	if manifest.DPNWorkItem.ProcessingNode != nil {
+		node = *manifest.DPNWorkItem.ProcessingNode
+	}
 	validator.Context.MessageLog.Info("Skipping xfer request %s (bag %s): item is already "+
 		" being processed by node %s, pid %d.", manifest.ReplicationTransfer.ReplicationId,
-		manifest.ReplicationTransfer.Bag, manifest.DPNWorkItem.ProcessingNode,
-		manifest.DPNWorkItem.Pid)
+		manifest.ReplicationTransfer.Bag, node, manifest.DPNWorkItem.Pid)
 }

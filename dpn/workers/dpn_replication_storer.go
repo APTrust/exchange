@@ -299,8 +299,11 @@ func (storer *DPNReplicationStorer) logStartingStorage(manifest *models.Replicat
 }
 
 func (storer *DPNReplicationStorer) logItemAlreadyInProcess(manifest *models.ReplicationManifest) {
+	node := "unknown"
+	if manifest.DPNWorkItem.ProcessingNode != nil {
+		node = *manifest.DPNWorkItem.ProcessingNode
+	}
 	storer.Context.MessageLog.Info("Skipping xfer request %s (bag %s): item is already "+
 		" being processed by node %s, pid %d.", manifest.ReplicationTransfer.ReplicationId,
-		manifest.ReplicationTransfer.Bag, manifest.DPNWorkItem.ProcessingNode,
-		manifest.DPNWorkItem.Pid)
+		manifest.ReplicationTransfer.Bag, node, manifest.DPNWorkItem.Pid)
 }
