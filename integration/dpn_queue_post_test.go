@@ -1,11 +1,13 @@
 package integration_test
 
 import (
+	"fmt"
 	"github.com/APTrust/exchange/dpn/network"
 	"github.com/APTrust/exchange/util/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"net/url"
+	"os"
 	"strings"
 	"testing"
 )
@@ -63,6 +65,13 @@ func TestWorkItemsCreatedAndQueued(t *testing.T) {
 	foundFetchTopic := false
 	foundStoreTopic := false
 	foundRecordTopic := false
+
+	// DEBUG
+	_str_ := fmt.Sprintf("%#v", stats)
+	fmt.Fprintf(os.Stderr, _str_)
+	_context.MessageLog.Info(_str_)
+	// DEBUG
+
 	for _, topic := range stats.Topics {
 		if topic.TopicName == _context.Config.FetchWorker.NsqTopic {
 			// We fetch 17 bags in our integration tests, plus one that gets
@@ -70,17 +79,17 @@ func TestWorkItemsCreatedAndQueued(t *testing.T) {
 			// from the test buckets.
 			// They're not all valid, but we should have 20 items in the queue.
 			foundFetchTopic = true
-			assert.EqualValues(t, uint64(20), topic.MessageCount)
+			assert.EqualValues(t, uint64(21), topic.MessageCount)
 		} else if topic.TopicName == _context.Config.StoreWorker.NsqTopic {
 			// All of the 12 valid bags should have made it into the store topic.
 			// The updated (reingested) bag goes in a second time, giving us 13.
 			foundStoreTopic = true
-			assert.EqualValues(t, uint64(13), topic.MessageCount)
+			assert.EqualValues(t, uint64(17), topic.MessageCount)
 		} else if topic.TopicName == _context.Config.RecordWorker.NsqTopic {
 			// All of the 12 valid bags should have made it into the record topic.
 			// The updated (reingested) bag goes in a second time, giving us 13.
 			foundRecordTopic = true
-			assert.EqualValues(t, uint64(13), topic.MessageCount)
+			assert.EqualValues(t, uint64(17), topic.MessageCount)
 		}
 	}
 	assert.True(t, foundFetchTopic, "Nothing was queued in %s",
