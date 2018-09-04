@@ -75,11 +75,15 @@ func (restorer *DPNGlacierRestoreInit) HandleMessage(message *nsq.Message) error
 	message.DisableAutoResponse()
 
 	state := restorer.GetRestoreState(message)
+	restorer.SaveDPNWorkItem(state)
 	if state.ErrorMessage != "" {
 		restorer.Context.MessageLog.Error("Error setting up state for WorkItem %d: %s",
 			string(message.Body), state.ErrorMessage)
+		// No use proceeding...
+		restorer.CleanupChannel <- state
 		return fmt.Errorf(state.ErrorMessage)
 	}
+	// OK, we're good
 	restorer.RequestChannel <- state
 	return nil
 }
@@ -91,16 +95,38 @@ func (restorer *DPNGlacierRestoreInit) RequestRestore() {
 }
 
 func (restorer *DPNGlacierRestoreInit) Cleanup() {
-	// for state := range restorer.CleanupChannel {
+	for state := range restorer.CleanupChannel {
+		if state.ErrorMessage != "" {
+			restorer.FinishWithError(state)
+		} else {
+			restorer.FinishWithSuccess(state)
+		}
+		// For testing only. The test code creates the PostTestChannel.
+		// When running in demo & production, this channel is nil.
+		if restorer.PostTestChannel != nil {
+			restorer.PostTestChannel <- state
+		}
+	}
+}
 
-	// 	// Cleanup...
+func (restorer *DPNGlacierRestoreInit) FinishWithSuccess(state *models.DPNGlacierRestoreState) {
+	state.DPNWorkItem.ClearNodeAndPid()
+	note := "Awaiting availability in S3 for fixity check"
+	if state.IsAvailableInS3 {
+		note = "Item is available in S3 for fixity check"
+	}
+	state.DPNWorkItem.Note = &note
+	restorer.SaveDPNWorkItem(state)
+	state.NSQMessage.Finish()
 
-	// 	// For testing only. The test code creates the PostTestChannel.
-	// 	// When running in demo & production, this channel is nil.
-	// 	if restorer.PostTestChannel != nil {
-	// 		restorer.PostTestChannel <- state
-	// 	}
-	// }
+	// Move to download queue
+}
+
+func (restorer *DPNGlacierRestoreInit) FinishWithError(state *models.DPNGlacierRestoreState) {
+	state.DPNWorkItem.ClearNodeAndPid()
+	state.DPNWorkItem.Note = &state.ErrorMessage
+	restorer.SaveDPNWorkItem(state)
+	state.NSQMessage.Finish()
 }
 
 // GetWorkItem returns the WorkItem with the specified Id from Pharos,
@@ -127,6 +153,9 @@ func (restorer *DPNGlacierRestoreInit) GetRestoreState(message *nsq.Message) *mo
 		return state
 	}
 	state.DPNWorkItem = dpnWorkItem
+	state.DPNWorkItem.SetNodeAndPid()
+	note := "Requesting Glacier restoration for fixity"
+	state.DPNWorkItem.Note = &note
 
 	// Get the DPN Bag from the DPN REST server.
 	dpnResp := restorer.LocalDPNRestClient.DPNBagGet(dpnWorkItem.Identifier)
@@ -160,7 +189,11 @@ func (restorer *DPNGlacierRestoreInit) SaveDPNWorkItem(state *models.DPNGlacierR
 		note := "[JSON serialization error]"
 		state.DPNWorkItem.Note = &note
 	}
+
+	// Update the DPNWorkItem
 	state.DPNWorkItem.State = &jsonData
+	state.DPNWorkItem.Retry = !state.ErrorIsFatal
+
 	resp := restorer.Context.PharosClient.DPNWorkItemSave(state.DPNWorkItem)
 	if resp.Error != nil {
 		msg := fmt.Sprintf("Could not save DPNWorkItem %d "+
