@@ -53,6 +53,12 @@ type DPNGlacierRestoreState struct {
 	// ErrorMessage is the text of the error sent by the Glacier/S3 or
 	// as written by the DPN Glacier Restore Worker.
 	ErrorMessage string
+	// ErrorIsFatal indicates whether the error encountered during the
+	// restoration was fatal or transient. If the key does not exist,
+	// the error is fatal. This may be set to true in some other circumstances
+	// as well, such as after repeated network errors, simply to prevent
+	// infinite retries without administrative review.
+	ErrorIsFatal bool
 }
 
 func DPNGlacierRestoreStateFromJson(jsonString string) (*DPNGlacierRestoreState, error) {

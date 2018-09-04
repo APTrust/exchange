@@ -10,7 +10,7 @@ import (
 	"time"
 )
 
-const DPNGlacierRestoreJson = `{"DPNBag":{"uuid":"b146d1b7-9ffd-4f6f-90e9-ca5f1aa486c0","local_id":"999-999","member":"9a000000-0000-4000-a000-000000000001","size":12345678,"first_version_uuid":"b146d1b7-9ffd-4f6f-90e9-ca5f1aa486c0","version":1,"ingest_node":"tdr","admin_node":"tdr","bag_type":"D","rights":[],"interpretive":[],"replicating_nodes":[],"message_digests":null,"fixity_checks":null,"created_at":"2018-06-13T08:16:54Z","updated_at":"2018-06-13T08:16:54Z"},"GlacierBucket":"test.dpn.buckeypoo","GlacierKey":"b146d1b7-9ffd-4f6f-90e9-ca5f1aa486c0","RequestAccepted":true,"RequestedAt":"2018-09-04T16:16:54Z","AttemptNumber":3,"EstimatedDeletionFromS3":"2018-09-07T16:16:54Z","IsAvailableInS3":true,"ErrorMessage":""}`
+const DPNGlacierRestoreJson = `{"DPNBag":{"uuid":"b146d1b7-9ffd-4f6f-90e9-ca5f1aa486c0","local_id":"999-999","member":"9a000000-0000-4000-a000-000000000001","size":12345678,"first_version_uuid":"b146d1b7-9ffd-4f6f-90e9-ca5f1aa486c0","version":1,"ingest_node":"tdr","admin_node":"tdr","bag_type":"D","rights":[],"interpretive":[],"replicating_nodes":[],"message_digests":null,"fixity_checks":null,"created_at":"2018-06-13T08:16:54Z","updated_at":"2018-06-13T08:16:54Z"},"GlacierBucket":"test.dpn.buckeypoo","GlacierKey":"b146d1b7-9ffd-4f6f-90e9-ca5f1aa486c0","RequestAccepted":true,"RequestedAt":"2018-09-04T16:16:54Z","AttemptNumber":3,"EstimatedDeletionFromS3":"2018-09-07T16:16:54Z","IsAvailableInS3":true,"ErrorMessage":"","ErrorIsFatal":false}`
 
 func TestDPNGlacierRestoreStateFromJson(t *testing.T) {
 	state := getTestDPNGlacierRestoreState()
