@@ -558,6 +558,15 @@ type DPNConfig struct {
 	// copying is done by rsync over ssh.
 	DPNCopyWorker WorkerConfig
 
+	// DPNFixityWorker processes requests to run fixity checks on
+	// bags that have been copied from Glacier through S3 into
+	// local storage.
+	DPNFixityWorker WorkerConfig
+
+	// DPNGlacierRestoreWorker processes requests to move files
+	// from Glacier storage to S3 storage.
+	DPNGlacierRestoreWorker WorkerConfig
+
 	// DPNIngestStoreWorker copies DPN bags ingested from APTrust
 	// to AWS Glacier.
 	DPNIngestStoreWorker WorkerConfig
@@ -580,12 +589,18 @@ type DPNConfig struct {
 	// DPNRestoreWorker processed RestoreTransfer requests.
 	DPNRestoreWorker WorkerConfig
 
+	// DPNS3DownloadWorker processes requests to move files
+	// from S3 to local storage. These files have previously
+	// been moved from Glacier to S3 by the DPNGlacierRestoreWorker.
+	// We do the downlad from S3 to local before checking fixity,
+	// which in DPN requires us to parse and validate the entire
+	// tarred bag, then calculate the sha256 checksum of the bag's
+	// tag manifest.
+	DPNS3DownloadWorker WorkerConfig
+
 	// DPNValidationWorker validates DPN bags that we are replicating
 	// from other nodes.
 	DPNValidationWorker WorkerConfig
-
-	// DPNGlacierRestoreWorker processed RestoreTransfer requests.
-	DPNGlacierRestoreWorker WorkerConfig
 
 	// LocalNode is the namespace of the node this code is running on.
 	// E.g. "aptrust", "chron", "hathi", "tdr", "sdr"

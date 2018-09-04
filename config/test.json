@@ -300,14 +300,38 @@
 	    "DPNGlacierRestoreWorker": {
 		    "NetworkConnections": 8,
 		    "Workers": 4,
-		    "NsqTopic": "apt_glacier_restore_topic",
-		    "NsqChannel": "apt_glacier_restore_channel",
+		    "NsqTopic": "dpn_glacier_restore_topic",
+		    "NsqChannel": "dpn_glacier_restore_channel",
 		    "MaxAttempts": 3,
 		    "MaxInFlight": 20,
 		    "HeartbeatInterval": "10s",
 		    "ReadTimeout": "60s",
 		    "WriteTimeout": "10s",
 		    "MessageTimeout": "180m"
+	    },
+	    "DPNS3DownloadWorker": {
+		    "NetworkConnections": 8,
+		    "Workers": 4,
+		    "NsqTopic": "dpn_s3_download_topic",
+		    "NsqChannel": "dpn_s3_download_channel",
+		    "MaxAttempts": 3,
+		    "MaxInFlight": 20,
+		    "HeartbeatInterval": "10s",
+		    "ReadTimeout": "60s",
+		    "WriteTimeout": "10s",
+		    "MessageTimeout": "360m"
+	    },
+	    "DPNFixityWorker": {
+		    "NetworkConnections": 8,
+		    "Workers": 4,
+		    "NsqTopic": "dpn_fixity_topic",
+		    "NsqChannel": "dpn_fixity_channel",
+		    "MaxAttempts": 3,
+		    "MaxInFlight": 20,
+		    "HeartbeatInterval": "10s",
+		    "ReadTimeout": "60s",
+		    "WriteTimeout": "10s",
+		    "MessageTimeout": "360m"
 	    }
 	}
 }
