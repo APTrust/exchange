@@ -6,7 +6,7 @@ import (
 	//	"github.com/APTrust/exchange/constants"
 	"github.com/APTrust/exchange/context"
 	"github.com/APTrust/exchange/dpn/models"
-	//	"github.com/APTrust/exchange/network"
+	"github.com/APTrust/exchange/dpn/network"
 	"github.com/nsqio/go-nsq"
 	//	"net/url"
 	"strconv"
@@ -27,6 +27,8 @@ type DPNGlacierRestoreInit struct {
 	// Context includes logging, config, network connections, and
 	// other general resources for the worker.
 	Context *context.Context
+	// LocalDPNRestClient lets us talk to our local DPN server.
+	LocalDPNRestClient *network.DPNRestClient
 	// RequestChannel is for requesting an item be moved from Glacier
 	// into S3.
 	RequestChannel chan *models.DPNGlacierRestoreState
@@ -42,7 +44,7 @@ type DPNGlacierRestoreInit struct {
 	S3Url string
 }
 
-func DPNNewGlacierRestoreInit(_context *context.Context) *DPNGlacierRestoreInit {
+func DPNNewGlacierRestoreInit(_context *context.Context) (*DPNGlacierRestoreInit, error) {
 	restorer := &DPNGlacierRestoreInit{
 		Context: _context,
 	}
@@ -58,7 +60,14 @@ func DPNNewGlacierRestoreInit(_context *context.Context) *DPNGlacierRestoreInit 
 	for i := 0; i < _context.Config.DPN.DPNGlacierRestoreWorker.Workers; i++ {
 		go restorer.Cleanup()
 	}
-	return restorer
+	var err error
+	restorer.LocalDPNRestClient, err = network.NewDPNRestClient(
+		_context.Config.DPN.RestClient.LocalServiceURL,
+		_context.Config.DPN.RestClient.LocalAPIRoot,
+		_context.Config.DPN.RestClient.LocalAuthToken,
+		_context.Config.DPN.LocalNode,
+		_context.Config.DPN)
+	return restorer, err
 }
 
 // This is the callback that NSQ workers use to handle messages from NSQ.
@@ -103,25 +112,48 @@ func (restorer *DPNGlacierRestoreInit) Cleanup() {
 
 // GetWorkItem returns the WorkItem with the specified Id from Pharos,
 // or nil.
-func (restorer *DPNGlacierRestoreInit) GetRestoreState(message *nsq.Message) (*models.DPNGlacierRestoreState, error) {
+func (restorer *DPNGlacierRestoreInit) GetRestoreState(message *nsq.Message) *models.DPNGlacierRestoreState {
 	msgBody := strings.TrimSpace(string(message.Body))
 	restorer.Context.MessageLog.Info("NSQ Message body: '%s'", msgBody)
+	state := &models.DPNGlacierRestoreState{}
+
+	// Get the DPN work item
 	dpnWorkItemId, err := strconv.Atoi(string(msgBody))
 	if err != nil || dpnWorkItemId == 0 {
-		return nil, fmt.Errorf("Could not get DPNWorkItem Id from NSQ message body: %v", err)
+		state.ErrorMessage = fmt.Sprintf("Could not get DPNWorkItem Id from NSQ message body: %v", err)
+		return state
 	}
 	resp := restorer.Context.PharosClient.DPNWorkItemGet(dpnWorkItemId)
 	if resp.Error != nil {
-		return nil, fmt.Errorf("Error getting DPNWorkItem %d from Pharos: %v", dpnWorkItemId, resp.Error)
+		state.ErrorMessage = fmt.Sprintf("Error getting DPNWorkItem %d from Pharos: %v", dpnWorkItemId, resp.Error)
+		return state
 	}
 	dpnWorkItem := resp.DPNWorkItem()
 	if dpnWorkItem == nil {
-		return nil, fmt.Errorf("Pharos returned nil for WorkItem %d", dpnWorkItemId)
+		state.ErrorMessage = fmt.Sprintf("Pharos returned nil for WorkItem %d", dpnWorkItemId)
+		return state
 	}
+	state.DPNWorkItem = dpnWorkItem
 
-	// TODO: Get the DPN Bag from the DPN REST server.
-	// TODO: Properly construct the DPNGlacierRestoreState object.
+	// Get the DPN Bag from the DPN REST server.
+	dpnResp := restorer.LocalDPNRestClient.DPNBagGet(dpnWorkItem.Identifier)
+	if dpnResp.Error != nil {
+		state.ErrorMessage = fmt.Sprintf("Error getting DPN bag %s from %s: %v", dpnWorkItem.Identifier,
+			restorer.Context.Config.DPN.RestClient.LocalServiceURL, resp.Error)
+		return state
+	}
+	dpnBag := dpnResp.Bag()
+	if dpnBag == nil {
+		state.ErrorMessage = fmt.Sprintf("DPN REST server returned nil for bag %s", dpnWorkItem.Identifier)
+		return state
+	}
+	state.DPNBag = dpnBag
 
-	state := &models.DPNGlacierRestoreState{}
-	return state, nil
+	// Although this is duplicate info, we record it in the state object
+	// so we can see it in the Pharos UI when we're checking on the state
+	// of an item.
+	state.GlacierBucket = restorer.Context.Config.DPN.DPNGlacierRegion
+	state.GlacierKey = dpnBag.UUID
+
+	return state
 }

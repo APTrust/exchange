@@ -1,6 +1,7 @@
 package models
 
 import (
+	"encoding/json"
 	apt_models "github.com/APTrust/exchange/models"
 	"github.com/nsqio/go-nsq"
 	"time"
@@ -34,6 +35,9 @@ type DPNGlacierRestoreState struct {
 	// RequestedAt is the timestamp of the last request to
 	// restore this object.
 	RequestedAt time.Time
+	// AttemptNumber is the number of times we've made this particular
+	// restoration request.
+	AttemptNumber int
 	// EstimatedDeletionFromS3 describes approximately when
 	// this item should be available at the RestorationURL.
 	// This time can vary, depending on what level of Glacier
@@ -46,4 +50,24 @@ type DPNGlacierRestoreState struct {
 	// takes 3-5 hours. If RequestAccepted is true and IsAvailableInS3
 	// is false, then the request is still in process.
 	IsAvailableInS3 bool
+	// ErrorMessage is the text of the error sent by the Glacier/S3 or
+	// as written by the DPN Glacier Restore Worker.
+	ErrorMessage string
+}
+
+func DPNGlacierRestoreStateFromJson(jsonString string) (*DPNGlacierRestoreState, error) {
+	state := &DPNGlacierRestoreState{}
+	err := json.Unmarshal([]byte(jsonString), state)
+	if err != nil {
+		return nil, err
+	}
+	return state, nil
+}
+
+func (state *DPNGlacierRestoreState) ToJson() (string, error) {
+	jsonStr, err := json.Marshal(state)
+	if err != nil {
+		return "", err
+	}
+	return string(jsonStr), nil
 }
