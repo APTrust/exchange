@@ -161,6 +161,9 @@ func NewDPNWorkItemForPharos(item *DPNWorkItem) *DPNWorkItemForPharos {
 		Pid:            item.Pid,
 		Note:           item.Note,
 		State:          item.State,
+		// TODO: Uncomment when Pharos has this attribute
+		// See: https://www.pivotaltracker.com/story/show/160263632
+		// Retry: item.Retry
 	}
 }
 
