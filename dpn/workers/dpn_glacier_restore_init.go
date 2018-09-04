@@ -74,20 +74,13 @@ func DPNNewGlacierRestoreInit(_context *context.Context) (*DPNGlacierRestoreInit
 func (restorer *DPNGlacierRestoreInit) HandleMessage(message *nsq.Message) error {
 	message.DisableAutoResponse()
 
-	// if err != nil {
-	// 	restorer.Context.MessageLog.Error(err.Error())
-	// 	return err
-	// }
-
-	// state := models.NewDPNGlacierRestoreState(message, nil)
-	// state.DPNWorkItem = dpnWorkItem
-
-	// if err != nil {
-	// 	restorer.Context.MessageLog.Error("Error getting WorkItemState for WorkItem %d: %s",
-	// 		workItem.Id, err.Error())
-	// 	return err
-	// }
-	// restorer.RequestChannel <- state
+	state := restorer.GetRestoreState(message)
+	if state.ErrorMessage != "" {
+		restorer.Context.MessageLog.Error("Error setting up state for WorkItem %d: %s",
+			string(message.Body), state.ErrorMessage)
+		return fmt.Errorf(state.ErrorMessage)
+	}
+	restorer.RequestChannel <- state
 	return nil
 }
 
@@ -156,4 +149,26 @@ func (restorer *DPNGlacierRestoreInit) GetRestoreState(message *nsq.Message) *mo
 	state.GlacierKey = dpnBag.UUID
 
 	return state
+}
+
+func (restorer *DPNGlacierRestoreInit) SaveDPNWorkItem(state *models.DPNGlacierRestoreState) {
+	jsonData, err := state.ToJson()
+	if err != nil {
+		msg := fmt.Sprintf("Could not marshal DPNGlacierRestoreState "+
+			"for DPNWorkItem %d: %v", state.DPNWorkItem.Id, err)
+		restorer.Context.MessageLog.Error(msg)
+		note := "[JSON serialization error]"
+		state.DPNWorkItem.Note = &note
+	}
+	state.DPNWorkItem.State = &jsonData
+	resp := restorer.Context.PharosClient.DPNWorkItemSave(state.DPNWorkItem)
+	if resp.Error != nil {
+		msg := fmt.Sprintf("Could not save DPNWorkItem %d "+
+			"for fixity on bag %s to Pharos: %v",
+			state.DPNWorkItem.Id, state.DPNWorkItem.Identifier, err)
+		restorer.Context.MessageLog.Error(msg)
+		if state.ErrorMessage == "" {
+			state.ErrorMessage = msg
+		}
+	}
 }
