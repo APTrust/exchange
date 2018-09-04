@@ -16,7 +16,7 @@ type DPNGlacierRestoreState struct {
 	NSQMessage *nsq.Message `json:"-"`
 	// DPNWorkItem is the DPNWorkItem being processed. This object
 	// comes from Pharos.
-	DPNWorkItem *apt_models.DPNWorkItem
+	DPNWorkItem *apt_models.DPNWorkItem `json:"-"`
 	// DPNBag is the bag we're restoring. This object comes from
 	// the DPN REST server.
 	DPNBag *DPNBag
