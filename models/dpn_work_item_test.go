@@ -50,3 +50,22 @@ func TestDPNWorkItemIsBeingProcessedByMe(t *testing.T) {
 	assert.False(t, item.IsBeingProcessedByMe("aptrust.org", 1234))
 	assert.True(t, item.IsBeingProcessedByMe("example.com", 900))
 }
+
+func TestDPNWorkItemSetNodeAndPid(t *testing.T) {
+	item := models.DPNWorkItem{}
+	assert.Nil(t, item.ProcessingNode)
+	assert.Equal(t, 0, item.Pid)
+	item.SetNodeAndPid()
+	assert.NotEmpty(t, item.ProcessingNode)
+	assert.NotEqual(t, 0, item.Pid)
+}
+
+func TestDPNWorkItemClearNodeAndPid(t *testing.T) {
+	item := models.DPNWorkItem{}
+	item.SetNodeAndPid()
+	assert.NotEmpty(t, item.ProcessingNode)
+	assert.NotEqual(t, 0, item.Pid)
+	item.ClearNodeAndPid()
+	assert.Nil(t, item.ProcessingNode)
+	assert.Equal(t, 0, item.Pid)
+}

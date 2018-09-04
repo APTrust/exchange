@@ -2,6 +2,7 @@ package models
 
 import (
 	"encoding/json"
+	"os"
 	"time"
 )
 
@@ -42,4 +43,20 @@ func (item *DPNWorkItem) IsBeingProcessed() bool {
 // being processed by the specified hostname under the specified pid.
 func (item *DPNWorkItem) IsBeingProcessedByMe(hostname string, pid int) bool {
 	return item.ProcessingNode != nil && *item.ProcessingNode == hostname && item.Pid == pid
+}
+
+// Set ProcessingNode and Pid on this DPNWorkItem.
+func (item *DPNWorkItem) SetNodeAndPid() {
+	hostname, err := os.Hostname()
+	if err != nil {
+		hostname = "hostname?"
+	}
+	item.ProcessingNode = &hostname
+	item.Pid = os.Getpid()
+}
+
+// Clear ProcessingNode and Pid on this DPNWorkItem.
+func (item *DPNWorkItem) ClearNodeAndPid() {
+	item.ProcessingNode = nil
+	item.Pid = 0
 }
