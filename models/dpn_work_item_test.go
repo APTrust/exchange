@@ -1,6 +1,7 @@
 package models_test
 
 import (
+	"github.com/APTrust/exchange/constants"
 	"github.com/APTrust/exchange/models"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -23,9 +24,17 @@ func TestSerializeDPNWorkItemForPharos(t *testing.T) {
 		State:       &state,
 		CreatedAt:   timestamp,
 		UpdatedAt:   timestamp,
+		Retry:       true,
+		Stage:       constants.StageRequested,
+		Status:      constants.StatusPending,
 	}
 	data, err := item.SerializeForPharos()
 	require.Nil(t, err)
+
+	// TODO: expected will change to include retry, status, and stage
+	// when Pharos understands those things.
+	// See: https://www.pivotaltracker.com/story/show/160263632
+	// And: https://www.pivotaltracker.com/story/show/160287414
 	expected := `{"dpn_work_item":{"remote_node":"chron","task":"Replication","identifier":"1234-5678","queued_at":"2016-11-15T15:33:00Z","completed_at":"2016-11-15T15:33:00Z","processing_node":null,"pid":0,"note":"All done","state":"Nebraska"}}`
 	assert.Equal(t, expected, string(data))
 }

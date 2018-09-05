@@ -17,6 +17,8 @@ type DPNWorkItem struct {
 	CompletedAt    *time.Time `json:"completed_at"`
 	ProcessingNode *string    `json:"processing_node"`
 	Pid            int        `json:"pid"`
+	Stage          string     `json:"stage"`
+	Status         string     `json:"status"`
 	Retry          bool       `json:"retry"`
 	Note           *string    `json:"note"`
 	State          *string    `json:"state"`
