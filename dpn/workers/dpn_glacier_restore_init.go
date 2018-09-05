@@ -1,24 +1,29 @@
 package workers
 
 import (
-	//	"encoding/json"
 	"fmt"
-	//	"github.com/APTrust/exchange/constants"
 	"github.com/APTrust/exchange/context"
 	"github.com/APTrust/exchange/dpn/models"
-	"github.com/APTrust/exchange/dpn/network"
+	dpn_network "github.com/APTrust/exchange/dpn/network"
+	apt_network "github.com/APTrust/exchange/network"
 	"github.com/nsqio/go-nsq"
-	//	"net/url"
 	"strconv"
 	"strings"
-	//	"time"
+	"time"
 )
+
+// Standard retrieval is 3-5 hours.
+// Bulk is 5-12 hours, and is cheaper.
+// There's no rush on DPN fixity checking, so use the cheaper option.
+// https://docs.aws.amazon.com/amazonglacier/latest/dev/downloading-an-archive-two-steps.html#api-downloading-an-archive-two-steps-retrieval-options
+// For retrieval pricing, see https://aws.amazon.com/glacier/pricing/
+const RETRIEVAL_OPTION = "Bulk"
 
 // Keep the files in S3 up to 60 days, in case we're
 // having system problems and we need to attempt the
 // restore multiple times. We'll have other processes
 // clean out the S3 bucket when necessary.
-const DAYS_TO_KEEP_IN_S3 = 5
+const DAYS_TO_KEEP_IN_S3 = 60
 
 // Requests that an object be restored from Glacier to S3. This is
 // the first step toward performing fixity checks on DPN bags, and
@@ -28,7 +33,7 @@ type DPNGlacierRestoreInit struct {
 	// other general resources for the worker.
 	Context *context.Context
 	// LocalDPNRestClient lets us talk to our local DPN server.
-	LocalDPNRestClient *network.DPNRestClient
+	LocalDPNRestClient *dpn_network.DPNRestClient
 	// RequestChannel is for requesting an item be moved from Glacier
 	// into S3.
 	RequestChannel chan *models.DPNGlacierRestoreState
@@ -62,7 +67,7 @@ func DPNNewGlacierRestoreInit(_context *context.Context) (*DPNGlacierRestoreInit
 	}
 	// Set up a client to talk to our local DPN server.
 	var err error
-	restorer.LocalDPNRestClient, err = network.NewDPNRestClient(
+	restorer.LocalDPNRestClient, err = dpn_network.NewDPNRestClient(
 		_context.Config.DPN.RestClient.LocalServiceURL,
 		_context.Config.DPN.RestClient.LocalAPIRoot,
 		_context.Config.DPN.RestClient.LocalAuthToken,
@@ -91,15 +96,15 @@ func (restorer *DPNGlacierRestoreInit) HandleMessage(message *nsq.Message) error
 		return nil
 	}
 
-	// OK, we're good
+	// OK, we're good. Ask Glacier to move the file into S3.
 	restorer.RequestChannel <- state
 	return nil
 }
 
 func (restorer *DPNGlacierRestoreInit) RequestRestore() {
-	// for state := range restorer.RequestChannel {
-	// 	// Request restore from Glacier
-	// }
+	for state := range restorer.RequestChannel {
+		restorer.InitializeRetrieval(state)
+	}
 }
 
 func (restorer *DPNGlacierRestoreInit) Cleanup() {
@@ -124,17 +129,74 @@ func (restorer *DPNGlacierRestoreInit) FinishWithSuccess(state *models.DPNGlacie
 		note = "Item is available in S3 for fixity check"
 	}
 	state.DPNWorkItem.Note = &note
+	restorer.Context.MessageLog.Info("Requested %s from Glacier. %s", state.GlacierKey, note)
 	restorer.SaveDPNWorkItem(state)
 	state.NSQMessage.Finish()
 
-	// Move to download queue
+	// TODO: Push to download queue
 }
 
 func (restorer *DPNGlacierRestoreInit) FinishWithError(state *models.DPNGlacierRestoreState) {
 	state.DPNWorkItem.ClearNodeAndPid()
 	state.DPNWorkItem.Note = &state.ErrorMessage
+	restorer.Context.MessageLog.Error(state.ErrorMessage)
 	restorer.SaveDPNWorkItem(state)
-	state.NSQMessage.Finish()
+
+	attempts := int(state.NSQMessage.Attempts)
+	maxAttempts := int(restorer.Context.Config.DPN.DPNGlacierRestoreWorker.MaxAttempts)
+
+	if state.ErrorIsFatal {
+		restorer.Context.MessageLog.Error("Error for %s is fatal. Not requeueing.", state.GlacierKey)
+		state.NSQMessage.Finish()
+	} else if attempts > maxAttempts {
+		restorer.Context.MessageLog.Error("Attempt to restore %s failed %d times. Not requeuing.",
+			attempts, state.GlacierKey)
+		state.NSQMessage.Finish()
+	} else {
+		restorer.Context.MessageLog.Info("Error for %s is transient. Requeueing.", state.GlacierKey)
+		state.NSQMessage.Requeue(1 * time.Minute)
+	}
+}
+
+func (restorer *DPNGlacierRestoreInit) InitializeRetrieval(state *models.DPNGlacierRestoreState) {
+
+	// Request restore from Glacier
+	restorer.Context.MessageLog.Info("Requesting Glacier retrieval of %s from %s",
+		state.GlacierKey, state.GlacierBucket)
+
+	restoreClient := apt_network.NewS3Restore(
+		restorer.Context.Config.GetAWSAccessKeyId(),
+		restorer.Context.Config.GetAWSSecretAccessKey(),
+		restorer.Context.Config.DPN.DPNGlacierRegion,
+		state.GlacierBucket,
+		state.GlacierKey,
+		RETRIEVAL_OPTION,
+		DAYS_TO_KEEP_IN_S3)
+
+	// Custom S3Url is for testing only.
+	if restorer.S3Url != "" {
+		restorer.Context.MessageLog.Warning("Setting S3 URL to %s. This should happen only in testing!",
+			restorer.S3Url)
+		restoreClient.TestURL = restorer.S3Url
+		restoreClient.BucketName = ""
+	}
+
+	// Figure out approximately how long this item will
+	// be available in S3, once we restore it.
+	now := time.Now().UTC()
+	estimatedDeletionFromS3 := now.AddDate(0, 0, DAYS_TO_KEEP_IN_S3)
+
+	// This is where me make the actual request to Glacier.
+	restoreClient.Restore()
+	if restoreClient.ErrorMessage != "" {
+		state.ErrorMessage = fmt.Sprintf("Glacier retrieval request returned an error for %s at %s: %v",
+			state.GlacierBucket, state.GlacierKey, restoreClient.ErrorMessage)
+	}
+
+	// Update this info.
+	state.RequestAccepted = (restoreClient.ErrorMessage == "")
+	state.RequestedAt = now
+	state.EstimatedDeletionFromS3 = estimatedDeletionFromS3
 }
 
 // GetWorkItem returns the WorkItem with the specified Id from Pharos,
