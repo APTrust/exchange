@@ -104,6 +104,7 @@ func (restorer *DPNGlacierRestoreInit) HandleMessage(message *nsq.Message) error
 func (restorer *DPNGlacierRestoreInit) RequestRestore() {
 	for state := range restorer.RequestChannel {
 		restorer.InitializeRetrieval(state)
+		restorer.CleanupChannel <- state
 	}
 }
 
@@ -133,7 +134,17 @@ func (restorer *DPNGlacierRestoreInit) FinishWithSuccess(state *models.DPNGlacie
 	restorer.SaveDPNWorkItem(state)
 	state.NSQMessage.Finish()
 
-	// TODO: Push to download queue
+	// Push to download queue.
+	topic := restorer.Context.Config.DPN.DPNS3DownloadWorker.NsqTopic
+	err := restorer.Context.NSQClient.Enqueue(topic, state.DPNWorkItem.Id)
+	if err != nil {
+		state.ErrorMessage = fmt.Sprintf("Glacier requested succeeded, but error pushing "+
+			"DPNWorkItem %d (%s) into NSQ topic %s: %v",
+			state.DPNWorkItem.Id, state.DPNWorkItem.Identifier, topic, err)
+		restorer.Context.MessageLog.Error(state.ErrorMessage)
+		restorer.SaveDPNWorkItem(state)
+	}
+
 }
 
 func (restorer *DPNGlacierRestoreInit) FinishWithError(state *models.DPNGlacierRestoreState) {
