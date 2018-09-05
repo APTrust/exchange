@@ -53,13 +53,14 @@ func DPNNewGlacierRestoreInit(_context *context.Context) (*DPNGlacierRestoreInit
 	workerBufferSize := _context.Config.DPN.DPNGlacierRestoreWorker.Workers * 10
 	restorer.RequestChannel = make(chan *models.DPNGlacierRestoreState, restorerBufferSize)
 	restorer.CleanupChannel = make(chan *models.DPNGlacierRestoreState, workerBufferSize)
-	// Set up a limited number of go routines
+	// Set up a limited number of go routines to handle the work.
 	for i := 0; i < _context.Config.DPN.DPNGlacierRestoreWorker.NetworkConnections; i++ {
 		go restorer.RequestRestore()
 	}
 	for i := 0; i < _context.Config.DPN.DPNGlacierRestoreWorker.Workers; i++ {
 		go restorer.Cleanup()
 	}
+	// Set up a client to talk to our local DPN server.
 	var err error
 	restorer.LocalDPNRestClient, err = network.NewDPNRestClient(
 		_context.Config.DPN.RestClient.LocalServiceURL,
@@ -77,12 +78,19 @@ func (restorer *DPNGlacierRestoreInit) HandleMessage(message *nsq.Message) error
 	state := restorer.GetRestoreState(message)
 	restorer.SaveDPNWorkItem(state)
 	if state.ErrorMessage != "" {
-		restorer.Context.MessageLog.Error("Error setting up state for WorkItem %d: %s",
+		restorer.Context.MessageLog.Error("Error setting up state for WorkItem %s: %s",
 			string(message.Body), state.ErrorMessage)
 		// No use proceeding...
 		restorer.CleanupChannel <- state
 		return fmt.Errorf(state.ErrorMessage)
 	}
+	if state.DPNWorkItem.IsCompletedOrCancelled() {
+		restorer.Context.MessageLog.Info("Skipping WorkItem %d because status is %s",
+			state.DPNWorkItem.Id, state.DPNWorkItem.Status)
+		restorer.CleanupChannel <- state
+		return nil
+	}
+
 	// OK, we're good
 	restorer.RequestChannel <- state
 	return nil
