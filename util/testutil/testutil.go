@@ -21,6 +21,8 @@ import (
 // Bloomsday
 var TEST_TIMESTAMP time.Time = time.Date(2016, 6, 16, 10, 24, 16, 0, time.UTC)
 
+var EMPTY_UUID = "00000000-0000-0000-0000-000000000000"
+
 var INTEGRATION_GOOD_BAGS = []string{
 	"aptrust.integration.test/example.edu.tagsample_good.tar",
 	"aptrust.integration.test/example.edu.sample_ds_store_and_empty.tar",
