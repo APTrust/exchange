@@ -2,6 +2,7 @@ package models
 
 import (
 	"encoding/json"
+	"github.com/APTrust/exchange/constants"
 	"os"
 	"time"
 )
@@ -61,4 +62,11 @@ func (item *DPNWorkItem) SetNodeAndPid() {
 func (item *DPNWorkItem) ClearNodeAndPid() {
 	item.ProcessingNode = nil
 	item.Pid = 0
+}
+
+// Returns true if this item has been completed or cancelled.
+// The worker processes check this to see if they should
+// actually perform their work.
+func (item *DPNWorkItem) IsCompletedOrCancelled() bool {
+	return item.Status == constants.StatusCancelled || item.Status == constants.StatusSuccess
 }

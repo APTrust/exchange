@@ -78,3 +78,17 @@ func TestDPNWorkItemClearNodeAndPid(t *testing.T) {
 	assert.Nil(t, item.ProcessingNode)
 	assert.Equal(t, 0, item.Pid)
 }
+
+func TestDPNWorkItemIsCompletedOrCancelled(t *testing.T) {
+	item := models.DPNWorkItem{}
+	item.Status = constants.StatusStarted
+	assert.False(t, item.IsCompletedOrCancelled())
+	item.Status = constants.StatusPending
+	assert.False(t, item.IsCompletedOrCancelled())
+	item.Status = constants.StatusSuccess
+	assert.True(t, item.IsCompletedOrCancelled())
+	item.Status = constants.StatusFailed
+	assert.False(t, item.IsCompletedOrCancelled())
+	item.Status = constants.StatusCancelled
+	assert.True(t, item.IsCompletedOrCancelled())
+}
