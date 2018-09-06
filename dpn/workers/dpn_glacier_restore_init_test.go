@@ -4,13 +4,14 @@ import (
 	//	"encoding/json"
 	//	"fmt"
 	"github.com/APTrust/exchange/constants"
+	// dpn_models "github.com/APTrust/exchange/dpn/models"
 	dpn_network "github.com/APTrust/exchange/dpn/network"
 	"github.com/APTrust/exchange/dpn/workers"
 	apt_models "github.com/APTrust/exchange/models"
 	"github.com/APTrust/exchange/network"
 	"github.com/APTrust/exchange/util/testutil"
 	//	"github.com/nsqio/go-nsq"
-	//	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	//	"io/ioutil"
 	"net/http"
@@ -19,7 +20,7 @@ import (
 	//	"regexp"
 	//	"strconv"
 	//	"strings"
-	//	"sync"
+	// "sync"
 	"testing"
 	"time"
 )
@@ -84,11 +85,49 @@ func getDGITestWorker(t *testing.T) *workers.DPNGlacierRestoreInit {
 }
 
 func TestDGIInit(t *testing.T) {
-
+	worker := getDGITestWorker(t)
+	require.NotNil(t, worker)
+	assert.NotNil(t, worker.Context)
+	assert.NotNil(t, worker.RequestChannel)
+	assert.NotNil(t, worker.CleanupChannel)
+	assert.NotNil(t, worker.LocalDPNRestClient)
 }
 
 func TestDGIHandleMessage(t *testing.T) {
+	// worker := getDGITestWorker(t)
+	// message := testutil.MakeNSQMessage("1234")
 
+	// delegate := testutil.NewNSQTestDelegate()
+	// state.NSQMessage.Delegate = delegate
+
+	// worker.PostTestChannel = make(chan *dpn_models.DPNGlacierRestoreState)
+	// var wg sync.WaitGroup
+	// wg.Add(1)
+	// go func() {
+	// 	for state := range worker.PostTestChannel {
+	// 		assert.Empty(t, state.WorkSummary.Errors)
+	// 		assert.NotNil(t, state.IntellectualObject)
+	// 		assert.Equal(t, 12, len(state.Requests))
+	// 		for _, req := range state.Requests {
+	// 			assert.NotEmpty(t, req.GenericFileIdentifier)
+	// 			assert.NotEmpty(t, req.GlacierBucket)
+	// 			assert.NotEmpty(t, req.GlacierKey)
+	// 			assert.False(t, req.RequestedAt.IsZero())
+	// 			assert.True(t, req.RequestAccepted)
+	// 			assert.False(t, req.IsAvailableInS3)
+	// 		}
+	// 		assert.Equal(t, "requeue", delegate.Operation)
+	// 		assert.Equal(t, 2*time.Hour, delegate.Delay)
+	// 		assert.Equal(t, "Requeued to check on status of Glacier restore requests.", state.WorkItem.Note)
+	// 		assert.Equal(t, constants.StatusStarted, state.WorkItem.Status)
+	// 		assert.True(t, state.WorkItem.Retry)
+	// 		assert.False(t, state.WorkItem.NeedsAdminReview)
+	// 		wg.Done()
+	// 	}
+	// }()
+
+	// worker.RequestChannel <- state
+	// wg.Wait()
 }
 
 func TestDGIRequestRestore(t *testing.T) {
