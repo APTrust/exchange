@@ -10,15 +10,11 @@ import (
 	apt_models "github.com/APTrust/exchange/models"
 	"github.com/APTrust/exchange/network"
 	"github.com/APTrust/exchange/util/testutil"
-	//	"github.com/nsqio/go-nsq"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
-	//	"os"
-	//	"regexp"
-	//	"strconv"
 	"strings"
 	"sync"
 	"testing"
@@ -161,7 +157,7 @@ func test_DGIHandleAcceptedButNotComplete(t *testing.T) {
 			assert.Equal(t, expectedNote, *state.DPNWorkItem.Note)
 
 			// Make sure we updated the DPNWorkItem appropriately
-			assert.Equal(t, constants.StatusPending, state.DPNWorkItem.Status)
+			assert.Equal(t, constants.StatusStarted, state.DPNWorkItem.Status)
 			assert.True(t, state.DPNWorkItem.Retry)
 			wg.Done()
 		}
@@ -214,7 +210,60 @@ func TestDGIHandleNotStartedRejectNow(t *testing.T) {
 			assert.Equal(t, expectedError, *state.DPNWorkItem.Note)
 
 			// Make sure we updated the DPNWorkItem appropriately
-			assert.Equal(t, constants.StatusPending, state.DPNWorkItem.Status)
+			assert.Equal(t, constants.StatusStarted, state.DPNWorkItem.Status)
+			assert.True(t, state.DPNWorkItem.Retry)
+			wg.Done()
+		}
+	}()
+
+	worker.HandleMessage(message)
+	wg.Wait()
+}
+
+func TestDGIHandleCompleted(t *testing.T) {
+	worker := getDGITestWorker(t)
+
+	// Create an NSQMessage with a delegate that will capture
+	// the data our worker sends back to the NSQ server.
+	message := testutil.MakeNsqMessage("1234")
+	delegate := testutil.NewNSQTestDelegate()
+	message.Delegate = delegate
+
+	// Tell our S3 mock server to reject this request.
+	DescribeRestoreStateAs = Completed
+
+	// Because the request will be rejected, we expect this error.
+	expected := "Item is available in S3 for download."
+
+	// Create a PostTestChannel. The worker will send the
+	// DPNGlacierRestoreState object into this channel when
+	// all other processing is complete.
+	worker.PostTestChannel = make(chan *dpn_models.DPNGlacierRestoreState)
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go func() {
+		for state := range worker.PostTestChannel {
+			// Check the basics
+			assert.NotNil(t, state.DPNBag)
+			assert.NotEmpty(t, state.GlacierBucket)
+			assert.NotEmpty(t, state.GlacierKey)
+			assert.False(t, state.RequestedAt.IsZero())
+
+			// Request was rejected, and state should reflect that.
+			assert.True(t, state.RequestAccepted)
+			assert.True(t, state.IsAvailableInS3)
+			assert.Equal(t, "", state.ErrorMessage)
+
+			// Rejection is non-fatal. Make sure we requeued.
+			assert.Equal(t, "finish", delegate.Operation)
+
+			// Make sure the error message was copied into the DPNWorkItem note.
+			require.NotNil(t, state.DPNWorkItem.Note)
+			assert.Equal(t, expected, *state.DPNWorkItem.Note)
+
+			// Make sure we updated the DPNWorkItem appropriately
+			assert.Equal(t, constants.StageAvailableInS3, state.DPNWorkItem.Stage)
+			assert.Equal(t, constants.StatusStarted, state.DPNWorkItem.Status)
 			assert.True(t, state.DPNWorkItem.Retry)
 			wg.Done()
 		}
@@ -349,7 +398,7 @@ func s3Handler(w http.ResponseWriter, r *http.Request) {
 		// in progress, but not yet complete.
 		network.S3RestoreInProgressHandler(w, r)
 	} else if DescribeRestoreStateAs == Completed {
-		// This is an S3 API call, where the HEAD response includes
+		// This is an S3 API call, where the response includes
 		// info saying the restore is complete and the item will be
 		// available in S3 until a specific date/time.
 		network.S3HeadRestoreCompletedHandler(w, r)

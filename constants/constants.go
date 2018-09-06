@@ -64,16 +64,18 @@ var StatusTypes []string = []string{
 // Stage enumerations match values defined in
 // https://github.com/APTrust/fluctus/blob/develop/config/application.rb
 const (
-	StageRequested = "Requested"
-	StageReceive   = "Receive"
-	StageFetch     = "Fetch"
-	StageUnpack    = "Unpack" // TODO: Delete if we're no longer using this.
-	StageValidate  = "Validate"
-	StageStore     = "Store"
-	StageRecord    = "Record"
-	StageCleanup   = "Cleanup"
-	StageResolve   = "Resolve"
-	StagePackage   = "Package"
+	StageRequested     = "Requested"
+	StageReceive       = "Receive"
+	StageFetch         = "Fetch"
+	StageUnpack        = "Unpack" // TODO: Delete if we're no longer using this.
+	StageValidate      = "Validate"
+	StageStore         = "Store"
+	StageRecord        = "Record"
+	StageCleanup       = "Cleanup"
+	StageResolve       = "Resolve"
+	StagePackage       = "Package"
+	StageRestoring     = "Restoring"
+	StageAvailableInS3 = "Available in S3"
 )
 
 var StageTypes []string = []string{
@@ -87,6 +89,8 @@ var StageTypes []string = []string{
 	StageCleanup,
 	StageResolve,
 	StagePackage,
+	StageRestoring,
+	StageAvailableInS3,
 }
 
 // Action enumerations match values defined in

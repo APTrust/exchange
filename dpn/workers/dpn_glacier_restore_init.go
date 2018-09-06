@@ -110,7 +110,12 @@ func (restorer *DPNGlacierRestoreInit) HandleMessage(message *nsq.Message) error
 
 func (restorer *DPNGlacierRestoreInit) RequestRestore() {
 	for state := range restorer.RequestChannel {
-		restorer.InitializeRetrieval(state)
+		requestNeeded, err := restorer.RestoreRequestNeeded(state)
+		if err != nil {
+			state.ErrorMessage = fmt.Sprintf("Error processing S3 HEAD request for %s: %v", state.GlacierKey, err)
+		} else if requestNeeded {
+			restorer.InitializeRetrieval(state)
+		}
 		restorer.CleanupChannel <- state
 	}
 }
@@ -135,13 +140,15 @@ func (restorer *DPNGlacierRestoreInit) FinishWithSuccess(state *models.DPNGlacie
 	note := fmt.Sprintf("Glacier restore initiated. Will check availability "+
 		"in S3 every %d hours.", HOURS_BETWEEN_CHECKS)
 	if state.IsAvailableInS3 {
-		note = "Item is available in S3 for fixity check"
+		note = "Item is available in S3 for download."
+		state.DPNWorkItem.Note = &note
+		state.DPNWorkItem.Stage = constants.StageAvailableInS3
+		fmt.Println(state)
 		restorer.SaveDPNWorkItem(state)
 		restorer.SendToDownloadQueue(state)
 	} else {
 		state.DPNWorkItem.Note = &note
 		restorer.Context.MessageLog.Info("Requested %s from Glacier. %s", state.GlacierKey, note)
-		state.DPNWorkItem.Status = constants.StatusPending
 		state.DPNWorkItem.Retry = true
 		restorer.SaveDPNWorkItem(state)
 		state.NSQMessage.Requeue(HOURS_BETWEEN_CHECKS * time.Hour)
@@ -182,12 +189,62 @@ func (restorer *DPNGlacierRestoreInit) FinishWithError(state *models.DPNGlacierR
 		state.NSQMessage.Finish()
 	} else {
 		restorer.Context.MessageLog.Info("Error for %s is transient. Requeueing.", state.GlacierKey)
-		state.DPNWorkItem.Status = constants.StatusPending
 		state.DPNWorkItem.Retry = true
 		state.NSQMessage.Requeue(1 * time.Minute)
 	}
 
 	restorer.SaveDPNWorkItem(state)
+}
+
+func (restorer *DPNGlacierRestoreInit) RestoreRequestNeeded(state *models.DPNGlacierRestoreState) (bool, error) {
+	needsRestoreRequest := false
+	s3Client := apt_network.NewS3Head(
+		restorer.Context.Config.GetAWSAccessKeyId(),
+		restorer.Context.Config.GetAWSSecretAccessKey(),
+		restorer.Context.Config.DPN.DPNGlacierRegion,
+		state.GlacierBucket)
+	// Hack for testing: Tell the client to talk to our own
+	// local S3 test server, and clear the bucket name,
+	// because that gets prepended to the URL.
+	if restorer.S3Url != "" {
+		restorer.Context.MessageLog.Warning("Setting S3 URL to %s. This should happen only in testing!",
+			restorer.S3Url)
+		s3Client.SetSessionEndpoint(restorer.S3Url)
+		s3Client.BucketName = ""
+	}
+
+	// Ask S3 about the status of this object
+	s3Client.Head(state.GlacierKey)
+
+	// Status 409: Conflict is an expected response.
+	// It means a restore request has already been initiated.
+	if strings.Contains(s3Client.ErrorMessage, "Conflict") {
+		restorer.Context.MessageLog.Info("Already in progress: %s ", state.GlacierKey)
+		state.RequestAccepted = true
+		state.RequestedAt = time.Now().UTC()
+		return false, nil
+	}
+
+	restoreRequestInfo, err := s3Client.GetRestoreRequestInfo()
+	if restoreRequestInfo.RequestInProgress {
+		// Log and go on
+		restorer.Context.MessageLog.Info("Already in progress: %s ", state.GlacierKey)
+		state.RequestAccepted = true
+		state.RequestedAt = time.Now().UTC()
+	} else if restoreRequestInfo.RequestIsComplete {
+		// Log and update expiry date
+		state.RequestAccepted = true
+		state.RequestedAt = time.Now().UTC()
+		state.IsAvailableInS3 = true
+		state.EstimatedDeletionFromS3 = restoreRequestInfo.S3ExpiryDate
+		restorer.Context.MessageLog.Info("Already restored to S3: %s", state.GlacierKey)
+	} else {
+		// Not restored yet and not even requested.
+		// We need to make a request for this now.
+		restorer.Context.MessageLog.Info("Needs Glacier retrieval request: %s", state.GlacierKey)
+		needsRestoreRequest = true
+	}
+	return needsRestoreRequest, err
 }
 
 func (restorer *DPNGlacierRestoreInit) InitializeRetrieval(state *models.DPNGlacierRestoreState) {
@@ -230,6 +287,7 @@ func (restorer *DPNGlacierRestoreInit) InitializeRetrieval(state *models.DPNGlac
 	state.RequestAccepted = restoreClient.RequestAccepted()
 	state.RequestedAt = now
 	state.EstimatedDeletionFromS3 = estimatedDeletionFromS3
+	state.IsAvailableInS3 = restoreClient.AlreadyInActiveTier
 
 	if restoreClient.RequestRejectedServiceUnavailable {
 		state.ErrorMessage = fmt.Sprintf("Request to restore %s/%s: "+
