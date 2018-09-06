@@ -2,6 +2,7 @@ package workers
 
 import (
 	"fmt"
+	"github.com/APTrust/exchange/constants"
 	"github.com/APTrust/exchange/context"
 	"github.com/APTrust/exchange/dpn/models"
 	dpn_network "github.com/APTrust/exchange/dpn/network"
@@ -81,6 +82,7 @@ func (restorer *DPNGlacierRestoreInit) HandleMessage(message *nsq.Message) error
 	message.DisableAutoResponse()
 
 	state := restorer.GetRestoreState(message)
+	state.DPNWorkItem.Status = constants.StatusStarted
 	restorer.SaveDPNWorkItem(state)
 	if state.ErrorMessage != "" {
 		restorer.Context.MessageLog.Error("Error setting up state for WorkItem %s: %s",
@@ -151,22 +153,29 @@ func (restorer *DPNGlacierRestoreInit) FinishWithError(state *models.DPNGlacierR
 	state.DPNWorkItem.ClearNodeAndPid()
 	state.DPNWorkItem.Note = &state.ErrorMessage
 	restorer.Context.MessageLog.Error(state.ErrorMessage)
-	restorer.SaveDPNWorkItem(state)
 
 	attempts := int(state.NSQMessage.Attempts)
 	maxAttempts := int(restorer.Context.Config.DPN.DPNGlacierRestoreWorker.MaxAttempts)
 
 	if state.ErrorIsFatal {
 		restorer.Context.MessageLog.Error("Error for %s is fatal. Not requeueing.", state.GlacierKey)
+		state.DPNWorkItem.Status = constants.StatusFailed
+		state.DPNWorkItem.Retry = false
 		state.NSQMessage.Finish()
 	} else if attempts > maxAttempts {
 		restorer.Context.MessageLog.Error("Attempt to restore %s failed %d times. Not requeuing.",
 			attempts, state.GlacierKey)
+		state.DPNWorkItem.Status = constants.StatusFailed
+		state.DPNWorkItem.Retry = false
 		state.NSQMessage.Finish()
 	} else {
 		restorer.Context.MessageLog.Info("Error for %s is transient. Requeueing.", state.GlacierKey)
+		state.DPNWorkItem.Status = constants.StatusPending
+		state.DPNWorkItem.Retry = true
 		state.NSQMessage.Requeue(1 * time.Minute)
 	}
+
+	restorer.SaveDPNWorkItem(state)
 }
 
 func (restorer *DPNGlacierRestoreInit) InitializeRetrieval(state *models.DPNGlacierRestoreState) {

@@ -150,7 +150,7 @@ func TestDGIHandleNotStartedRejectNow(t *testing.T) {
 			assert.Equal(t, expectedError, *state.DPNWorkItem.Note)
 
 			// Make sure we updated the DPNWorkItem appropriately
-			// assert.Equal(t, constants.StatusStarted, state.DPNWorkItem.Status)
+			assert.Equal(t, constants.StatusPending, state.DPNWorkItem.Status)
 			assert.True(t, state.DPNWorkItem.Retry)
 			wg.Done()
 		}
