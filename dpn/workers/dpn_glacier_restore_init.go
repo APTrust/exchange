@@ -206,9 +206,16 @@ func (restorer *DPNGlacierRestoreInit) InitializeRetrieval(state *models.DPNGlac
 	}
 
 	// Update this info.
-	state.RequestAccepted = (restoreClient.ErrorMessage == "")
+	state.RequestAccepted = restoreClient.RequestAccepted()
 	state.RequestedAt = now
 	state.EstimatedDeletionFromS3 = estimatedDeletionFromS3
+
+	if restoreClient.RequestRejectedServiceUnavailable {
+		state.ErrorMessage = fmt.Sprintf("Request to restore %s/%s: "+
+			"Glacier restore service is temporarily unavailable. Try again later.",
+			state.GlacierBucket, state.GlacierKey)
+		state.ErrorIsFatal = false
+	}
 }
 
 // GetWorkItem returns the WorkItem with the specified Id from Pharos,

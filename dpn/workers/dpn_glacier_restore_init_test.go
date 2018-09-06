@@ -107,7 +107,7 @@ func TestDGIInit(t *testing.T) {
 	assert.NotNil(t, worker.LocalDPNRestClient)
 }
 
-func TestDGIHandleMessage(t *testing.T) {
+func TestDGIHandleNotStartedRejectNow(t *testing.T) {
 	worker := getDGITestWorker(t)
 
 	// Create an NSQMessage with a delegate that will capture
@@ -116,8 +116,11 @@ func TestDGIHandleMessage(t *testing.T) {
 	delegate := testutil.NewNSQTestDelegate()
 	message.Delegate = delegate
 
-	// Tell our S3 mock server to accept this request.
-	DescribeRestoreStateAs = NotStartedAcceptNow
+	// Tell our S3 mock server to reject this request.
+	DescribeRestoreStateAs = NotStartedRejectNow
+
+	// Because the request will be rejected, we expect this error.
+	expectedError := "Request to restore aptrust.dpn.test/00000000-0000-0000-0000-000000000000: Glacier restore service is temporarily unavailable. Try again later."
 
 	// Create a PostTestChannel. The worker will send the
 	// DPNGlacierRestoreState object into this channel when
@@ -127,16 +130,26 @@ func TestDGIHandleMessage(t *testing.T) {
 	wg.Add(1)
 	go func() {
 		for state := range worker.PostTestChannel {
-			assert.Empty(t, state.ErrorMessage)
+			// Check the basics
 			assert.NotNil(t, state.DPNBag)
 			assert.NotEmpty(t, state.GlacierBucket)
 			assert.NotEmpty(t, state.GlacierKey)
 			assert.False(t, state.RequestedAt.IsZero())
-			// assert.True(t, state.RequestAccepted)
-			// assert.False(t, state.IsAvailableInS3)
-			// assert.Equal(t, "requeue", delegate.Operation)
-			// assert.Equal(t, 1*time.Minute, delegate.Delay)
-			// assert.Equal(t, "Requeued to check on status of Glacier restore requests.", state.DPNWorkItem.Note)
+
+			// Request was rejected, and state should reflect that.
+			assert.False(t, state.RequestAccepted)
+			assert.False(t, state.IsAvailableInS3)
+			assert.Equal(t, expectedError, state.ErrorMessage)
+
+			// Rejection is non-fatal. Make sure we requeued.
+			assert.Equal(t, "requeue", delegate.Operation)
+			assert.Equal(t, 1*time.Minute, delegate.Delay)
+
+			// Make sure the error message was copied into the DPNWorkItem note.
+			require.NotNil(t, state.DPNWorkItem.Note)
+			assert.Equal(t, expectedError, *state.DPNWorkItem.Note)
+
+			// Make sure we updated the DPNWorkItem appropriately
 			// assert.Equal(t, constants.StatusStarted, state.DPNWorkItem.Status)
 			assert.True(t, state.DPNWorkItem.Retry)
 			wg.Done()

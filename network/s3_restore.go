@@ -10,18 +10,19 @@ import (
 )
 
 type S3Restore struct {
-	AWSRegion                string
-	BucketName               string
-	KeyName                  string
-	Tier                     string
-	Days                     int64
-	ErrorMessage             string
-	Response                 *s3.RestoreObjectOutput
-	RestoreAlreadyInProgress bool
-	AlreadyInActiveTier      bool
-	session                  *session.Session
-	accessKeyId              string
-	secretAccessKey          string
+	AWSRegion                         string
+	BucketName                        string
+	KeyName                           string
+	Tier                              string
+	Days                              int64
+	ErrorMessage                      string
+	Response                          *s3.RestoreObjectOutput
+	RestoreAlreadyInProgress          bool
+	AlreadyInActiveTier               bool
+	RequestRejectedServiceUnavailable bool
+	session                           *session.Session
+	accessKeyId                       string
+	secretAccessKey                   string
 
 	// TestURL is the URL of a mock S3 server
 	// for use in unit tests only.
@@ -59,10 +60,11 @@ func NewS3Restore(accessKeyId, secretAccessKey, region, bucket, key, tier string
 		KeyName:    key,
 		Tier:       tier,
 		Days:       days,
-		RestoreAlreadyInProgress: false,
-		AlreadyInActiveTier:      false,
-		accessKeyId:              accessKeyId,
-		secretAccessKey:          secretAccessKey,
+		RestoreAlreadyInProgress:          false,
+		AlreadyInActiveTier:               false,
+		RequestRejectedServiceUnavailable: false,
+		accessKeyId:                       accessKeyId,
+		secretAccessKey:                   secretAccessKey,
 	}
 }
 
@@ -139,10 +141,14 @@ func (client *S3Restore) checkError(err error) {
 	// even though the S3 service may indicate them
 	// as such. We do want to let the caller know what
 	// state the restore request is in.
+	//
+	// https://docs.aws.amazon.com/AmazonS3/latest/API/RESTObjectPOSTrestore.html#RESTObjectPOSTrestore-responses
 	if client.isActiveTierError(err) {
 		client.AlreadyInActiveTier = true
 	} else if client.isRestoreInProgressError(err) {
 		client.RestoreAlreadyInProgress = true
+	} else if client.isServiceUnavailableError(err) {
+		client.RequestRejectedServiceUnavailable = true
 	} else {
 		// This is not a normal or expected condition,
 		// so we do consider this an error.
@@ -173,4 +179,23 @@ func (client *S3Restore) isRestoreInProgressError(err error) bool {
 		isInProgress = true
 	}
 	return isInProgress
+}
+
+func (client *S3Restore) isServiceUnavailableError(err error) bool {
+	is503Response := false
+	lcErrorMessage := strings.ToLower(err.Error())
+	if strings.Contains(lcErrorMessage, "serviceunavailable") ||
+		strings.Contains(lcErrorMessage, "status code: 503") {
+		is503Response = true
+	}
+	return is503Response
+}
+
+// RequestAccepted returns true if the restore request was
+// accepted, or if it is already in progress or has already
+// been completed.
+func (client *S3Restore) RequestAccepted() bool {
+	return (client.Response != nil &&
+		client.ErrorMessage == "" &&
+		client.RequestRejectedServiceUnavailable == false)
 }
