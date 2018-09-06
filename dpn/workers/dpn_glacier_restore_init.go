@@ -170,7 +170,6 @@ func (restorer *DPNGlacierRestoreInit) FinishWithError(state *models.DPNGlacierR
 }
 
 func (restorer *DPNGlacierRestoreInit) InitializeRetrieval(state *models.DPNGlacierRestoreState) {
-
 	// Request restore from Glacier
 	restorer.Context.MessageLog.Info("Requesting Glacier retrieval of %s from %s",
 		state.GlacierKey, state.GlacierBucket)
@@ -202,6 +201,8 @@ func (restorer *DPNGlacierRestoreInit) InitializeRetrieval(state *models.DPNGlac
 	if restoreClient.ErrorMessage != "" {
 		state.ErrorMessage = fmt.Sprintf("Glacier retrieval request returned an error for %s at %s: %v",
 			state.GlacierBucket, state.GlacierKey, restoreClient.ErrorMessage)
+		restorer.Context.MessageLog.Error("Bad response from Glacier. Requested %s/%s. Got:\n %v",
+			state.GlacierBucket, state.GlacierKey, restoreClient.Response)
 	}
 
 	// Update this info.
@@ -215,7 +216,9 @@ func (restorer *DPNGlacierRestoreInit) InitializeRetrieval(state *models.DPNGlac
 func (restorer *DPNGlacierRestoreInit) GetRestoreState(message *nsq.Message) *models.DPNGlacierRestoreState {
 	msgBody := strings.TrimSpace(string(message.Body))
 	restorer.Context.MessageLog.Info("NSQ Message body: '%s'", msgBody)
-	state := &models.DPNGlacierRestoreState{}
+	state := &models.DPNGlacierRestoreState{
+		NSQMessage: message,
+	}
 
 	// Get the DPN work item
 	dpnWorkItemId, err := strconv.Atoi(string(msgBody))
@@ -255,7 +258,7 @@ func (restorer *DPNGlacierRestoreInit) GetRestoreState(message *nsq.Message) *mo
 	// Although this is duplicate info, we record it in the state object
 	// so we can see it in the Pharos UI when we're checking on the state
 	// of an item.
-	state.GlacierBucket = restorer.Context.Config.DPN.DPNGlacierRegion
+	state.GlacierBucket = restorer.Context.Config.DPN.DPNPreservationBucket
 	state.GlacierKey = dpnBag.UUID
 
 	return state

@@ -260,6 +260,9 @@ func MakeDPNWorkItem() *models.DPNWorkItem {
 		QueuedAt:    &queuedAt,
 		CompletedAt: nil,
 		Note:        &note,
+		Retry:       true,
+		Stage:       constants.StageRequested,
+		Status:      constants.StatusPending,
 		CreatedAt:   createdAt,
 		UpdatedAt:   createdAt,
 	}
