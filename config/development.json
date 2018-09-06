@@ -298,7 +298,7 @@
 		    "Workers": 4,
 		    "NsqTopic": "dpn_glacier_restore_topic",
 		    "NsqChannel": "dpn_glacier_restore_channel",
-		    "MaxAttempts": 3,
+		    "MaxAttempts": 10,
 		    "MaxInFlight": 20,
 		    "HeartbeatInterval": "10s",
 		    "ReadTimeout": "60s",

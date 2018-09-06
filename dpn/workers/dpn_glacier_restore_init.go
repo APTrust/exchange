@@ -20,6 +20,11 @@ import (
 // For retrieval pricing, see https://aws.amazon.com/glacier/pricing/
 const RETRIEVAL_OPTION = "Bulk"
 
+// After a Glacier restore request has been accepted, we will check
+// S3 periodically to see if the item has been restored. This is the
+// interval between checks.
+const HOURS_BETWEEN_CHECKS = 3
+
 // Keep the files in S3 up to 60 days, in case we're
 // having system problems and we need to attempt the
 // restore multiple times. We'll have other processes
@@ -127,16 +132,24 @@ func (restorer *DPNGlacierRestoreInit) Cleanup() {
 
 func (restorer *DPNGlacierRestoreInit) FinishWithSuccess(state *models.DPNGlacierRestoreState) {
 	state.DPNWorkItem.ClearNodeAndPid()
-	note := "Awaiting availability in S3 for fixity check"
+	note := fmt.Sprintf("Glacier restore initiated. Will check availability "+
+		"in S3 every %d hours.", HOURS_BETWEEN_CHECKS)
 	if state.IsAvailableInS3 {
 		note = "Item is available in S3 for fixity check"
+		restorer.SaveDPNWorkItem(state)
+		restorer.SendToDownloadQueue(state)
+	} else {
+		state.DPNWorkItem.Note = &note
+		restorer.Context.MessageLog.Info("Requested %s from Glacier. %s", state.GlacierKey, note)
+		state.DPNWorkItem.Status = constants.StatusPending
+		state.DPNWorkItem.Retry = true
+		restorer.SaveDPNWorkItem(state)
+		state.NSQMessage.Requeue(HOURS_BETWEEN_CHECKS * time.Hour)
 	}
-	state.DPNWorkItem.Note = &note
-	restorer.Context.MessageLog.Info("Requested %s from Glacier. %s", state.GlacierKey, note)
-	restorer.SaveDPNWorkItem(state)
-	state.NSQMessage.Finish()
+}
 
-	// Push to download queue.
+func (restorer *DPNGlacierRestoreInit) SendToDownloadQueue(state *models.DPNGlacierRestoreState) {
+	state.NSQMessage.Finish()
 	topic := restorer.Context.Config.DPN.DPNS3DownloadWorker.NsqTopic
 	err := restorer.Context.NSQClient.Enqueue(topic, state.DPNWorkItem.Id)
 	if err != nil {
@@ -146,7 +159,6 @@ func (restorer *DPNGlacierRestoreInit) FinishWithSuccess(state *models.DPNGlacie
 		restorer.Context.MessageLog.Error(state.ErrorMessage)
 		restorer.SaveDPNWorkItem(state)
 	}
-
 }
 
 func (restorer *DPNGlacierRestoreInit) FinishWithError(state *models.DPNGlacierRestoreState) {

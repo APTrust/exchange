@@ -107,6 +107,59 @@ func TestDGIInit(t *testing.T) {
 	assert.NotNil(t, worker.LocalDPNRestClient)
 }
 
+func TestDGIHandleNotStartedAcceptNow(t *testing.T) {
+	worker := getDGITestWorker(t)
+
+	// Create an NSQMessage with a delegate that will capture
+	// the data our worker sends back to the NSQ server.
+	message := testutil.MakeNsqMessage("1234")
+	delegate := testutil.NewNSQTestDelegate()
+	message.Delegate = delegate
+
+	// Tell our S3 mock server to say this request has not yet
+	// been intitiated but Glacier will accept it & get to work.
+	DescribeRestoreStateAs = NotStartedAcceptNow
+
+	expectedNote := "Glacier restore initiated. Will check availability in S3 every 3 hours."
+
+	// Create a PostTestChannel. The worker will send the
+	// DPNGlacierRestoreState object into this channel when
+	// all other processing is complete.
+	worker.PostTestChannel = make(chan *dpn_models.DPNGlacierRestoreState)
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go func() {
+		for state := range worker.PostTestChannel {
+			// Check the basics
+			assert.NotNil(t, state.DPNBag)
+			assert.NotEmpty(t, state.GlacierBucket)
+			assert.NotEmpty(t, state.GlacierKey)
+			assert.False(t, state.RequestedAt.IsZero())
+
+			// Request was accepted, and state should reflect that.
+			assert.True(t, state.RequestAccepted)
+			assert.False(t, state.IsAvailableInS3)
+			assert.Equal(t, "", state.ErrorMessage)
+
+			// Rejection is non-fatal. Make sure we requeued.
+			assert.Equal(t, "requeue", delegate.Operation)
+			assert.Equal(t, 3*time.Hour, delegate.Delay)
+
+			// Make sure the error message was copied into the DPNWorkItem note.
+			require.NotNil(t, state.DPNWorkItem.Note)
+			assert.Equal(t, expectedNote, *state.DPNWorkItem.Note)
+
+			// Make sure we updated the DPNWorkItem appropriately
+			assert.Equal(t, constants.StatusPending, state.DPNWorkItem.Status)
+			assert.True(t, state.DPNWorkItem.Retry)
+			wg.Done()
+		}
+	}()
+
+	worker.HandleMessage(message)
+	wg.Wait()
+}
+
 func TestDGIHandleNotStartedRejectNow(t *testing.T) {
 	worker := getDGITestWorker(t)
 
