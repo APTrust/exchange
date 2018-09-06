@@ -107,7 +107,22 @@ func TestDGIInit(t *testing.T) {
 	assert.NotNil(t, worker.LocalDPNRestClient)
 }
 
-func TestDGIHandleNotStartedAcceptNow(t *testing.T) {
+func TestDGIHandleAcceptedButNotComplete(t *testing.T) {
+	// If Glacier accepts our restore request, or if
+	// it's in progress but not yet complete, the worker
+	// should re-check the item every few hours.
+
+	// This is an initial request being accepted by Glacier.
+	DescribeRestoreStateAs = NotStartedAcceptNow
+	test_DGIHandleAcceptedButNotComplete(t)
+
+	// This is a previously accepted request that is still
+	// in process of being restored.
+	DescribeRestoreStateAs = InProgressGlacier
+	test_DGIHandleAcceptedButNotComplete(t)
+}
+
+func test_DGIHandleAcceptedButNotComplete(t *testing.T) {
 	worker := getDGITestWorker(t)
 
 	// Create an NSQMessage with a delegate that will capture
@@ -115,10 +130,6 @@ func TestDGIHandleNotStartedAcceptNow(t *testing.T) {
 	message := testutil.MakeNsqMessage("1234")
 	delegate := testutil.NewNSQTestDelegate()
 	message.Delegate = delegate
-
-	// Tell our S3 mock server to say this request has not yet
-	// been intitiated but Glacier will accept it & get to work.
-	DescribeRestoreStateAs = NotStartedAcceptNow
 
 	expectedNote := "Glacier restore initiated. Will check availability in S3 every 3 hours."
 
