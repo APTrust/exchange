@@ -321,7 +321,19 @@ func TestDGIFinishWithError(t *testing.T) {
 }
 
 func TestDGIInitializeRetrieval(t *testing.T) {
+	worker, _, _, state := getDGITestItems(t)
 
+	DescribeRestoreStateAs = NotStartedAcceptNow
+	state.RequestedAt = time.Time{}
+	worker.InitializeRetrieval(state)
+	assert.False(t, state.RequestedAt.IsZero())
+	assert.True(t, state.RequestAccepted)
+
+	DescribeRestoreStateAs = NotStartedRejectNow
+	state.RequestedAt = time.Time{}
+	worker.InitializeRetrieval(state)
+	assert.False(t, state.RequestedAt.IsZero())
+	assert.False(t, state.RequestAccepted)
 }
 
 func TestDGIGetRestoreState(t *testing.T) {
