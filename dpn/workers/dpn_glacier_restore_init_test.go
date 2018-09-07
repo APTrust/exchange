@@ -148,7 +148,7 @@ func test_DGIHandleAcceptedButNotComplete(t *testing.T) {
 			assert.False(t, state.IsAvailableInS3)
 			assert.Equal(t, "", state.ErrorMessage)
 
-			// Rejection is non-fatal. Make sure we requeued.
+			// Make sure we requeued to recheck progress later.
 			assert.Equal(t, "requeue", delegate.Operation)
 			assert.Equal(t, 3*time.Hour, delegate.Delay)
 
@@ -229,7 +229,8 @@ func TestDGIHandleCompleted(t *testing.T) {
 	delegate := testutil.NewNSQTestDelegate()
 	message.Delegate = delegate
 
-	// Tell our S3 mock server to reject this request.
+	// Tell our S3 mock server to say this request
+	// has already been completed.
 	DescribeRestoreStateAs = Completed
 
 	// Because the request will be rejected, we expect this error.
@@ -271,6 +272,48 @@ func TestDGIHandleCompleted(t *testing.T) {
 
 	worker.HandleMessage(message)
 	wg.Wait()
+}
+
+func TestDGIRestoreRequestNeeded(t *testing.T) {
+	worker := getDGITestWorker(t)
+	message := testutil.MakeNsqMessage("1234")
+	delegate := testutil.NewNSQTestDelegate()
+	message.Delegate = delegate
+
+	state := worker.GetRestoreState(message)
+
+	// Request is needed because mock S3 service
+	// is telling worker this request has not been
+	// initiated.
+	DescribeRestoreStateAs = NotStartedAcceptNow
+	needed, err := worker.RestoreRequestNeeded(state)
+	require.Nil(t, err)
+	assert.True(t, needed)
+
+	// Request is needed because mock S3 service
+	// is telling worker this request has not been
+	// initiated.
+	DescribeRestoreStateAs = NotStartedRejectNow
+	needed, err = worker.RestoreRequestNeeded(state)
+	require.Nil(t, err)
+	assert.True(t, needed)
+
+	// Request is NOT needed because S3 HEAD request
+	// tells us restore has been initiated but is not
+	// yet complete. In this case, we requeue for a
+	// later HEAD request to see if it is complete.
+	DescribeRestoreStateAs = InProgressGlacier
+	needed, err = worker.RestoreRequestNeeded(state)
+	require.Nil(t, err)
+	assert.False(t, needed)
+
+	// Request is NOT needed because S3 HEAD request
+	// tells us the item has already been restored
+	// from Glacier to S3.
+	DescribeRestoreStateAs = Completed
+	needed, err = worker.RestoreRequestNeeded(state)
+	require.Nil(t, err)
+	assert.False(t, needed)
 }
 
 func TestDGIRequestRestore(t *testing.T) {
