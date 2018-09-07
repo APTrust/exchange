@@ -47,6 +47,7 @@ class Context
 	  'apt_volume_service' => App.new('apt_volume_service', 'service'),
 	  'dpn_cleanup' => App.new('dpn_cleanup', 'application'),
 	  'dpn_copy' => App.new('dpn_copy', 'service'),
+	  'dpn_glacier_restore_init' => App.new('dpn_glacier_restore_init', 'service'),
 	  'dpn_ingest_record' => App.new('dpn_ingest_record', 'service'),
 	  'dpn_ingest_store' => App.new('dpn_ingest_store', 'service'),
 	  'dpn_package' => App.new('dpn_package', 'service'),
