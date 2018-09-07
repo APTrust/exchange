@@ -10,6 +10,7 @@ import (
 	apt_models "github.com/APTrust/exchange/models"
 	"github.com/APTrust/exchange/network"
 	"github.com/APTrust/exchange/util/testutil"
+	"github.com/nsqio/go-nsq"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"io/ioutil"
@@ -94,6 +95,17 @@ func getDGITestWorker(t *testing.T) *workers.DPNGlacierRestoreInit {
 	return worker
 }
 
+func getDGITestItems(t *testing.T) (*workers.DPNGlacierRestoreInit, *nsq.Message, *testutil.NSQTestDelegate, *dpn_models.DPNGlacierRestoreState) {
+	worker := getDGITestWorker(t)
+	message := testutil.MakeNsqMessage("1234")
+	// Create an NSQMessage with a delegate that will capture
+	// the data our worker sends back to the NSQ server.
+	delegate := testutil.NewNSQTestDelegate()
+	message.Delegate = delegate
+	state := worker.GetRestoreState(message)
+	return worker, message, delegate, state
+}
+
 func TestDGIInit(t *testing.T) {
 	worker := getDGITestWorker(t)
 	require.NotNil(t, worker)
@@ -119,14 +131,7 @@ func TestDGIHandleAcceptedButNotComplete(t *testing.T) {
 }
 
 func test_DGIHandleAcceptedButNotComplete(t *testing.T) {
-	worker := getDGITestWorker(t)
-
-	// Create an NSQMessage with a delegate that will capture
-	// the data our worker sends back to the NSQ server.
-	message := testutil.MakeNsqMessage("1234")
-	delegate := testutil.NewNSQTestDelegate()
-	message.Delegate = delegate
-
+	worker, message, delegate, _ := getDGITestItems(t)
 	expectedNote := "Glacier restore initiated. Will check availability in S3 every 3 hours."
 
 	// Create a PostTestChannel. The worker will send the
@@ -168,13 +173,7 @@ func test_DGIHandleAcceptedButNotComplete(t *testing.T) {
 }
 
 func TestDGIHandleNotStartedRejectNow(t *testing.T) {
-	worker := getDGITestWorker(t)
-
-	// Create an NSQMessage with a delegate that will capture
-	// the data our worker sends back to the NSQ server.
-	message := testutil.MakeNsqMessage("1234")
-	delegate := testutil.NewNSQTestDelegate()
-	message.Delegate = delegate
+	worker, message, delegate, _ := getDGITestItems(t)
 
 	// Tell our S3 mock server to reject this request.
 	DescribeRestoreStateAs = NotStartedRejectNow
@@ -221,13 +220,7 @@ func TestDGIHandleNotStartedRejectNow(t *testing.T) {
 }
 
 func TestDGIHandleCompleted(t *testing.T) {
-	worker := getDGITestWorker(t)
-
-	// Create an NSQMessage with a delegate that will capture
-	// the data our worker sends back to the NSQ server.
-	message := testutil.MakeNsqMessage("1234")
-	delegate := testutil.NewNSQTestDelegate()
-	message.Delegate = delegate
+	worker, message, delegate, _ := getDGITestItems(t)
 
 	// Tell our S3 mock server to say this request
 	// has already been completed.
@@ -275,12 +268,7 @@ func TestDGIHandleCompleted(t *testing.T) {
 }
 
 func TestDGIRestoreRequestNeeded(t *testing.T) {
-	worker := getDGITestWorker(t)
-	message := testutil.MakeNsqMessage("1234")
-	delegate := testutil.NewNSQTestDelegate()
-	message.Delegate = delegate
-
-	state := worker.GetRestoreState(message)
+	worker, _, _, state := getDGITestItems(t)
 
 	// Request is needed because mock S3 service
 	// is telling worker this request has not been
