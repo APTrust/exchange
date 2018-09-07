@@ -143,7 +143,6 @@ func (restorer *DPNGlacierRestoreInit) FinishWithSuccess(state *models.DPNGlacie
 		note = "Item is available in S3 for download."
 		state.DPNWorkItem.Note = &note
 		state.DPNWorkItem.Stage = constants.StageAvailableInS3
-		fmt.Println(state)
 		restorer.SaveDPNWorkItem(state)
 		restorer.SendToDownloadQueue(state)
 	} else {

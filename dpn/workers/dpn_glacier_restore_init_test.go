@@ -103,6 +103,7 @@ func getDGITestItems(t *testing.T) (*workers.DPNGlacierRestoreInit, *nsq.Message
 	delegate := testutil.NewNSQTestDelegate()
 	message.Delegate = delegate
 	state := worker.GetRestoreState(message)
+	require.NotNil(t, state)
 	return worker, message, delegate, state
 }
 
@@ -248,7 +249,7 @@ func TestDGIHandleCompleted(t *testing.T) {
 			assert.True(t, state.IsAvailableInS3)
 			assert.Equal(t, "", state.ErrorMessage)
 
-			// Rejection is non-fatal. Make sure we requeued.
+			// Item was completed, so the message should be marked finished.
 			assert.Equal(t, "finish", delegate.Operation)
 
 			// Make sure the error message was copied into the DPNWorkItem note.
@@ -304,16 +305,33 @@ func TestDGIRestoreRequestNeeded(t *testing.T) {
 	assert.False(t, needed)
 }
 
-func TestDGIRequestRestore(t *testing.T) {
-
-}
-
-func TestDGICleanup(t *testing.T) {
-
-}
-
 func TestDGIFinishWithSuccess(t *testing.T) {
+	node := "server1.aptrust.org"
+	pid := 8477
 
+	// Test a fully completed item (available in S3)
+	worker, _, delegate, state := getDGITestItems(t)
+	state.IsAvailableInS3 = true
+	state.DPNWorkItem.ProcessingNode = &node
+	state.DPNWorkItem.Pid = pid
+	worker.FinishWithSuccess(state)
+	assert.Equal(t, constants.StageAvailableInS3, state.DPNWorkItem.Stage)
+	assert.Equal(t, "Item is available in S3 for download.", *state.DPNWorkItem.Note)
+	assert.Nil(t, state.DPNWorkItem.ProcessingNode)
+	assert.Equal(t, 0, state.DPNWorkItem.Pid)
+	assert.Equal(t, "finish", delegate.Operation)
+
+	// Test an in-progress item (not yet in S3)
+	worker, _, delegate, state = getDGITestItems(t)
+	state.IsAvailableInS3 = false
+	state.DPNWorkItem.ProcessingNode = &node
+	state.DPNWorkItem.Pid = pid
+	worker.FinishWithSuccess(state)
+	assert.Equal(t, "Glacier restore initiated. Will check availability in S3 every 3 hours.", *state.DPNWorkItem.Note)
+	assert.Nil(t, state.DPNWorkItem.ProcessingNode)
+	assert.Equal(t, 0, state.DPNWorkItem.Pid)
+	assert.Equal(t, "requeue", delegate.Operation)
+	assert.Equal(t, 3*time.Hour, delegate.Delay)
 }
 
 func TestDGIFinishWithError(t *testing.T) {
@@ -334,10 +352,6 @@ func TestDGIInitializeRetrieval(t *testing.T) {
 	worker.InitializeRetrieval(state)
 	assert.False(t, state.RequestedAt.IsZero())
 	assert.False(t, state.RequestAccepted)
-}
-
-func TestDGIGetRestoreState(t *testing.T) {
-
 }
 
 func TestDGISaveDPNWorkItem(t *testing.T) {
