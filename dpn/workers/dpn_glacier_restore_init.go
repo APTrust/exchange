@@ -355,7 +355,7 @@ func (restorer *DPNGlacierRestoreInit) SaveDPNWorkItem(state *models.DPNGlacierR
 		msg := fmt.Sprintf("Could not marshal DPNGlacierRestoreState "+
 			"for DPNWorkItem %d: %v", state.DPNWorkItem.Id, err)
 		restorer.Context.MessageLog.Error(msg)
-		note := "[JSON serialization error]"
+		note := "JSON serialization error while trying to save DPNWorkItemState."
 		state.DPNWorkItem.Note = &note
 	}
 

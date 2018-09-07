@@ -335,7 +335,33 @@ func TestDGIFinishWithSuccess(t *testing.T) {
 }
 
 func TestDGIFinishWithError(t *testing.T) {
+	node := "server1.aptrust.org"
+	pid := 8477
 
+	// Test with a non-fatal error
+	worker, _, delegate, state := getDGITestItems(t)
+	state.DPNWorkItem.ProcessingNode = &node
+	state.DPNWorkItem.Pid = pid
+	state.ErrorMessage = "Oops! Deliberate error for testing."
+	state.ErrorIsFatal = false
+	worker.FinishWithError(state)
+	assert.Equal(t, "Oops! Deliberate error for testing.", *state.DPNWorkItem.Note)
+	assert.Nil(t, state.DPNWorkItem.ProcessingNode)
+	assert.Equal(t, 0, state.DPNWorkItem.Pid)
+	assert.Equal(t, "requeue", delegate.Operation)
+	assert.Equal(t, 1*time.Minute, delegate.Delay)
+
+	// Test with a fatal error
+	worker, _, delegate, state = getDGITestItems(t)
+	state.DPNWorkItem.ProcessingNode = &node
+	state.DPNWorkItem.Pid = pid
+	state.ErrorMessage = "Oopsie!"
+	state.ErrorIsFatal = true
+	worker.FinishWithError(state)
+	assert.Equal(t, "Oopsie!", *state.DPNWorkItem.Note)
+	assert.Nil(t, state.DPNWorkItem.ProcessingNode)
+	assert.Equal(t, 0, state.DPNWorkItem.Pid)
+	assert.Equal(t, "finish", delegate.Operation)
 }
 
 func TestDGIInitializeRetrieval(t *testing.T) {
@@ -355,6 +381,24 @@ func TestDGIInitializeRetrieval(t *testing.T) {
 }
 
 func TestDGISaveDPNWorkItem(t *testing.T) {
+	worker, _, _, state := getDGITestItems(t)
+	originalNote := *state.DPNWorkItem.Note
+	worker.SaveDPNWorkItem(state)
+	assert.Empty(t, state.ErrorMessage)
+	// SaveDPNWorkItem will set an error message here if it has problems.
+	// Unchanged note means there were no problems.
+	assert.Equal(t, originalNote, *state.DPNWorkItem.Note)
+	// Should retry if no fatal error
+	assert.True(t, state.DPNWorkItem.Retry)
+
+	worker, _, _, state = getDGITestItems(t)
+	state.ErrorIsFatal = true
+	originalNote = *state.DPNWorkItem.Note
+	worker.SaveDPNWorkItem(state)
+	assert.Empty(t, state.ErrorMessage)
+	assert.Equal(t, originalNote, *state.DPNWorkItem.Note)
+	// Should NOT retry if there was a fatal error
+	assert.False(t, state.DPNWorkItem.Retry)
 
 }
 
