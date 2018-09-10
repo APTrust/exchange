@@ -313,6 +313,7 @@ func (restorer *DPNGlacierRestoreInit) GetRetrievalManifest(message *nsq.Message
 	msgBody := strings.TrimSpace(string(message.Body))
 	restorer.Context.MessageLog.Info("NSQ Message body: '%s'", msgBody)
 	manifest := models.NewDPNRetrievalManifest(message)
+	manifest.TaskType = constants.ActionFixityCheck
 	manifest.GlacierBucket = restorer.Context.Config.DPN.DPNPreservationBucket
 
 	dpnWorkItemId, err := strconv.Atoi(string(msgBody))

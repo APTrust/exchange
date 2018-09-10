@@ -22,6 +22,11 @@ type DPNRetrievalManifest struct {
 	// comes from the DPN REST server.
 	DPNBag *DPNBag
 
+	// TaskType describes whether this retrieval is for a fixity
+	// check or a restoration. Value should be one of:
+	// constants.ActionFixityCheck or constants.ActionRestore
+	TaskType string
+
 	// GlacierBucket is the bucket that contains the item
 	// we want to restore.
 	GlacierBucket string
