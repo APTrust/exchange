@@ -132,3 +132,16 @@ func (manifest *DPNRetrievalManifest) ToJson() (string, error) {
 	}
 	return string(jsonStr), nil
 }
+
+func (manifest *DPNRetrievalManifest) GetSummary(name string) *apt_models.WorkSummary {
+	if name == "GlacierRestoreSummary" {
+		return manifest.GlacierRestoreSummary
+	} else if name == "LocalCopySummary" {
+		return manifest.LocalCopySummary
+	} else if name == "ValidationSummary" {
+		return manifest.ValidationSummary
+	} else if name == "RecordSummary" {
+		return manifest.RecordSummary
+	}
+	return nil
+}
