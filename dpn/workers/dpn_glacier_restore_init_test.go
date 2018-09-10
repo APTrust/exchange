@@ -161,9 +161,15 @@ func test_DGIHandleAcceptedButNotComplete(t *testing.T) {
 			require.NotNil(t, manifest.DPNWorkItem.Note)
 			assert.Equal(t, expectedNote, *manifest.DPNWorkItem.Note)
 
+			// Make sure we closed out the WorkSummary correctly.
+			assert.True(t, manifest.GlacierRestoreSummary.Started())
+			assert.True(t, manifest.GlacierRestoreSummary.Finished())
+			assert.True(t, manifest.GlacierRestoreSummary.Succeeded())
+
 			// Make sure we updated the DPNWorkItem appropriately
 			assert.Equal(t, constants.StatusStarted, manifest.DPNWorkItem.Status)
 			assert.True(t, manifest.DPNWorkItem.Retry)
+
 			wg.Done()
 		}
 	}()
@@ -203,9 +209,14 @@ func TestDGIHandleNotStartedRejectNow(t *testing.T) {
 			assert.Equal(t, "requeue", delegate.Operation)
 			assert.Equal(t, 1*time.Minute, delegate.Delay)
 
-			// Make sure the error message was copied into the DPNWorkItem note.
+			// Make sure DPNWorkItem note contains the right info.
 			require.NotNil(t, manifest.DPNWorkItem.Note)
 			assert.Equal(t, expectedError, *manifest.DPNWorkItem.Note)
+
+			// Make sure we closed out the WorkSummary correctly
+			assert.True(t, manifest.GlacierRestoreSummary.Started())
+			assert.True(t, manifest.GlacierRestoreSummary.Finished())
+			assert.False(t, manifest.GlacierRestoreSummary.Succeeded())
 
 			// Make sure we updated the DPNWorkItem appropriately
 			assert.Equal(t, constants.StatusStarted, manifest.DPNWorkItem.Status)
@@ -249,9 +260,14 @@ func TestDGIHandleCompleted(t *testing.T) {
 			// Item was completed, so the message should be marked finished.
 			assert.Equal(t, "finish", delegate.Operation)
 
-			// Make sure the error message was copied into the DPNWorkItem note.
+			// Make sure the DPNWorkItem note includes a meaningful status message.
 			require.NotNil(t, manifest.DPNWorkItem.Note)
 			assert.Equal(t, expected, *manifest.DPNWorkItem.Note)
+
+			// Make sure we closed out the WorkSummary correctly
+			assert.True(t, manifest.GlacierRestoreSummary.Started())
+			assert.True(t, manifest.GlacierRestoreSummary.Finished())
+			assert.True(t, manifest.GlacierRestoreSummary.Succeeded())
 
 			// Make sure we updated the DPNWorkItem appropriately
 			assert.Equal(t, constants.StageAvailableInS3, manifest.DPNWorkItem.Stage)
@@ -266,7 +282,23 @@ func TestDGIHandleCompleted(t *testing.T) {
 }
 
 func TestGetRetrievalManifest(t *testing.T) {
-
+	_, _, _, manifest := getDGITestItems(t)
+	require.NotNil(t, manifest)
+	assert.NotNil(t, manifest.DPNBag)
+	assert.NotNil(t, manifest.GlacierRestoreSummary)
+	assert.False(t, manifest.GlacierRestoreSummary.Started())
+	assert.False(t, manifest.GlacierRestoreSummary.Finished())
+	assert.Empty(t, manifest.LocalPath)
+	assert.Empty(t, manifest.RestorationURL)
+	assert.Empty(t, manifest.S3Bucket)
+	assert.Empty(t, manifest.ActualFixityValue)
+	assert.NotEmpty(t, manifest.GlacierBucket)
+	assert.NotEmpty(t, manifest.ExpectedFixityValue)
+	assert.Equal(t, constants.ActionFixityCheck, manifest.TaskType)
+	assert.True(t, manifest.RequestedFromGlacierAt.IsZero())
+	assert.False(t, manifest.GlacierRequestAccepted)
+	assert.True(t, manifest.EstimatedDeletionFromS3.IsZero())
+	assert.False(t, manifest.IsAvailableInS3)
 }
 
 func TestDGIRestoreRequestNeeded(t *testing.T) {
