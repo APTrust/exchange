@@ -126,6 +126,7 @@ func (restorer *DPNGlacierRestoreInit) RequestRestore() {
 
 func (restorer *DPNGlacierRestoreInit) Cleanup() {
 	for manifest := range restorer.CleanupChannel {
+		manifest.GlacierRestoreSummary.Finish()
 		if manifest.GlacierRestoreSummary.HasErrors() {
 			restorer.FinishWithError(manifest)
 		} else {
