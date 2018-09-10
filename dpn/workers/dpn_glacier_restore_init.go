@@ -42,12 +42,12 @@ type DPNGlacierRestoreInit struct {
 	LocalDPNRestClient *dpn_network.DPNRestClient
 	// RequestChannel is for requesting an item be moved from Glacier
 	// into S3.
-	RequestChannel chan *models.DPNGlacierRestoreState
+	RequestChannel chan *models.DPNRetrievalManifest
 	// CleanupChannel is for housekeeping, like updating NSQ.
-	CleanupChannel chan *models.DPNGlacierRestoreState
+	CleanupChannel chan *models.DPNRetrievalManifest
 	// PostTestChannel is for testing only. In production, nothing listens
 	// on this channel.
-	PostTestChannel chan *models.DPNGlacierRestoreState
+	PostTestChannel chan *models.DPNRetrievalManifest
 	// S3Url is a custom URL that the S3 client should connect to.
 	// We use this only in testing, when we want the client to talk
 	// to a local test server. This should not be set in demo or
@@ -62,8 +62,8 @@ func DPNNewGlacierRestoreInit(_context *context.Context) (*DPNGlacierRestoreInit
 	// Set up buffered channels
 	restorerBufferSize := _context.Config.DPN.DPNGlacierRestoreWorker.NetworkConnections * 4
 	workerBufferSize := _context.Config.DPN.DPNGlacierRestoreWorker.Workers * 10
-	restorer.RequestChannel = make(chan *models.DPNGlacierRestoreState, restorerBufferSize)
-	restorer.CleanupChannel = make(chan *models.DPNGlacierRestoreState, workerBufferSize)
+	restorer.RequestChannel = make(chan *models.DPNRetrievalManifest, restorerBufferSize)
+	restorer.CleanupChannel = make(chan *models.DPNRetrievalManifest, workerBufferSize)
 	// Set up a limited number of go routines to handle the work.
 	for i := 0; i < _context.Config.DPN.DPNGlacierRestoreWorker.NetworkConnections; i++ {
 		go restorer.RequestRestore()
@@ -86,122 +86,130 @@ func DPNNewGlacierRestoreInit(_context *context.Context) (*DPNGlacierRestoreInit
 func (restorer *DPNGlacierRestoreInit) HandleMessage(message *nsq.Message) error {
 	message.DisableAutoResponse()
 
-	state := restorer.GetRestoreState(message)
-	state.DPNWorkItem.Status = constants.StatusStarted
-	restorer.SaveDPNWorkItem(state)
-	if state.ErrorMessage != "" {
-		restorer.Context.MessageLog.Error("Error setting up state for WorkItem %s: %s",
-			string(message.Body), state.ErrorMessage)
+	manifest := restorer.GetRetrievalManifest(message)
+	manifest.GlacierRestoreSummary.ClearErrors()
+	manifest.GlacierRestoreSummary.Start()
+	manifest.DPNWorkItem.Status = constants.StatusStarted
+	restorer.SaveDPNWorkItem(manifest)
+	if manifest.GlacierRestoreSummary.HasErrors() {
+		restorer.Context.MessageLog.Error("Error setting up manifest for WorkItem %s: %s",
+			string(message.Body), manifest.GlacierRestoreSummary.AllErrorsAsString())
 		// No use proceeding...
-		restorer.CleanupChannel <- state
-		return fmt.Errorf(state.ErrorMessage)
+		restorer.CleanupChannel <- manifest
+		return fmt.Errorf(manifest.GlacierRestoreSummary.AllErrorsAsString())
 	}
-	if state.DPNWorkItem.IsCompletedOrCancelled() {
+	if manifest.DPNWorkItem.IsCompletedOrCancelled() {
 		restorer.Context.MessageLog.Info("Skipping WorkItem %d because status is %s",
-			state.DPNWorkItem.Id, state.DPNWorkItem.Status)
-		restorer.CleanupChannel <- state
+			manifest.DPNWorkItem.Id, manifest.DPNWorkItem.Status)
+		restorer.CleanupChannel <- manifest
 		return nil
 	}
 
 	// OK, we're good. Ask Glacier to move the file into S3.
-	restorer.RequestChannel <- state
+	restorer.RequestChannel <- manifest
 	return nil
 }
 
 func (restorer *DPNGlacierRestoreInit) RequestRestore() {
-	for state := range restorer.RequestChannel {
-		requestNeeded, err := restorer.RestoreRequestNeeded(state)
+	for manifest := range restorer.RequestChannel {
+		requestNeeded, err := restorer.RestoreRequestNeeded(manifest)
 		if err != nil {
-			state.ErrorMessage = fmt.Sprintf("Error processing S3 HEAD request for %s: %v", state.GlacierKey, err)
+			manifest.GlacierRestoreSummary.AddError(
+				"Error processing S3 HEAD request for %s: %v",
+				manifest.DPNWorkItem.Identifier, err)
 		} else if requestNeeded {
-			restorer.InitializeRetrieval(state)
+			restorer.InitializeRetrieval(manifest)
 		}
-		restorer.CleanupChannel <- state
+		restorer.CleanupChannel <- manifest
 	}
 }
 
 func (restorer *DPNGlacierRestoreInit) Cleanup() {
-	for state := range restorer.CleanupChannel {
-		if state.ErrorMessage != "" {
-			restorer.FinishWithError(state)
+	for manifest := range restorer.CleanupChannel {
+		if manifest.GlacierRestoreSummary.HasErrors() {
+			restorer.FinishWithError(manifest)
 		} else {
-			restorer.FinishWithSuccess(state)
+			restorer.FinishWithSuccess(manifest)
 		}
 		// For testing only. The test code creates the PostTestChannel.
 		// When running in demo & production, this channel is nil.
 		if restorer.PostTestChannel != nil {
-			restorer.PostTestChannel <- state
+			restorer.PostTestChannel <- manifest
 		}
 	}
 }
 
-func (restorer *DPNGlacierRestoreInit) FinishWithSuccess(state *models.DPNGlacierRestoreState) {
-	state.DPNWorkItem.ClearNodeAndPid()
+func (restorer *DPNGlacierRestoreInit) FinishWithSuccess(manifest *models.DPNRetrievalManifest) {
+	manifest.DPNWorkItem.ClearNodeAndPid()
 	note := fmt.Sprintf("Glacier restore initiated. Will check availability "+
 		"in S3 every %d hours.", HOURS_BETWEEN_CHECKS)
-	if state.IsAvailableInS3 {
+	if manifest.IsAvailableInS3 {
 		note = "Item is available in S3 for download."
-		state.DPNWorkItem.Note = &note
-		state.DPNWorkItem.Stage = constants.StageAvailableInS3
-		restorer.SaveDPNWorkItem(state)
-		restorer.SendToDownloadQueue(state)
+		manifest.DPNWorkItem.Note = &note
+		manifest.DPNWorkItem.Stage = constants.StageAvailableInS3
+		restorer.SaveDPNWorkItem(manifest)
+		restorer.SendToDownloadQueue(manifest)
 	} else {
-		state.DPNWorkItem.Note = &note
-		restorer.Context.MessageLog.Info("Requested %s from Glacier. %s", state.GlacierKey, note)
-		state.DPNWorkItem.Retry = true
-		restorer.SaveDPNWorkItem(state)
-		state.NSQMessage.Requeue(HOURS_BETWEEN_CHECKS * time.Hour)
+		manifest.DPNWorkItem.Note = &note
+		restorer.Context.MessageLog.Info("Requested %s from Glacier. %s", manifest.DPNWorkItem.Identifier, note)
+		manifest.DPNWorkItem.Retry = true
+		restorer.SaveDPNWorkItem(manifest)
+		manifest.NsqMessage.Requeue(HOURS_BETWEEN_CHECKS * time.Hour)
 	}
 }
 
-func (restorer *DPNGlacierRestoreInit) SendToDownloadQueue(state *models.DPNGlacierRestoreState) {
-	state.NSQMessage.Finish()
+func (restorer *DPNGlacierRestoreInit) SendToDownloadQueue(manifest *models.DPNRetrievalManifest) {
+	manifest.NsqMessage.Finish()
 	topic := restorer.Context.Config.DPN.DPNS3DownloadWorker.NsqTopic
-	err := restorer.Context.NSQClient.Enqueue(topic, state.DPNWorkItem.Id)
+	err := restorer.Context.NSQClient.Enqueue(topic, manifest.DPNWorkItem.Id)
 	if err != nil {
-		state.ErrorMessage = fmt.Sprintf("Glacier requested succeeded, but error pushing "+
-			"DPNWorkItem %d (%s) into NSQ topic %s: %v",
-			state.DPNWorkItem.Id, state.DPNWorkItem.Identifier, topic, err)
-		restorer.Context.MessageLog.Error(state.ErrorMessage)
-		restorer.SaveDPNWorkItem(state)
+		manifest.GlacierRestoreSummary.AddError(
+			"Glacier requested succeeded, but error pushing "+
+				"DPNWorkItem %d (%s) into NSQ topic %s: %v",
+			manifest.DPNWorkItem.Id, manifest.DPNWorkItem.Identifier, topic, err)
+		restorer.Context.MessageLog.Error(manifest.GlacierRestoreSummary.AllErrorsAsString())
+		restorer.SaveDPNWorkItem(manifest)
 	}
 }
 
-func (restorer *DPNGlacierRestoreInit) FinishWithError(state *models.DPNGlacierRestoreState) {
-	state.DPNWorkItem.ClearNodeAndPid()
-	state.DPNWorkItem.Note = &state.ErrorMessage
-	restorer.Context.MessageLog.Error(state.ErrorMessage)
+func (restorer *DPNGlacierRestoreInit) FinishWithError(manifest *models.DPNRetrievalManifest) {
+	manifest.DPNWorkItem.ClearNodeAndPid()
+	errors := manifest.GlacierRestoreSummary.AllErrorsAsString()
+	manifest.DPNWorkItem.Note = &errors
+	restorer.Context.MessageLog.Error(errors)
 
-	attempts := int(state.NSQMessage.Attempts)
+	attempts := int(manifest.NsqMessage.Attempts)
 	maxAttempts := int(restorer.Context.Config.DPN.DPNGlacierRestoreWorker.MaxAttempts)
 
-	if state.ErrorIsFatal {
-		restorer.Context.MessageLog.Error("Error for %s is fatal. Not requeueing.", state.GlacierKey)
-		state.DPNWorkItem.Status = constants.StatusFailed
-		state.DPNWorkItem.Retry = false
-		state.NSQMessage.Finish()
+	if manifest.GlacierRestoreSummary.ErrorIsFatal {
+		restorer.Context.MessageLog.Error("Error for %s is fatal. Not requeueing.",
+			manifest.DPNWorkItem.Identifier)
+		manifest.DPNWorkItem.Status = constants.StatusFailed
+		manifest.DPNWorkItem.Retry = false
+		manifest.NsqMessage.Finish()
 	} else if attempts > maxAttempts {
 		restorer.Context.MessageLog.Error("Attempt to restore %s failed %d times. Not requeuing.",
-			attempts, state.GlacierKey)
-		state.DPNWorkItem.Status = constants.StatusFailed
-		state.DPNWorkItem.Retry = false
-		state.NSQMessage.Finish()
+			attempts, manifest.DPNWorkItem.Identifier)
+		manifest.DPNWorkItem.Status = constants.StatusFailed
+		manifest.DPNWorkItem.Retry = false
+		manifest.NsqMessage.Finish()
 	} else {
-		restorer.Context.MessageLog.Info("Error for %s is transient. Requeueing.", state.GlacierKey)
-		state.DPNWorkItem.Retry = true
-		state.NSQMessage.Requeue(1 * time.Minute)
+		restorer.Context.MessageLog.Info("Error for %s is transient. Requeueing.",
+			manifest.DPNWorkItem.Identifier)
+		manifest.DPNWorkItem.Retry = true
+		manifest.NsqMessage.Requeue(1 * time.Minute)
 	}
 
-	restorer.SaveDPNWorkItem(state)
+	restorer.SaveDPNWorkItem(manifest)
 }
 
-func (restorer *DPNGlacierRestoreInit) RestoreRequestNeeded(state *models.DPNGlacierRestoreState) (bool, error) {
+func (restorer *DPNGlacierRestoreInit) RestoreRequestNeeded(manifest *models.DPNRetrievalManifest) (bool, error) {
 	needsRestoreRequest := false
 	s3Client := apt_network.NewS3Head(
 		restorer.Context.Config.GetAWSAccessKeyId(),
 		restorer.Context.Config.GetAWSSecretAccessKey(),
 		restorer.Context.Config.DPN.DPNGlacierRegion,
-		state.GlacierBucket)
+		manifest.GlacierBucket)
 	// Hack for testing: Tell the client to talk to our own
 	// local S3 test server, and clear the bucket name,
 	// because that gets prepended to the URL.
@@ -213,50 +221,50 @@ func (restorer *DPNGlacierRestoreInit) RestoreRequestNeeded(state *models.DPNGla
 	}
 
 	// Ask S3 about the status of this object
-	s3Client.Head(state.GlacierKey)
+	s3Client.Head(manifest.DPNWorkItem.Identifier)
 
 	// Status 409: Conflict is an expected response.
 	// It means a restore request has already been initiated.
 	if strings.Contains(s3Client.ErrorMessage, "Conflict") {
-		restorer.Context.MessageLog.Info("Already in progress: %s ", state.GlacierKey)
-		state.RequestAccepted = true
-		state.RequestedAt = time.Now().UTC()
+		restorer.Context.MessageLog.Info("Already in progress: %s ", manifest.DPNWorkItem.Identifier)
+		manifest.GlacierRequestAccepted = true
+		manifest.RequestedFromGlacierAt = time.Now().UTC()
 		return false, nil
 	}
 
 	restoreRequestInfo, err := s3Client.GetRestoreRequestInfo()
 	if restoreRequestInfo.RequestInProgress {
 		// Log and go on
-		restorer.Context.MessageLog.Info("Already in progress: %s ", state.GlacierKey)
-		state.RequestAccepted = true
-		state.RequestedAt = time.Now().UTC()
+		restorer.Context.MessageLog.Info("Already in progress: %s ", manifest.DPNWorkItem.Identifier)
+		manifest.GlacierRequestAccepted = true
+		manifest.RequestedFromGlacierAt = time.Now().UTC()
 	} else if restoreRequestInfo.RequestIsComplete {
 		// Log and update expiry date
-		state.RequestAccepted = true
-		state.RequestedAt = time.Now().UTC()
-		state.IsAvailableInS3 = true
-		state.EstimatedDeletionFromS3 = restoreRequestInfo.S3ExpiryDate
-		restorer.Context.MessageLog.Info("Already restored to S3: %s", state.GlacierKey)
+		manifest.GlacierRequestAccepted = true
+		manifest.RequestedFromGlacierAt = time.Now().UTC()
+		manifest.IsAvailableInS3 = true
+		manifest.EstimatedDeletionFromS3 = restoreRequestInfo.S3ExpiryDate
+		restorer.Context.MessageLog.Info("Already restored to S3: %s", manifest.DPNWorkItem.Identifier)
 	} else {
 		// Not restored yet and not even requested.
 		// We need to make a request for this now.
-		restorer.Context.MessageLog.Info("Needs Glacier retrieval request: %s", state.GlacierKey)
+		restorer.Context.MessageLog.Info("Needs Glacier retrieval request: %s", manifest.DPNWorkItem.Identifier)
 		needsRestoreRequest = true
 	}
 	return needsRestoreRequest, err
 }
 
-func (restorer *DPNGlacierRestoreInit) InitializeRetrieval(state *models.DPNGlacierRestoreState) {
+func (restorer *DPNGlacierRestoreInit) InitializeRetrieval(manifest *models.DPNRetrievalManifest) {
 	// Request restore from Glacier
 	restorer.Context.MessageLog.Info("Requesting Glacier retrieval of %s from %s",
-		state.GlacierKey, state.GlacierBucket)
+		manifest.DPNWorkItem.Identifier, manifest.GlacierBucket)
 
 	restoreClient := apt_network.NewS3Restore(
 		restorer.Context.Config.GetAWSAccessKeyId(),
 		restorer.Context.Config.GetAWSSecretAccessKey(),
 		restorer.Context.Config.DPN.DPNGlacierRegion,
-		state.GlacierBucket,
-		state.GlacierKey,
+		manifest.GlacierBucket,
+		manifest.DPNWorkItem.Identifier,
 		RETRIEVAL_OPTION,
 		DAYS_TO_KEEP_IN_S3)
 
@@ -276,101 +284,157 @@ func (restorer *DPNGlacierRestoreInit) InitializeRetrieval(state *models.DPNGlac
 	// This is where me make the actual request to Glacier.
 	restoreClient.Restore()
 	if restoreClient.ErrorMessage != "" {
-		state.ErrorMessage = fmt.Sprintf("Glacier retrieval request returned an error for %s at %s: %v",
-			state.GlacierBucket, state.GlacierKey, restoreClient.ErrorMessage)
+		manifest.GlacierRestoreSummary.AddError(
+			"Glacier retrieval request returned an error for %s at %s: %v",
+			manifest.GlacierBucket, manifest.DPNWorkItem.Identifier,
+			restoreClient.ErrorMessage)
 		restorer.Context.MessageLog.Error("Bad response from Glacier. Requested %s/%s. Got:\n %v",
-			state.GlacierBucket, state.GlacierKey, restoreClient.Response)
+			manifest.GlacierBucket, manifest.DPNWorkItem.Identifier, restoreClient.Response)
 	}
 
 	// Update this info.
-	state.RequestAccepted = restoreClient.RequestAccepted()
-	state.RequestedAt = now
-	state.EstimatedDeletionFromS3 = estimatedDeletionFromS3
-	state.IsAvailableInS3 = restoreClient.AlreadyInActiveTier
+	manifest.GlacierRequestAccepted = restoreClient.RequestAccepted()
+	manifest.RequestedFromGlacierAt = now
+	manifest.EstimatedDeletionFromS3 = estimatedDeletionFromS3
+	manifest.IsAvailableInS3 = restoreClient.AlreadyInActiveTier
 
 	if restoreClient.RequestRejectedServiceUnavailable {
-		state.ErrorMessage = fmt.Sprintf("Request to restore %s/%s: "+
-			"Glacier restore service is temporarily unavailable. Try again later.",
-			state.GlacierBucket, state.GlacierKey)
-		state.ErrorIsFatal = false
+		manifest.GlacierRestoreSummary.AddError(
+			"Request to restore %s/%s: "+
+				"Glacier restore service is temporarily unavailable. Try again later.",
+			manifest.GlacierBucket, manifest.DPNWorkItem.Identifier)
+		manifest.GlacierRestoreSummary.ErrorIsFatal = false
 	}
 }
 
 // GetWorkItem returns the WorkItem with the specified Id from Pharos,
 // or nil.
-func (restorer *DPNGlacierRestoreInit) GetRestoreState(message *nsq.Message) *models.DPNGlacierRestoreState {
+func (restorer *DPNGlacierRestoreInit) GetRetrievalManifest(message *nsq.Message) *models.DPNRetrievalManifest {
 	msgBody := strings.TrimSpace(string(message.Body))
 	restorer.Context.MessageLog.Info("NSQ Message body: '%s'", msgBody)
-	state := &models.DPNGlacierRestoreState{
-		NSQMessage: message,
-	}
+	manifest := models.NewDPNRetrievalManifest(message)
+	manifest.GlacierBucket = restorer.Context.Config.DPN.DPNPreservationBucket
 
-	// Get the DPN work item
 	dpnWorkItemId, err := strconv.Atoi(string(msgBody))
 	if err != nil || dpnWorkItemId == 0 {
-		state.ErrorMessage = fmt.Sprintf("Could not get DPNWorkItem Id from NSQ message body: %v", err)
-		return state
+		manifest.GlacierRestoreSummary.AddError(
+			"Could not get DPNWorkItem Id from NSQ message body: %v", err)
+		return manifest
 	}
+
+	restorer.GetDPNWorkItem(manifest, dpnWorkItemId)
+
+	if manifest.DPNWorkItem.State != nil && *manifest.DPNWorkItem.State != "" {
+		restoredManifest, err := models.DPNRetrievalManifestFromJson(*manifest.DPNWorkItem.State)
+		if err != nil {
+			restorer.Context.MessageLog.Warning("Error restoring manifest state "+
+				"for DPNWorkItem %d: %v JSON:\n%s", manifest.DPNWorkItem.Id, err,
+				manifest.DPNWorkItem.Identifier, *manifest.DPNWorkItem.State)
+			restorer.Context.MessageLog.Warning("Starting with new manifest for "+
+				"for DPNWorkItem %d (%s)", manifest.DPNWorkItem.Id,
+				manifest.DPNWorkItem.Identifier)
+		} else {
+			restoredManifest.NsqMessage = manifest.NsqMessage
+			restoredManifest.DPNWorkItem = manifest.DPNWorkItem
+			manifest = restoredManifest
+		}
+	}
+
+	// This will be nil for new jobs, and should be non-nil if we're reattempting
+	// an existing job. DPN bag records are immutable, so we don't need to reload
+	// them each time we reattempt a task. (Unlike DPNWorkItem, which can be
+	// cancelled between attempts.)
+	if manifest.DPNBag == nil {
+		restorer.GetDPNBag(manifest)
+	}
+	if manifest.ExpectedFixityValue == "" {
+		restorer.GetBagDigest(manifest)
+	}
+
+	return manifest
+}
+
+func (restorer *DPNGlacierRestoreInit) GetDPNWorkItem(manifest *models.DPNRetrievalManifest, dpnWorkItemId int) {
+	// Get the DPN work item
 	resp := restorer.Context.PharosClient.DPNWorkItemGet(dpnWorkItemId)
 	if resp.Error != nil {
-		state.ErrorMessage = fmt.Sprintf("Error getting DPNWorkItem %d from Pharos: %v", dpnWorkItemId, resp.Error)
-		return state
+		manifest.GlacierRestoreSummary.AddError(
+			"Error getting DPNWorkItem %d from Pharos: %v",
+			dpnWorkItemId, resp.Error)
+		return
 	}
 	dpnWorkItem := resp.DPNWorkItem()
 	if dpnWorkItem == nil {
-		state.ErrorMessage = fmt.Sprintf("Pharos returned nil for WorkItem %d", dpnWorkItemId)
-		return state
+		manifest.GlacierRestoreSummary.AddError(
+			"Pharos returned nil for WorkItem %d", dpnWorkItemId)
+		return
 	}
-	state.DPNWorkItem = dpnWorkItem
-	state.DPNWorkItem.SetNodeAndPid()
+
+	manifest.DPNWorkItem = dpnWorkItem
+	manifest.DPNWorkItem.SetNodeAndPid()
 	note := "Requesting Glacier restoration for fixity"
-	state.DPNWorkItem.Note = &note
-
-	// Get the DPN Bag from the DPN REST server.
-	dpnResp := restorer.LocalDPNRestClient.DPNBagGet(dpnWorkItem.Identifier)
-	if dpnResp.Error != nil {
-		state.ErrorMessage = fmt.Sprintf("Error getting DPN bag %s from %s: %v", dpnWorkItem.Identifier,
-			restorer.Context.Config.DPN.RestClient.LocalServiceURL, resp.Error)
-		return state
-	}
-	dpnBag := dpnResp.Bag()
-	if dpnBag == nil {
-		state.ErrorMessage = fmt.Sprintf("DPN REST server returned nil for bag %s", dpnWorkItem.Identifier)
-		return state
-	}
-	state.DPNBag = dpnBag
-
-	// Although this is duplicate info, we record it in the state object
-	// so we can see it in the Pharos UI when we're checking on the state
-	// of an item.
-	state.GlacierBucket = restorer.Context.Config.DPN.DPNPreservationBucket
-	state.GlacierKey = dpnBag.UUID
-
-	return state
+	manifest.DPNWorkItem.Note = &note
 }
 
-func (restorer *DPNGlacierRestoreInit) SaveDPNWorkItem(state *models.DPNGlacierRestoreState) {
-	jsonData, err := state.ToJson()
+func (restorer *DPNGlacierRestoreInit) GetDPNBag(manifest *models.DPNRetrievalManifest) {
+	// Get the DPN Bag from the DPN REST server.
+	resp := restorer.LocalDPNRestClient.DPNBagGet(manifest.DPNWorkItem.Identifier)
+	if resp.Error != nil {
+		manifest.GlacierRestoreSummary.AddError(
+			"Error getting DPN bag %s from %s: %v",
+			manifest.DPNWorkItem.Identifier,
+			restorer.Context.Config.DPN.RestClient.LocalServiceURL, resp.Error)
+		return
+	}
+	dpnBag := resp.Bag()
+	if dpnBag == nil {
+		manifest.GlacierRestoreSummary.AddError(
+			"DPN REST server returned nil for bag %s",
+			manifest.DPNWorkItem.Identifier)
+		return
+	}
+	manifest.DPNBag = dpnBag
+}
+
+func (restorer *DPNGlacierRestoreInit) GetBagDigest(manifest *models.DPNRetrievalManifest) {
+	resp := restorer.LocalDPNRestClient.DigestGet(manifest.DPNWorkItem.Identifier, constants.AlgSha256)
+	if resp.Error != nil {
+		manifest.GlacierRestoreSummary.AddError(
+			"Error getting sha256 digest for DPN bag %s from %s: %v",
+			manifest.DPNWorkItem.Identifier,
+			restorer.Context.Config.DPN.RestClient.LocalServiceURL, resp.Error)
+		return
+	}
+	digest := resp.Digest()
+	if digest == nil {
+		manifest.GlacierRestoreSummary.AddError(
+			"DPN REST server returned nil digest for bag %s",
+			manifest.DPNWorkItem.Identifier)
+		return
+	}
+	manifest.ExpectedFixityValue = digest.Value
+}
+
+func (restorer *DPNGlacierRestoreInit) SaveDPNWorkItem(manifest *models.DPNRetrievalManifest) {
+	jsonData, err := manifest.ToJson()
 	if err != nil {
-		msg := fmt.Sprintf("Could not marshal DPNGlacierRestoreState "+
-			"for DPNWorkItem %d: %v", state.DPNWorkItem.Id, err)
+		msg := fmt.Sprintf("Could not marshal DPNRetrievalManifest "+
+			"for DPNWorkItem %d: %v", manifest.DPNWorkItem.Id, err)
 		restorer.Context.MessageLog.Error(msg)
 		note := "JSON serialization error while trying to save DPNWorkItemState."
-		state.DPNWorkItem.Note = &note
+		manifest.DPNWorkItem.Note = &note
 	}
 
 	// Update the DPNWorkItem
-	state.DPNWorkItem.State = &jsonData
-	state.DPNWorkItem.Retry = !state.ErrorIsFatal
+	manifest.DPNWorkItem.State = &jsonData
+	manifest.DPNWorkItem.Retry = !manifest.GlacierRestoreSummary.ErrorIsFatal
 
-	resp := restorer.Context.PharosClient.DPNWorkItemSave(state.DPNWorkItem)
+	resp := restorer.Context.PharosClient.DPNWorkItemSave(manifest.DPNWorkItem)
 	if resp.Error != nil {
 		msg := fmt.Sprintf("Could not save DPNWorkItem %d "+
 			"for fixity on bag %s to Pharos: %v",
-			state.DPNWorkItem.Id, state.DPNWorkItem.Identifier, err)
+			manifest.DPNWorkItem.Id, manifest.DPNWorkItem.Identifier, err)
 		restorer.Context.MessageLog.Error(msg)
-		if state.ErrorMessage == "" {
-			state.ErrorMessage = msg
-		}
+		manifest.GlacierRestoreSummary.AddError(msg)
 	}
 }
