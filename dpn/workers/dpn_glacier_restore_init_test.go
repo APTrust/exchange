@@ -284,26 +284,6 @@ func TestDGIHandleCompleted(t *testing.T) {
 	wg.Wait()
 }
 
-// func TestGetRetrievalManifest(t *testing.T) {
-// 	_, _, _, manifest := getDGITestItems(t)
-// 	require.NotNil(t, manifest)
-// 	assert.NotNil(t, manifest.DPNBag)
-// 	assert.NotNil(t, manifest.GlacierRestoreSummary)
-// 	assert.False(t, manifest.GlacierRestoreSummary.Started())
-// 	assert.False(t, manifest.GlacierRestoreSummary.Finished())
-// 	assert.Empty(t, manifest.LocalPath)
-// 	assert.Empty(t, manifest.RestorationURL)
-// 	assert.Empty(t, manifest.S3Bucket)
-// 	assert.Empty(t, manifest.ActualFixityValue)
-// 	assert.NotEmpty(t, manifest.GlacierBucket)
-// 	assert.NotEmpty(t, manifest.ExpectedFixityValue)
-// 	assert.Equal(t, constants.ActionFixityCheck, manifest.TaskType)
-// 	assert.True(t, manifest.RequestedFromGlacierAt.IsZero())
-// 	assert.False(t, manifest.GlacierRequestAccepted)
-// 	assert.True(t, manifest.EstimatedDeletionFromS3.IsZero())
-// 	assert.False(t, manifest.IsAvailableInS3)
-// }
-
 func TestDGIRestoreRequestNeeded(t *testing.T) {
 	worker, _, _, helper := getDGITestItems(t)
 
