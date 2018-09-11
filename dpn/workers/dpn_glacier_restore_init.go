@@ -82,8 +82,6 @@ func DPNNewGlacierRestoreInit(_context *context.Context) (*DPNGlacierRestoreInit
 
 // This is the callback that NSQ workers use to handle messages from NSQ.
 func (restorer *DPNGlacierRestoreInit) HandleMessage(message *nsq.Message) error {
-	message.DisableAutoResponse()
-
 	helper, err := NewDPNRestoreHelper(message, restorer.Context,
 		restorer.LocalDPNRestClient, constants.ActionFixityCheck,
 		"GlacierRestoreSummary")
