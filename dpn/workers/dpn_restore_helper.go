@@ -206,7 +206,7 @@ func (helper *DPNRestoreHelper) FileExistsAndIsComplete() bool {
 		}
 		if uint64(fileInfo.Size()) == helper.Manifest.DPNBag.Size {
 			helper.context.MessageLog.Info("File %s is already on disk and same size as bag (%d bytes)",
-				helper.Manifest.DPNBag.Size)
+				helper.Manifest.LocalPath, helper.Manifest.DPNBag.Size)
 			return true
 		} else {
 			helper.context.MessageLog.Info("File %s is on disk, but size doesn't match. "+
