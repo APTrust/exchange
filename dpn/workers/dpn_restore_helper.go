@@ -7,7 +7,9 @@ import (
 	"github.com/APTrust/exchange/dpn/models"
 	"github.com/APTrust/exchange/dpn/network"
 	apt_models "github.com/APTrust/exchange/models"
+	"github.com/APTrust/exchange/util/fileutil"
 	"github.com/nsqio/go-nsq"
+	"os"
 	"strconv"
 	"strings"
 )
@@ -181,4 +183,34 @@ func (helper *DPNRestoreHelper) SaveDPNWorkItem() {
 		helper.context.MessageLog.Error(msg)
 		helper.WorkSummary.AddError(msg)
 	}
+}
+
+func (helper *DPNRestoreHelper) FileExistsAndIsComplete() bool {
+	if helper.Manifest.LocalPath != "" && fileutil.FileExists(helper.Manifest.LocalPath) {
+		file, err := os.Open(helper.Manifest.LocalPath)
+		if err != nil {
+			helper.context.MessageLog.Warning("Error opening file %s. Telling worker this "+
+				"file is not complete on disk. %v", helper.Manifest.LocalPath, err)
+			return false
+		}
+		defer file.Close()
+		fileInfo, err := file.Stat()
+		if err != nil {
+			helper.context.MessageLog.Warning("Error getting stats for file %s. "+
+				"Telling worker this file is not complete on disk. %v", helper.Manifest.LocalPath, err)
+			return false
+		}
+		if uint64(fileInfo.Size()) == helper.Manifest.DPNBag.Size {
+			helper.context.MessageLog.Info("File %s is already on disk and same size as bag (%d bytes)",
+				helper.Manifest.DPNBag.Size)
+			return true
+		} else {
+			helper.context.MessageLog.Info("File %s is on disk, but size doesn't match. "+
+				"Disk has %d bytes, DPN Bag is %d bytes", helper.Manifest.LocalPath,
+				fileInfo.Size(), helper.Manifest.DPNBag.Size)
+			return true
+		}
+	}
+	helper.context.MessageLog.Info("File %s is not on disk yet.", helper.Manifest.LocalPath)
+	return false
 }
