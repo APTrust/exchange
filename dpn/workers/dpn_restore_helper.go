@@ -186,6 +186,10 @@ func (helper *DPNRestoreHelper) SaveDPNWorkItem() {
 }
 
 func (helper *DPNRestoreHelper) FileExistsAndIsComplete() bool {
+	if helper.Manifest.LocalPath == "" {
+		helper.context.MessageLog.Info("No file path is set yet for WorkItem %d (Bag %s).",
+			helper.Manifest.DPNWorkItem.Id, helper.Manifest.DPNWorkItem.Identifier)
+	}
 	if helper.Manifest.LocalPath != "" && fileutil.FileExists(helper.Manifest.LocalPath) {
 		file, err := os.Open(helper.Manifest.LocalPath)
 		if err != nil {
@@ -208,7 +212,7 @@ func (helper *DPNRestoreHelper) FileExistsAndIsComplete() bool {
 			helper.context.MessageLog.Info("File %s is on disk, but size doesn't match. "+
 				"Disk has %d bytes, DPN Bag is %d bytes", helper.Manifest.LocalPath,
 				fileInfo.Size(), helper.Manifest.DPNBag.Size)
-			return true
+			return false
 		}
 	}
 	helper.context.MessageLog.Info("File %s is not on disk yet.", helper.Manifest.LocalPath)

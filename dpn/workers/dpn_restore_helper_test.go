@@ -1,25 +1,14 @@
 package workers_test
 
 import (
-	// "encoding/json"
-	// "fmt"
 	"github.com/APTrust/exchange/constants"
-	// dpn_models "github.com/APTrust/exchange/dpn/models"
-	// dpn_network "github.com/APTrust/exchange/dpn/network"
 	"github.com/APTrust/exchange/dpn/workers"
-	// apt_models "github.com/APTrust/exchange/models"
-	// "github.com/APTrust/exchange/network"
 	"github.com/APTrust/exchange/util/testutil"
-	// "github.com/nsqio/go-nsq"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	// "io/ioutil"
-	// "net/http"
-	// "net/http/httptest"
-	// "strings"
-	// "sync"
+	"os"
+	"runtime"
 	"testing"
-	// "time"
 )
 
 func getRestoreHelper(t *testing.T) *workers.DPNRestoreHelper {
@@ -75,4 +64,29 @@ func TestRestoreHelper_SaveDPNWorkItem(t *testing.T) {
 	assert.Equal(t, originalNote, *helper.Manifest.DPNWorkItem.Note)
 	// Should NOT retry if there was a fatal error
 	assert.False(t, helper.Manifest.DPNWorkItem.Retry)
+}
+
+func TestRestoreHelper_FileExistsAndIsComplete(t *testing.T) {
+	helper := getRestoreHelper(t)
+
+	// False, because there is no file path specified.
+	helper.Manifest.LocalPath = ""
+	assert.False(t, helper.FileExistsAndIsComplete())
+
+	// Get some info about this file.
+	_, filename, _, _ := runtime.Caller(0)
+	file, err := os.Open(filename)
+	require.Nil(t, err)
+	defer file.Close()
+	fileInfo, err := file.Stat()
+	fileSize := uint64(fileInfo.Size())
+
+	// False, because the file size does not match
+	helper.Manifest.LocalPath = filename
+	helper.Manifest.DPNBag.Size = fileSize * uint64(2)
+	assert.False(t, helper.FileExistsAndIsComplete())
+
+	// True, because the file exists and size matches
+	helper.Manifest.DPNBag.Size = fileSize
+	assert.True(t, helper.FileExistsAndIsComplete())
 }
