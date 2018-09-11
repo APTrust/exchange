@@ -15,13 +15,13 @@ import (
 type DPNRestoreHelper struct {
 	Manifest      *models.DPNRetrievalManifest
 	WorkSummary   *apt_models.WorkSummary
-	context       context.Context
+	context       *context.Context
 	dpnRestClient *network.DPNRestClient
 	summaryName   string
 	workItemId    int
 }
 
-func NewDPNRestoreHelper(message *nsq.Message, _context context.Context, dpnRestClient *network.DPNRestClient, action, summaryName string) (*DPNRestoreHelper, error) {
+func NewDPNRestoreHelper(message *nsq.Message, _context *context.Context, dpnRestClient *network.DPNRestClient, action, summaryName string) (*DPNRestoreHelper, error) {
 	helper := &DPNRestoreHelper{
 		context:       _context,
 		dpnRestClient: dpnRestClient,
