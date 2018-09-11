@@ -397,28 +397,6 @@ func TestDGIInitializeRetrieval(t *testing.T) {
 	assert.False(t, helper.Manifest.GlacierRequestAccepted)
 }
 
-// func TestDGISaveDPNWorkItem(t *testing.T) {
-// 	worker, _, _, manifest := getDGITestItems(t)
-// 	originalNote := *manifest.DPNWorkItem.Note
-// 	worker.SaveDPNWorkItem(manifest)
-// 	assert.False(t, manifest.GlacierRestoreSummary.HasErrors())
-// 	// SaveDPNWorkItem will set an error message here if it has problems.
-// 	// Unchanged note means there were no problems.
-// 	assert.Equal(t, originalNote, *manifest.DPNWorkItem.Note)
-// 	// Should retry if no fatal error
-// 	assert.True(t, manifest.DPNWorkItem.Retry)
-
-// 	worker, _, _, manifest = getDGITestItems(t)
-// 	manifest.GlacierRestoreSummary.ErrorIsFatal = true
-// 	originalNote = *manifest.DPNWorkItem.Note
-// 	worker.SaveDPNWorkItem(manifest)
-// 	assert.False(t, manifest.GlacierRestoreSummary.HasErrors())
-// 	assert.Equal(t, originalNote, *manifest.DPNWorkItem.Note)
-// 	// Should NOT retry if there was a fatal error
-// 	assert.False(t, manifest.DPNWorkItem.Retry)
-
-// }
-
 // ----------------------------------------------------------------------------------
 // HTTP handlers for unit tests...
 // ----------------------------------------------------------------------------------
