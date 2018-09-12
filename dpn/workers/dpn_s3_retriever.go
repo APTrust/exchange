@@ -5,12 +5,7 @@ import (
 	"github.com/APTrust/exchange/constants"
 	"github.com/APTrust/exchange/context"
 	dpn_network "github.com/APTrust/exchange/dpn/network"
-	//	"github.com/APTrust/exchange/models"
 	apt_network "github.com/APTrust/exchange/network"
-	//	"github.com/APTrust/exchange/util"
-	//	"github.com/APTrust/exchange/util/fileutil"
-	//	"github.com/APTrust/exchange/util/storage"
-	//	"github.com/APTrust/exchange/validation"
 	"github.com/nsqio/go-nsq"
 	"os"
 	"path/filepath"
@@ -101,6 +96,7 @@ func (retriever *DPNS3Retriever) HandleMessage(message *nsq.Message) error {
 	return nil
 }
 
+// Fetch the item from S3, if necessary.
 func (retriever *DPNS3Retriever) fetch() {
 	for helper := range retriever.FetchChannel {
 		// Retrieve the tar file if it's not already on disk.
@@ -111,6 +107,7 @@ func (retriever *DPNS3Retriever) fetch() {
 	}
 }
 
+// Cleanup sends data back to Pharos and NSQ about the status of this task.
 func (retriever *DPNS3Retriever) cleanup() {
 	for helper := range retriever.CleanupChannel {
 		helper.Manifest.LocalCopySummary.Finish()
@@ -203,6 +200,8 @@ func (fetcher *DPNS3Retriever) FinishWithSuccess(helper *DPNRestoreHelper) {
 
 func (fetcher *DPNS3Retriever) FinishWithError(helper *DPNRestoreHelper) {
 	helper.Manifest.DPNWorkItem.ClearNodeAndPid()
+	// Copy errors into the DPNWorkItem note, so we can see them in
+	// the Pharos UI.
 	errors := helper.Manifest.GlacierRestoreSummary.AllErrorsAsString()
 	helper.Manifest.DPNWorkItem.Note = &errors
 	fetcher.Context.MessageLog.Error(errors)
@@ -215,7 +214,7 @@ func (fetcher *DPNS3Retriever) FinishWithError(helper *DPNRestoreHelper) {
 		helper.SaveDPNWorkItem()
 		helper.Manifest.NsqMessage.Finish()
 	} else {
-		// Retry DPNWorkItem
+		// Transient errors. Retry DPNWorkItem.
 		helper.Manifest.DPNWorkItem.Retry = true
 		helper.SaveDPNWorkItem()
 		helper.Manifest.NsqMessage.Requeue(MINUTES_BETWEEN_RETRIES * time.Minute)
