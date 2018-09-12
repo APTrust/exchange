@@ -20,7 +20,7 @@ import (
 	//	"sync"
 	"path/filepath"
 	"testing"
-	//	"time"
+	"time"
 )
 
 func getDPNS3TestWorker(t *testing.T) *workers.DPNS3Retriever {
@@ -99,13 +99,43 @@ func TestDPNS3Retriever_DownloadFile(t *testing.T) {
 }
 
 func TestDPNS3Retriever_FinishWithSuccess(t *testing.T) {
-
+	worker, _, delegate, helper := getDPNS3TestItems(t)
+	helper.Manifest.LocalPath = "path/to/file.tar"
+	worker.FinishWithSuccess(helper)
+	require.NotNil(t, helper.Manifest.DPNWorkItem.Note)
+	assert.Equal(t, "Bag has been downloaded to path/to/file.tar", *helper.Manifest.DPNWorkItem.Note)
+	assert.Equal(t, constants.StageValidate, helper.Manifest.DPNWorkItem.Stage)
+	assert.Equal(t, constants.StatusPending, helper.Manifest.DPNWorkItem.Status)
+	assert.Equal(t, 0, helper.Manifest.DPNWorkItem.Pid)
+	assert.Nil(t, helper.Manifest.DPNWorkItem.ProcessingNode)
+	assert.Equal(t, "finish", delegate.Operation)
 }
 
 func TestDPNS3Retriever_FinishWithError(t *testing.T) {
+	// Test with non-fatal error
+	worker, _, delegate, helper := getDPNS3TestItems(t)
+	helper.WorkSummary.AddError("Oops 1")
+	helper.WorkSummary.AddError("Oops 2")
+	helper.WorkSummary.ErrorIsFatal = false
+	worker.FinishWithError(helper)
+	require.NotNil(t, helper.Manifest.DPNWorkItem.Note)
+	assert.Equal(t, "Oops 1\nOops 2", *helper.Manifest.DPNWorkItem.Note)
+	assert.Equal(t, 0, helper.Manifest.DPNWorkItem.Pid)
+	assert.Nil(t, helper.Manifest.DPNWorkItem.ProcessingNode)
+	assert.Equal(t, "requeue", delegate.Operation)
+	assert.Equal(t, 3*time.Minute, delegate.Delay)
 
-}
-
-func TestDPNS3Retriever_SendToFixityQueue(t *testing.T) {
+	// Test with fatal error
+	worker, _, delegate, helper = getDPNS3TestItems(t)
+	helper.WorkSummary.AddError("Oops 1")
+	helper.WorkSummary.AddError("Oops 2")
+	helper.WorkSummary.ErrorIsFatal = true
+	worker.FinishWithError(helper)
+	require.NotNil(t, helper.Manifest.DPNWorkItem.Note)
+	assert.Equal(t, "Oops 1\nOops 2", *helper.Manifest.DPNWorkItem.Note)
+	assert.Equal(t, constants.StatusFailed, helper.Manifest.DPNWorkItem.Status)
+	assert.Equal(t, 0, helper.Manifest.DPNWorkItem.Pid)
+	assert.Nil(t, helper.Manifest.DPNWorkItem.ProcessingNode)
+	assert.Equal(t, "finish", delegate.Operation)
 
 }
