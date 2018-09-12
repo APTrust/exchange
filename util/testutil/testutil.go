@@ -62,6 +62,21 @@ const (
 	UPDATED_GLACIER_BAG_ETAG       = "bf01126663915a4f5d135a37443b8349"
 )
 
+var s3TestMessagePrinted = false
+
+func CanTestS3() bool {
+	// Note that, to run S3 and Glacier tests, these vars not only have to be set,
+	// they have to be valid keys with read/write access to the buckets specified
+	// in the config file.
+	if os.Getenv("AWS_ACCESS_KEY_ID") == "" || os.Getenv("AWS_SECRET_ACCESS_KEY") == "" {
+		if !s3TestMessagePrinted {
+			fmt.Println("Skipping S3 tests because ENV vars are not set")
+		}
+		return false
+	}
+	return true
+}
+
 func ShouldRunIntegrationTests() bool {
 	return os.Getenv("RUN_EXCHANGE_INTEGRATION") == "true"
 }

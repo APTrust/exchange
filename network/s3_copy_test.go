@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/APTrust/exchange/constants"
 	"github.com/APTrust/exchange/network"
+	"github.com/APTrust/exchange/util/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"os"
@@ -12,7 +13,7 @@ import (
 )
 
 func TestS3Copy(t *testing.T) {
-	if !canTestS3() {
+	if !testutil.CanTestS3() {
 		return
 	}
 	tempName := getS3CopyTempName()
