@@ -15,8 +15,12 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	// "time"
+	"time"
 )
+
+// If S3 download fails with a non-fatal error, how many
+// minutes should we wait before trying again?
+const MINUTES_BETWEEN_RETRIES = 3
 
 // Fetches from S3 to local storage.
 type DPNS3Retriever struct {
@@ -186,9 +190,47 @@ func (fetcher *DPNS3Retriever) tryDownload(helper *DPNRestoreHelper, downloader 
 }
 
 func (fetcher *DPNS3Retriever) FinishWithSuccess(helper *DPNRestoreHelper) {
-
+	// Mark DPNWorkItem as succeeded and push to next queue
+	helper.Manifest.DPNWorkItem.ClearNodeAndPid()
+	note := fmt.Sprintf("Bag has been downloaded to %s", helper.Manifest.LocalPath)
+	helper.Manifest.DPNWorkItem.Note = &note
+	helper.Manifest.DPNWorkItem.Stage = constants.StageValidate
+	helper.Manifest.DPNWorkItem.Status = constants.StatusPending
+	helper.SaveDPNWorkItem()
+	helper.Manifest.NsqMessage.Finish()
+	fetcher.SendToFixityQueue(helper)
 }
 
 func (fetcher *DPNS3Retriever) FinishWithError(helper *DPNRestoreHelper) {
+	helper.Manifest.DPNWorkItem.ClearNodeAndPid()
+	errors := helper.Manifest.GlacierRestoreSummary.AllErrorsAsString()
+	helper.Manifest.DPNWorkItem.Note = &errors
+	fetcher.Context.MessageLog.Error(errors)
+	if helper.WorkSummary.ErrorIsFatal {
+		// Mark the DPNWorkItem as failed
+		fetcher.Context.MessageLog.Error("Error for %s is fatal. Not requeueing.",
+			helper.Manifest.DPNWorkItem.Identifier)
+		helper.Manifest.DPNWorkItem.Status = constants.StatusFailed
+		helper.Manifest.DPNWorkItem.Retry = false
+		helper.SaveDPNWorkItem()
+		helper.Manifest.NsqMessage.Finish()
+	} else {
+		// Retry DPNWorkItem
+		helper.Manifest.DPNWorkItem.Retry = true
+		helper.SaveDPNWorkItem()
+		helper.Manifest.NsqMessage.Requeue(MINUTES_BETWEEN_RETRIES * time.Minute)
+	}
+}
 
+func (fetcher *DPNS3Retriever) SendToFixityQueue(helper *DPNRestoreHelper) {
+	topic := fetcher.Context.Config.DPN.DPNFixityWorker.NsqTopic
+	err := fetcher.Context.NSQClient.Enqueue(topic, helper.Manifest.DPNWorkItem.Id)
+	if err != nil {
+		helper.WorkSummary.AddError(
+			"S3 download succeeded, but error pushing "+
+				"DPNWorkItem %d (%s) into NSQ topic %s: %v",
+			helper.Manifest.DPNWorkItem.Id, helper.Manifest.DPNWorkItem.Identifier, topic, err)
+		fetcher.Context.MessageLog.Error(helper.Manifest.GlacierRestoreSummary.AllErrorsAsString())
+		helper.SaveDPNWorkItem()
+	}
 }

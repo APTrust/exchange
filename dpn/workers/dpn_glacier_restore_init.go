@@ -159,15 +159,15 @@ func (restorer *DPNGlacierRestoreInit) FinishWithSuccess(helper *DPNRestoreHelpe
 		helper.SaveDPNWorkItem()
 		helper.Manifest.NsqMessage.Requeue(HOURS_BETWEEN_CHECKS * time.Hour)
 	}
+	helper.Manifest.NsqMessage.Finish()
 }
 
 func (restorer *DPNGlacierRestoreInit) SendToDownloadQueue(helper *DPNRestoreHelper) {
-	helper.Manifest.NsqMessage.Finish()
 	topic := restorer.Context.Config.DPN.DPNS3DownloadWorker.NsqTopic
 	err := restorer.Context.NSQClient.Enqueue(topic, helper.Manifest.DPNWorkItem.Id)
 	if err != nil {
-		helper.Manifest.GlacierRestoreSummary.AddError(
-			"Glacier requested succeeded, but error pushing "+
+		helper.WorkSummary.AddError(
+			"Glacier request succeeded, but error pushing "+
 				"DPNWorkItem %d (%s) into NSQ topic %s: %v",
 			helper.Manifest.DPNWorkItem.Id, helper.Manifest.DPNWorkItem.Identifier, topic, err)
 		restorer.Context.MessageLog.Error(helper.Manifest.GlacierRestoreSummary.AllErrorsAsString())
