@@ -76,6 +76,7 @@ func (retriever *DPNS3Retriever) HandleMessage(message *nsq.Message) error {
 	helper.Manifest.LocalCopySummary.ClearErrors()
 	helper.Manifest.LocalCopySummary.Start()
 	helper.Manifest.DPNWorkItem.Status = constants.StatusStarted
+	helper.Manifest.DPNWorkItem.Stage = constants.StageFetch
 	helper.SaveDPNWorkItem()
 	if helper.Manifest.LocalCopySummary.HasErrors() {
 		retriever.Context.MessageLog.Error("Error setting up manifest for WorkItem %s: %s",
@@ -202,7 +203,7 @@ func (fetcher *DPNS3Retriever) FinishWithError(helper *DPNRestoreHelper) {
 	helper.Manifest.DPNWorkItem.ClearNodeAndPid()
 	// Copy errors into the DPNWorkItem note, so we can see them in
 	// the Pharos UI.
-	errors := helper.Manifest.GlacierRestoreSummary.AllErrorsAsString()
+	errors := helper.WorkSummary.AllErrorsAsString()
 	helper.Manifest.DPNWorkItem.Note = &errors
 	fetcher.Context.MessageLog.Error(errors)
 	if helper.WorkSummary.ErrorIsFatal {
