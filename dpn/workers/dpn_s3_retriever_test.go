@@ -1,24 +1,15 @@
 package workers_test
 
 import (
-	//	"encoding/json"
-	//	"fmt"
 	"github.com/APTrust/exchange/constants"
-	//	dpn_models "github.com/APTrust/exchange/dpn/models"
-	//	dpn_network "github.com/APTrust/exchange/dpn/network"
 	"github.com/APTrust/exchange/dpn/workers"
-	//	apt_models "github.com/APTrust/exchange/models"
-	//	"github.com/APTrust/exchange/network"
 	"github.com/APTrust/exchange/util/testutil"
 	"github.com/nsqio/go-nsq"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	//	"io/ioutil"
-	//	"net/http"
-	//	"net/http/httptest"
-	//	"strings"
-	//	"sync"
 	"path/filepath"
+	"strings"
+	"sync"
 	"testing"
 	"time"
 )
@@ -137,5 +128,111 @@ func TestDPNS3Retriever_FinishWithError(t *testing.T) {
 	assert.Equal(t, 0, helper.Manifest.DPNWorkItem.Pid)
 	assert.Nil(t, helper.Manifest.DPNWorkItem.ProcessingNode)
 	assert.Equal(t, "finish", delegate.Operation)
+}
 
+func TestDPNS3Retriever_DownloadSuccess(t *testing.T) {
+	if !testutil.CanTestS3() {
+		return
+	}
+	worker, _, delegate, helper := getDPNS3TestItems(t)
+	worker.Context.Config.DPN.DPNRestorationBucket = "aptrust.integration.test"
+	helper.Manifest.DPNBag.UUID = "example.edu.tagsample_good"
+	helper.Manifest.DPNBag.Size = uint64(40960)
+
+	// Create a PostTestChannel. The worker will send the
+	// DPNRetrievalManifest object into this channel when
+	// all other processing is complete.
+	worker.PostTestChannel = make(chan *workers.DPNRestoreHelper)
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go func() {
+		for helper := range worker.PostTestChannel {
+			// Check the basics
+			assert.NotNil(t, helper.Manifest.DPNBag)
+			require.NotNil(t, helper.Manifest.DPNWorkItem)
+
+			// Make sure no errors and item is on disk.
+			// Also not that these two point the same WorkSummary object.
+			assert.False(t, helper.Manifest.LocalCopySummary.HasErrors())
+			assert.Equal(t, "", helper.Manifest.LocalCopySummary.AllErrorsAsString())
+			assert.False(t, helper.WorkSummary.HasErrors())
+
+			// Make sure the file is on disk
+			assert.True(t, helper.FileExistsAndIsComplete())
+
+			// NSQ message should be marked finished.
+			assert.Equal(t, "finish", delegate.Operation)
+
+			// Make sure the error message was copied into the DPNWorkItem note.
+			expectedNote := "Bag has been downloaded to " + helper.Manifest.LocalPath
+			require.NotNil(t, helper.Manifest.DPNWorkItem.Note)
+			assert.Equal(t, expectedNote, *helper.Manifest.DPNWorkItem.Note)
+
+			// Make sure we closed out the WorkSummary correctly.
+			// helper.WorkSummary.Finished() will not be true here
+			// because HandleMessage sets the start time, and we're
+			// bypassing that here, going directly into the FetchChannel.
+			assert.True(t, helper.WorkSummary.Finished())
+			assert.True(t, helper.WorkSummary.Succeeded())
+
+			// Make sure we updated the DPNWorkItem appropriately
+			assert.Equal(t, constants.StageValidate, helper.Manifest.DPNWorkItem.Stage)
+			assert.Equal(t, constants.StatusPending, helper.Manifest.DPNWorkItem.Status)
+			assert.True(t, helper.Manifest.DPNWorkItem.Retry)
+
+			wg.Done()
+		}
+	}()
+
+	worker.FetchChannel <- helper
+	wg.Wait()
+}
+
+func TestDPNS3Retriever_HandleMessageFail(t *testing.T) {
+	if !testutil.CanTestS3() {
+		return
+	}
+	worker, message, delegate, _ := getDPNS3TestItems(t)
+
+	worker.PostTestChannel = make(chan *workers.DPNRestoreHelper)
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go func() {
+		for helper := range worker.PostTestChannel {
+			// Check the basics
+			assert.NotNil(t, helper.Manifest.DPNBag)
+			require.NotNil(t, helper.Manifest.DPNWorkItem)
+
+			// Make sure no errors and item is on disk.
+			// Also not that these two point the same WorkSummary object.
+			assert.True(t, helper.Manifest.LocalCopySummary.HasErrors())
+			assert.True(t, helper.WorkSummary.HasErrors())
+
+			// Error is fatal because the bucket we requested does not exist.
+			assert.True(t, helper.WorkSummary.ErrorIsFatal)
+			assert.True(t, strings.HasPrefix(helper.WorkSummary.AllErrorsAsString(), "NoSuchBucket"))
+
+			// NSQ message should be marked finished.
+			assert.Equal(t, "finish", delegate.Operation)
+
+			// Make sure the error message was copied into the DPNWorkItem note.
+			require.NotNil(t, helper.Manifest.DPNWorkItem.Note)
+			assert.Equal(t, helper.WorkSummary.AllErrorsAsString(), *helper.Manifest.DPNWorkItem.Note)
+
+			// Make sure we closed out the WorkSummary correctly.
+			assert.True(t, helper.WorkSummary.Started())
+			assert.True(t, helper.WorkSummary.Finished())
+			assert.False(t, helper.WorkSummary.Succeeded())
+
+			// Make sure we updated the DPNWorkItem appropriately
+			assert.Equal(t, constants.StageFetch, helper.Manifest.DPNWorkItem.Stage)
+			assert.Equal(t, constants.StatusFailed, helper.Manifest.DPNWorkItem.Status)
+			assert.False(t, helper.Manifest.DPNWorkItem.Retry)
+
+			wg.Done()
+		}
+	}()
+
+	worker.HandleMessage(message)
+	wg.Wait()
 }

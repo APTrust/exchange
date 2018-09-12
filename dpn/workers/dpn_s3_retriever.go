@@ -176,7 +176,7 @@ func (fetcher *DPNS3Retriever) tryDownload(helper *DPNRestoreHelper, downloader 
 			downloader.ErrorMessage,
 			retryMessage)
 		fetcher.Context.MessageLog.Warning(fullMessage)
-		if strings.Contains(downloader.ErrorMessage, "NoSuchKey") {
+		if strings.Contains(downloader.ErrorMessage, "NoSuch") {
 			helper.WorkSummary.AddError(downloader.ErrorMessage)
 			helper.WorkSummary.ErrorIsFatal = true
 		} else {
