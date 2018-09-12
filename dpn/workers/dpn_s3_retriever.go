@@ -6,14 +6,15 @@ import (
 	"github.com/APTrust/exchange/context"
 	dpn_network "github.com/APTrust/exchange/dpn/network"
 	//	"github.com/APTrust/exchange/models"
-	//	"github.com/APTrust/exchange/network"
+	apt_network "github.com/APTrust/exchange/network"
 	//	"github.com/APTrust/exchange/util"
 	//	"github.com/APTrust/exchange/util/fileutil"
 	//	"github.com/APTrust/exchange/util/storage"
 	//	"github.com/APTrust/exchange/validation"
 	"github.com/nsqio/go-nsq"
-	//	"os"
-	//	"strings"
+	"os"
+	"path/filepath"
+	"strings"
 	// "time"
 )
 
@@ -99,7 +100,9 @@ func (retriever *DPNS3Retriever) HandleMessage(message *nsq.Message) error {
 func (retriever *DPNS3Retriever) fetch() {
 	for helper := range retriever.FetchChannel {
 		// Retrieve the tar file if it's not already on disk.
-
+		if !helper.FileExistsAndIsComplete() {
+			retriever.DownloadFile(helper)
+		}
 		retriever.CleanupChannel <- helper
 	}
 }
@@ -120,8 +123,66 @@ func (retriever *DPNS3Retriever) cleanup() {
 	}
 }
 
-func (fetcher *DPNS3Retriever) Download(helper *DPNRestoreHelper) {
+func (fetcher *DPNS3Retriever) DownloadFile(helper *DPNRestoreHelper) {
+	downloader := fetcher.getDownloader(helper)
+	// Large downloads often fail more than once on transient
+	// network errors (e.g. "Connection reset by peer")
+	// So we give this several tries.
+	for i := 0; i < 10; i++ {
+		succeeded := fetcher.tryDownload(helper, downloader, i)
+		if succeeded || helper.WorkSummary.ErrorIsFatal {
+			break
+		}
+	}
+}
 
+func (fetcher *DPNS3Retriever) getDownloader(helper *DPNRestoreHelper) *apt_network.S3Download {
+	tarFileName := fmt.Sprintf("%s.tar", helper.Manifest.DPNBag.UUID)
+	helper.Manifest.LocalPath = filepath.Join(
+		fetcher.Context.Config.DPN.DPNRestorationDirectory,
+		tarFileName)
+	return apt_network.NewS3Download(
+		os.Getenv("AWS_ACCESS_KEY_ID"),
+		os.Getenv("AWS_SECRET_ACCESS_KEY"),
+		constants.AWSVirginia,                           // region
+		fetcher.Context.Config.DPN.DPNRestorationBucket, // bucket
+		tarFileName,               // Key/file to download
+		helper.Manifest.LocalPath, // where to put the downloaded file
+		false, // calculate md5 checksum on the entire tar file
+		false, // calculate sha256 checksum on the entire tar file
+	)
+}
+
+func (fetcher *DPNS3Retriever) tryDownload(helper *DPNRestoreHelper, downloader *apt_network.S3Download, attemptNumber int) bool {
+	succeeded := false
+	downloader.ErrorMessage = "" // clear before each attempt
+	downloader.Fetch()
+	if downloader.ErrorMessage == "" {
+		fetcher.Context.MessageLog.Info("Fetched %s/%s after %d attempts",
+			downloader.BucketName,
+			downloader.KeyName,
+			attemptNumber+1)
+		succeeded = true
+	} else {
+		retryMessage := "will retry"
+		if attemptNumber >= 9 {
+			retryMessage = "will not retry - too many failed attempts"
+		}
+		fullMessage := fmt.Sprintf("Error fetching %s/%s: %s - %s",
+			downloader.BucketName,
+			downloader.KeyName,
+			downloader.ErrorMessage,
+			retryMessage)
+		fetcher.Context.MessageLog.Warning(fullMessage)
+		if strings.Contains(downloader.ErrorMessage, "NoSuchKey") {
+			helper.WorkSummary.AddError(downloader.ErrorMessage)
+			helper.WorkSummary.ErrorIsFatal = true
+		} else {
+			// Note that we tried 10 times.
+			helper.WorkSummary.AddError(fullMessage)
+		}
+	}
+	return succeeded
 }
 
 func (fetcher *DPNS3Retriever) FinishWithSuccess(helper *DPNRestoreHelper) {
