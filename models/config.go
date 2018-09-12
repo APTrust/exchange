@@ -382,6 +382,10 @@ func (config *Config) ExpandFilePaths() {
 	if err == nil {
 		config.DPN.StagingDirectory = expanded
 	}
+	expanded, err = fileutil.ExpandTilde(config.DPN.DPNRestorationDirectory)
+	if err == nil {
+		config.DPN.DPNRestorationDirectory = expanded
+	}
 	expanded, err = fileutil.ExpandTilde(config.DPN.RemoteNodeHomeDirectory)
 	if err == nil {
 		config.DPN.RemoteNodeHomeDirectory = expanded
@@ -575,8 +579,14 @@ type DPNConfig struct {
 	// DPN bags, so they can be ingested into DPN.
 	DPNPackageWorker WorkerConfig
 
-	// The name of the long-term storage bucket for DPN
+	// The name of the long-term storage bucket for DPN.
+	// This is, in effect, a Glacier bucket. (S3 with a
+	// move-to-Glacier policy.)
 	DPNPreservationBucket string
+
+	// The name of the bucket into which we restore DPN items
+	// for retrieval and fixity checking. This is an S3 bucket.
+	DPNRestorationBucket string
 
 	// DPNIngestRecordWorker records DPN ingest events in Pharos
 	// and in the DPN REST server.
@@ -648,6 +658,11 @@ type DPNConfig struct {
 	// here while they await transfer to the DPN preservation
 	// bucket and while they await replication to other nodes.
 	StagingDirectory string
+
+	// The local directory for bag restoration. We download bags
+	// into this directory for DPN fixity checking, which requires
+	// full parsing and validation of the entire bag.
+	DPNRestorationDirectory string
 
 	// When copying bags from remote nodes, should we use rsync
 	// over SSH (true) or just plain rsync (false)? For local

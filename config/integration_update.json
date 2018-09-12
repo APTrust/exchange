@@ -151,6 +151,7 @@
 
 	"DPN": {
 		"StagingDirectory": "~/tmp/dpn_staging",
+		"DPNRestorationDirectory": "~/tmp/dpn_restoration",
 		"RemoteNodeHomeDirectory": "~/tmp/dpn_home",
 		"LocalNode": "aptrust",
 		"LogDirectory": "~/tmp/logs",
@@ -159,6 +160,7 @@
 		"ReplicateToNumNodes": 2,
 		"DPNAPIVersion": "api-v2",
 		"DPNPreservationBucket": "aptrust.dpn.test",
+        "DPNRestorationBucket": "aptrust.dpn.restoration.test",
 		"AcceptInvalidSSLCerts": true,
 		"UseSSHWithRsync": false,
 		"DPNGlacierRegion": "us-east-1",
