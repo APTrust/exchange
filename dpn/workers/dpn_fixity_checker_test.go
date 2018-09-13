@@ -8,6 +8,7 @@ import (
 	"github.com/nsqio/go-nsq"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"os"
 	"path"
 	"path/filepath"
 	"runtime"
@@ -65,6 +66,12 @@ func pathToDPNTestBag(t *testing.T) string {
 	return getBagPath(t, bagName)
 }
 
+func deleteBoltDBFile(t *testing.T) {
+	dbFile := dpn_testutil.DPN_TEST_BAG_UUID + ".valdb"
+	dbPath := getBagPath(t, dbFile)
+	os.Remove(dbPath)
+}
+
 func TestNewDPNFixityChecker(t *testing.T) {
 	worker := getDPNFixityTestWorker(t)
 	assert.NotNil(t, worker.Context)
@@ -75,7 +82,22 @@ func TestNewDPNFixityChecker(t *testing.T) {
 }
 
 func TestDPNFixityChecker_ValidateBag(t *testing.T) {
+	defer deleteBoltDBFile(t)
+	worker, _, _, helper := getDPNFixityTestItems(t)
+	helper.Manifest.DPNBag.UUID = dpn_testutil.DPN_TEST_BAG_UUID
+	helper.Manifest.ExpectedFixityValue = dpn_testutil.DPN_TEST_BAG_FIXITY
+	helper.Manifest.LocalPath = pathToDPNTestBag(t)
+	worker.ValidateBag(helper)
+	assert.Equal(t, dpn_testutil.DPN_TEST_BAG_FIXITY, helper.Manifest.ActualFixityValue)
+	assert.False(t, helper.WorkSummary.HasErrors())
 
+	worker, _, _, helper = getDPNFixityTestItems(t)
+	helper.Manifest.DPNBag.UUID = dpn_testutil.DPN_TEST_BAG_UUID
+	helper.Manifest.ExpectedFixityValue = "This fixity value won't match"
+	helper.Manifest.LocalPath = pathToDPNTestBag(t)
+	worker.ValidateBag(helper)
+	assert.NotEqual(t, helper.Manifest.ExpectedFixityValue, helper.Manifest.ActualFixityValue)
+	assert.False(t, helper.WorkSummary.HasErrors())
 }
 
 func TestDPNFixityChecker_SaveFixityRecord(t *testing.T) {
@@ -91,13 +113,7 @@ func TestDPNFixityChecker_FinishWithError(t *testing.T) {
 }
 
 func TestDPNFixityChecker_HandleMessageSuccess(t *testing.T) {
-	worker, _, _, helper := getDPNFixityTestItems(t)
-	helper.Manifest.DPNBag.UUID = dpn_testutil.DPN_TEST_BAG_UUID
-	helper.Manifest.ExpectedFixityValue = dpn_testutil.DPN_TEST_BAG_FIXITY
-	helper.Manifest.LocalPath = pathToDPNTestBag(t)
-	worker.ValidateBag(helper)
-	assert.Equal(t, dpn_testutil.DPN_TEST_BAG_FIXITY, helper.Manifest.ActualFixityValue)
-	assert.False(t, helper.WorkSummary.HasErrors())
+
 }
 
 func TestDPNFixityChecker_HandleMessageFail(t *testing.T) {
