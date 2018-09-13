@@ -104,6 +104,18 @@ type DPNRetrievalManifest struct {
 	// to record the result of the fixity check in the local DPN
 	// registry (our node's instance of the DPN REST server).
 	RecordSummary *apt_models.WorkSummary
+
+	// FixityCheck is the FixityCheck record saved the DPN after
+	// the worker finishes validating a bag and calculating the
+	// sha256 checksum of its tagmanifest-sha256.txt file.
+	// This property will be nil until the very last phase of
+	// the fixity check process. For DPN bag restorations, this
+	// property will remain nil throughout.
+	FixityCheck *FixityCheck
+
+	// FixityCheckSavedAt describes when we saved the FixityCheck
+	// record to the local DPN REST server.
+	FixityCheckSavedAt time.Time
 }
 
 func NewDPNRetrievalManifest(message *nsq.Message) *DPNRetrievalManifest {
