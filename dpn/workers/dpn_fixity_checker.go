@@ -240,6 +240,7 @@ func (checker *DPNFixityChecker) SaveFixityRecord(helper *DPNRestoreHelper) {
 		helper.WorkSummary.AddError(
 			"Fixity check completed, and fixity record %s was saved to DPN. "+
 				"Actual fixity value %s does not match expected fixity %s",
+			helper.Manifest.FixityCheck.FixityCheckId,
 			helper.Manifest.ActualFixityValue, helper.Manifest.ExpectedFixityValue)
 		helper.WorkSummary.ErrorIsFatal = true
 	}
