@@ -157,13 +157,15 @@ func (checker *DPNFixityChecker) ValidateBag(helper *DPNRestoreHelper) {
 // file because we often get bags with over 100,000 files.
 // We can extract the tagmanifest-sha256.txt checksum from the BoltDB.
 func (checker *DPNFixityChecker) getTagManifestChecksum(helper *DPNRestoreHelper, validator *validation.Validator) {
+	fileIdentifier := fmt.Sprintf("%s/tagmanifest-sha256.txt", helper.Manifest.DPNBag.UUID)
+	checker.Context.MessageLog.Info("Looking up %s in BoltDB %s",
+		fileIdentifier, validator.DBName())
 	db, err := storage.NewBoltDB(validator.DBName())
 	if err != nil {
 		helper.WorkSummary.AddError("Error opening BoltDB: %v", err)
 		return
 	}
 	defer db.Close()
-	fileIdentifier := fmt.Sprintf("%s/tagmanifest-sha256.txt", helper.Manifest.DPNBag.UUID)
 	gf, err := db.GetGenericFile(fileIdentifier)
 	if err != nil {
 		helper.WorkSummary.AddError("Error finding file %s in BoltDB: %v", fileIdentifier, err)
@@ -174,6 +176,8 @@ func (checker *DPNFixityChecker) getTagManifestChecksum(helper *DPNRestoreHelper
 	helper.Manifest.ActualFixityValue = gf.IngestSha256
 	checker.Context.MessageLog.Info("Validator calculated checksum %s for file %s",
 		gf.IngestSha256, fileIdentifier)
+
+	// TODO: Delete BoltDB
 }
 
 // Record this fixity check in our local DPN REST server

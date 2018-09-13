@@ -16,6 +16,12 @@ import (
 	"time"
 )
 
+// This is a valid bag.
+const DPN_TEST_BAG_UUID = "a9f7cbab-b531-4eb7-b532-770f592629ba"
+
+// This is the sha-256 checksum of the DPN test bag's tagmanifest-sha256.txt file.
+const DPN_TEST_BAG_FIXITY = "fbcf91342bdd894fb55f2820dc2fce392d527ea60fd691dbef066477489820ef"
+
 var fluctusUrl string = "http://localhost:3000"
 
 // BAG_IDS match the Bag.UUID values in the DPN server cluster
