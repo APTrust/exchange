@@ -10,3 +10,4 @@ partner_apps/bin
 apps/apt_restore_from_glacier/apt_restore_from_glacier
 apps/apt_dump_valdb/apt_dump_valdb
 .DS_Store
+testdata/unit_test_bags/dpn/*.valdb
