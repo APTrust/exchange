@@ -180,14 +180,41 @@ func (checker *DPNFixityChecker) getTagManifestChecksum(helper *DPNRestoreHelper
 	}
 }
 
+// Record this fixity check in our local DPN REST server
 func (checker *DPNFixityChecker) record() {
-	// for helper := range checker.RecordChannel {
+	for helper := range checker.RecordChannel {
 
-	// }
+		checker.CleanupChannel <- helper
+	}
 }
 
+// Update NSQ and Pharos on the status of this task
 func (checker *DPNFixityChecker) cleanup() {
-	// for helper := range checker.CleanupChannel {
+	for helper := range checker.CleanupChannel {
+		helper.WorkSummary.Finish()
+		if helper.WorkSummary.HasErrors() {
+			checker.FinishWithError(helper)
+		} else {
+			checker.FinishWithSuccess(helper)
+		}
+		// For testing only. The test code creates the PostTestChannel.
+		// When running in demo & production, this channel is nil.
+		if checker.PostTestChannel != nil {
+			checker.PostTestChannel <- helper
+		}
+	}
+}
 
-	// }
+// Save the fixity record to the local DPN REST server.
+func (checker *DPNFixityChecker) SaveFixityRecord(helper *DPNRestoreHelper) {
+	// Create a FixityCheck record and save it with
+	// checker.LocalDPNRestClient.FixityCheckCreate()
+}
+
+func (checker *DPNFixityChecker) FinishWithSuccess(helper *DPNRestoreHelper) {
+
+}
+
+func (checker *DPNFixityChecker) FinishWithError(helper *DPNRestoreHelper) {
+
 }
