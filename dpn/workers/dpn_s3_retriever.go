@@ -65,7 +65,6 @@ func NewDPNS3Retriever(_context *context.Context) (*DPNS3Retriever, error) {
 // This is the callback that NSQ workers use to handle messages from NSQ.
 func (retriever *DPNS3Retriever) HandleMessage(message *nsq.Message) error {
 	message.DisableAutoResponse()
-
 	helper, err := NewDPNRestoreHelper(message, retriever.Context,
 		retriever.LocalDPNRestClient, constants.ActionFixityCheck,
 		"LocalCopySummary")
@@ -101,6 +100,7 @@ func (retriever *DPNS3Retriever) HandleMessage(message *nsq.Message) error {
 func (retriever *DPNS3Retriever) fetch() {
 	for helper := range retriever.FetchChannel {
 		// Retrieve the tar file if it's not already on disk.
+		helper.Manifest.NsqMessage.Touch()
 		if !helper.FileExistsAndIsComplete() {
 			retriever.DownloadFile(helper)
 		}
@@ -111,6 +111,7 @@ func (retriever *DPNS3Retriever) fetch() {
 // Cleanup sends data back to Pharos and NSQ about the status of this task.
 func (retriever *DPNS3Retriever) cleanup() {
 	for helper := range retriever.CleanupChannel {
+		helper.Manifest.NsqMessage.Touch()
 		helper.Manifest.LocalCopySummary.Finish()
 		if helper.Manifest.LocalCopySummary.HasErrors() {
 			retriever.FinishWithError(helper)
@@ -131,6 +132,7 @@ func (fetcher *DPNS3Retriever) DownloadFile(helper *DPNRestoreHelper) {
 	// network errors (e.g. "Connection reset by peer")
 	// So we give this several tries.
 	for i := 0; i < 10; i++ {
+		helper.Manifest.NsqMessage.Touch()
 		succeeded := fetcher.tryDownload(helper, downloader, i)
 		if succeeded || helper.WorkSummary.ErrorIsFatal {
 			break
