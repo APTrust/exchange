@@ -4,6 +4,7 @@ import (
 	"github.com/APTrust/exchange/constants"
 	dpn_testutil "github.com/APTrust/exchange/dpn/util/testutil"
 	"github.com/APTrust/exchange/dpn/workers"
+	"github.com/APTrust/exchange/util"
 	"github.com/APTrust/exchange/util/testutil"
 	"github.com/nsqio/go-nsq"
 	"github.com/stretchr/testify/assert"
@@ -12,7 +13,7 @@ import (
 	"path"
 	"path/filepath"
 	"runtime"
-	//	"strings"
+	"strings"
 	//	"sync"
 	"testing"
 	//	"time"
@@ -86,22 +87,77 @@ func TestDPNFixityChecker_ValidateBag(t *testing.T) {
 	worker, _, _, helper := getDPNFixityTestItems(t)
 	helper.Manifest.DPNBag.UUID = dpn_testutil.DPN_TEST_BAG_UUID
 	helper.Manifest.ExpectedFixityValue = dpn_testutil.DPN_TEST_BAG_FIXITY
+	helper.Manifest.ActualFixityValue = ""
 	helper.Manifest.LocalPath = pathToDPNTestBag(t)
 	worker.ValidateBag(helper)
+	assert.NotEmpty(t, helper.Manifest.ActualFixityValue)
 	assert.Equal(t, dpn_testutil.DPN_TEST_BAG_FIXITY, helper.Manifest.ActualFixityValue)
 	assert.False(t, helper.WorkSummary.HasErrors())
 
 	worker, _, _, helper = getDPNFixityTestItems(t)
 	helper.Manifest.DPNBag.UUID = dpn_testutil.DPN_TEST_BAG_UUID
 	helper.Manifest.ExpectedFixityValue = "This fixity value won't match"
+	helper.Manifest.ActualFixityValue = ""
 	helper.Manifest.LocalPath = pathToDPNTestBag(t)
 	worker.ValidateBag(helper)
+	assert.NotEmpty(t, helper.Manifest.ActualFixityValue)
 	assert.NotEqual(t, helper.Manifest.ExpectedFixityValue, helper.Manifest.ActualFixityValue)
 	assert.False(t, helper.WorkSummary.HasErrors())
 }
 
 func TestDPNFixityChecker_SaveFixityRecord(t *testing.T) {
+	// Can't save because there's no ExpectedFixityValue
+	worker, _, _, helper := getDPNFixityTestItems(t)
+	helper.Manifest.ExpectedFixityValue = ""
+	helper.Manifest.ActualFixityValue = ""
+	worker.SaveFixityRecord(helper)
+	require.True(t, helper.WorkSummary.HasErrors())
+	assert.Equal(t, "Cannot create DPN FixityCheck record because because ExpectedFixityValue is missing from manifest.", helper.WorkSummary.FirstError())
+	assert.Nil(t, helper.Manifest.FixityCheck)
+	assert.True(t, helper.Manifest.FixityCheckSavedAt.IsZero())
 
+	// Can't save because there's no ActualFixityValue
+	worker, _, _, helper = getDPNFixityTestItems(t)
+	helper.Manifest.ExpectedFixityValue = dpn_testutil.DPN_TEST_BAG_FIXITY
+	helper.Manifest.ActualFixityValue = ""
+	worker.SaveFixityRecord(helper)
+	require.True(t, helper.WorkSummary.HasErrors())
+	assert.Equal(t, "Cannot create DPN FixityCheck record because because ActualFixityValue is missing from manifest.", helper.WorkSummary.FirstError())
+	assert.Nil(t, helper.Manifest.FixityCheck)
+	assert.True(t, helper.Manifest.FixityCheckSavedAt.IsZero())
+
+	// Record saved with matching fixity
+	worker, _, _, helper = getDPNFixityTestItems(t)
+	helper.Manifest.DPNBag.UUID = dpn_testutil.DPN_TEST_BAG_UUID
+	helper.Manifest.ExpectedFixityValue = dpn_testutil.DPN_TEST_BAG_FIXITY
+	helper.Manifest.ActualFixityValue = dpn_testutil.DPN_TEST_BAG_FIXITY
+	worker.SaveFixityRecord(helper)
+	require.False(t, helper.WorkSummary.HasErrors())
+	assert.False(t, helper.Manifest.FixityCheckSavedAt.IsZero())
+	require.NotNil(t, helper.Manifest.FixityCheck)
+	assert.True(t, util.LooksLikeUUID(helper.Manifest.FixityCheck.FixityCheckId))
+	assert.Equal(t, dpn_testutil.DPN_TEST_BAG_UUID, helper.Manifest.FixityCheck.Bag)
+	assert.Equal(t, worker.Context.Config.DPN.LocalNode, helper.Manifest.FixityCheck.Node)
+	assert.True(t, helper.Manifest.FixityCheck.Success)
+	assert.False(t, helper.Manifest.FixityCheck.FixityAt.IsZero())
+	assert.False(t, helper.Manifest.FixityCheck.CreatedAt.IsZero())
+
+	// Record saved with mismatched fixity
+	worker, _, _, helper = getDPNFixityTestItems(t)
+	helper.Manifest.DPNBag.UUID = dpn_testutil.DPN_TEST_BAG_UUID
+	helper.Manifest.ExpectedFixityValue = dpn_testutil.DPN_TEST_BAG_FIXITY
+	helper.Manifest.ActualFixityValue = "Blah blah blah"
+	worker.SaveFixityRecord(helper)
+	require.True(t, helper.WorkSummary.HasErrors())
+	assert.True(t, strings.Contains(helper.WorkSummary.FirstError(), "does not match expected fixity"))
+	assert.False(t, helper.Manifest.FixityCheckSavedAt.IsZero())
+	require.NotNil(t, helper.Manifest.FixityCheck)
+	assert.True(t, util.LooksLikeUUID(helper.Manifest.FixityCheck.FixityCheckId))
+	assert.Equal(t, dpn_testutil.DPN_TEST_BAG_UUID, helper.Manifest.FixityCheck.Bag)
+	assert.Equal(t, worker.Context.Config.DPN.LocalNode, helper.Manifest.FixityCheck.Node)
+	assert.False(t, helper.Manifest.FixityCheck.Success)
+	assert.False(t, helper.Manifest.FixityCheck.FixityAt.IsZero())
+	assert.False(t, helper.Manifest.FixityCheck.CreatedAt.IsZero())
 }
 
 func TestDPNFixityChecker_FinishWithSuccess(t *testing.T) {

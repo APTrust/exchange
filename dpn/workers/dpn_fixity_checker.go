@@ -235,6 +235,7 @@ func (checker *DPNFixityChecker) SaveFixityRecord(helper *DPNRestoreHelper) {
 		return
 	}
 	helper.Manifest.FixityCheck.CreatedAt = resp.FixityCheck().CreatedAt
+	helper.Manifest.FixityCheckSavedAt = time.Now().UTC()
 	if helper.Manifest.CheckCompletedAndFailed() {
 		helper.WorkSummary.AddError(
 			"Fixity check completed, and fixity record %s was saved to DPN. "+
