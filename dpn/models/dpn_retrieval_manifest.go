@@ -157,3 +157,9 @@ func (manifest *DPNRetrievalManifest) GetSummary(name string) *apt_models.WorkSu
 	}
 	return nil
 }
+
+func (manifest *DPNRetrievalManifest) CheckCompletedAndFailed() bool {
+	return (manifest.ExpectedFixityValue != "" &&
+		manifest.ActualFixityValue != "" &&
+		manifest.ExpectedFixityValue != manifest.ActualFixityValue)
+}

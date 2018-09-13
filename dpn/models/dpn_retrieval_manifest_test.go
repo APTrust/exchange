@@ -45,3 +45,24 @@ func TestDPNRetrievalManifest_GetSummary(t *testing.T) {
 	assert.Equal(t, manifest.RecordSummary, manifest.GetSummary("RecordSummary"))
 	assert.Nil(t, manifest.GetSummary("NoSuchSummary"))
 }
+
+func TestDPNRetrievalManifest_CheckCompletedAndFailed(t *testing.T) {
+	message := testutil.MakeNsqMessage("1234")
+	manifest := models.NewDPNRetrievalManifest(message)
+	manifest.ExpectedFixityValue = ""
+	manifest.ActualFixityValue = ""
+	// False because the check did not complete
+	assert.False(t, manifest.CheckCompletedAndFailed())
+
+	// False because the check did not complete (no ActualFixityValue)
+	manifest.ExpectedFixityValue = "1234567890"
+	assert.False(t, manifest.CheckCompletedAndFailed())
+
+	// False because check completed and checksums match
+	manifest.ActualFixityValue = "1234567890"
+	assert.False(t, manifest.CheckCompletedAndFailed())
+
+	// True because check completed and checksums don't match
+	manifest.ActualFixityValue = "abcdef"
+	assert.True(t, manifest.CheckCompletedAndFailed())
+}
