@@ -24,7 +24,6 @@ func getDPNS3TestWorker(t *testing.T) *workers.DPNS3Retriever {
 
 	// Tell the worker to talk to our S3 test server and Pharos
 	// test server, defined below
-	// worker.S3Url = s3TestServer.URL
 	worker.Context.PharosClient = getPharosClientForTest(pharosTestServer.URL)
 	worker.LocalDPNRestClient = getDPNClientForTest(dpnTestServer.URL)
 	worker.Context.NSQClient.URL = nsqServer.URL

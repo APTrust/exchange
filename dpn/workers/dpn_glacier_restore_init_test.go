@@ -453,13 +453,23 @@ func dpnHandler(w http.ResponseWriter, r *http.Request) {
 	url := r.URL.String()
 	var objJson []byte
 	if strings.Contains(url, "/digest") {
-		// Fixity request
+		// Digest request
 		obj := &dpn_models.MessageDigest{
 			Bag:       testutil.EMPTY_UUID,
 			Algorithm: constants.AlgSha256,
 			Node:      "aptrust",
 			Value:     "1234567890",
 			CreatedAt: testutil.TEST_TIMESTAMP,
+		}
+		objJson, _ = json.Marshal(obj)
+	} else if strings.Contains(url, "/fixity_check/") {
+		obj := &dpn_models.FixityCheck{
+			FixityCheckId: testutil.EMPTY_UUID,
+			Bag:           testutil.EMPTY_UUID,
+			Node:          "aptrust",
+			Success:       true,
+			FixityAt:      testutil.TEST_TIMESTAMP,
+			CreatedAt:     testutil.TEST_TIMESTAMP,
 		}
 		objJson, _ = json.Marshal(obj)
 	} else {
