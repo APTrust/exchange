@@ -174,11 +174,6 @@ func (checker *DPNFixityChecker) getTagManifestChecksum(helper *DPNRestoreHelper
 	helper.Manifest.ActualFixityValue = gf.IngestSha256
 	checker.Context.MessageLog.Info("Validator calculated checksum %s for file %s",
 		gf.IngestSha256, fileIdentifier)
-	if helper.Manifest.ActualFixityValue != helper.Manifest.ExpectedFixityValue {
-		helper.WorkSummary.AddError("Actual fixity value %s does not match expected fixity %s",
-			helper.Manifest.ActualFixityValue, helper.Manifest.ExpectedFixityValue)
-		helper.WorkSummary.ErrorIsFatal = true
-	}
 }
 
 // Record this fixity check in our local DPN REST server
@@ -235,13 +230,52 @@ func (checker *DPNFixityChecker) SaveFixityRecord(helper *DPNRestoreHelper) {
 			resp.Error)
 		return
 	}
-	helper.Manifest.FixityCheck = resp.FixityCheck()
+	helper.Manifest.FixityCheck.CreatedAt = resp.FixityCheck().CreatedAt
+	if helper.Manifest.CheckCompletedAndFailed() {
+		helper.WorkSummary.AddError(
+			"Fixity check completed, and fixity record %s was saved to DPN. "+
+				"Actual fixity value %s does not match expected fixity %s",
+			helper.Manifest.ActualFixityValue, helper.Manifest.ExpectedFixityValue)
+		helper.WorkSummary.ErrorIsFatal = true
+	}
 }
 
 func (checker *DPNFixityChecker) FinishWithSuccess(helper *DPNRestoreHelper) {
-
+	helper.Manifest.DPNWorkItem.ClearNodeAndPid()
+	note := fmt.Sprintf("Fixity check complete.")
+	helper.Manifest.DPNWorkItem.Note = &note
+	// TODO: To repurpose this code to support restoration,
+	// branch here. If DPNWorkItem.Task is fixity check,
+	// set Status to Success. If Task is restore, set Stage
+	// to StageRestoring, status to StatusPending, and push the
+	// bag into the restoration queue, or do whatever else is
+	// necessary to complete the restore process.
+	helper.Manifest.DPNWorkItem.Stage = constants.StageValidate
+	helper.Manifest.DPNWorkItem.Status = constants.StatusSuccess
+	helper.SaveDPNWorkItem()
+	helper.Manifest.NsqMessage.Finish()
 }
 
 func (checker *DPNFixityChecker) FinishWithError(helper *DPNRestoreHelper) {
-
+	helper.Manifest.DPNWorkItem.ClearNodeAndPid()
+	// Copy errors into the DPNWorkItem note, so we can see them in
+	// the Pharos UI.
+	errors := helper.WorkSummary.AllErrorsAsString()
+	helper.Manifest.DPNWorkItem.Note = &errors
+	checker.Context.MessageLog.Error(errors)
+	if helper.WorkSummary.ErrorIsFatal {
+		// Mark the DPNWorkItem as failed
+		checker.Context.MessageLog.Error("Error for %s is fatal. Not requeueing.",
+			helper.Manifest.DPNWorkItem.Identifier)
+		helper.Manifest.DPNWorkItem.Status = constants.StatusFailed
+		helper.Manifest.DPNWorkItem.Retry = false
+		helper.SaveDPNWorkItem()
+		helper.Manifest.NsqMessage.Finish()
+	} else {
+		// Transient errors. Retry DPNWorkItem.
+		// MINUTES_BETWEEN_RETRIES is defined in dpn_s3_retriever.go
+		helper.Manifest.DPNWorkItem.Retry = true
+		helper.SaveDPNWorkItem()
+		helper.Manifest.NsqMessage.Requeue(MINUTES_BETWEEN_RETRIES * time.Minute)
+	}
 }
