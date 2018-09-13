@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"github.com/APTrust/exchange/constants"
 	"github.com/APTrust/exchange/context"
-	//	"github.com/APTrust/exchange/dpn/models"
+	"github.com/APTrust/exchange/dpn/models"
 	"github.com/APTrust/exchange/dpn/network"
 	"github.com/APTrust/exchange/util/storage"
 	//	dpn_util "github.com/APTrust/exchange/dpn/util"
@@ -16,11 +16,12 @@ import (
 	//	"github.com/APTrust/exchange/util/fileutil"
 	"github.com/APTrust/exchange/validation"
 	"github.com/nsqio/go-nsq"
+	"github.com/satori/go.uuid"
 	//	"io"
 	//	"os"
 	//	"path/filepath"
 	//	"strings"
-	//	"time"
+	"time"
 )
 
 type DPNFixityChecker struct {
@@ -209,6 +210,32 @@ func (checker *DPNFixityChecker) cleanup() {
 func (checker *DPNFixityChecker) SaveFixityRecord(helper *DPNRestoreHelper) {
 	// Create a FixityCheck record and save it with
 	// checker.LocalDPNRestClient.FixityCheckCreate()
+	if helper.Manifest.ExpectedFixityValue == "" {
+		helper.WorkSummary.AddError("Cannot create DPN FixityCheck record because " +
+			"because ExpectedFixityValue is missing from manifest.")
+		return
+	}
+	if helper.Manifest.ActualFixityValue == "" {
+		helper.WorkSummary.AddError("Cannot create DPN FixityCheck record because " +
+			"because ActualFixityValue is missing from manifest.")
+		return
+	}
+	if helper.Manifest.FixityCheck == nil {
+		helper.Manifest.FixityCheck = &models.FixityCheck{
+			FixityCheckId: uuid.NewV4().String(),
+			Bag:           helper.Manifest.DPNBag.UUID,
+			Node:          checker.Context.Config.DPN.LocalNode,
+			Success:       helper.Manifest.ExpectedFixityValue == helper.Manifest.ActualFixityValue,
+			FixityAt:      time.Now().UTC(),
+		}
+	}
+	resp := checker.LocalDPNRestClient.FixityCheckCreate(helper.Manifest.FixityCheck)
+	if resp.Error != nil {
+		helper.WorkSummary.AddError("Error saving FixityCheck to DPN REST server: %v",
+			resp.Error)
+		return
+	}
+	helper.Manifest.FixityCheck = resp.FixityCheck()
 }
 
 func (checker *DPNFixityChecker) FinishWithSuccess(helper *DPNRestoreHelper) {
