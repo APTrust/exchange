@@ -89,16 +89,16 @@ func (restorer *DPNGlacierRestoreInit) HandleMessage(message *nsq.Message) error
 		restorer.Context.MessageLog.Error(err.Error())
 		return err
 	}
-	helper.Manifest.GlacierRestoreSummary.ClearErrors()
-	helper.Manifest.GlacierRestoreSummary.Start()
+	helper.WorkSummary.ClearErrors()
+	helper.WorkSummary.Start()
 	helper.Manifest.DPNWorkItem.Status = constants.StatusStarted
 	helper.SaveDPNWorkItem()
-	if helper.Manifest.GlacierRestoreSummary.HasErrors() {
+	if helper.WorkSummary.HasErrors() {
 		restorer.Context.MessageLog.Error("Error setting up manifest for WorkItem %s: %s",
-			string(message.Body), helper.Manifest.GlacierRestoreSummary.AllErrorsAsString())
+			string(message.Body), helper.WorkSummary.AllErrorsAsString())
 		// No use proceeding...
 		restorer.CleanupChannel <- helper
-		return fmt.Errorf(helper.Manifest.GlacierRestoreSummary.AllErrorsAsString())
+		return fmt.Errorf(helper.WorkSummary.AllErrorsAsString())
 	}
 	if helper.Manifest.DPNWorkItem.IsCompletedOrCancelled() {
 		restorer.Context.MessageLog.Info("Skipping WorkItem %d because status is %s",
@@ -116,7 +116,7 @@ func (restorer *DPNGlacierRestoreInit) RequestRestore() {
 	for helper := range restorer.RequestChannel {
 		requestNeeded, err := restorer.RestoreRequestNeeded(helper)
 		if err != nil {
-			helper.Manifest.GlacierRestoreSummary.AddError(
+			helper.WorkSummary.AddError(
 				"Error processing S3 HEAD request for %s: %v",
 				helper.Manifest.DPNWorkItem.Identifier, err)
 		} else if requestNeeded {
@@ -128,8 +128,8 @@ func (restorer *DPNGlacierRestoreInit) RequestRestore() {
 
 func (restorer *DPNGlacierRestoreInit) Cleanup() {
 	for helper := range restorer.CleanupChannel {
-		helper.Manifest.GlacierRestoreSummary.Finish()
-		if helper.Manifest.GlacierRestoreSummary.HasErrors() {
+		helper.WorkSummary.Finish()
+		if helper.WorkSummary.HasErrors() {
 			restorer.FinishWithError(helper)
 		} else {
 			restorer.FinishWithSuccess(helper)
@@ -170,21 +170,21 @@ func (restorer *DPNGlacierRestoreInit) SendToDownloadQueue(helper *DPNRestoreHel
 			"Glacier request succeeded, but error pushing "+
 				"DPNWorkItem %d (%s) into NSQ topic %s: %v",
 			helper.Manifest.DPNWorkItem.Id, helper.Manifest.DPNWorkItem.Identifier, topic, err)
-		restorer.Context.MessageLog.Error(helper.Manifest.GlacierRestoreSummary.AllErrorsAsString())
+		restorer.Context.MessageLog.Error(helper.WorkSummary.AllErrorsAsString())
 		helper.SaveDPNWorkItem()
 	}
 }
 
 func (restorer *DPNGlacierRestoreInit) FinishWithError(helper *DPNRestoreHelper) {
 	helper.Manifest.DPNWorkItem.ClearNodeAndPid()
-	errors := helper.Manifest.GlacierRestoreSummary.AllErrorsAsString()
+	errors := helper.WorkSummary.AllErrorsAsString()
 	helper.Manifest.DPNWorkItem.Note = &errors
 	restorer.Context.MessageLog.Error(errors)
 
 	attempts := int(helper.Manifest.NsqMessage.Attempts)
 	maxAttempts := int(restorer.Context.Config.DPN.DPNGlacierRestoreWorker.MaxAttempts)
 
-	if helper.Manifest.GlacierRestoreSummary.ErrorIsFatal {
+	if helper.WorkSummary.ErrorIsFatal {
 		restorer.Context.MessageLog.Error("Error for %s is fatal. Not requeueing.",
 			helper.Manifest.DPNWorkItem.Identifier)
 		helper.Manifest.DPNWorkItem.Status = constants.StatusFailed
@@ -287,7 +287,7 @@ func (restorer *DPNGlacierRestoreInit) InitializeRetrieval(helper *DPNRestoreHel
 	// This is where me make the actual request to Glacier.
 	restoreClient.Restore()
 	if restoreClient.ErrorMessage != "" {
-		helper.Manifest.GlacierRestoreSummary.AddError(
+		helper.WorkSummary.AddError(
 			"Glacier retrieval request returned an error for %s at %s: %v",
 			helper.Manifest.GlacierBucket, helper.Manifest.DPNWorkItem.Identifier,
 			restoreClient.ErrorMessage)
@@ -302,10 +302,10 @@ func (restorer *DPNGlacierRestoreInit) InitializeRetrieval(helper *DPNRestoreHel
 	helper.Manifest.IsAvailableInS3 = restoreClient.AlreadyInActiveTier
 
 	if restoreClient.RequestRejectedServiceUnavailable {
-		helper.Manifest.GlacierRestoreSummary.AddError(
+		helper.WorkSummary.AddError(
 			"Request to restore %s/%s: "+
 				"Glacier restore service is temporarily unavailable. Try again later.",
 			helper.Manifest.GlacierBucket, helper.Manifest.DPNWorkItem.Identifier)
-		helper.Manifest.GlacierRestoreSummary.ErrorIsFatal = false
+		helper.WorkSummary.ErrorIsFatal = false
 	}
 }

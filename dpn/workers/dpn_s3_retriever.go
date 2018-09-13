@@ -72,17 +72,17 @@ func (retriever *DPNS3Retriever) HandleMessage(message *nsq.Message) error {
 		retriever.Context.MessageLog.Error(err.Error())
 		return err
 	}
-	helper.Manifest.LocalCopySummary.ClearErrors()
-	helper.Manifest.LocalCopySummary.Start()
+	helper.WorkSummary.ClearErrors()
+	helper.WorkSummary.Start()
 	helper.Manifest.DPNWorkItem.Status = constants.StatusStarted
 	helper.Manifest.DPNWorkItem.Stage = constants.StageFetch
 	helper.SaveDPNWorkItem()
-	if helper.Manifest.LocalCopySummary.HasErrors() {
+	if helper.WorkSummary.HasErrors() {
 		retriever.Context.MessageLog.Error("Error setting up manifest for WorkItem %s: %s",
-			string(message.Body), helper.Manifest.LocalCopySummary.AllErrorsAsString())
+			string(message.Body), helper.WorkSummary.AllErrorsAsString())
 		// No use proceeding...
 		retriever.CleanupChannel <- helper
-		return fmt.Errorf(helper.Manifest.LocalCopySummary.AllErrorsAsString())
+		return fmt.Errorf(helper.WorkSummary.AllErrorsAsString())
 	}
 	if helper.Manifest.DPNWorkItem.IsCompletedOrCancelled() {
 		retriever.Context.MessageLog.Info("Skipping WorkItem %d because status is %s",
@@ -112,8 +112,8 @@ func (retriever *DPNS3Retriever) fetch() {
 func (retriever *DPNS3Retriever) cleanup() {
 	for helper := range retriever.CleanupChannel {
 		helper.Manifest.NsqMessage.Touch()
-		helper.Manifest.LocalCopySummary.Finish()
-		if helper.Manifest.LocalCopySummary.HasErrors() {
+		helper.WorkSummary.Finish()
+		if helper.WorkSummary.HasErrors() {
 			retriever.FinishWithError(helper)
 		} else {
 			retriever.FinishWithSuccess(helper)
