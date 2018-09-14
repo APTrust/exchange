@@ -14,11 +14,17 @@ import (
 )
 
 type DPNFixityChecker struct {
-	Context             *context.Context
-	LocalDPNRestClient  *network.DPNRestClient
-	ValidationChannel   chan *DPNRestoreHelper
-	RecordChannel       chan *DPNRestoreHelper
-	CleanupChannel      chan *DPNRestoreHelper
+	Context            *context.Context
+	LocalDPNRestClient *network.DPNRestClient
+	ValidationChannel  chan *DPNRestoreHelper
+	RecordChannel      chan *DPNRestoreHelper
+	CleanupChannel     chan *DPNRestoreHelper
+	// PreTestChannel is used in testing only to set some properties
+	// on the helper/manifest. PreTestChannel should push directly into
+	// the ValidationChannel.
+	PreTestChannel chan *DPNRestoreHelper
+	// PostTestChannel is for testing only. It allows us to inspect the
+	// state of our helper and manifest when processing completes.
 	PostTestChannel     chan *DPNRestoreHelper
 	BagValidationConfig *validation.BagValidationConfig
 }
@@ -44,6 +50,7 @@ func NewDPNFixityChecker(_context *context.Context) (*DPNFixityChecker, error) {
 	checker.ValidationChannel = make(chan *DPNRestoreHelper, workerBufferSize)
 	checker.RecordChannel = make(chan *DPNRestoreHelper, workerBufferSize)
 	checker.CleanupChannel = make(chan *DPNRestoreHelper, workerBufferSize)
+	checker.PreTestChannel = make(chan *DPNRestoreHelper, workerBufferSize)
 	checker.PostTestChannel = make(chan *DPNRestoreHelper, workerBufferSize)
 	for i := 0; i < _context.Config.DPN.DPNPackageWorker.Workers; i++ {
 		go checker.validate()
@@ -93,7 +100,11 @@ func (checker *DPNFixityChecker) HandleMessage(message *nsq.Message) error {
 		return nil
 	}
 
-	checker.ValidationChannel <- helper
+	if checker.PreTestChannel != nil {
+		checker.PreTestChannel <- helper
+	} else {
+		checker.ValidationChannel <- helper
+	}
 	return nil
 }
 
@@ -136,7 +147,12 @@ func (checker *DPNFixityChecker) ValidateBag(helper *DPNRestoreHelper) {
 		} else {
 			checker.Context.MessageLog.Info("Finished validating %s",
 				helper.Manifest.LocalPath)
-			helper.WorkSummary = summary
+			for _, validationError := range summary.Errors {
+				helper.WorkSummary.AddError(validationError)
+			}
+			if summary.ErrorIsFatal {
+				helper.WorkSummary.ErrorIsFatal = summary.ErrorIsFatal
+			}
 			checker.getTagManifestChecksum(helper, validator)
 		}
 	}
@@ -166,13 +182,14 @@ func (checker *DPNFixityChecker) getTagManifestChecksum(helper *DPNRestoreHelper
 	checker.Context.MessageLog.Info("Validator calculated checksum %s for file %s",
 		gf.IngestSha256, fileIdentifier)
 
-	// TODO: Delete BoltDB
+	// TODO: Delete BoltDB?
+	// TODO: Delete bag? (though not during unit tests)
 }
 
 // Record this fixity check in our local DPN REST server
 func (checker *DPNFixityChecker) record() {
 	for helper := range checker.RecordChannel {
-
+		checker.SaveFixityRecord(helper)
 		checker.CleanupChannel <- helper
 	}
 }
@@ -246,6 +263,7 @@ func (checker *DPNFixityChecker) FinishWithSuccess(helper *DPNRestoreHelper) {
 	// to StageRestoring, status to StatusPending, and push the
 	// bag into the restoration queue, or do whatever else is
 	// necessary to complete the restore process.
+	helper.WorkSummary.Finish()
 	helper.Manifest.DPNWorkItem.Stage = constants.StageValidate
 	helper.Manifest.DPNWorkItem.Status = constants.StatusSuccess
 	helper.SaveDPNWorkItem()
@@ -259,6 +277,7 @@ func (checker *DPNFixityChecker) FinishWithError(helper *DPNRestoreHelper) {
 	errors := helper.WorkSummary.AllErrorsAsString()
 	helper.Manifest.DPNWorkItem.Note = &errors
 	checker.Context.MessageLog.Error(errors)
+	helper.WorkSummary.Finish()
 	if helper.WorkSummary.ErrorIsFatal {
 		// Mark the DPNWorkItem as failed
 		checker.Context.MessageLog.Error("Error for %s is fatal. Not requeueing.",

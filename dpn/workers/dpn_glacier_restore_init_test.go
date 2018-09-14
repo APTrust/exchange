@@ -487,7 +487,7 @@ func dpnHandler(w http.ResponseWriter, r *http.Request) {
 			Bag:       bagUUID,
 			Algorithm: constants.AlgSha256,
 			Node:      "aptrust",
-			Value:     "1234567890",
+			Value:     dpn_testutil.DPN_TEST_BAG_FIXITY,
 			CreatedAt: testutil.TEST_TIMESTAMP,
 		}
 		objJson, _ = json.Marshal(obj)
