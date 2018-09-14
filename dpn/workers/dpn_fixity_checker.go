@@ -50,8 +50,6 @@ func NewDPNFixityChecker(_context *context.Context) (*DPNFixityChecker, error) {
 	checker.ValidationChannel = make(chan *DPNRestoreHelper, workerBufferSize)
 	checker.RecordChannel = make(chan *DPNRestoreHelper, workerBufferSize)
 	checker.CleanupChannel = make(chan *DPNRestoreHelper, workerBufferSize)
-	checker.PreTestChannel = make(chan *DPNRestoreHelper, workerBufferSize)
-	checker.PostTestChannel = make(chan *DPNRestoreHelper, workerBufferSize)
 	for i := 0; i < _context.Config.DPN.DPNPackageWorker.Workers; i++ {
 		go checker.validate()
 		go checker.record()
