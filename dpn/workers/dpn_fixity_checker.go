@@ -147,9 +147,7 @@ func (checker *DPNFixityChecker) ValidateBag(helper *DPNRestoreHelper) {
 				helper.Manifest.LocalPath)
 			for _, validationError := range summary.Errors {
 				helper.WorkSummary.AddError(validationError)
-			}
-			if summary.ErrorIsFatal {
-				helper.WorkSummary.ErrorIsFatal = summary.ErrorIsFatal
+				helper.WorkSummary.ErrorIsFatal = true
 			}
 			checker.getTagManifestChecksum(helper, validator)
 		}
@@ -172,6 +170,10 @@ func (checker *DPNFixityChecker) getTagManifestChecksum(helper *DPNRestoreHelper
 	gf, err := db.GetGenericFile(fileIdentifier)
 	if err != nil {
 		helper.WorkSummary.AddError("Error finding file %s in BoltDB: %v", fileIdentifier, err)
+		return
+	}
+	if gf == nil {
+		helper.WorkSummary.AddError("Cannot find file %s in BoltDB.", fileIdentifier)
 		return
 	}
 	// Record on the manifest the actual sha256 digest that the validator

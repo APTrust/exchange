@@ -66,10 +66,16 @@ func pathToDPNTestBag(t *testing.T) string {
 	return getBagPath(t, bagName)
 }
 
+func pathToInvalidDPNTestBag(t *testing.T) string {
+	bagName := dpn_testutil.INVALID_DPN_TEST_BAG_UUID + ".tar"
+	return getBagPath(t, bagName)
+}
+
 func deleteBoltDBFile(t *testing.T) {
-	dbFile := dpn_testutil.DPN_TEST_BAG_UUID + ".valdb"
-	dbPath := getBagPath(t, dbFile)
-	os.Remove(dbPath)
+	dbPath1 := getBagPath(t, dpn_testutil.DPN_TEST_BAG_UUID+".valdb")
+	dbPath2 := getBagPath(t, dpn_testutil.INVALID_DPN_TEST_BAG_UUID+".valdb")
+	os.Remove(dbPath1)
+	os.Remove(dbPath2)
 }
 
 func TestNewDPNFixityChecker(t *testing.T) {
@@ -225,6 +231,169 @@ func TestDPNFixityChecker_HandleMessageSuccess(t *testing.T) {
 	wg.Wait()
 }
 
-func TestDPNFixityChecker_HandleMessageFail(t *testing.T) {
+func TestDPNFixityChecker_HandleMessageFailNoBag(t *testing.T) {
+	if !testutil.CanTestS3() {
+		return
+	}
+	worker, message, delegate, _ := getDPNFixityTestItems(t)
+	worker.PreTestChannel = make(chan *workers.DPNRestoreHelper)
+	worker.PostTestChannel = make(chan *workers.DPNRestoreHelper)
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go func() {
+		for helper := range worker.PreTestChannel {
+			// In PreTestChannel, set path to a bag we can actually
+			// validate, then push into the normal validation channel.
+			helper.Manifest.LocalPath = pathToDPNTestBag(t) + "_does_not_exist"
+			worker.ValidationChannel <- helper
+		}
+	}()
+	go func() {
+		for helper := range worker.PostTestChannel {
+			// Check the basics
+			assert.NotNil(t, helper.Manifest.DPNBag)
+			assert.NotEmpty(t, helper.Manifest.DPNWorkItem)
+			assert.NotEmpty(t, helper.Manifest.ExpectedFixityValue)
+			assert.Empty(t, helper.Manifest.ActualFixityValue)
 
+			assert.Nil(t, helper.Manifest.FixityCheck)
+
+			// Make sure we requeued to recheck progress later.
+			assert.Equal(t, "finish", delegate.Operation)
+
+			// Make sure the error message was copied into the DPNWorkItem note.
+			assert.NotNil(t, helper.Manifest.DPNWorkItem.Note)
+			assert.True(t, strings.HasPrefix(*helper.Manifest.DPNWorkItem.Note, "Bag does not exist at"))
+
+			// Make sure we closed out the WorkSummary correctly.
+			assert.True(t, helper.Manifest.ValidationSummary.Started())
+			assert.True(t, helper.Manifest.ValidationSummary.Finished())
+			assert.False(t, helper.Manifest.ValidationSummary.Succeeded())
+
+			// Make sure we updated the DPNWorkItem appropriately
+			assert.Equal(t, constants.StatusFailed, helper.Manifest.DPNWorkItem.Status)
+			require.NotNil(t, helper.Manifest.DPNWorkItem.Note)
+			assert.Nil(t, helper.Manifest.DPNWorkItem.ProcessingNode)
+			assert.Equal(t, 0, helper.Manifest.DPNWorkItem.Pid)
+			assert.False(t, helper.Manifest.DPNWorkItem.Retry)
+
+			wg.Done()
+		}
+	}()
+	worker.HandleMessage(message)
+	wg.Wait()
+}
+
+func TestDPNFixityChecker_HandleMessageFailInvalidBag(t *testing.T) {
+	if !testutil.CanTestS3() {
+		return
+	}
+	worker, message, delegate, _ := getDPNFixityTestItems(t)
+	worker.PreTestChannel = make(chan *workers.DPNRestoreHelper)
+	worker.PostTestChannel = make(chan *workers.DPNRestoreHelper)
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go func() {
+		for helper := range worker.PreTestChannel {
+			// In PreTestChannel, set path to a bag we can actually
+			// validate, then push into the normal validation channel.
+			helper.Manifest.LocalPath = pathToInvalidDPNTestBag(t)
+			worker.ValidationChannel <- helper
+		}
+	}()
+	go func() {
+		for helper := range worker.PostTestChannel {
+			// Check the basics
+			assert.NotNil(t, helper.Manifest.DPNBag)
+			assert.NotEmpty(t, helper.Manifest.DPNWorkItem)
+			assert.NotEmpty(t, helper.Manifest.ExpectedFixityValue)
+			assert.Empty(t, helper.Manifest.ActualFixityValue)
+
+			assert.Nil(t, helper.Manifest.FixityCheck)
+
+			// Make sure we requeued to recheck progress later.
+			assert.Equal(t, "finish", delegate.Operation)
+
+			// Make sure the error message was copied into the DPNWorkItem note.
+			assert.NotNil(t, helper.Manifest.DPNWorkItem.Note)
+			assert.True(t, strings.Contains(*helper.Manifest.DPNWorkItem.Note,
+				"/atom/gen.go' in manifest 'manifest-sha256.txt' is missing"))
+			assert.True(t, strings.Contains(*helper.Manifest.DPNWorkItem.Note,
+				"Bad sha256 digest for 'dpn-tags/dpn-info.txt'"))
+
+			// Make sure we closed out the WorkSummary correctly.
+			assert.True(t, helper.Manifest.ValidationSummary.Started())
+			assert.True(t, helper.Manifest.ValidationSummary.Finished())
+			assert.False(t, helper.Manifest.ValidationSummary.Succeeded())
+
+			// Make sure we updated the DPNWorkItem appropriately
+			assert.Equal(t, constants.StatusFailed, helper.Manifest.DPNWorkItem.Status)
+			require.NotNil(t, helper.Manifest.DPNWorkItem.Note)
+			assert.Nil(t, helper.Manifest.DPNWorkItem.ProcessingNode)
+			assert.Equal(t, 0, helper.Manifest.DPNWorkItem.Pid)
+			assert.False(t, helper.Manifest.DPNWorkItem.Retry)
+
+			wg.Done()
+		}
+	}()
+	worker.HandleMessage(message)
+	wg.Wait()
+}
+
+func TestDPNFixityChecker_HandleMessageFailChecksumMismatch(t *testing.T) {
+	if !testutil.CanTestS3() {
+		return
+	}
+	worker, message, delegate, _ := getDPNFixityTestItems(t)
+	worker.PreTestChannel = make(chan *workers.DPNRestoreHelper)
+	worker.PostTestChannel = make(chan *workers.DPNRestoreHelper)
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go func() {
+		for helper := range worker.PreTestChannel {
+			// In PreTestChannel, set path to a bag we can actually
+			// validate, then push into the normal validation channel.
+			helper.Manifest.LocalPath = pathToDPNTestBag(t)
+			// Set a bad fixity value. The bag will pass validation,
+			// but the tagmanifest fixity won't match.
+			helper.Manifest.ExpectedFixityValue = "1234567890"
+			worker.ValidationChannel <- helper
+		}
+	}()
+	go func() {
+		for helper := range worker.PostTestChannel {
+			// Check the basics
+			assert.NotNil(t, helper.Manifest.DPNBag)
+			assert.NotEmpty(t, helper.Manifest.DPNWorkItem)
+			assert.Equal(t, "1234567890", helper.Manifest.ExpectedFixityValue)
+			assert.Equal(t, dpn_testutil.DPN_TEST_BAG_FIXITY, helper.Manifest.ActualFixityValue)
+			assert.NotEqual(t, helper.Manifest.ExpectedFixityValue, helper.Manifest.ActualFixityValue)
+
+			assert.NotNil(t, helper.Manifest.FixityCheck)
+			assert.False(t, helper.Manifest.FixityCheckSavedAt.IsZero())
+
+			// Make sure we requeued to recheck progress later.
+			assert.Equal(t, "finish", delegate.Operation)
+
+			// Make sure the error message was copied into the DPNWorkItem note.
+			assert.NotNil(t, helper.Manifest.DPNWorkItem.Note)
+			assert.True(t, strings.Contains(*helper.Manifest.DPNWorkItem.Note, "does not match expected fixity"))
+
+			// Make sure we closed out the WorkSummary correctly.
+			assert.True(t, helper.Manifest.ValidationSummary.Started())
+			assert.True(t, helper.Manifest.ValidationSummary.Finished())
+			assert.False(t, helper.Manifest.ValidationSummary.Succeeded())
+
+			// Make sure we updated the DPNWorkItem appropriately
+			assert.Equal(t, constants.StatusFailed, helper.Manifest.DPNWorkItem.Status)
+			require.NotNil(t, helper.Manifest.DPNWorkItem.Note)
+			assert.Nil(t, helper.Manifest.DPNWorkItem.ProcessingNode)
+			assert.Equal(t, 0, helper.Manifest.DPNWorkItem.Pid)
+			assert.False(t, helper.Manifest.DPNWorkItem.Retry)
+
+			wg.Done()
+		}
+	}()
+	worker.HandleMessage(message)
+	wg.Wait()
 }
