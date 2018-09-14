@@ -165,14 +165,7 @@ func TestDPNFixityChecker_SaveFixityRecord(t *testing.T) {
 	assert.False(t, helper.Manifest.FixityCheck.CreatedAt.IsZero())
 }
 
-func TestDPNFixityChecker_FinishWithSuccess(t *testing.T) {
-
-}
-
-func TestDPNFixityChecker_FinishWithError(t *testing.T) {
-
-}
-
+// Implicitly tests FinishWithSuccess
 func TestDPNFixityChecker_HandleMessageSuccess(t *testing.T) {
 	if !testutil.CanTestS3() {
 		return
@@ -231,6 +224,7 @@ func TestDPNFixityChecker_HandleMessageSuccess(t *testing.T) {
 	wg.Wait()
 }
 
+// Implicitly tests FinishWithError
 func TestDPNFixityChecker_HandleMessageFailNoBag(t *testing.T) {
 	if !testutil.CanTestS3() {
 		return
@@ -284,6 +278,7 @@ func TestDPNFixityChecker_HandleMessageFailNoBag(t *testing.T) {
 	wg.Wait()
 }
 
+// Implicitly tests FinishWithError
 func TestDPNFixityChecker_HandleMessageFailInvalidBag(t *testing.T) {
 	if !testutil.CanTestS3() {
 		return
@@ -340,6 +335,7 @@ func TestDPNFixityChecker_HandleMessageFailInvalidBag(t *testing.T) {
 	wg.Wait()
 }
 
+// Implicitly tests FinishWithError
 func TestDPNFixityChecker_HandleMessageFailChecksumMismatch(t *testing.T) {
 	if !testutil.CanTestS3() {
 		return
