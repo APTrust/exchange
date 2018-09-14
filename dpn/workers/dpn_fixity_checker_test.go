@@ -14,7 +14,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
-	//	"sync"
+	// "sync"
 	"testing"
 	//	"time"
 )
@@ -168,9 +168,56 @@ func TestDPNFixityChecker_FinishWithError(t *testing.T) {
 
 }
 
-func TestDPNFixityChecker_HandleMessageSuccess(t *testing.T) {
+// func TestDPNFixityChecker_HandleMessageSuccess(t *testing.T) {
+// 	worker, message, delegate, helper := getDPNFixityTestItems(t)
 
-}
+// 	helper.Manifest.DPNWorkItem.Identifier = dpn_testutil.DPN_TEST_BAG_UUID
+// 	helper.Manifest.DPNBag.UUID = dpn_testutil.DPN_TEST_BAG_UUID
+// 	helper.Manifest.ExpectedFixityValue = dpn_testutil.DPN_TEST_BAG_FIXITY
+
+// 	// Create a PostTestChannel. The worker will send the
+// 	// DPNRetrievalManifest object into this channel when
+// 	// all other processing is complete.
+// 	worker.PostTestChannel = make(chan *workers.DPNRestoreHelper)
+// 	var wg sync.WaitGroup
+// 	wg.Add(1)
+// 	go func() {
+// 		for helper := range worker.PostTestChannel {
+// 			// Check the basics
+// 			assert.NotNil(t, helper.Manifest.DPNBag)
+// 			assert.NotEmpty(t, helper.Manifest.DPNWorkItem)
+// 			assert.NotEmpty(t, helper.Manifest.ExpectedFixityValue)
+// 			assert.NotEmpty(t, helper.Manifest.ActualFixityValue)
+// 			assert.Equal(t, helper.Manifest.ExpectedFixityValue, helper.Manifest.ActualFixityValue)
+
+// 			assert.NotNil(t, helper.Manifest.FixityCheck)
+// 			assert.False(t, helper.Manifest.FixityCheckSavedAt.IsZero())
+
+// 			// Make sure we requeued to recheck progress later.
+// 			assert.Equal(t, "finish", delegate.Operation)
+
+// 			// Make sure the error message was copied into the DPNWorkItem note.
+// 			require.NotNil(t, helper.Manifest.DPNWorkItem.Note)
+// 			assert.True(t, strings.HasPrefix(*helper.Manifest.DPNWorkItem.Note, "Fixity check complete. Saved to DPN"))
+
+// 			// Make sure we closed out the WorkSummary correctly.
+// 			assert.True(t, helper.Manifest.ValidationSummary.Started())
+// 			assert.True(t, helper.Manifest.ValidationSummary.Finished())
+// 			assert.True(t, helper.Manifest.ValidationSummary.Succeeded())
+
+// 			// Make sure we updated the DPNWorkItem appropriately
+// 			assert.Equal(t, constants.StatusSuccess, helper.Manifest.DPNWorkItem.Status)
+// 			assert.Equal(t, "", helper.Manifest.DPNWorkItem.Note)
+// 			assert.Nil(t, helper.Manifest.DPNWorkItem.ProcessingNode)
+// 			assert.Equal(t, 0, helper.Manifest.DPNWorkItem.Pid)
+// 			assert.True(t, helper.Manifest.DPNWorkItem.Retry)
+
+// 			wg.Done()
+// 		}
+// 	}()
+// 	worker.HandleMessage(message)
+// 	wg.Wait()
+// }
 
 func TestDPNFixityChecker_HandleMessageFail(t *testing.T) {
 

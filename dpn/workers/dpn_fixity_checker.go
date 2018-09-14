@@ -1,26 +1,15 @@
 package workers
 
 import (
-	//	"crypto/sha256"
 	"fmt"
 	"github.com/APTrust/exchange/constants"
 	"github.com/APTrust/exchange/context"
 	"github.com/APTrust/exchange/dpn/models"
 	"github.com/APTrust/exchange/dpn/network"
 	"github.com/APTrust/exchange/util/storage"
-	//	dpn_util "github.com/APTrust/exchange/dpn/util"
-	//	apt_models "github.com/APTrust/exchange/models"
-	//	apt_network "github.com/APTrust/exchange/network"
-	//	"github.com/APTrust/exchange/tarfile"
-	//	"github.com/APTrust/exchange/util"
-	//	"github.com/APTrust/exchange/util/fileutil"
 	"github.com/APTrust/exchange/validation"
 	"github.com/nsqio/go-nsq"
 	"github.com/satori/go.uuid"
-	//	"io"
-	//	"os"
-	//	"path/filepath"
-	//	"strings"
 	"time"
 )
 
@@ -248,7 +237,8 @@ func (checker *DPNFixityChecker) SaveFixityRecord(helper *DPNRestoreHelper) {
 
 func (checker *DPNFixityChecker) FinishWithSuccess(helper *DPNRestoreHelper) {
 	helper.Manifest.DPNWorkItem.ClearNodeAndPid()
-	note := fmt.Sprintf("Fixity check complete.")
+	note := fmt.Sprintf("Fixity check complete. Saved to DPN with FixityCheckId %s",
+		helper.Manifest.FixityCheck.FixityCheckId)
 	helper.Manifest.DPNWorkItem.Note = &note
 	// TODO: To repurpose this code to support restoration,
 	// branch here. If DPNWorkItem.Task is fixity check,

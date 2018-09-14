@@ -16,7 +16,12 @@ import (
 	"time"
 )
 
-// This is a valid bag.
+// This is a valid bag used to test the DPN fixity check process.
+// A copy of this bag appears in testdata/unit_test_bags/dpn/a9f7cbab-b531-4eb7-b532-770f592629ba.tar
+// and in the DPN test restoration bucket at aptrust.dpn.restoration.test.
+// If it disappears from aptrust.dpn.restoration.test, you can re-upload it
+// from testdata/unit_test_bags/dpn/. It must have the .tar extension when
+// uploaded to S3.
 const DPN_TEST_BAG_UUID = "a9f7cbab-b531-4eb7-b532-770f592629ba"
 
 // This is the sha-256 checksum of the DPN test bag's tagmanifest-sha256.txt file.

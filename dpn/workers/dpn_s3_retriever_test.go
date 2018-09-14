@@ -209,7 +209,7 @@ func TestDPNS3Retriever_HandleMessageFail(t *testing.T) {
 
 			// Error is fatal because the bucket we requested does not exist.
 			assert.True(t, helper.WorkSummary.ErrorIsFatal)
-			assert.True(t, strings.HasPrefix(helper.WorkSummary.AllErrorsAsString(), "NoSuchBucket"))
+			assert.True(t, strings.HasPrefix(helper.WorkSummary.AllErrorsAsString(), "NoSuch"))
 
 			// NSQ message should be marked finished.
 			assert.Equal(t, "finish", delegate.Operation)
