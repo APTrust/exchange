@@ -191,6 +191,10 @@ func TestDPNS3Retriever_HandleMessageFail(t *testing.T) {
 	if !testutil.CanTestS3() {
 		return
 	}
+	// Get a DPNWorkItem with a UUID that we know is bogus
+	// and will not exist in our dpn restoration bucket.
+	ReturnDPNWorkItemWithEmptyUUID = true
+	defer ResetDPNWorkItemUUID()
 	worker, message, delegate, _ := getDPNS3TestItems(t)
 
 	worker.PostTestChannel = make(chan *workers.DPNRestoreHelper)

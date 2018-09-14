@@ -6,6 +6,7 @@ import (
 	"github.com/APTrust/exchange/constants"
 	dpn_models "github.com/APTrust/exchange/dpn/models"
 	dpn_network "github.com/APTrust/exchange/dpn/network"
+	dpn_testutil "github.com/APTrust/exchange/dpn/util/testutil"
 	"github.com/APTrust/exchange/dpn/workers"
 	apt_models "github.com/APTrust/exchange/models"
 	"github.com/APTrust/exchange/network"
@@ -32,13 +33,33 @@ const (
 	Completed           = 5
 )
 
+// This package-level setting tells our S3 mock server
+// what kind of response we want for the current test
+// scenario.
 var DescribeRestoreStateAs = NotStartedHead
+
+// This package-level setting tells our Pharos mock server
+// whether to return a DPNWorkItem with an empty UUID. When
+// this is true, the mock server returns data with an empty
+// UUID that does not correspond to any DPN bag anywhere,
+// which allows us to test some failure scenarios. When this is
+// false, our Pharos mock server returns a DPNWorkItem with the
+// UUID of a bag that actually exists in our test bucket. This
+// allows us to test the happy path of successful outcomes.
+var ReturnDPNWorkItemWithEmptyUUID = false
 
 // Test server to mock Pharos, S3, and DPN requests
 var pharosTestServer = httptest.NewServer(http.HandlerFunc(pharosHandler))
 var s3TestServer = httptest.NewServer(http.HandlerFunc(s3Handler))
 var dpnTestServer = httptest.NewServer(http.HandlerFunc(dpnHandler))
 var nsqServer = httptest.NewServer(http.HandlerFunc(nsqHandler))
+
+// This resets ReturnDPNWorkItemWithEmptyUUID to false.
+// Use in defer statements so the setting reverts to false
+// after an individual test completes.
+func ResetDPNWorkItemUUID() {
+	ReturnDPNWorkItemWithEmptyUUID = false
+}
 
 func getFixityWorkItem() *apt_models.DPNWorkItem {
 	timestamp := testutil.TEST_TIMESTAMP
@@ -47,7 +68,7 @@ func getFixityWorkItem() *apt_models.DPNWorkItem {
 		Id:             999,
 		RemoteNode:     "tdr",
 		Task:           constants.DPNTaskFixity,
-		Identifier:     testutil.EMPTY_UUID,
+		Identifier:     dpn_testutil.DPN_TEST_BAG_UUID,
 		QueuedAt:       &timestamp,
 		CompletedAt:    &emptyTime,
 		ProcessingNode: nil,
@@ -188,7 +209,7 @@ func TestDGIHandleNotStartedRejectNow(t *testing.T) {
 	DescribeRestoreStateAs = NotStartedRejectNow
 
 	// Because the request will be rejected, we expect this error.
-	expectedError := "Request to restore aptrust.dpn.test/00000000-0000-0000-0000-000000000000: Glacier restore service is temporarily unavailable. Try again later."
+	expectedError := fmt.Sprintf("Request to restore aptrust.dpn.test/%s: Glacier restore service is temporarily unavailable. Try again later.", dpn_testutil.DPN_TEST_BAG_UUID)
 
 	// Create a PostTestChannel. The worker will send the
 	// DPNRetrievalManifest object into this channel when
@@ -417,11 +438,15 @@ func pharosHandler(w http.ResponseWriter, r *http.Request) {
 // be completed.
 func dpnItemGetHandler(w http.ResponseWriter, r *http.Request) {
 	timestamp := testutil.TEST_TIMESTAMP
+	bagUUID := dpn_testutil.DPN_TEST_BAG_UUID
+	if ReturnDPNWorkItemWithEmptyUUID {
+		bagUUID = testutil.EMPTY_UUID
+	}
 	obj := &apt_models.DPNWorkItem{
 		Id:          1234,
 		RemoteNode:  "tdr",
 		Task:        constants.DPNTaskFixity,
-		Identifier:  testutil.EMPTY_UUID,
+		Identifier:  bagUUID,
 		QueuedAt:    &timestamp,
 		CompletedAt: nil,
 		Note:        nil,
@@ -450,12 +475,16 @@ func dpnItemPutHandler(w http.ResponseWriter, r *http.Request) {
 
 // Return a DPN Bag record
 func dpnHandler(w http.ResponseWriter, r *http.Request) {
+	bagUUID := dpn_testutil.DPN_TEST_BAG_UUID
+	if ReturnDPNWorkItemWithEmptyUUID {
+		bagUUID = testutil.EMPTY_UUID
+	}
 	url := r.URL.String()
 	var objJson []byte
 	if strings.Contains(url, "/digest") {
 		// Digest request
 		obj := &dpn_models.MessageDigest{
-			Bag:       testutil.EMPTY_UUID,
+			Bag:       bagUUID,
 			Algorithm: constants.AlgSha256,
 			Node:      "aptrust",
 			Value:     "1234567890",
@@ -465,7 +494,7 @@ func dpnHandler(w http.ResponseWriter, r *http.Request) {
 	} else if strings.Contains(url, "/fixity_check/") {
 		obj := &dpn_models.FixityCheck{
 			FixityCheckId: testutil.EMPTY_UUID,
-			Bag:           testutil.EMPTY_UUID,
+			Bag:           bagUUID,
 			Node:          "aptrust",
 			Success:       true,
 			FixityAt:      testutil.TEST_TIMESTAMP,
@@ -475,13 +504,13 @@ func dpnHandler(w http.ResponseWriter, r *http.Request) {
 	} else {
 		// Bag GET request
 		obj := &dpn_models.DPNBag{
-			UUID:             testutil.EMPTY_UUID,
+			UUID:             bagUUID,
 			Interpretive:     []string{},
 			Rights:           []string{},
 			ReplicatingNodes: []string{},
-			LocalId:          fmt.Sprintf("GO-TEST-BAG-%s", testutil.EMPTY_UUID),
-			Size:             12345678,
-			FirstVersionUUID: testutil.EMPTY_UUID,
+			LocalId:          "DPN-TEST-BAG",
+			Size:             dpn_testutil.DPN_TEST_BAG_SIZE,
+			FirstVersionUUID: bagUUID,
 			Version:          1,
 			BagType:          "D",
 			IngestNode:       "aptrust",
