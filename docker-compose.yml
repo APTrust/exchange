@@ -1,0 +1,30 @@
+# Initial docker-compose file to run Exchange services in containers
+# Phase1: Run NSQ in containers
+# Phase2: Define Exchange services in this file.
+version: '3'
+services:
+  nsqlookupd:
+    image: nsqio/nsq
+    command: /nsqlookupd -config /nsq.config
+    ports:
+      - "4160:4160"
+      - "4161:4161"
+    volumes:
+		  - ./docker/nsq/nsq.config:/nsq.config
+  nsqd:
+    image: nsqio/nsq
+    command: /nsqd --lookupd-tcp-address=nsqlookupd:4160 -config /nsq.config
+    depends_on:
+      - nsqlookupd
+    ports:
+      - "4150:4150"
+      - "4151:4251"
+    volumes:
+		  - ./docker/nsq/nsq.config:/nsq.config
+  nsqadmin:
+    image: nsqio/nsq
+    command: /nsqadmin --lookupd-http-address=nsqlookupd:4161
+    depends_on:
+      - nsqlookupd
+    ports:
+      - "4171:4171"
