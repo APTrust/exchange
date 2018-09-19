@@ -10,7 +10,7 @@ services:
       - "4160:4160"
       - "4161:4161"
     volumes:
-      - ./docker/nsq/nsq.config:/etc/nsq.config
+      - ./docker/nsq/nsq.config:/etc/nsq.config:ro
   nsqd:
     image: nsqio/nsq
     command: /nsqd --lookupd-tcp-address=nsqlookupd:4160 -config /etc/nsq.config
@@ -20,7 +20,7 @@ services:
       - "4150:4150"
       - "4151:4251"
     volumes:
-      - ./docker/nsq/nsq.config:/etc/nsq.config
+      - ./docker/nsq/nsq.config:/etc/nsq.config:ro
   nsqadmin:
     image: nsqio/nsq
     command: /nsqadmin --lookupd-http-address=nsqlookupd:4161
