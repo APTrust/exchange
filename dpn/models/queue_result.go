@@ -39,6 +39,8 @@ type QueueResult struct {
 	Restores []*QueueItem
 	// Ingests is a list of ingest requests encountered during this run.
 	Ingests []*QueueItem
+	// Fixities is a list of items representing bags that need fixity checks.
+	Fixities []*QueueItem
 	// Errors is a list of errors that occurred during processing.
 	Errors []string
 }
@@ -49,6 +51,7 @@ func NewQueueResult() *QueueResult {
 		Replications: make([]*QueueItem, 0),
 		Restores:     make([]*QueueItem, 0),
 		Ingests:      make([]*QueueItem, 0),
+		Fixities:     make([]*QueueItem, 0),
 		Errors:       make([]string, 0),
 	}
 }
@@ -78,6 +81,11 @@ func (result *QueueResult) AddIngest(item *QueueItem) {
 	result.Ingests = append(result.Ingests, item)
 }
 
+// AddFixity adds a QueueItem to the Ingests list.
+func (result *QueueResult) AddFixity(item *QueueItem) {
+	result.Fixities = append(result.Fixities, item)
+}
+
 // FindReplication returns the Replication QueueItem with the specified
 // identifier, or nil.
 func (result *QueueResult) FindReplication(identifier string) *QueueItem {
@@ -104,6 +112,17 @@ func (result *QueueResult) FindRestore(identifier string) *QueueItem {
 // identifier, or nil.
 func (result *QueueResult) FindIngest(identifier string) *QueueItem {
 	for _, item := range result.Ingests {
+		if item.Identifier == identifier {
+			return item
+		}
+	}
+	return nil
+}
+
+// FindFixity returns the Fixity QueueItem with the specified
+// identifier, or nil.
+func (result *QueueResult) FindFixity(identifier string) *QueueItem {
+	for _, item := range result.Fixities {
 		if item.Identifier == identifier {
 			return item
 		}
