@@ -1,6 +1,7 @@
 package integration_test
 
 import (
+	"github.com/APTrust/exchange/constants"
 	"github.com/APTrust/exchange/dpn/network"
 	"github.com/APTrust/exchange/util/testutil"
 	"github.com/stretchr/testify/assert"
@@ -139,12 +140,24 @@ func TestDPNWorkItemsCreatedAndQueued(t *testing.T) {
 		assert.Equal(t, xfer.ToNode, dpnWorkItem.RemoteNode)
 	}
 
+	// Check DPNWorkItems Fixity checks
+	params := url.Values{}
+	params.Set("task", constants.DPNTaskFixity)
+	pharosResp := _context.PharosClient.DPNWorkItemList(params)
+	require.Nil(t, pharosResp.Error)
+	require.Equal(t, 5, pharosResp.Count)
+	for _, dpnWorkItem := range pharosResp.DPNWorkItems() {
+		require.NotNil(t, dpnWorkItem.QueuedAt)
+		assert.False(t, dpnWorkItem.QueuedAt.IsZero())
+	}
+
 	// Check NSQ as well.
 	stats, err := _context.NSQClient.GetStats()
 	require.Nil(t, err)
 	foundPackageTopic := false
 	foundCopyTopic := false
-	foundRestoreTopic := false
+	foundRestoreTopic := false        // may be obsolete, since new DPNGlacierRestore topic will handle this
+	foundGlacierRestoreTopic := false // first step of DPN fixity checking
 	for _, topic := range stats.Topics {
 		if topic.TopicName == _context.Config.DPN.DPNPackageWorker.NsqTopic {
 			// apps/test_push_to_dpn.go requests that items
@@ -160,7 +173,11 @@ func TestDPNWorkItemsCreatedAndQueued(t *testing.T) {
 			// Fixture data has 4 restores: one from each remote node
 			foundRestoreTopic = true
 			assert.EqualValues(t, uint64(4), topic.MessageCount)
+		} else if topic.TopicName == _context.Config.DPN.DPNGlacierRestoreWorker.NsqTopic {
+			foundGlacierRestoreTopic = true
+			assert.EqualValues(t, uint64(5), topic.MessageCount)
 		}
+
 	}
 	assert.True(t, foundPackageTopic, "Nothing was queued in %s",
 		_context.Config.DPN.DPNPackageWorker.NsqTopic)
@@ -168,4 +185,6 @@ func TestDPNWorkItemsCreatedAndQueued(t *testing.T) {
 		_context.Config.DPN.DPNCopyWorker.NsqTopic)
 	assert.True(t, foundRestoreTopic, "Nothing was queued in %s",
 		_context.Config.DPN.DPNRestoreWorker.NsqTopic)
+	assert.True(t, foundGlacierRestoreTopic, "Nothing was queued in %s",
+		_context.Config.DPN.DPNGlacierRestoreWorker.NsqTopic)
 }

@@ -87,6 +87,7 @@ func (dpnQueue *DPNQueue) Run() {
 	dpnQueue.queueReplicationRequests()
 	dpnQueue.queueRestoreRequests()
 	dpnQueue.queueIngestRequests()
+	dpnQueue.queueItemsNeedingFixity()
 	dpnQueue.QueueResult.EndTime = time.Now().UTC()
 	dpnQueue.logResults()
 }
