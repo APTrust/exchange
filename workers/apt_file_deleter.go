@@ -57,7 +57,17 @@ func (deleter *APTFileDeleter) HandleMessage(message *nsq.Message) error {
 	deleteState.WorkItem.SetNodeAndPid()
 	deleteState.WorkItem.Status = constants.StatusStarted
 	deleter.saveWorkItem(deleteState)
-	deleter.DeleteChannel <- deleteState
+
+	// Don't proceed without approval!
+	if deleteState.WorkItem.InstitutionalApprover == nil || *deleteState.WorkItem.InstitutionalApprover == "" {
+		deleteState.DeleteSummary.AddError("Cannot delete %s because institutional approver is missing",
+			deleteState.GenericFile.Identifier)
+		deleteState.DeleteSummary.ErrorIsFatal = true
+		deleter.PostProcessChannel <- deleteState
+	} else {
+		// OK. We have approval.
+		deleter.DeleteChannel <- deleteState
+	}
 	return nil
 }
 
