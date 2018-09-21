@@ -13,7 +13,7 @@ services:
       - ./docker/nsq/nsq.config:/etc/nsq.config:ro
   nsqd:
     image: nsqio/nsq
-    command: /nsqd --lookupd-tcp-address=nsqlookupd:4160 --data-path=/nsq_data -broadcast-address=nsq --msg-timeout "60m0s" --max-msg-timeout "180m0s" --max-msg-size "31457280" -mem-queue-size 0
+    command: /nsqd --lookupd-tcp-address=nsqlookupd:4160 --data-path=/nsq_data -broadcast-address=nsq --msg-timeout=${msg_timeout} --max-msg-timeout=${max_msg_timeout} --max-msg-size=${max_msg_size} -mem-queue-size=${mem_queue_size}
     depends_on:
       - nsqlookupd
     ports:
