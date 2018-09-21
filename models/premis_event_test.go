@@ -337,16 +337,31 @@ func TestNewEventGenericFileReplication(t *testing.T) {
 func TestNewEventFileDeletion(t *testing.T) {
 	fileUUID := uuid.NewV4().String()
 	utcNow := time.Now().UTC()
-	event := models.NewEventFileDeletion(fileUUID, "user@example.com", utcNow)
+	event := models.NewEventFileDeletion(fileUUID, "user@example.com", "admin@example.com", "", utcNow)
 	assert.Len(t, event.Identifier, 36)
 	assert.Equal(t, "deletion", event.EventType)
 	assert.Equal(t, utcNow, event.DateTime)
 	assert.Equal(t, "File deleted from long-term storage.", event.Detail)
 	assert.Equal(t, "Success", event.Outcome)
-	assert.Equal(t, "File deleted at the request of user@example.com", event.OutcomeDetail)
+	assert.Equal(t, "File deleted at the request of user@example.com. Institutional approver: admin@example.com.",
+		event.OutcomeDetail)
 	assert.Equal(t, "APTrust Exchange apt_delete service", event.Object)
 	assert.Equal(t, "https://github.com/APTrust/exchange", event.Agent)
-	assert.True(t, strings.HasSuffix(event.OutcomeInformation, "deleted from S3 and Glacier"))
+	assert.True(t, strings.HasSuffix(event.OutcomeInformation, "deleted from preservation storage."))
+
+	event = models.NewEventFileDeletion(fileUUID, "user@example.com",
+		"admin@example.com", "someone@aptrust.org", utcNow)
+	assert.Len(t, event.Identifier, 36)
+	assert.Equal(t, "deletion", event.EventType)
+	assert.Equal(t, utcNow, event.DateTime)
+	assert.Equal(t, "File deleted from long-term storage.", event.Detail)
+	assert.Equal(t, "Success", event.Outcome)
+	assert.Equal(t,
+		"File deleted at the request of user@example.com. Institutional approver: admin@example.com. APTrust approver: someone@aptrust.org.",
+		event.OutcomeDetail)
+	assert.Equal(t, "APTrust Exchange apt_delete service", event.Object)
+	assert.Equal(t, "https://github.com/APTrust/exchange", event.Agent)
+	assert.True(t, strings.HasSuffix(event.OutcomeInformation, "deleted from preservation storage."))
 }
 
 func TestPremisEventMergeAttributes(t *testing.T) {

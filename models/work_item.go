@@ -84,6 +84,16 @@ type WorkItem struct {
 	// the user who clicked the button or submitted the API request to
 	// start the process.
 	User string `json:"user"`
+	// InstitutionalApprover is for deletions only and will be null for all
+	// actions other than deletion. This is the email
+	// address of the institutional admin who approved the deletion.
+	// Exchange services should not process deletions where this field
+	// is nil.
+	InstitutionalApprover *string `json:"inst_approver"`
+	// APTrustApprover is for bulk deletions only and will be null for
+	// all actions other than deletion. This is the email
+	// address of the APTrust admin who approved the deletion.
+	APTrustApprover *string `json:"aptrust_approver"`
 	// Date is the timestamp describing when some worker process last
 	// touched this item.
 	Date time.Time `json:"date"`

@@ -248,8 +248,16 @@ func (deleter *APTFileDeleter) recordFileDeletionEvent(deleteState *models.Delet
 		return
 	}
 	requestedBy := deleteState.WorkItem.User
+	instApprover := ""
+	if deleteState.WorkItem.InstitutionalApprover != nil {
+		instApprover = *deleteState.WorkItem.InstitutionalApprover
+	}
+	aptrustApprover := ""
+	if deleteState.WorkItem.APTrustApprover != nil {
+		instApprover = *deleteState.WorkItem.APTrustApprover
+	}
 	timestamp := deleteState.DeletedFromSecondaryAt
-	event := models.NewEventFileDeletion(fileUUID, requestedBy, timestamp)
+	event := models.NewEventFileDeletion(fileUUID, requestedBy, instApprover, aptrustApprover, timestamp)
 	event.IntellectualObjectId = deleteState.GenericFile.IntellectualObjectId
 	event.IntellectualObjectIdentifier = deleteState.GenericFile.IntellectualObjectIdentifier
 	event.GenericFileId = deleteState.GenericFile.Id
