@@ -10,21 +10,20 @@ services:
       - "4161:4161"
       - "4160:4160"
     volumes:
-      - ./docker/nsq/nsq.config:/etc/nsq.config:ro
+      - ${nsq_data_path}:/nsq_data
   nsqd:
     image: nsqio/nsq
-    command: /nsqd --lookupd-tcp-address=nsqlookupd:4160 --data-path=/nsq_data -broadcast-address=nsq --msg-timeout=${msg_timeout} --max-msg-timeout=${max_msg_timeout} --max-msg-size=${max_msg_size} -mem-queue-size=${mem_queue_size}
+    command: /nsqd --lookupd-tcp-address=${nsq_lookupd_tcp_address} --data-path=/nsq_data --broadcast-address=${nsq_broadcast_address} --msg-timeout=${nsq_msg_timeout} --max-msg-timeout=${nsq_max_msg_timeout} --max-msg-size=${nsq_max_msg_size} -mem-queue-size=${nsq_mem_queue_size}
     depends_on:
       - nsqlookupd
     ports:
       - "4150:4150"
       - "4151:4251"
     volumes:
-      - ./docker/nsq/nsq.config:/etc/nsq.config:ro
-      - ./docker/nsq/:/nsq_data
+      - ${nsq_data_path}:/nsq_data
   nsqadmin:
     image: nsqio/nsq
-    command: /nsqadmin --lookupd-http-address=nsqlookupd:4161
+    command: /nsqadmin --lookupd-http-address=${nsq_lookupd_tcp_address}
     depends_on:
       - nsqlookupd
     ports:
