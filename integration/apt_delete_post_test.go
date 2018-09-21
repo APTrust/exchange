@@ -19,7 +19,7 @@ import (
 
 /*
 These tests check the results of the integration tests for
-the app apt_file_delete. See the ingest_test.sh script in
+the app apt_file_delete. See the integration_test.sh script in
 the scripts folder, which sets up an integration context, runs
 apt_file_delete.
 */
@@ -47,10 +47,12 @@ func TestDeleteResults(t *testing.T) {
 	params.Set("per_page", "100")
 	resp := _context.PharosClient.PremisEventList(params)
 
-	// 7 events: 6 files, plus one for the object itself.
+	// One event for each of six files.
+	// We need to somehow record that the object was deleted as well
+	// if all of its generic files have been deleted.
 	require.Nil(t, resp.Error)
 	events := resp.PremisEvents()
-	assert.Equal(t, 7, len(events))
+	assert.Equal(t, 6, len(events))
 
 	maxKeys := int64(10)
 	s3Client := network.NewS3ObjectList(
@@ -75,10 +77,14 @@ func TestDeleteResults(t *testing.T) {
 		require.Nil(t, resp.Error)
 		gf := resp.GenericFile()
 		require.NotNil(t, gf)
+
+		// Make sure we marked the file as deleted
+		assert.Equal(t, "D", gf.State)
+
 		key, err := gf.PreservationStorageFileName()
 		require.Nil(t, err)
 
-		// Make sure the file's not there anymore.
+		// Make sure the file's not in S3 or Glacier anymore.
 		s3Client.GetList(key)
 		assert.Empty(t, s3Client.Response.Contents)
 		s3Client.Response.Contents = nil

@@ -300,10 +300,30 @@ class IntegrationTest
   end
 
   # apt_delete runs the APTrust file deletion service to delete a
-  # number of GenericFiles from the archive.
+  # number of GenericFiles from the archive. This test cannot be run
+  # with apt_restore, because it deletes some of the times that
+  # apt_restore is trying to restore.
   def apt_delete(more_tests_follow)
-	puts 'Run apt_restore instead. That includes apt_delete tests.'
-	return true
+	run_suite(more_tests_follow) do
+	  @build.build(@context.apps['apt_file_delete'])
+
+	  # Run the prerequisite process (with tests)
+	  # Note that the prereq starts most of the required services,
+	  # and apt_queue marks items for restore and pushes them into
+	  # NSQ.
+	  apt_queue_ok = apt_queue(true)
+	  if !apt_queue_ok
+		puts "Skipping apt_restore test because of prior failures."
+		return false
+	  end
+
+	  # Start services required for this specific set of tests.
+	  @service.app_start(@context.apps['apt_file_delete'])
+	  sleep 60
+
+	  # Run the post tests.
+	  @results['apt_delete_test'] = run('apt_delete_post_test.go')
+	end
   end
 
   # apt_fixity runs the fixity checking service.

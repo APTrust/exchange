@@ -59,6 +59,7 @@ func (deleter *APTFileDeleter) HandleMessage(message *nsq.Message) error {
 	deleter.saveWorkItem(deleteState)
 
 	// Don't proceed without approval!
+	// TODO: We need to circumvent this check during testing.
 	if deleteState.WorkItem.InstitutionalApprover == nil || *deleteState.WorkItem.InstitutionalApprover == "" {
 		deleteState.DeleteSummary.AddError("Cannot delete %s because institutional approver is missing",
 			deleteState.GenericFile.Identifier)
@@ -106,6 +107,9 @@ func (deleter *APTFileDeleter) delete() {
 
 func (deleter *APTFileDeleter) postProcess() {
 	for deleteState := range deleter.PostProcessChannel {
+		if !deleteState.DeleteSummary.HasErrors() {
+			deleter.markFileDeleted(deleteState)
+		}
 		if !deleteState.DeleteSummary.HasErrors() {
 			deleter.recordFileDeletionEvent(deleteState)
 		}
@@ -285,6 +289,18 @@ func (deleter *APTFileDeleter) recordFileDeletionEvent(deleteState *models.Delet
 	} else {
 		deleter.Context.MessageLog.Info("Saved deletion event %s for file %s",
 			event.Identifier, deleteState.GenericFile.Identifier)
+	}
+}
+
+func (deleter *APTFileDeleter) markFileDeleted(deleteState *models.DeleteState) {
+	// TODO: This is NOT WORKING! Does Pharos have a call that will let us change gf.State?
+	// TODO: Maybe Pharos should mark the file deleted when the deletion WorkItem is
+	// marked as completed/succeeded.
+	deleteState.GenericFile.State = "D"
+	resp := deleter.Context.PharosClient.GenericFileSave(deleteState.GenericFile)
+	if resp.Error != nil {
+		deleteState.DeleteSummary.AddError("Error marking %s as deleted: %v",
+			deleteState.GenericFile.Identifier, resp.Error)
 	}
 }
 

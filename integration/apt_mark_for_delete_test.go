@@ -1,6 +1,7 @@
 package integration_test
 
 import (
+	"github.com/APTrust/exchange/constants"
 	"github.com/APTrust/exchange/context"
 	"github.com/APTrust/exchange/models"
 	"github.com/APTrust/exchange/util/testutil"
@@ -8,6 +9,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 )
 
 // apt_mark_for_delete_test is used by scripts/integration_test.rb
@@ -24,7 +26,43 @@ func TestMarkForDelete(t *testing.T) {
 	s3Key := testutil.INTEGRATION_GOOD_BAGS[9]
 	identifier := strings.Replace(s3Key, "aptrust.integration.test", "test.edu", 1)
 	identifier = strings.Replace(identifier, ".tar", "", 1)
-	resp := _context.PharosClient.IntellectualObjectRequestDelete(identifier)
-	require.Nil(t, resp.Error)
-	_context.MessageLog.Info("Created delete request for object %s", identifier)
+
+	instResp := _context.PharosClient.InstitutionGet("test.edu")
+	require.Nil(t, instResp.Error)
+	institution := instResp.Institution()
+	require.NotNil(t, institution)
+
+	// Get the object with all its files (true) but no events (false)
+	objResp := _context.PharosClient.IntellectualObjectGet(identifier, true, false)
+	require.Nil(t, objResp.Error)
+	obj := objResp.IntellectualObject()
+	for _, gf := range obj.GenericFiles {
+		item := makeDeletionWorkItem(obj.Identifier, gf.Identifier, institution.Id)
+		itemResp := _context.PharosClient.WorkItemSave(item)
+		require.Nil(t, itemResp.Error)
+	}
+}
+
+func makeDeletionWorkItem(objIdentifier, gfIdentifier string, instId int) *models.WorkItem {
+	instApprover := "approver@example.com"
+	aptrustApprover := "someone@aptrust.org"
+	return &models.WorkItem{
+		ObjectIdentifier:      objIdentifier,
+		GenericFileIdentifier: gfIdentifier,
+		Name:          "Homer Simpson",
+		Bucket:        "fake-bucket",
+		ETag:          "fake-etag",
+		Size:          9999,
+		BagDate:       time.Now().UTC(),
+		InstitutionId: instId,
+		User:          "user@example.com",
+		InstitutionalApprover: &instApprover,
+		APTrustApprover:       &aptrustApprover,
+		Action:                constants.ActionDelete,
+		Stage:                 constants.StageRequested,
+		Status:                constants.StatusPending,
+		Retry:                 true,
+		Note:                  "Deletion requested",
+		Outcome:               "We'll see now, won't we?",
+	}
 }
