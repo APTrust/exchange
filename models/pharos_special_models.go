@@ -151,10 +151,9 @@ type DPNWorkItemForPharos struct {
 	// TODO: Uncomment when Pharos has this attribute
 	// See: https://www.pivotaltracker.com/story/show/160263632
 	// And: https://www.pivotaltracker.com/story/show/160287414
-	// Retry     bool     `json:"retry"`
-	// Stage     string   `json:"stage"`
-	// Status    string  `json:"status"`
-
+	Retry  bool   `json:"retry"`
+	Stage  string `json:"stage"`
+	Status string `json:"status"`
 }
 
 func NewDPNWorkItemForPharos(item *DPNWorkItem) *DPNWorkItemForPharos {
@@ -171,9 +170,9 @@ func NewDPNWorkItemForPharos(item *DPNWorkItem) *DPNWorkItemForPharos {
 		// TODO: Uncomment when Pharos has this attribute
 		// See: https://www.pivotaltracker.com/story/show/160263632
 		// And: https://www.pivotaltracker.com/story/show/160287414
-		// Retry: item.Retry,
-		// Stage: item.Stage,
-		// Status: item.Status,
+		Retry:  item.Retry,
+		Stage:  item.Stage,
+		Status: item.Status,
 	}
 }
 
