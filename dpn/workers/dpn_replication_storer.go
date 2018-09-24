@@ -101,6 +101,7 @@ func (storer *DPNReplicationStorer) store() {
 		manifest.DPNWorkItem.Note = &note
 		manifest.DPNWorkItem.ProcessingNode = &hostname
 		manifest.DPNWorkItem.Pid = os.Getpid()
+		manifest.DPNWorkItem.Status = constants.StatusStarted
 		SaveDPNWorkItemState(storer.Context, manifest, manifest.StoreSummary)
 
 		// Upload to Glacier.
@@ -159,7 +160,8 @@ func (storer *DPNReplicationStorer) copyToLongTermStorage(manifest *models.Repli
 }
 
 func (storer *DPNReplicationStorer) finishWithError(manifest *models.ReplicationManifest) {
-
+	// Back to pending state, unless this is a fatal error.
+	manifest.DPNWorkItem.Status = constants.StatusPending
 	// Give up only if we've failed too many times.
 	note := "Bag could not be copied to long-term storage"
 	maxAttempts := storer.Context.Config.DPN.DPNReplicationStoreWorker.MaxAttempts
@@ -199,6 +201,9 @@ func (storer *DPNReplicationStorer) finishWithError(manifest *models.Replication
 		storer.Context.MessageLog.Info(note)
 		storer.Context.MessageLog.Info("Deleting %s", manifest.LocalPath)
 		os.Remove(manifest.LocalPath)
+
+		manifest.DPNWorkItem.Status = constants.StatusFailed
+		manifest.DPNWorkItem.Retry = false
 	}
 
 	manifest.StoreSummary.Finish()
@@ -246,6 +251,8 @@ func (storer *DPNReplicationStorer) finishWithSuccess(manifest *models.Replicati
 	manifest.DPNWorkItem.Note = &note
 	manifest.DPNWorkItem.ProcessingNode = nil
 	manifest.DPNWorkItem.Pid = 0
+	manifest.DPNWorkItem.Status = constants.StatusSuccess
+	manifest.DPNWorkItem.Stage = constants.StageResolve
 	SaveDPNWorkItemState(storer.Context, manifest, manifest.StoreSummary)
 
 	// Dump the JSON info about this validation attempt,

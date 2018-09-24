@@ -3,6 +3,7 @@ package workers
 import (
 	"crypto/sha256"
 	"fmt"
+	"github.com/APTrust/exchange/constants"
 	"github.com/APTrust/exchange/context"
 	"github.com/APTrust/exchange/dpn/models"
 	"github.com/APTrust/exchange/dpn/network"
@@ -116,6 +117,8 @@ func (copier *DPNCopier) doCopy() {
 		manifest.DPNWorkItem.Note = &note
 		manifest.DPNWorkItem.ProcessingNode = &hostname
 		manifest.DPNWorkItem.Pid = os.Getpid()
+		manifest.DPNWorkItem.Stage = constants.StageReceive
+		manifest.DPNWorkItem.Status = constants.StatusStarted
 		SaveDPNWorkItemState(copier.Context, manifest, manifest.CopySummary)
 
 		output, err := rsyncCommand.CombinedOutput()
@@ -236,6 +239,8 @@ func (copier *DPNCopier) finishWithError(manifest *models.ReplicationManifest) {
 		manifest.ReplicationTransfer.Cancelled = true
 		manifest.ReplicationTransfer.CancelReason = &manifest.CopySummary.Errors[0]
 		remoteClient := copier.RemoteClients[fromNode]
+		manifest.DPNWorkItem.Retry = false
+		manifest.DPNWorkItem.Status = constants.StatusFailed
 		UpdateReplicationTransfer(copier.Context, remoteClient, manifest)
 		manifest.NsqMessage.Finish()
 	} else if manifest.CopySummary.AttemptNumber > copier.Context.Config.DPN.DPNCopyWorker.MaxAttempts {
@@ -244,10 +249,14 @@ func (copier *DPNCopier) finishWithError(manifest *models.ReplicationManifest) {
 		copier.Context.MessageLog.Error(msg)
 		manifest.ReplicationTransfer.Cancelled = true
 		manifest.ReplicationTransfer.CancelReason = &msg
+		manifest.DPNWorkItem.Retry = false
+		manifest.DPNWorkItem.Status = constants.StatusFailed
 		remoteClient := copier.RemoteClients[fromNode]
 		UpdateReplicationTransfer(copier.Context, remoteClient, manifest)
 		manifest.NsqMessage.Finish()
 	} else {
+		manifest.DPNWorkItem.Retry = false
+		manifest.DPNWorkItem.Status = constants.StatusPending
 		msg := fmt.Sprintf("Requeueing xfer %s due to non-fatal error: %s",
 			xferId, manifest.CopySummary.Errors[0])
 		copier.Context.MessageLog.Warning(msg)
@@ -273,6 +282,8 @@ func (copier *DPNCopier) finishWithSuccess(manifest *models.ReplicationManifest)
 	manifest.DPNWorkItem.Note = &note
 	manifest.DPNWorkItem.ProcessingNode = nil
 	manifest.DPNWorkItem.Pid = 0
+	manifest.DPNWorkItem.Stage = constants.StageValidate
+	manifest.DPNWorkItem.Status = constants.StatusPending
 	copier.Context.MessageLog.Info("Copy succeeded for Replication %s",
 		manifest.ReplicationTransfer.ReplicationId)
 
