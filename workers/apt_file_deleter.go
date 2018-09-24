@@ -58,7 +58,7 @@ func (deleter *APTFileDeleter) HandleMessage(message *nsq.Message) error {
 	deleteState.WorkItem.Status = constants.StatusStarted
 	deleter.saveWorkItem(deleteState)
 
-	// Don't proceed without approval!
+	// Don't proceed without approval from institutional admin!
 	// TODO: We need to circumvent this check during testing.
 	if deleteState.WorkItem.InstitutionalApprover == nil || *deleteState.WorkItem.InstitutionalApprover == "" {
 		deleteState.DeleteSummary.AddError("Cannot delete %s because institutional approver is missing",
@@ -108,10 +108,10 @@ func (deleter *APTFileDeleter) delete() {
 func (deleter *APTFileDeleter) postProcess() {
 	for deleteState := range deleter.PostProcessChannel {
 		if !deleteState.DeleteSummary.HasErrors() {
-			deleter.markFileDeleted(deleteState)
+			deleter.recordFileDeletionEvent(deleteState)
 		}
 		if !deleteState.DeleteSummary.HasErrors() {
-			deleter.recordFileDeletionEvent(deleteState)
+			deleter.markFileDeleted(deleteState)
 		}
 		if deleteState.DeleteSummary.HasErrors() {
 			deleter.finishWithError(deleteState)
