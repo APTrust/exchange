@@ -434,17 +434,20 @@ func (dpnQueue *DPNQueue) getOrCreateWorkItem(identifier, remoteNode, taskType s
 		Identifier: identifier,
 		RemoteNode: remoteNode,
 		QueuedAt:   nil,
+		Status:     constants.StatusPending,
+		Stage:      constants.StageRequested,
+		Retry:      true,
 	}
 	createResp := dpnQueue.Context.PharosClient.DPNWorkItemSave(dpnWorkItem)
 	if createResp.Error != nil {
 		dpnQueue.err("Error creating DPNWorkItem for %s Xfer %s: %v",
-			taskType, identifier, getResp.Error)
+			taskType, identifier, createResp.Error)
 		return nil
 	}
 	newItem := createResp.DPNWorkItem()
 	if newItem == nil {
-		dpnQueue.err("DPNWorkItemSave returned nil for %s Xfer %s: %v",
-			taskType, identifier, getResp.Error)
+		dpnQueue.err("DPNWorkItemSave returned nil for %s Xfer %s",
+			taskType, identifier)
 	} else {
 		queuedAt := "[never]"
 		if newItem.QueuedAt != nil {
