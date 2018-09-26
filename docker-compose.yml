@@ -10,10 +10,10 @@ services:
       - "4161:4161"
       - "4160:4160"
     volumes:
-      - ${nsq_data_path}:/nsq_data
+      - ${nsq_data_path}:/data
   nsqd:
     image: nsqio/nsq
-    command: /nsqd --lookupd-tcp-address=${nsq_lookupd_tcp_address} --data-path=/nsq_data --broadcast-address=${nsq_broadcast_address} --msg-timeout=${nsq_msg_timeout} --max-msg-timeout=${nsq_max_msg_timeout} --max-msg-size=${nsq_max_msg_size} -mem-queue-size=${nsq_mem_queue_size}
+    command: /nsqd --lookupd-tcp-address=${nsq_lookupd_tcp_address} --data-path=/data --broadcast-address=${nsq_broadcast_address} --msg-timeout=${nsq_msg_timeout} --max-msg-timeout=${nsq_max_msg_timeout} --max-msg-size=${nsq_max_msg_size} -mem-queue-size=${nsq_mem_queue_size}
     depends_on:
       - nsqlookupd
     ports:
