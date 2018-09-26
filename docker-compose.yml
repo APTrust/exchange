@@ -23,7 +23,7 @@ services:
       - ${nsq_data_path}:/data
   nsqadmin:
     image: nsqio/nsq
-    command: /nsqadmin --lookupd-http-address=${nsq_lookupd_tcp_address}
+    command: /nsqadmin --lookupd-http-address=${nsq_lookupd_http_address}
     depends_on:
       - nsqlookupd
     ports:
