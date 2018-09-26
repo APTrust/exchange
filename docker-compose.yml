@@ -20,7 +20,7 @@ services:
       - "4150:4150"
       - "4151:4151"
     volumes:
-      - ${nsq_data_path}:/nsq_data
+      - ${nsq_data_path}:/data
   nsqadmin:
     image: nsqio/nsq
     command: /nsqadmin --lookupd-http-address=${nsq_lookupd_tcp_address}
