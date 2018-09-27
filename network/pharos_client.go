@@ -293,6 +293,31 @@ func (client *PharosClient) IntellectualObjectRequestDelete(identifier string) *
 	return resp
 }
 
+// IntellectualObjectFinishDelete tells Pharos to mark an IntellectualObject
+// as deleted, once we've finished deleting it.
+func (client *PharosClient) IntellectualObjectFinishDelete(identifier string) *PharosResponse {
+	// Set up the response object
+	resp := NewPharosResponse(PharosIntellectualObject)
+	resp.objects = make([]*models.IntellectualObject, 0)
+
+	// Build the url and the request object
+	relativeUrl := fmt.Sprintf("api/%s/objects/%s/finish_delete", client.apiVersion,
+		url.QueryEscape(identifier))
+	absoluteUrl := client.BuildUrl(relativeUrl)
+
+	// Run the request
+	client.DoRequest(resp, "GET", absoluteUrl, nil)
+	if resp.Error != nil {
+		return resp
+	}
+
+	// This call has no response body. We're just looking for 200 or 204.
+	if resp.Response.StatusCode != 200 && resp.Response.StatusCode != 204 {
+		resp.Error = fmt.Errorf("IntellectualObject finish_delete failed with message: %s", string(resp.data))
+	}
+	return resp
+}
+
 // GenericFileGet returns the GenericFile having the specified identifier.
 // The identifier should be in the format
 // "institution.edu/object_name/path/to/file.ext"
