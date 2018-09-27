@@ -19,6 +19,7 @@ func TestNewQueueResult(t *testing.T) {
 	assert.NotNil(t, result.Replications)
 	assert.NotNil(t, result.Restores)
 	assert.NotNil(t, result.Ingests)
+	assert.NotNil(t, result.Fixities)
 	assert.NotNil(t, result.Errors)
 }
 
@@ -56,6 +57,18 @@ func TestAddAndFindIngest(t *testing.T) {
 	require.NotNil(t, item)
 	assert.Equal(t, "ingest1", item.Identifier)
 	assert.Nil(t, result.FindIngest("does not exist"))
+}
+
+func TestAddAndFindFixity(t *testing.T) {
+	result := models.NewQueueResult()
+	require.NotNil(t, result)
+	assert.Empty(t, result.Fixities)
+	result.AddFixity(models.NewQueueItem("fixity1"))
+	assert.Equal(t, 1, len(result.Fixities))
+	item := result.FindFixity("fixity1")
+	require.NotNil(t, item)
+	assert.Equal(t, "fixity1", item.Identifier)
+	assert.Nil(t, result.FindFixity("does not exist"))
 }
 
 func TestAddAndHasErrors(t *testing.T) {

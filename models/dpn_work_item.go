@@ -2,6 +2,8 @@ package models
 
 import (
 	"encoding/json"
+	"github.com/APTrust/exchange/constants"
+	"os"
 	"time"
 )
 
@@ -16,6 +18,9 @@ type DPNWorkItem struct {
 	CompletedAt    *time.Time `json:"completed_at"`
 	ProcessingNode *string    `json:"processing_node"`
 	Pid            int        `json:"pid"`
+	Stage          string     `json:"stage"`
+	Status         string     `json:"status"`
+	Retry          bool       `json:"retry"`
 	Note           *string    `json:"note"`
 	State          *string    `json:"state"`
 	CreatedAt      time.Time  `json:"created_at"`
@@ -41,4 +46,27 @@ func (item *DPNWorkItem) IsBeingProcessed() bool {
 // being processed by the specified hostname under the specified pid.
 func (item *DPNWorkItem) IsBeingProcessedByMe(hostname string, pid int) bool {
 	return item.ProcessingNode != nil && *item.ProcessingNode == hostname && item.Pid == pid
+}
+
+// Set ProcessingNode and Pid on this DPNWorkItem.
+func (item *DPNWorkItem) SetNodeAndPid() {
+	hostname, err := os.Hostname()
+	if err != nil {
+		hostname = "hostname?"
+	}
+	item.ProcessingNode = &hostname
+	item.Pid = os.Getpid()
+}
+
+// Clear ProcessingNode and Pid on this DPNWorkItem.
+func (item *DPNWorkItem) ClearNodeAndPid() {
+	item.ProcessingNode = nil
+	item.Pid = 0
+}
+
+// Returns true if this item has been completed or cancelled.
+// The worker processes check this to see if they should
+// actually perform their work.
+func (item *DPNWorkItem) IsCompletedOrCancelled() bool {
+	return item.Status == constants.StatusCancelled || item.Status == constants.StatusSuccess
 }

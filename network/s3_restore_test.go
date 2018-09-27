@@ -39,6 +39,8 @@ func TestS3RestoreNormal(t *testing.T) {
 	require.Empty(t, restoreClient.ErrorMessage)
 	assert.False(t, restoreClient.RestoreAlreadyInProgress)
 	assert.False(t, restoreClient.AlreadyInActiveTier)
+	assert.False(t, restoreClient.RequestRejectedServiceUnavailable)
+	assert.True(t, restoreClient.RequestAccepted())
 	require.NotNil(t, restoreClient.Response)
 }
 
@@ -51,6 +53,8 @@ func TestS3RestoreInProgress(t *testing.T) {
 	require.Empty(t, restoreClient.ErrorMessage)
 	assert.True(t, restoreClient.RestoreAlreadyInProgress)
 	assert.False(t, restoreClient.AlreadyInActiveTier)
+	assert.False(t, restoreClient.RequestRejectedServiceUnavailable)
+	assert.True(t, restoreClient.RequestAccepted())
 	require.NotNil(t, restoreClient.Response)
 }
 
@@ -62,10 +66,26 @@ func TestS3RestoreCompleted(t *testing.T) {
 	restoreClient.Restore()
 	require.Empty(t, restoreClient.ErrorMessage)
 	assert.False(t, restoreClient.RestoreAlreadyInProgress)
+	assert.False(t, restoreClient.RequestRejectedServiceUnavailable)
+	assert.True(t, restoreClient.RequestAccepted())
 
 	// The following is what we want to test, but we
 	// can't test it because s3.RestoreObjectOutput
 	// gives us no access to the underlying HTTP response code.
 	// assert.True(t, restoreClient.AlreadyInActiveTier)
+	require.NotNil(t, restoreClient.Response)
+}
+
+func TestS3RestoreRejected(t *testing.T) {
+	testServer := httptest.NewServer(http.HandlerFunc(network.S3RestoreRejectHandler))
+	defer testServer.Close()
+	restoreClient := getS3RestoreClient()
+	restoreClient.TestURL = testServer.URL
+	restoreClient.Restore()
+	require.Empty(t, restoreClient.ErrorMessage)
+	assert.False(t, restoreClient.RestoreAlreadyInProgress)
+	assert.False(t, restoreClient.AlreadyInActiveTier)
+	assert.True(t, restoreClient.RequestRejectedServiceUnavailable)
+	assert.False(t, restoreClient.RequestAccepted())
 	require.NotNil(t, restoreClient.Response)
 }

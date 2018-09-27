@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/APTrust/exchange/constants"
 	"github.com/APTrust/exchange/network"
+	"github.com/APTrust/exchange/util/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"os"
@@ -11,7 +12,7 @@ import (
 )
 
 func TestNewS3ObjectDelete(t *testing.T) {
-	if !canTestS3() {
+	if !testutil.CanTestS3() {
 		return
 	}
 	s3ObjectDelete := network.NewS3ObjectDelete(
@@ -28,7 +29,7 @@ func TestNewS3ObjectDelete(t *testing.T) {
 }
 
 func TestS3ObjectDelete(t *testing.T) {
-	if !canTestS3() {
+	if !testutil.CanTestS3() {
 		return
 	}
 	// Hmmm... don't like having to upload objects first.

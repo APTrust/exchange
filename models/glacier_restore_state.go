@@ -36,6 +36,9 @@ type GlacierRestoreState struct {
 	// be nil if we're only restoring a single file. This item
 	// is not serialized to JSON.
 	IntellectualObject *IntellectualObject `json:"-"`
+	// DPNWorkItem is the DPNWorkItem being processed. This will
+	// be nil, except for DPN fixity checks and DPN restore jobs.
+	DPNWorkItem *DPNWorkItem `json:"-"`
 	// Requests are the requests we've made (or need to make)
 	// to Glacier to retrieve the objects we need to retrieve.
 	Requests []*GlacierRestoreRequest

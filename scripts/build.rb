@@ -1,3 +1,5 @@
+#!/usr/bin/env ruby
+
 require_relative 'context'
 
 # The Build class provides methods for building Go source files

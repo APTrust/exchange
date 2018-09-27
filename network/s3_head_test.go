@@ -12,9 +12,9 @@ import (
 )
 
 func TestHead(t *testing.T) {
-	// canTestS3, testBucket, testFile, testFileSize,
+	// testBucket, testFile, testFileSize,
 	// and testFileEtag are defined in s3_download_test
-	if !canTestS3() {
+	if !apt_testutil.CanTestS3() {
 		return
 	}
 	_context, err := apt_testutil.GetContext("integration.json")

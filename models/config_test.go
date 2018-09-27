@@ -100,6 +100,7 @@ func TestEnsureDPNConfig(t *testing.T) {
 
 	assert.EqualValues(t, 3, config.DPN.DPNValidationWorker.MaxAttempts)
 	assert.EqualValues(t, 3, config.DPN.DPNCopyWorker.MaxAttempts)
+	assert.EqualValues(t, 4, config.DPN.DPNGlacierRestoreWorker.Workers)
 
 	assert.Equal(t, "chron_token", config.DPN.RemoteNodeAdminTokensForTesting["chron"])
 	assert.Equal(t, "aptrust_token", config.DPN.RemoteNodeTokens["chron"])
