@@ -293,11 +293,7 @@ func (deleter *APTFileDeleter) recordFileDeletionEvent(deleteState *models.Delet
 }
 
 func (deleter *APTFileDeleter) markFileDeleted(deleteState *models.DeleteState) {
-	// TODO: This is NOT WORKING! Does Pharos have a call that will let us change gf.State?
-	// TODO: Maybe Pharos should mark the file deleted when the deletion WorkItem is
-	// marked as completed/succeeded.
-	deleteState.GenericFile.State = "D"
-	resp := deleter.Context.PharosClient.GenericFileSave(deleteState.GenericFile)
+	resp := deleter.Context.PharosClient.GenericFileFinishDelete(deleteState.GenericFile.Identifier)
 	if resp.Error != nil {
 		deleteState.DeleteSummary.AddError("Error marking %s as deleted: %v",
 			deleteState.GenericFile.Identifier, resp.Error)
