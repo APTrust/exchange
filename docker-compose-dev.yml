@@ -21,11 +21,10 @@ services:
       - "4151:4151"
     volumes:
       - ${nsq_data_path}:/data
-# Disabled for now due to circular dns reference issue
-#  nsqadmin:
-#    image: nsqio/nsq
-#    command: /nsqadmin --lookupd-http-address=${nsq_lookupd_http_address}
-#    depends_on:
-#      - nsqlookupd
-#    ports:
-#      - "4171:4171"
+  nsqadmin:
+    image: nsqio/nsq
+    command: /nsqadmin --lookupd-http-address=${nsq_lookupd_http_address}
+    depends_on:
+      - nsqlookupd
+    ports:
+      - "4171:4171"
