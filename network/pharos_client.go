@@ -482,6 +482,33 @@ func (client *PharosClient) GenericFileRequestRestore(identifier string) *Pharos
 	return resp
 }
 
+// GenericFileFinishDelete tells Pharos we've finished deleting a
+// generic file. We have to create the deletion PREMIS event
+// before calling this. This call returns no data. If response.Error
+// is nil, it succeeded.
+func (client *PharosClient) GenericFileFinishDelete(identifier string) *PharosResponse {
+	// Set up the response object
+	resp := NewPharosResponse(PharosGenericFile)
+	resp.files = make([]*models.GenericFile, 1)
+
+	// Build the url and the request object
+	relativeUrl := fmt.Sprintf("/api/%s/files/finish_delete/%s", client.apiVersion,
+		escapeFileIdentifier(identifier))
+	absoluteUrl := client.BuildUrl(relativeUrl)
+
+	// Run the request
+	client.DoRequest(resp, "GET", absoluteUrl, nil)
+	if resp.Error != nil {
+		return resp
+	}
+
+	// This call has no response body. We're just looking for 200 or 204.
+	if resp.Response.StatusCode != 200 && resp.Response.StatusCode != 204 {
+		resp.Error = fmt.Errorf("GenericFile finish_delete failed with message: %s", string(resp.data))
+	}
+	return resp
+}
+
 // ChecksumGet returns the checksum with the specified id
 func (client *PharosClient) ChecksumGet(id int) *PharosResponse {
 	// Set up the response object

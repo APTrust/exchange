@@ -502,6 +502,27 @@ func TestGenericFileRequestRestore(t *testing.T) {
 	assert.NotEqual(t, "", item.ObjectIdentifier)
 }
 
+func TestGenericFileFinishDelete(t *testing.T) {
+	testServer := httptest.NewServer(http.HandlerFunc(genericFileFinishDeleteHandler))
+	defer testServer.Close()
+
+	client, err := network.NewPharosClient(testServer.URL, "v2", "user", "key")
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	response := client.GenericFileFinishDelete("college.edu/object/this_call_will_succeed.xml")
+	assert.Equal(t, "GET", response.Request.Method)
+	assert.Equal(t, "/api/v2/files/finish_delete/college.edu%2Fobject%2Fthis_call_will_succeed.xml", response.Request.URL.Opaque)
+	assert.Nil(t, response.Error)
+
+	response = client.GenericFileFinishDelete("college.edu/object/this_call_will_fail.xml")
+	assert.Equal(t, "GET", response.Request.Method)
+	assert.Equal(t, "/api/v2/files/finish_delete/college.edu%2Fobject%2Fthis_call_will_fail.xml", response.Request.URL.Opaque)
+	assert.NotNil(t, response.Error)
+}
+
 func TestCheckumGet(t *testing.T) {
 	testServer := httptest.NewServer(http.HandlerFunc(checksumGetHandler))
 	defer testServer.Close()
@@ -1385,6 +1406,16 @@ func genericFileSaveBatchHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("Content-Type", "application/json")
 	fmt.Fprintln(w, string(jsonData))
+}
+
+func genericFileFinishDeleteHandler(w http.ResponseWriter, r *http.Request) {
+	url := r.URL.Path
+	if strings.Contains(url, "succeed") {
+		w.WriteHeader(http.StatusNoContent)
+	} else {
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprintln(w, "File cannot be marked deleted without first creating a deletion PREMIS event.")
+	}
 }
 
 // -------------------------------------------------------------------------
