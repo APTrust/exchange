@@ -302,6 +302,25 @@ func TestIntellectualObjectRequestRestore(t *testing.T) {
 	assert.NotEqual(t, "", item.ObjectIdentifier)
 }
 
+func TestIntellectualObjectFinishDelete(t *testing.T) {
+	testServer := httptest.NewServer(http.HandlerFunc(intellectualObjectFinishDeleteHandler))
+	defer testServer.Close()
+	client, err := network.NewPharosClient(testServer.URL, "v2", "user", "key")
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	response := client.IntellectualObjectFinishDelete("college.edu/success")
+	assert.Equal(t, "GET", response.Request.Method)
+	assert.Equal(t, "/api/v2/objects/college.edu%2Fsuccess/finish_delete", response.Request.URL.Opaque)
+	assert.Nil(t, response.Error)
+
+	response = client.IntellectualObjectFinishDelete("college.edu/failure")
+	assert.Equal(t, "GET", response.Request.Method)
+	assert.Equal(t, "/api/v2/objects/college.edu%2Ffailure/finish_delete", response.Request.URL.Opaque)
+	assert.NotNil(t, response.Error)
+}
+
 func TestGenericFileGet(t *testing.T) {
 	testServer := httptest.NewServer(http.HandlerFunc(genericFileGetHandler))
 	defer testServer.Close()
@@ -1297,6 +1316,16 @@ func intellectualObjectSaveHandler(w http.ResponseWriter, r *http.Request) {
 	objJson, _ := json.Marshal(data)
 	w.Header().Set("Content-Type", "application/json")
 	fmt.Fprintln(w, string(objJson))
+}
+
+func intellectualObjectFinishDeleteHandler(w http.ResponseWriter, r *http.Request) {
+	url := r.URL.Path
+	if strings.Contains(url, "success") {
+		w.WriteHeader(http.StatusNoContent)
+	} else {
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprintln(w, "Sorry, pal. Can't be done.")
+	}
 }
 
 // -------------------------------------------------------------------------

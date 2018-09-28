@@ -301,7 +301,7 @@ func (client *PharosClient) IntellectualObjectFinishDelete(identifier string) *P
 	resp.objects = make([]*models.IntellectualObject, 0)
 
 	// Build the url and the request object
-	relativeUrl := fmt.Sprintf("api/%s/objects/%s/finish_delete", client.apiVersion,
+	relativeUrl := fmt.Sprintf("/api/%s/objects/%s/finish_delete", client.apiVersion,
 		url.QueryEscape(identifier))
 	absoluteUrl := client.BuildUrl(relativeUrl)
 
