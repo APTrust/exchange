@@ -67,6 +67,7 @@ func TestDPNS3Retriever_DownloadFile(t *testing.T) {
 	worker, _, _, helper := getDPNS3TestItems(t)
 	worker.Context.Config.DPN.DPNRestorationBucket = "aptrust.integration.test"
 	helper.Manifest.DPNBag.UUID = "example.edu.tagsample_good"
+	helper.Manifest.GlacierKey = "example.edu.tagsample_good.tar"
 	helper.Manifest.DPNBag.Size = uint64(40960)
 	expectedLocalPath := filepath.Join(worker.Context.Config.DPN.DPNRestorationDirectory,
 		helper.Manifest.DPNBag.UUID+".tar")
@@ -79,6 +80,7 @@ func TestDPNS3Retriever_DownloadFile(t *testing.T) {
 	worker, _, _, helper = getDPNS3TestItems(t)
 	worker.Context.Config.DPN.DPNRestorationBucket = "aptrust.integration.test"
 	helper.Manifest.DPNBag.UUID = "this_file_does_not_exist"
+	helper.Manifest.GlacierKey = "this_file_does_not_exist.tar"
 	expectedLocalPath = filepath.Join(worker.Context.Config.DPN.DPNRestorationDirectory,
 		helper.Manifest.DPNBag.UUID+".tar")
 	worker.DownloadFile(helper)
@@ -136,6 +138,7 @@ func TestDPNS3Retriever_DownloadSuccess(t *testing.T) {
 	worker, _, delegate, helper := getDPNS3TestItems(t)
 	worker.Context.Config.DPN.DPNRestorationBucket = "aptrust.integration.test"
 	helper.Manifest.DPNBag.UUID = "example.edu.tagsample_good"
+	helper.Manifest.GlacierKey = "example.edu.tagsample_good.tar"
 	helper.Manifest.DPNBag.Size = uint64(40960)
 
 	// Create a PostTestChannel. The worker will send the

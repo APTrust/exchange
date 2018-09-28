@@ -141,17 +141,18 @@ func (fetcher *DPNS3Retriever) DownloadFile(helper *DPNRestoreHelper) {
 }
 
 func (fetcher *DPNS3Retriever) getDownloader(helper *DPNRestoreHelper) *apt_network.S3Download {
-	tarFileName := fmt.Sprintf("%s.tar", helper.Manifest.DPNBag.UUID)
+	// Set path to file on local file system.
+	// Remember that GlacierKey is DPN Bag UUID + ".tar"
 	helper.Manifest.LocalPath = filepath.Join(
 		fetcher.Context.Config.DPN.DPNRestorationDirectory,
-		tarFileName)
+		helper.Manifest.GlacierKey)
 	return apt_network.NewS3Download(
 		os.Getenv("AWS_ACCESS_KEY_ID"),
 		os.Getenv("AWS_SECRET_ACCESS_KEY"),
 		constants.AWSVirginia,                           // region
 		fetcher.Context.Config.DPN.DPNRestorationBucket, // bucket
-		tarFileName,               // Key/file to download
-		helper.Manifest.LocalPath, // where to put the downloaded file
+		helper.Manifest.GlacierKey,                      // Key/file to download
+		helper.Manifest.LocalPath,                       // where to put the downloaded file
 		false, // calculate md5 checksum on the entire tar file
 		false, // calculate sha256 checksum on the entire tar file
 	)

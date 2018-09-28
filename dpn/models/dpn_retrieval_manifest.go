@@ -31,6 +31,10 @@ type DPNRetrievalManifest struct {
 	// we want to restore.
 	GlacierBucket string
 
+	// GlacierKey is the name of this item in the Glacier bucket.
+	// It should be the bag UUID with a ".tar" extension.
+	GlacierKey string
+
 	// RequestedFromGlacierAt is the timestamp of the last request to
 	// Glacier to restore this object. That request may not have been
 	// accepted. See GlacierRequestAccepted

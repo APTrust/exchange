@@ -94,6 +94,9 @@ func (helper *DPNRestoreHelper) initManifest(message *nsq.Message, action string
 			return err
 		}
 	}
+	if helper.Manifest.GlacierKey == "" {
+		helper.Manifest.GlacierKey = fmt.Sprintf("%s.tar", helper.Manifest.DPNBag.UUID)
+	}
 
 	return nil
 }

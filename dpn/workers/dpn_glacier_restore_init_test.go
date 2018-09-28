@@ -209,7 +209,7 @@ func TestDGIHandleNotStartedRejectNow(t *testing.T) {
 	DescribeRestoreStateAs = NotStartedRejectNow
 
 	// Because the request will be rejected, we expect this error.
-	expectedError := fmt.Sprintf("Request to restore aptrust.dpn.test/%s: Glacier restore service is temporarily unavailable. Try again later.", dpn_testutil.DPN_TEST_BAG_UUID)
+	expectedError := fmt.Sprintf("Request to restore aptrust.dpn.test/%s.tar: Glacier restore service is temporarily unavailable. Try again later.", dpn_testutil.DPN_TEST_BAG_UUID)
 
 	// Create a PostTestChannel. The worker will send the
 	// DPNRetrievalManifest object into this channel when

@@ -118,7 +118,7 @@ func (restorer *DPNGlacierRestoreInit) RequestRestore() {
 		if err != nil {
 			helper.WorkSummary.AddError(
 				"Error processing S3 HEAD request for %s: %v",
-				helper.Manifest.DPNWorkItem.Identifier, err)
+				helper.Manifest.GlacierKey, err)
 		} else if requestNeeded {
 			restorer.InitializeRetrieval(helper)
 		}
@@ -154,7 +154,7 @@ func (restorer *DPNGlacierRestoreInit) FinishWithSuccess(helper *DPNRestoreHelpe
 		restorer.SendToDownloadQueue(helper)
 	} else {
 		helper.Manifest.DPNWorkItem.Note = &note
-		restorer.Context.MessageLog.Info("Requested %s from Glacier. %s", helper.Manifest.DPNWorkItem.Identifier, note)
+		restorer.Context.MessageLog.Info("Requested %s from Glacier. %s", helper.Manifest.GlacierKey, note)
 		helper.Manifest.DPNWorkItem.Retry = true
 		helper.SaveDPNWorkItem()
 		helper.Manifest.NsqMessage.Requeue(HOURS_BETWEEN_CHECKS * time.Hour)
@@ -224,7 +224,7 @@ func (restorer *DPNGlacierRestoreInit) RestoreRequestNeeded(helper *DPNRestoreHe
 	}
 
 	// Ask S3 about the status of this object
-	s3Client.Head(helper.Manifest.DPNWorkItem.Identifier)
+	s3Client.Head(helper.Manifest.GlacierKey)
 
 	// Status 409: Conflict is an expected response.
 	// It means a restore request has already been initiated.
@@ -260,14 +260,14 @@ func (restorer *DPNGlacierRestoreInit) RestoreRequestNeeded(helper *DPNRestoreHe
 func (restorer *DPNGlacierRestoreInit) InitializeRetrieval(helper *DPNRestoreHelper) {
 	// Request restore from Glacier
 	restorer.Context.MessageLog.Info("Requesting Glacier retrieval of %s from %s",
-		helper.Manifest.DPNWorkItem.Identifier, helper.Manifest.GlacierBucket)
+		helper.Manifest.GlacierKey, helper.Manifest.GlacierBucket)
 
 	restoreClient := apt_network.NewS3Restore(
 		restorer.Context.Config.GetAWSAccessKeyId(),
 		restorer.Context.Config.GetAWSSecretAccessKey(),
 		restorer.Context.Config.DPN.DPNGlacierRegion,
 		helper.Manifest.GlacierBucket,
-		helper.Manifest.DPNWorkItem.Identifier,
+		helper.Manifest.GlacierKey,
 		RETRIEVAL_OPTION,
 		DAYS_TO_KEEP_IN_S3)
 
@@ -289,10 +289,10 @@ func (restorer *DPNGlacierRestoreInit) InitializeRetrieval(helper *DPNRestoreHel
 	if restoreClient.ErrorMessage != "" {
 		helper.WorkSummary.AddError(
 			"Glacier retrieval request returned an error for %s at %s: %v",
-			helper.Manifest.GlacierBucket, helper.Manifest.DPNWorkItem.Identifier,
+			helper.Manifest.GlacierBucket, helper.Manifest.GlacierKey,
 			restoreClient.ErrorMessage)
 		restorer.Context.MessageLog.Error("Bad response from Glacier. Requested %s/%s. Got:\n %v",
-			helper.Manifest.GlacierBucket, helper.Manifest.DPNWorkItem.Identifier, restoreClient.Response)
+			helper.Manifest.GlacierBucket, helper.Manifest.GlacierKey, restoreClient.Response)
 	}
 
 	// Update this info.
@@ -305,7 +305,7 @@ func (restorer *DPNGlacierRestoreInit) InitializeRetrieval(helper *DPNRestoreHel
 		helper.WorkSummary.AddError(
 			"Request to restore %s/%s: "+
 				"Glacier restore service is temporarily unavailable. Try again later.",
-			helper.Manifest.GlacierBucket, helper.Manifest.DPNWorkItem.Identifier)
+			helper.Manifest.GlacierBucket, helper.Manifest.GlacierKey)
 		helper.WorkSummary.ErrorIsFatal = false
 	}
 }
