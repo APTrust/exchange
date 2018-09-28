@@ -481,4 +481,5 @@ func (dpnQueue *DPNQueue) logResults() {
 	dpnQueue.Context.MessageLog.Info("Processed %d replication requests", len(dpnQueue.QueueResult.Replications))
 	dpnQueue.Context.MessageLog.Info("Processed %d restore requests", len(dpnQueue.QueueResult.Restores))
 	dpnQueue.Context.MessageLog.Info("Processed %d ingest requests", len(dpnQueue.QueueResult.Ingests))
+	dpnQueue.Context.MessageLog.Info("Processed %d items needing fixity", len(dpnQueue.QueueResult.Fixities))
 }
