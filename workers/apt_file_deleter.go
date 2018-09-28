@@ -8,6 +8,7 @@ import (
 	"github.com/APTrust/exchange/network"
 	"github.com/nsqio/go-nsq"
 	"os"
+	"strings"
 	"time"
 )
 
@@ -23,6 +24,9 @@ type APTFileDeleter struct {
 	// the outcome of the deletion in Pharos and finish or
 	// requeue the NSQ message.
 	PostProcessChannel chan *models.DeleteState
+	// isIntegrationTest will be true if we're running in the
+	// integration test context.
+	isIntegrationTest bool
 }
 
 func NewAPTFileDeleter(_context *context.Context) *APTFileDeleter {
@@ -39,6 +43,11 @@ func NewAPTFileDeleter(_context *context.Context) *APTFileDeleter {
 		go deleter.delete()
 		go deleter.postProcess()
 	}
+
+	deleter.isIntegrationTest = ((strings.HasSuffix(_context.Config.ActiveConfig, "integration.json") ||
+		strings.HasSuffix(_context.Config.ActiveConfig, "integration_update.json")) &&
+		strings.Contains(_context.Config.PreservationBucket, ".test."))
+
 	return deleter
 }
 
@@ -58,9 +67,11 @@ func (deleter *APTFileDeleter) HandleMessage(message *nsq.Message) error {
 	deleteState.WorkItem.Status = constants.StatusStarted
 	deleter.saveWorkItem(deleteState)
 
-	// Don't proceed without approval from institutional admin!
-	// TODO: We need to circumvent this check during testing.
-	if deleteState.WorkItem.InstitutionalApprover == nil || *deleteState.WorkItem.InstitutionalApprover == "" {
+	// Don't proceed without approval from institutional admin,
+	// unless we're running integration tests.
+	needsApproval := (deleteState.WorkItem.InstitutionalApprover == nil ||
+		*deleteState.WorkItem.InstitutionalApprover == "")
+	if needsApproval && !deleter.isIntegrationTest {
 		deleteState.DeleteSummary.AddError("Cannot delete %s because institutional approver is missing",
 			deleteState.GenericFile.Identifier)
 		deleteState.DeleteSummary.ErrorIsFatal = true
@@ -112,6 +123,9 @@ func (deleter *APTFileDeleter) postProcess() {
 		}
 		if !deleteState.DeleteSummary.HasErrors() {
 			deleter.markFileDeleted(deleteState)
+		}
+		if !deleteState.DeleteSummary.HasErrors() {
+			deleter.markObjectDeletedIfAppropriate(deleteState)
 		}
 		if deleteState.DeleteSummary.HasErrors() {
 			deleter.finishWithError(deleteState)
@@ -297,6 +311,76 @@ func (deleter *APTFileDeleter) markFileDeleted(deleteState *models.DeleteState) 
 	if resp.Error != nil {
 		deleteState.DeleteSummary.AddError("Error marking %s as deleted: %v",
 			deleteState.GenericFile.Identifier, resp.Error)
+	}
+}
+
+func (deleter *APTFileDeleter) markObjectDeletedIfAppropriate(deleteState *models.DeleteState) {
+	// Get the object with its events, but don't get GenericFiles, because
+	// there may be thousands of them.
+	objIdentifier := deleteState.GenericFile.IntellectualObjectIdentifier
+	resp := deleter.Context.PharosClient.IntellectualObjectGet(objIdentifier, false, true)
+	if resp.Error != nil {
+		deleteState.DeleteSummary.AddError(
+			"Error checking for state and events on IntellectualObject %s: %v",
+			objIdentifier, resp.Error)
+		return
+	}
+	obj := resp.IntellectualObject()
+	if obj == nil {
+		deleteState.DeleteSummary.AddError(
+			"When checking for state and events, Pharos returned nil for IntellectualObject %s: %v",
+			objIdentifier, resp.Error)
+		return
+	}
+	if obj.State == "D" {
+		deleter.Context.MessageLog.Info("Object %s is already marked deleted", objIdentifier)
+		return
+	}
+	lastIngest := time.Time{}
+	lastDelete := time.Time{}
+	// Typical object has ~5 events
+	for _, event := range obj.PremisEvents {
+		if event.EventType == constants.EventIngestion && event.DateTime.After(lastIngest) {
+			lastIngest = event.DateTime
+		} else if event.EventType == constants.EventDeletion && event.DateTime.After(lastDelete) {
+			lastDelete = event.DateTime
+		}
+	}
+	if lastDelete.IsZero() {
+		deleter.Context.MessageLog.Info("No delete event for object %s", objIdentifier)
+		return
+	}
+	// If we know we have a delete event on this object, check to see if the
+	// object still has any active files. This call is can be expensive, so
+	// we avoid it until this point.
+	if lastDelete.After(lastIngest) {
+		resp = deleter.Context.PharosClient.IntellectualObjectGet(objIdentifier, true, false)
+		if resp.Error != nil {
+			deleteState.DeleteSummary.AddError(
+				"Error checking for active files on IntellectualObject %s: %v",
+				objIdentifier, resp.Error)
+		}
+		obj = resp.IntellectualObject()
+		if obj == nil {
+			deleteState.DeleteSummary.AddError(
+				"When checking for active files, Pharos returned nil for IntellectualObject %s: %v",
+				objIdentifier, resp.Error)
+			return
+		}
+	} else {
+		deleter.Context.MessageLog.Info("No recent delete event for object %s", objIdentifier)
+		return
+	}
+	if len(obj.GenericFiles) == 0 {
+		resp := deleter.Context.PharosClient.IntellectualObjectFinishDelete(objIdentifier)
+		if resp.Error != nil {
+			deleteState.DeleteSummary.AddError("Error marking %s as deleted: %v",
+				deleteState.GenericFile.Identifier, resp.Error)
+		} else {
+			deleter.Context.MessageLog.Info(
+				"Marked IntellectualObject %s as deleted (has delete event and no more active files)",
+				objIdentifier)
+		}
 	}
 }
 
