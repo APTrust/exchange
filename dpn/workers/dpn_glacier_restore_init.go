@@ -89,6 +89,14 @@ func (restorer *DPNGlacierRestoreInit) HandleMessage(message *nsq.Message) error
 		restorer.Context.MessageLog.Error(err.Error())
 		return err
 	}
+
+	if helper.Manifest.DPNWorkItem.IsCompletedOrCancelled() {
+		restorer.Context.MessageLog.Info("Skipping WorkItem %d because status is %s",
+			helper.Manifest.DPNWorkItem.Id, helper.Manifest.DPNWorkItem.Status)
+		message.Finish()
+		return nil
+	}
+
 	helper.WorkSummary.ClearErrors()
 	helper.WorkSummary.Attempted = true
 	helper.WorkSummary.AttemptNumber += 1
@@ -101,12 +109,6 @@ func (restorer *DPNGlacierRestoreInit) HandleMessage(message *nsq.Message) error
 		// No use proceeding...
 		restorer.CleanupChannel <- helper
 		return fmt.Errorf(helper.WorkSummary.AllErrorsAsString())
-	}
-	if helper.Manifest.DPNWorkItem.IsCompletedOrCancelled() {
-		restorer.Context.MessageLog.Info("Skipping WorkItem %d because status is %s",
-			helper.Manifest.DPNWorkItem.Id, helper.Manifest.DPNWorkItem.Status)
-		restorer.CleanupChannel <- helper
-		return nil
 	}
 
 	// OK, we're good. Ask Glacier to move the file into S3.

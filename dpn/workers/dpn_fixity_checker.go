@@ -72,6 +72,14 @@ func (checker *DPNFixityChecker) HandleMessage(message *nsq.Message) error {
 		checker.Context.MessageLog.Error(err.Error())
 		return err
 	}
+
+	if helper.Manifest.DPNWorkItem.IsCompletedOrCancelled() {
+		checker.Context.MessageLog.Info("Skipping WorkItem %d because status is %s",
+			helper.Manifest.DPNWorkItem.Id, helper.Manifest.DPNWorkItem.Status)
+		message.Finish()
+		return nil
+	}
+
 	helper.WorkSummary.ClearErrors()
 	helper.WorkSummary.Attempted = true
 	helper.WorkSummary.AttemptNumber += 1
@@ -86,12 +94,6 @@ func (checker *DPNFixityChecker) HandleMessage(message *nsq.Message) error {
 		// No use proceeding...
 		checker.CleanupChannel <- helper
 		return fmt.Errorf(helper.WorkSummary.AllErrorsAsString())
-	}
-	if helper.Manifest.DPNWorkItem.IsCompletedOrCancelled() {
-		checker.Context.MessageLog.Info("Skipping WorkItem %d because status is %s",
-			helper.Manifest.DPNWorkItem.Id, helper.Manifest.DPNWorkItem.Status)
-		checker.CleanupChannel <- helper
-		return nil
 	}
 
 	if helper.Manifest.ExpectedFixityValue == "" {
