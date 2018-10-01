@@ -208,7 +208,7 @@ func (checker *DPNFixityChecker) cleanupLocalFiles(helper *DPNRestoreHelper, val
 	// Delete the local copy of the bag.
 	if fileutil.LooksSafeToDelete(helper.Manifest.LocalPath, 12, 3) {
 		checker.Context.MessageLog.Info("Deleting local bag file %s", helper.Manifest.LocalPath)
-		err := os.Remove(validator.DBName())
+		err := os.Remove(helper.Manifest.LocalPath)
 		if err != nil {
 			checker.Context.MessageLog.Warning("Error deleting %s: %v", helper.Manifest.LocalPath, err)
 		}
@@ -264,6 +264,9 @@ func (checker *DPNFixityChecker) SaveFixityRecord(helper *DPNRestoreHelper) {
 			FixityAt:      time.Now().UTC(),
 		}
 	}
+	checker.Context.MessageLog.Info("Posting new fixity check %s for bag %s to %s",
+		helper.Manifest.FixityCheck.FixityCheckId, helper.Manifest.DPNBag.UUID,
+		checker.LocalDPNRestClient.HostUrl)
 	resp := checker.LocalDPNRestClient.FixityCheckCreate(helper.Manifest.FixityCheck)
 	if resp.Error != nil {
 		helper.WorkSummary.AddError("Error saving FixityCheck to DPN REST server: %v",
