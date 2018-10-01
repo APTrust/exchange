@@ -198,6 +198,7 @@ func (fetcher *DPNS3Retriever) FinishWithSuccess(helper *DPNRestoreHelper) {
 	// Mark DPNWorkItem as succeeded and push to next queue
 	helper.Manifest.DPNWorkItem.ClearNodeAndPid()
 	note := fmt.Sprintf("Bag has been downloaded to %s", helper.Manifest.LocalPath)
+	fetcher.Context.MessageLog.Info(note)
 	helper.Manifest.DPNWorkItem.Note = &note
 	helper.Manifest.DPNWorkItem.Stage = constants.StageValidate
 	helper.Manifest.DPNWorkItem.Status = constants.StatusPending
@@ -239,5 +240,7 @@ func (fetcher *DPNS3Retriever) SendToFixityQueue(helper *DPNRestoreHelper) {
 			helper.Manifest.DPNWorkItem.Id, helper.Manifest.DPNWorkItem.Identifier, topic, err)
 		fetcher.Context.MessageLog.Error(helper.Manifest.GlacierRestoreSummary.AllErrorsAsString())
 		helper.SaveDPNWorkItem()
+	} else {
+		fetcher.Context.MessageLog.Info("Pushed %s into fixity queue", helper.Manifest.DPNBag.UUID)
 	}
 }

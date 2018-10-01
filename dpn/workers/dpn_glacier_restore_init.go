@@ -151,6 +151,7 @@ func (restorer *DPNGlacierRestoreInit) FinishWithSuccess(helper *DPNRestoreHelpe
 	note := fmt.Sprintf("Glacier restore initiated. Will check availability "+
 		"in S3 every %d hours.", HOURS_BETWEEN_CHECKS)
 	if helper.Manifest.IsAvailableInS3 {
+		restorer.Context.MessageLog.Info("%s is available in S3 for download.", helper.Manifest.DPNBag.UUID)
 		note = "Item is available in S3 for download."
 		helper.Manifest.DPNWorkItem.Note = &note
 		helper.Manifest.DPNWorkItem.Stage = constants.StageAvailableInS3
@@ -176,6 +177,8 @@ func (restorer *DPNGlacierRestoreInit) SendToDownloadQueue(helper *DPNRestoreHel
 			helper.Manifest.DPNWorkItem.Id, helper.Manifest.DPNWorkItem.Identifier, topic, err)
 		restorer.Context.MessageLog.Error(helper.WorkSummary.AllErrorsAsString())
 		helper.SaveDPNWorkItem()
+	} else {
+		restorer.Context.MessageLog.Info("Pushed %s to download queue.", helper.Manifest.DPNBag.UUID)
 	}
 }
 
