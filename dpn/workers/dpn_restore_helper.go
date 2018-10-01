@@ -118,8 +118,10 @@ func (helper *DPNRestoreHelper) getDPNWorkItem() error {
 
 	helper.Manifest.DPNWorkItem = dpnWorkItem
 	helper.Manifest.DPNWorkItem.SetNodeAndPid()
-	note := "Requesting Glacier restoration for fixity"
-	helper.Manifest.DPNWorkItem.Note = &note
+	if helper.Manifest.DPNWorkItem.Note == nil {
+		note := "Requesting Glacier restoration for fixity"
+		helper.Manifest.DPNWorkItem.Note = &note
+	}
 	return nil
 }
 
