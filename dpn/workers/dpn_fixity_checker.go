@@ -256,12 +256,14 @@ func (checker *DPNFixityChecker) SaveFixityRecord(helper *DPNRestoreHelper) {
 		return
 	}
 	if helper.Manifest.FixityCheck == nil {
+		utcNow := time.Now().UTC()
 		helper.Manifest.FixityCheck = &models.FixityCheck{
 			FixityCheckId: uuid.NewV4().String(),
 			Bag:           helper.Manifest.DPNBag.UUID,
 			Node:          checker.Context.Config.DPN.LocalNode,
 			Success:       helper.Manifest.ExpectedFixityValue == helper.Manifest.ActualFixityValue,
-			FixityAt:      time.Now().UTC(),
+			FixityAt:      utcNow,
+			CreatedAt:     utcNow,
 		}
 	}
 	checker.Context.MessageLog.Info("Posting new fixity check %s for bag %s to %s",
