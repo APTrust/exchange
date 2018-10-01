@@ -299,7 +299,7 @@ func (checker *DPNFixityChecker) FinishWithSuccess(helper *DPNRestoreHelper) {
 	// bag into the restoration queue, or do whatever else is
 	// necessary to complete the restore process.
 	helper.WorkSummary.Finish()
-	helper.Manifest.DPNWorkItem.Stage = constants.StageValidate
+	helper.Manifest.DPNWorkItem.Stage = constants.StageResolve
 	helper.Manifest.DPNWorkItem.Status = constants.StatusSuccess
 	helper.SaveDPNWorkItem()
 	helper.Manifest.NsqMessage.Finish()
