@@ -65,8 +65,8 @@ func TestDPNS3Retriever_DownloadFile(t *testing.T) {
 	// aptrust.integration.test always contains the items
 	// in testdata/s3_bags/TestData.zip
 	worker, _, _, helper := getDPNS3TestItems(t)
-	worker.Context.Config.DPN.DPNRestorationBucket = "aptrust.integration.test"
 	helper.Manifest.DPNBag.UUID = "example.edu.tagsample_good"
+	helper.Manifest.GlacierBucket = "aptrust.integration.test"
 	helper.Manifest.GlacierKey = "example.edu.tagsample_good.tar"
 	helper.Manifest.DPNBag.Size = uint64(40960)
 	expectedLocalPath := filepath.Join(worker.Context.Config.DPN.DPNRestorationDirectory,
@@ -78,8 +78,8 @@ func TestDPNS3Retriever_DownloadFile(t *testing.T) {
 
 	// Download a file that does not exist
 	worker, _, _, helper = getDPNS3TestItems(t)
-	worker.Context.Config.DPN.DPNRestorationBucket = "aptrust.integration.test"
 	helper.Manifest.DPNBag.UUID = "this_file_does_not_exist"
+	helper.Manifest.GlacierBucket = "aptrust.integration.test"
 	helper.Manifest.GlacierKey = "this_file_does_not_exist.tar"
 	expectedLocalPath = filepath.Join(worker.Context.Config.DPN.DPNRestorationDirectory,
 		helper.Manifest.DPNBag.UUID+".tar")
@@ -136,8 +136,8 @@ func TestDPNS3Retriever_DownloadSuccess(t *testing.T) {
 		return
 	}
 	worker, _, delegate, helper := getDPNS3TestItems(t)
-	worker.Context.Config.DPN.DPNRestorationBucket = "aptrust.integration.test"
 	helper.Manifest.DPNBag.UUID = "example.edu.tagsample_good"
+	helper.Manifest.GlacierBucket = "aptrust.integration.test"
 	helper.Manifest.GlacierKey = "example.edu.tagsample_good.tar"
 	helper.Manifest.DPNBag.Size = uint64(40960)
 

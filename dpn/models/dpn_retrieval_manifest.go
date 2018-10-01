@@ -28,7 +28,9 @@ type DPNRetrievalManifest struct {
 	TaskType string
 
 	// GlacierBucket is the bucket that contains the item
-	// we want to restore.
+	// we want to restore. Note that after we request restoration,
+	// Amazon leaves the item in same Glacier bucket and simply
+	// changes its storage class from Glacier to Standard.
 	GlacierBucket string
 
 	// GlacierKey is the name of this item in the Glacier bucket.
@@ -68,13 +70,13 @@ type DPNRetrievalManifest struct {
 	LocalPath string
 
 	// RestorationURL is the URL from which the depositor can
-	// retrieve the bag.
+	// retrieve the bag. Since depositors cannot access preservation
+	// buckets, we'll have to copy the item into an S3 bucket they
+	// can access. If this is an empty string, the item was never
+	// copied to a restoration bucket. (This attribute will remain
+	// empty for fixity check operations in which we only copy the file
+	// to local storage for validation.)
 	RestorationURL string
-
-	// S3Bucket is the bucket into which the item will be
-	// restored from Glacier. Once here, the item can be
-	// copied to a local volume for validation and fixity.
-	S3Bucket string
 
 	// ExpectedFixityValue is the SHA-256 digest that was calculated
 	// for this bag's tagmanifest-sha256.txt file when the bag was

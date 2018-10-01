@@ -149,10 +149,10 @@ func (fetcher *DPNS3Retriever) getDownloader(helper *DPNRestoreHelper) *apt_netw
 	return apt_network.NewS3Download(
 		os.Getenv("AWS_ACCESS_KEY_ID"),
 		os.Getenv("AWS_SECRET_ACCESS_KEY"),
-		constants.AWSVirginia,                           // region
-		fetcher.Context.Config.DPN.DPNRestorationBucket, // bucket
-		helper.Manifest.GlacierKey,                      // Key/file to download
-		helper.Manifest.LocalPath,                       // where to put the downloaded file
+		constants.AWSVirginia,         // region
+		helper.Manifest.GlacierBucket, // Glacier items are restored to same bucket
+		helper.Manifest.GlacierKey,    // Key/file to download
+		helper.Manifest.LocalPath,     // where to put the downloaded file
 		false, // calculate md5 checksum on the entire tar file
 		false, // calculate sha256 checksum on the entire tar file
 	)

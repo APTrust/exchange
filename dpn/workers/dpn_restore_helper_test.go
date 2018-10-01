@@ -30,7 +30,6 @@ func TestNewDPNRestoreHelper(t *testing.T) {
 	assert.False(t, helper.Manifest.GlacierRestoreSummary.Finished())
 	assert.Empty(t, helper.Manifest.LocalPath)
 	assert.Empty(t, helper.Manifest.RestorationURL)
-	assert.Empty(t, helper.Manifest.S3Bucket)
 	assert.Empty(t, helper.Manifest.ActualFixityValue)
 	assert.NotEmpty(t, helper.Manifest.GlacierBucket)
 	assert.NotEmpty(t, helper.Manifest.ExpectedFixityValue)
