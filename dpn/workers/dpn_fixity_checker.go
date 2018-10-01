@@ -245,16 +245,21 @@ func (checker *DPNFixityChecker) cleanup() {
 
 // Save the fixity record to the local DPN REST server.
 func (checker *DPNFixityChecker) SaveFixityRecord(helper *DPNRestoreHelper) {
+	helper.Manifest.RecordSummary.Attempted = true
+	helper.Manifest.RecordSummary.AttemptNumber += 1
+	helper.Manifest.RecordSummary.Start()
 	// Create a FixityCheck record and save it with
 	// checker.LocalDPNRestClient.FixityCheckCreate()
 	if helper.Manifest.ExpectedFixityValue == "" {
 		helper.WorkSummary.AddError("Cannot create DPN FixityCheck record because " +
 			"because ExpectedFixityValue is missing from manifest.")
+		helper.Manifest.RecordSummary.Finish()
 		return
 	}
 	if helper.Manifest.ActualFixityValue == "" {
 		helper.WorkSummary.AddError("Cannot create DPN FixityCheck record because " +
 			"because ActualFixityValue is missing from manifest.")
+		helper.Manifest.RecordSummary.Finish()
 		return
 	}
 	if helper.Manifest.FixityCheck == nil {
@@ -275,6 +280,7 @@ func (checker *DPNFixityChecker) SaveFixityRecord(helper *DPNRestoreHelper) {
 	if resp.Error != nil {
 		helper.WorkSummary.AddError("Error saving FixityCheck to DPN REST server: %v",
 			resp.Error)
+		helper.Manifest.RecordSummary.Finish()
 		return
 	}
 	helper.Manifest.FixityCheck.CreatedAt = resp.FixityCheck().CreatedAt
@@ -287,6 +293,7 @@ func (checker *DPNFixityChecker) SaveFixityRecord(helper *DPNRestoreHelper) {
 			helper.Manifest.ActualFixityValue, helper.Manifest.ExpectedFixityValue)
 		helper.WorkSummary.ErrorIsFatal = true
 	}
+	helper.Manifest.RecordSummary.Finish()
 }
 
 func (checker *DPNFixityChecker) FinishWithSuccess(helper *DPNRestoreHelper) {
