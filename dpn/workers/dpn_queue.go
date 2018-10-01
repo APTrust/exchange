@@ -329,12 +329,15 @@ func (dpnQueue *DPNQueue) queueItemsNeedingFixity() {
 				dpnQueue.QueueResult.AddFixity(queueItem)
 			}
 		}
-		if dpnResp.Next == nil {
-			break
-		} else {
-			pageNumber += 1
-			params = dpnQueue.fixityBagParams(pageNumber)
-		}
+		// TODO: Remove after trial period.
+		dpnQueue.Context.MessageLog.Warning("***** Requested only one batch of files for DPN fixity because we're in a trial period. *****")
+		break
+		// if dpnResp.Next == nil {
+		// 	break
+		// } else {
+		// 	pageNumber += 1
+		// 	params = dpnQueue.fixityBagParams(pageNumber)
+		// }
 	}
 }
 
@@ -343,7 +346,9 @@ func (dpnQueue *DPNQueue) fixityBagParams(pageNumber int) url.Values {
 	twoYearsAgo := time.Now().UTC().AddDate(-2, 0, 0)
 	params.Set("before", twoYearsAgo.Format(time.RFC3339))
 	params.Set("order_by", "created_at")
-	params.Set("page_size", "10")
+	// TODO: Increase after trial period.
+	params.Set("page_size", "2")
+	//params.Set("page_size", "10")
 	params.Set("page", strconv.Itoa(pageNumber))
 	return params
 }
