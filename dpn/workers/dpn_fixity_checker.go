@@ -6,10 +6,12 @@ import (
 	"github.com/APTrust/exchange/context"
 	"github.com/APTrust/exchange/dpn/models"
 	"github.com/APTrust/exchange/dpn/network"
+	"github.com/APTrust/exchange/util/fileutil"
 	"github.com/APTrust/exchange/util/storage"
 	"github.com/APTrust/exchange/validation"
 	"github.com/nsqio/go-nsq"
 	"github.com/satori/go.uuid"
+	"os"
 	"time"
 )
 
@@ -71,6 +73,8 @@ func (checker *DPNFixityChecker) HandleMessage(message *nsq.Message) error {
 		return err
 	}
 	helper.WorkSummary.ClearErrors()
+	helper.WorkSummary.Attempted = true
+	helper.WorkSummary.AttemptNumber += 1
 	helper.WorkSummary.Start()
 	helper.Manifest.DPNWorkItem.Status = constants.StatusStarted
 	helper.Manifest.DPNWorkItem.Stage = constants.StageValidate
@@ -176,19 +180,45 @@ func (checker *DPNFixityChecker) getTagManifestChecksum(helper *DPNRestoreHelper
 		helper.WorkSummary.AddError("Cannot find file %s in BoltDB.", fileIdentifier)
 		return
 	}
+
 	// Record on the manifest the actual sha256 digest that the validator
 	// just calculated for the tagmanifest-sha256.txt file.
 	helper.Manifest.ActualFixityValue = gf.IngestSha256
 	checker.Context.MessageLog.Info("Validator calculated checksum %s for file %s",
 		gf.IngestSha256, fileIdentifier)
 
-	// TODO: Delete BoltDB?
-	// TODO: Delete bag? (though not during unit tests)
+	// Once we have the validation result and the fixity value,
+	// we no longer need the local files (except in unit tests).
+	checker.cleanupLocalFiles(helper, validator)
+}
+
+func (checker *DPNFixityChecker) cleanupLocalFiles(helper *DPNRestoreHelper, validator *validation.Validator) {
+	if checker.Context.Config.TestsAreRunning() {
+		checker.Context.MessageLog.Info("Skippint local file and BoltDB deletion because tests are running.")
+		return
+	}
+	// Delete the BoltDB file
+	if fileutil.LooksSafeToDelete(validator.DBName(), 12, 3) {
+		checker.Context.MessageLog.Info("Deleting BoltDB file %s", validator.DBName())
+		err := os.Remove(validator.DBName())
+		if err != nil {
+			checker.Context.MessageLog.Warning("Error deleting %s: %v", validator.DBName(), err)
+		}
+	}
+	// Delete the local copy of the bag.
+	if fileutil.LooksSafeToDelete(helper.Manifest.LocalPath, 12, 3) {
+		checker.Context.MessageLog.Info("Deleting local bag file %s", helper.Manifest.LocalPath)
+		err := os.Remove(validator.DBName())
+		if err != nil {
+			checker.Context.MessageLog.Warning("Error deleting %s: %v", helper.Manifest.LocalPath, err)
+		}
+	}
 }
 
 // Record this fixity check in our local DPN REST server
 func (checker *DPNFixityChecker) record() {
 	for helper := range checker.RecordChannel {
+		checker.Context.MessageLog.Info("Preparing to record fixity for %s", helper.Manifest.DPNBag.UUID)
 		checker.SaveFixityRecord(helper)
 		checker.CleanupChannel <- helper
 	}

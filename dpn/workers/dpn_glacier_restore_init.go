@@ -90,6 +90,8 @@ func (restorer *DPNGlacierRestoreInit) HandleMessage(message *nsq.Message) error
 		return err
 	}
 	helper.WorkSummary.ClearErrors()
+	helper.WorkSummary.Attempted = true
+	helper.WorkSummary.AttemptNumber += 1
 	helper.WorkSummary.Start()
 	helper.Manifest.DPNWorkItem.Status = constants.StatusStarted
 	helper.SaveDPNWorkItem()
