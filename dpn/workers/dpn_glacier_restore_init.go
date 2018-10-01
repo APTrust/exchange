@@ -286,6 +286,20 @@ func (restorer *DPNGlacierRestoreInit) InitializeRetrieval(helper *DPNRestoreHel
 
 	// This is where me make the actual request to Glacier.
 	restoreClient.Restore()
+
+	// We'll run into this case periodically, especially on the demo system.
+	// Glacier objects initially go into an S3 bucket with a lifecycle policy
+	// that says "Move to Glacier after X days." If we happen to request the
+	// object before X days are up, the object is still in S3 storage, and
+	// we'll get this error. We can proceed to the next step (copying to local
+	// storage) because, as an S3 object, the item is available for immediate download.
+	if strings.Contains(restoreClient.ErrorMessage, "object's storage class is not GLACIER") {
+		helper.Manifest.GlacierRequestAccepted = true
+		helper.Manifest.RequestedFromGlacierAt = now
+		helper.Manifest.EstimatedDeletionFromS3 = estimatedDeletionFromS3
+		helper.Manifest.IsAvailableInS3 = true
+		return
+	}
 	if restoreClient.ErrorMessage != "" {
 		helper.WorkSummary.AddError(
 			"Glacier retrieval request returned an error for %s at %s: %v",
