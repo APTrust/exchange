@@ -110,8 +110,8 @@ func (restorer *APTFileRestorer) copyToRestorationBucket(restoreState *models.Fi
 		restoreState.RestoreSummary.AddError("Error getting file UUID: %v", err)
 		return
 	}
-	restorer.Context.MessageLog.Info("Copying %s from %s to %s", restoreState.GenericFile.Identifier,
-		sourceRegion, restorationRegion)
+	restorer.Context.MessageLog.Info("Copying %s (%s) from %s to %s (%s)", restoreState.GenericFile.Identifier,
+		sourceRegion, sourceBucket, restorationRegion, restorationBucket)
 	copier := network.NewS3Copy(
 		os.Getenv("AWS_ACCESS_KEY_ID"),
 		os.Getenv("AWS_SECRET_ACCESS_KEY"),
