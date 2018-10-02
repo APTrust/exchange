@@ -71,7 +71,8 @@ func (restorer *APTFileRestorer) restore() {
 		restoreState.RestoreSummary.Start()
 
 		if restorer.alreadyRestored(restoreState) {
-			restorationBucket := util.RestorationBucketFor(restoreState.IntellectualObject.Institution)
+			restorationBucket := util.RestorationBucketFor(restoreState.IntellectualObject.Institution,
+				restorer.Context.Config.RestoreToTestBuckets)
 			restorer.Context.MessageLog.Info("File %s has already been restored to %s",
 				restoreState.GenericFile.Identifier, restorationBucket)
 		} else {
@@ -101,7 +102,8 @@ func (restorer *APTFileRestorer) copyToRestorationBucket(restoreState *models.Fi
 		restoreState.RestoreSummary.AddError(err.Error())
 		return
 	}
-	restorationBucket := util.RestorationBucketFor(restoreState.IntellectualObject.Institution)
+	restorationBucket := util.RestorationBucketFor(restoreState.IntellectualObject.Institution,
+		restorer.Context.Config.RestoreToTestBuckets)
 	// PT #159115778: Get a client for the S3 restoration region, since
 	// this is the region we're writing to.
 	restorationRegion := restorer.Context.Config.APTrustS3Region
@@ -131,7 +133,8 @@ func (restorer *APTFileRestorer) copyToRestorationBucket(restoreState *models.Fi
 }
 
 func (restorer *APTFileRestorer) alreadyRestored(restoreState *models.FileRestoreState) bool {
-	restorationBucket := util.RestorationBucketFor(restoreState.IntellectualObject.Institution)
+	restorationBucket := util.RestorationBucketFor(restoreState.IntellectualObject.Institution,
+		restorer.Context.Config.RestoreToTestBuckets)
 	client := network.NewS3Head(
 		os.Getenv("AWS_ACCESS_KEY_ID"),
 		os.Getenv("AWS_SECRET_ACCESS_KEY"),

@@ -20,9 +20,8 @@ func TestOwnerOf(t *testing.T) {
 }
 
 func TestRestorationBucketFor(t *testing.T) {
-	if util.RestorationBucketFor("unc.edu") != "aptrust.restore.unc.edu" {
-		t.Error("RestorationBucketFor returned incorrect restoration bucket name")
-	}
+	assert.Equal(t, "aptrust.restore.unc.edu", util.RestorationBucketFor("unc.edu", false))
+	assert.Equal(t, "aptrust.restore.test.unc.edu", util.RestorationBucketFor("unc.edu", true))
 }
 
 func TestBagNameFromTarFileName(t *testing.T) {

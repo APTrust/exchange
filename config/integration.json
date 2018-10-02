@@ -36,8 +36,7 @@
 	"GlacierBucketOH": "aptrust.test.preservation.glacier.oh",
 	"GlacierBucketOR": "aptrust.test.preservation.glacier.or",
 
-	"CustomRestoreBucket": "aptrust.restore.test",
-	"RestoreToTestBuckets": false,
+	"RestoreToTestBuckets": true,
 	"MaxDaysSinceFixityCheck": 0,
 
 	"FetchWorker": {

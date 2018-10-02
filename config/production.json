@@ -32,7 +32,6 @@
 	"GlacierBucketVA": "aptrust.preservation.glacier.va",
 	"GlacierBucketOH": "aptrust.preservation.glacier.oh",
 	"GlacierBucketOR": "aptrust.preservation.glacier.or",
-	"CustomRestoreBucket": "",
 	"RestoreToTestBuckets": false,
 	"MaxDaysSinceFixityCheck": 90,
 

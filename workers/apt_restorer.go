@@ -382,15 +382,8 @@ func (restorer *APTRestorer) deleteBagDir(restoreState *models.RestoreState) {
 
 func (restorer *APTRestorer) uploadBag(restoreState *models.RestoreState) {
 	// Each institution has its own restoration bucket.
-	restorationBucket := util.RestorationBucketFor(restoreState.IntellectualObject.Institution)
-	// In certain environments, such as test and integration,
-	// the config specifies a custom restoration bucket so that
-	// we don't mix test bags in with production bags.
-	if restorer.Context.Config.CustomRestoreBucket != "" {
-		restorationBucket = fmt.Sprintf("%s.%s",
-			restorer.Context.Config.CustomRestoreBucket,
-			restoreState.IntellectualObject.Institution)
-	}
+	restorationBucket := util.RestorationBucketFor(restoreState.IntellectualObject.Institution,
+		restorer.Context.Config.RestoreToTestBuckets)
 	s3Key := fmt.Sprintf("%s.tar", restoreState.IntellectualObject.BagName)
 	restorer.Context.MessageLog.Info("Uploading %s to %s/%s",
 		restoreState.LocalTarFile, restorationBucket, s3Key)

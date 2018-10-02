@@ -121,12 +121,6 @@ type Config struct {
 	// load, this will save the server a lot of work.
 	BucketReaderCacheHours int
 
-	// Set this in non-production environments to restore
-	// intellectual objects to a custom bucket. If this is set,
-	// all intellectual objects from all institutions will be
-	// restored to this bucket.
-	CustomRestoreBucket string
-
 	// Should we delete the uploaded tar file from the receiving
 	// bucket after successfully processing this bag?
 	DeleteOnSuccess bool
@@ -256,8 +250,7 @@ type Config struct {
 	// If true, we should restore bags to our partners' test
 	// restoration buckets instead of the usual restoration
 	// buckets. This should be true only in the demo config,
-	// which is what we run on test.aptrust.org. Also note
-	// that CustomRestoreBucket overrides this.
+	// which is what we run on test.aptrust.org.
 	RestoreToTestBuckets bool
 
 	// Configuration options for apt_restore
