@@ -23,11 +23,11 @@ const RETRIEVAL_OPTION = "Bulk"
 // interval between checks.
 const HOURS_BETWEEN_CHECKS = 3
 
-// Keep the files in S3 up to 60 days, in case we're
+// Keep the files in S3 up to 10 days, in case we're
 // having system problems and we need to attempt the
 // restore multiple times. We'll have other processes
 // clean out the S3 bucket when necessary.
-const DAYS_TO_KEEP_IN_S3 = 60
+const DAYS_TO_KEEP_IN_S3 = 10
 
 // Requests that an object be restored from Glacier to S3. This is
 // the first step toward performing fixity checks on DPN bags, and
