@@ -33,8 +33,15 @@ func OwnerOf(bucketName string) (institution string) {
 
 // RestorationBucketFor returns the name of the specified institution's
 // restoration bucket. E.g. institution 'unc.edu' returns bucketName
-// 'aptrust.restore.unc.edu'
-func RestorationBucketFor(institution string) (bucketName string) {
+// 'aptrust.restore.unc.edu'. The second param, restoreToTestBuckets,
+// is set the in the config json file and accessible through
+// Config.RestoreToTestBuckets. It should be true everywhere
+// except in the production environment. If true, this will return
+// 'aptrust.restore.test.unc.edu'.
+func RestorationBucketFor(institution string, restoreToTestBuckets bool) (bucketName string) {
+	if restoreToTestBuckets {
+		return constants.RestoreBucketPrefix + "test." + institution
+	}
 	return constants.RestoreBucketPrefix + institution
 }
 

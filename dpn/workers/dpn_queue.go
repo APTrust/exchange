@@ -87,6 +87,7 @@ func (dpnQueue *DPNQueue) Run() {
 	dpnQueue.queueReplicationRequests()
 	dpnQueue.queueRestoreRequests()
 	dpnQueue.queueIngestRequests()
+	dpnQueue.queueItemsNeedingFixity()
 	dpnQueue.QueueResult.EndTime = time.Now().UTC()
 	dpnQueue.logResults()
 }
@@ -128,7 +129,7 @@ func (dpnQueue *DPNQueue) queueReplicationRequests() {
 			}
 			queueItem.ItemId = dpnWorkItem.Id
 			if dpnWorkItem.QueuedAt == nil || dpnWorkItem.QueuedAt.IsZero() {
-				dpnQueue.queueTransfer(dpnWorkItem, constants.DPNTaskReplication)
+				dpnQueue.queueDPNWorkItem(dpnWorkItem, constants.DPNTaskReplication)
 			}
 			queueItem.QueuedAt = *dpnWorkItem.QueuedAt
 			dpnQueue.QueueResult.AddReplication(queueItem)
@@ -187,7 +188,7 @@ func (dpnQueue *DPNQueue) queueRestoreRequests() {
 			dpnWorkItem := dpnQueue.getOrCreateWorkItem(xfer.RestoreId, xfer.ToNode, constants.DPNTaskRestore)
 			queueItem.ItemId = dpnWorkItem.Id
 			if dpnWorkItem.QueuedAt == nil || dpnWorkItem.QueuedAt.IsZero() {
-				dpnQueue.queueTransfer(dpnWorkItem, constants.DPNTaskRestore)
+				dpnQueue.queueDPNWorkItem(dpnWorkItem, constants.DPNTaskRestore)
 			}
 			queueItem.QueuedAt = *dpnWorkItem.QueuedAt
 			dpnQueue.QueueResult.AddRestore(queueItem)
@@ -293,18 +294,91 @@ func (dpnQueue *DPNQueue) queueIngest(workItem *apt_models.WorkItem) {
 }
 
 /***************************************************************************
+ Fixity Methods
+***************************************************************************/
+func (dpnQueue *DPNQueue) queueItemsNeedingFixity() {
+	pageNumber := 1
+	params := dpnQueue.fixityBagParams(pageNumber)
+	for {
+		dpnResp := dpnQueue.LocalClient.DPNBagList(params)
+		if dpnResp.Error != nil {
+			dpnQueue.err("Error getting Bags from local node: %v", dpnResp.Error)
+			break
+		}
+		bags := dpnResp.Bags()
+		for _, bag := range bags {
+			// See if our node has run a fixity check on this
+			// bag in the past two years.
+			fixityParams := dpnQueue.fixityCheckParams(bag.UUID)
+			fixityResp := dpnQueue.LocalClient.FixityCheckList(fixityParams)
+			if fixityResp.Error != nil {
+				dpnQueue.err("Error getting FixityCheck for bag %s from local node: %v",
+					bag.UUID, fixityResp.Error)
+				continue
+			}
+			if fixityResp.FixityCheck() == nil {
+				// Our node has not done a check in two years.
+				// Queue this for checking now.
+				queueItem := models.NewQueueItem(bag.UUID)
+				dpnWorkItem := dpnQueue.getOrCreateWorkItem(bag.UUID, "", constants.DPNTaskFixity)
+				queueItem.ItemId = dpnWorkItem.Id
+				if dpnWorkItem.QueuedAt == nil || dpnWorkItem.QueuedAt.IsZero() {
+					dpnQueue.queueDPNWorkItem(dpnWorkItem, constants.DPNTaskFixity)
+				}
+				queueItem.QueuedAt = *dpnWorkItem.QueuedAt
+				dpnQueue.QueueResult.AddFixity(queueItem)
+			}
+		}
+		// TODO: Remove after trial period.
+		dpnQueue.Context.MessageLog.Warning("***** Requested only one batch of files for DPN fixity because we're in a trial period. *****")
+		break
+		// if dpnResp.Next == nil {
+		// 	break
+		// } else {
+		// 	pageNumber += 1
+		// 	params = dpnQueue.fixityBagParams(pageNumber)
+		// }
+	}
+}
+
+func (dpnQueue *DPNQueue) fixityBagParams(pageNumber int) url.Values {
+	params := url.Values{}
+	twoYearsAgo := time.Now().UTC().AddDate(-2, 0, 0)
+	params.Set("before", twoYearsAgo.Format(time.RFC3339))
+	params.Set("order_by", "created_at")
+	// TODO: Increase after trial period.
+	params.Set("page_size", "2")
+	//params.Set("page_size", "10")
+	params.Set("page", strconv.Itoa(pageNumber))
+	return params
+}
+
+func (dpnQueue *DPNQueue) fixityCheckParams(bagUUID string) url.Values {
+	params := url.Values{}
+	twoYearsAgo := time.Now().UTC().AddDate(-2, 0, 0)
+	params.Set("after", twoYearsAgo.Format(time.RFC3339))
+	params.Set("bag", bagUUID)
+	params.Set("order_by", "created_at")
+	params.Set("node", dpnQueue.Context.Config.DPN.LocalNode)
+	params.Set("page_size", "1")
+	return params
+}
+
+/***************************************************************************
  Misc Utility Methods
 ***************************************************************************/
 
-// queueTransfer adds a transfer task to NSQ and records info about
+// queueDPNWorkItem adds a transfer task to NSQ and records info about
 // when the item was queued in DPNWorkItem.QueuedAt, which is saved to Pharos.
-func (dpnQueue *DPNQueue) queueTransfer(dpnWorkItem *apt_models.DPNWorkItem, taskType string) {
+func (dpnQueue *DPNQueue) queueDPNWorkItem(dpnWorkItem *apt_models.DPNWorkItem, taskType string) {
 	queueTopic := ""
 	if taskType == constants.DPNTaskReplication {
 		// Copy is first step of replication
 		queueTopic = dpnQueue.Context.Config.DPN.DPNCopyWorker.NsqTopic
 	} else if taskType == constants.DPNTaskRestore {
 		queueTopic = dpnQueue.Context.Config.DPN.DPNRestoreWorker.NsqTopic
+	} else if taskType == constants.DPNTaskFixity {
+		queueTopic = dpnQueue.Context.Config.DPN.DPNGlacierRestoreWorker.NsqTopic
 	} else {
 		dpnQueue.Context.MessageLog.Error("Illegal taskType '%s'", taskType)
 		return
@@ -365,17 +439,20 @@ func (dpnQueue *DPNQueue) getOrCreateWorkItem(identifier, remoteNode, taskType s
 		Identifier: identifier,
 		RemoteNode: remoteNode,
 		QueuedAt:   nil,
+		Status:     constants.StatusPending,
+		Stage:      constants.StageRequested,
+		Retry:      true,
 	}
 	createResp := dpnQueue.Context.PharosClient.DPNWorkItemSave(dpnWorkItem)
 	if createResp.Error != nil {
 		dpnQueue.err("Error creating DPNWorkItem for %s Xfer %s: %v",
-			taskType, identifier, getResp.Error)
+			taskType, identifier, createResp.Error)
 		return nil
 	}
 	newItem := createResp.DPNWorkItem()
 	if newItem == nil {
-		dpnQueue.err("DPNWorkItemSave returned nil for %s Xfer %s: %v",
-			taskType, identifier, getResp.Error)
+		dpnQueue.err("DPNWorkItemSave returned nil for %s Xfer %s",
+			taskType, identifier)
 	} else {
 		queuedAt := "[never]"
 		if newItem.QueuedAt != nil {
@@ -409,4 +486,5 @@ func (dpnQueue *DPNQueue) logResults() {
 	dpnQueue.Context.MessageLog.Info("Processed %d replication requests", len(dpnQueue.QueueResult.Replications))
 	dpnQueue.Context.MessageLog.Info("Processed %d restore requests", len(dpnQueue.QueueResult.Restores))
 	dpnQueue.Context.MessageLog.Info("Processed %d ingest requests", len(dpnQueue.QueueResult.Ingests))
+	dpnQueue.Context.MessageLog.Info("Processed %d items needing fixity", len(dpnQueue.QueueResult.Fixities))
 }

@@ -16,6 +16,23 @@ import (
 	"time"
 )
 
+// This is a valid bag used to test the DPN fixity check process.
+// A copy of this bag appears in testdata/unit_test_bags/dpn/a9f7cbab-b531-4eb7-b532-770f592629ba.tar
+// and in the DPN test restoration bucket at aptrust.dpn.restoration.test.
+// If it disappears from aptrust.dpn.restoration.test, you can re-upload it
+// from testdata/unit_test_bags/dpn/. It must have the .tar extension when
+// uploaded to S3.
+const DPN_TEST_BAG_UUID = "a9f7cbab-b531-4eb7-b532-770f592629ba"
+
+const DPN_TEST_BAG_SIZE = uint64(61952)
+
+// This is the sha-256 checksum of the DPN test bag's tagmanifest-sha256.txt file.
+const DPN_TEST_BAG_FIXITY = "fbcf91342bdd894fb55f2820dc2fce392d527ea60fd691dbef066477489820ef"
+
+// This bag in the testdata dir is missing a payload file,
+// and has a bad checksum in the tag manifest, so should fail validation.
+const INVALID_DPN_TEST_BAG_UUID = "020c8edd-d043-4204-a6b8-26b6fb8bda5d"
+
 var fluctusUrl string = "http://localhost:3000"
 
 // BAG_IDS match the Bag.UUID values in the DPN server cluster

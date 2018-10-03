@@ -588,7 +588,7 @@ func (restorer *APTGlacierRestoreInit) InitializeRetrieval(state *models.Glacier
 	}
 
 	// Update this info. It's a pointer, so it will be saved with GlacierRestoreState.
-	glacierRestoreRequest.RequestAccepted = (restoreClient.ErrorMessage == "")
+	glacierRestoreRequest.RequestAccepted = restoreClient.RequestAccepted()
 	glacierRestoreRequest.RequestedAt = now
 	glacierRestoreRequest.EstimatedDeletionFromS3 = estimatedDeletionFromS3
 

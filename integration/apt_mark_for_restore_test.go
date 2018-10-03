@@ -60,7 +60,7 @@ func deleteOldRestoredFile(gfIdentifier string) {
 		os.Getenv("AWS_ACCESS_KEY_ID"),
 		os.Getenv("AWS_SECRET_ACCESS_KEY"),
 		constants.AWSVirginia,
-		util.RestorationBucketFor("test.edu"),
+		util.RestorationBucketFor("test.edu", true),
 		[]string{gfIdentifier})
 	fmt.Println("Deleting old restored file", gfIdentifier)
 	s3ObjectDelete.DeleteList()

@@ -121,12 +121,6 @@ type Config struct {
 	// load, this will save the server a lot of work.
 	BucketReaderCacheHours int
 
-	// Set this in non-production environments to restore
-	// intellectual objects to a custom bucket. If this is set,
-	// all intellectual objects from all institutions will be
-	// restored to this bucket.
-	CustomRestoreBucket string
-
 	// Should we delete the uploaded tar file from the receiving
 	// bucket after successfully processing this bag?
 	DeleteOnSuccess bool
@@ -256,8 +250,7 @@ type Config struct {
 	// If true, we should restore bags to our partners' test
 	// restoration buckets instead of the usual restoration
 	// buckets. This should be true only in the demo config,
-	// which is what we run on test.aptrust.org. Also note
-	// that CustomRestoreBucket overrides this.
+	// which is what we run on test.aptrust.org.
 	RestoreToTestBuckets bool
 
 	// Configuration options for apt_restore
@@ -381,6 +374,10 @@ func (config *Config) ExpandFilePaths() {
 	expanded, err = fileutil.ExpandTilde(config.DPN.StagingDirectory)
 	if err == nil {
 		config.DPN.StagingDirectory = expanded
+	}
+	expanded, err = fileutil.ExpandTilde(config.DPN.DPNRestorationDirectory)
+	if err == nil {
+		config.DPN.DPNRestorationDirectory = expanded
 	}
 	expanded, err = fileutil.ExpandTilde(config.DPN.RemoteNodeHomeDirectory)
 	if err == nil {
@@ -558,6 +555,15 @@ type DPNConfig struct {
 	// copying is done by rsync over ssh.
 	DPNCopyWorker WorkerConfig
 
+	// DPNFixityWorker processes requests to run fixity checks on
+	// bags that have been copied from Glacier through S3 into
+	// local storage.
+	DPNFixityWorker WorkerConfig
+
+	// DPNGlacierRestoreWorker processes requests to move files
+	// from Glacier storage to S3 storage.
+	DPNGlacierRestoreWorker WorkerConfig
+
 	// DPNIngestStoreWorker copies DPN bags ingested from APTrust
 	// to AWS Glacier.
 	DPNIngestStoreWorker WorkerConfig
@@ -566,8 +572,14 @@ type DPNConfig struct {
 	// DPN bags, so they can be ingested into DPN.
 	DPNPackageWorker WorkerConfig
 
-	// The name of the long-term storage bucket for DPN
+	// The name of the long-term storage bucket for DPN.
+	// This is, in effect, a Glacier bucket. (S3 with a
+	// move-to-Glacier policy.)
 	DPNPreservationBucket string
+
+	// The name of the bucket into which we restore DPN items
+	// for retrieval and fixity checking. This is an S3 bucket.
+	DPNRestorationBucket string
 
 	// DPNIngestRecordWorker records DPN ingest events in Pharos
 	// and in the DPN REST server.
@@ -579,6 +591,15 @@ type DPNConfig struct {
 
 	// DPNRestoreWorker processed RestoreTransfer requests.
 	DPNRestoreWorker WorkerConfig
+
+	// DPNS3DownloadWorker processes requests to move files
+	// from S3 to local storage. These files have previously
+	// been moved from Glacier to S3 by the DPNGlacierRestoreWorker.
+	// We do the downlad from S3 to local before checking fixity,
+	// which in DPN requires us to parse and validate the entire
+	// tarred bag, then calculate the sha256 checksum of the bag's
+	// tag manifest.
+	DPNS3DownloadWorker WorkerConfig
 
 	// DPNValidationWorker validates DPN bags that we are replicating
 	// from other nodes.
@@ -630,6 +651,11 @@ type DPNConfig struct {
 	// here while they await transfer to the DPN preservation
 	// bucket and while they await replication to other nodes.
 	StagingDirectory string
+
+	// The local directory for bag restoration. We download bags
+	// into this directory for DPN fixity checking, which requires
+	// full parsing and validation of the entire bag.
+	DPNRestorationDirectory string
 
 	// When copying bags from remote nodes, should we use rsync
 	// over SSH (true) or just plain rsync (false)? For local

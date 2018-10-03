@@ -3,6 +3,7 @@ package network_test
 import (
 	"github.com/APTrust/exchange/constants"
 	"github.com/APTrust/exchange/network"
+	"github.com/APTrust/exchange/util/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"os"
@@ -11,7 +12,7 @@ import (
 )
 
 func TestNewS3Upload(t *testing.T) {
-	if !canTestS3() {
+	if !testutil.CanTestS3() {
 		return
 	}
 	upload := network.NewS3Upload(
@@ -29,7 +30,7 @@ func TestNewS3Upload(t *testing.T) {
 }
 
 func TestS3UploadAddMetadata(t *testing.T) {
-	if !canTestS3() {
+	if !testutil.CanTestS3() {
 		return
 	}
 	upload := network.NewS3Upload(
@@ -53,7 +54,7 @@ func TestS3UploadAddMetadata(t *testing.T) {
 }
 
 func TestS3UploadBadFile(t *testing.T) {
-	if !canTestS3() {
+	if !testutil.CanTestS3() {
 		return
 	}
 	upload := network.NewS3Upload(
@@ -70,7 +71,7 @@ func TestS3UploadBadFile(t *testing.T) {
 }
 
 func TestS3UploadGoodFile(t *testing.T) {
-	if !canTestS3() {
+	if !testutil.CanTestS3() {
 		return
 	}
 	upload := network.NewS3Upload(

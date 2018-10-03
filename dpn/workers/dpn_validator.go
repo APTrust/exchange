@@ -2,6 +2,7 @@ package workers
 
 import (
 	"fmt"
+	"github.com/APTrust/exchange/constants"
 	"github.com/APTrust/exchange/context"
 	dpn_models "github.com/APTrust/exchange/dpn/models"
 	"github.com/APTrust/exchange/dpn/network"
@@ -106,6 +107,7 @@ func (validator *DPNValidator) validate() {
 		manifest.DPNWorkItem.Note = &note
 		manifest.DPNWorkItem.ProcessingNode = &hostname
 		manifest.DPNWorkItem.Pid = os.Getpid()
+		manifest.DPNWorkItem.Status = constants.StatusStarted
 		SaveDPNWorkItemState(validator.Context, manifest, manifest.ValidateSummary)
 
 		// Set up a new validator to check this bag.
@@ -199,6 +201,7 @@ func (validator *DPNValidator) finishWithError(manifest *dpn_models.ReplicationM
 	manifest.DPNWorkItem.CompletedAt = &now
 	manifest.DPNWorkItem.ProcessingNode = nil
 	manifest.DPNWorkItem.Pid = 0
+	manifest.DPNWorkItem.Status = constants.StatusFailed
 	SaveDPNWorkItemState(validator.Context, manifest, manifest.ValidateSummary)
 	validator.Context.MessageLog.Error(manifest.ValidateSummary.AllErrorsAsString())
 
@@ -223,6 +226,8 @@ func (validator *DPNValidator) finishWithSuccess(manifest *dpn_models.Replicatio
 	manifest.DPNWorkItem.Note = &note
 	manifest.DPNWorkItem.ProcessingNode = nil
 	manifest.DPNWorkItem.Pid = 0
+	manifest.DPNWorkItem.Stage = constants.StageStore
+	manifest.DPNWorkItem.Status = constants.StatusPending
 	SaveDPNWorkItemState(validator.Context, manifest, manifest.ValidateSummary)
 
 	// Push this DPNWorkItem Id into the next queue, so it can be stored.

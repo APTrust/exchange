@@ -1,9 +1,9 @@
 package network_test
 
 import (
-	"fmt"
 	"github.com/APTrust/exchange/constants"
 	"github.com/APTrust/exchange/network"
+	"github.com/APTrust/exchange/util/testutil"
 	"github.com/stretchr/testify/assert"
 	"io/ioutil"
 	"os"
@@ -21,21 +21,6 @@ const testFileSize int64 = 30720
 const testFileETag string = "\"036995504a5b07a865b62e1a7c0ea9c4\""
 const testFileMd5 string = "036995504a5b07a865b62e1a7c0ea9c4"
 const testFileSha256 string = "a909bbe46dedfc15918bfa94d0fd86bad9d9e1d2aa2afdedbfc11e7f52582eab"
-
-var s3TestMessagePrinted = false
-
-func canTestS3() bool {
-	// Note that, to run S3 and Glacier tests, these vars not only have to be set,
-	// they have to be valid keys with read/write access to the buckets specified
-	// in the config file.
-	if os.Getenv("AWS_ACCESS_KEY_ID") == "" || os.Getenv("AWS_SECRET_ACCESS_KEY") == "" {
-		if !s3TestMessagePrinted {
-			fmt.Println("Skipping S3 tests because ENV vars are not set")
-		}
-		return false
-	}
-	return true
-}
 
 func getS3DownloadObject(t *testing.T) *network.S3Download {
 	tmpDir, err := ioutil.TempDir("", "s3_download_test")
@@ -57,7 +42,7 @@ func getS3DownloadObject(t *testing.T) *network.S3Download {
 }
 
 func TestGetSession(t *testing.T) {
-	if !canTestS3() {
+	if !testutil.CanTestS3() {
 		return
 	}
 	download := getS3DownloadObject(t)
@@ -70,7 +55,7 @@ func TestGetSession(t *testing.T) {
 }
 
 func TestFetchWithoutChecksums(t *testing.T) {
-	if !canTestS3() {
+	if !testutil.CanTestS3() {
 		return
 	}
 	download := getS3DownloadObject(t)
@@ -102,7 +87,7 @@ func TestFetchWithoutChecksums(t *testing.T) {
 }
 
 func TestFetchWithChecksums(t *testing.T) {
-	if !canTestS3() {
+	if !testutil.CanTestS3() {
 		return
 	}
 	download := getS3DownloadObject(t)

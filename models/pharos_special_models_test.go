@@ -1,6 +1,7 @@
 package models_test
 
 import (
+	"github.com/APTrust/exchange/constants"
 	"github.com/APTrust/exchange/models"
 	"github.com/APTrust/exchange/util/testutil"
 	"github.com/stretchr/testify/assert"
@@ -101,6 +102,9 @@ func TestNewDPNWorkItemForPharos(t *testing.T) {
 		State:       &state,
 		CreatedAt:   timestamp,
 		UpdatedAt:   timestamp,
+		Retry:       true,
+		Stage:       constants.StageRequested,
+		Status:      constants.StatusPending,
 	}
 	pharosItem := models.NewDPNWorkItemForPharos(item)
 	require.NotNil(t, pharosItem)
@@ -111,6 +115,9 @@ func TestNewDPNWorkItemForPharos(t *testing.T) {
 	assert.Equal(t, item.CompletedAt, pharosItem.CompletedAt)
 	assert.Equal(t, item.Note, pharosItem.Note)
 	assert.Equal(t, item.State, pharosItem.State)
+	assert.Equal(t, item.Stage, pharosItem.Stage)
+	assert.Equal(t, item.Status, pharosItem.Status)
+	assert.Equal(t, item.Retry, pharosItem.Retry)
 }
 
 func TestNewWorkItemStateForPharos(t *testing.T) {

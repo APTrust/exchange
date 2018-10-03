@@ -21,6 +21,8 @@ import (
 // Bloomsday
 var TEST_TIMESTAMP time.Time = time.Date(2016, 6, 16, 10, 24, 16, 0, time.UTC)
 
+var EMPTY_UUID = "00000000-0000-0000-0000-000000000000"
+
 var INTEGRATION_GOOD_BAGS = []string{
 	"aptrust.integration.test/example.edu.tagsample_good.tar",
 	"aptrust.integration.test/example.edu.sample_ds_store_and_empty.tar",
@@ -59,6 +61,21 @@ const (
 	UPDATED_GLACIER_BAG_IDENTIFIER = "test.edu/example.edu.sample_glacier_oh"
 	UPDATED_GLACIER_BAG_ETAG       = "bf01126663915a4f5d135a37443b8349"
 )
+
+var s3TestMessagePrinted = false
+
+func CanTestS3() bool {
+	// Note that, to run S3 and Glacier tests, these vars not only have to be set,
+	// they have to be valid keys with read/write access to the buckets specified
+	// in the config file.
+	if os.Getenv("AWS_ACCESS_KEY_ID") == "" || os.Getenv("AWS_SECRET_ACCESS_KEY") == "" {
+		if !s3TestMessagePrinted {
+			fmt.Println("Skipping S3 tests because ENV vars are not set")
+		}
+		return false
+	}
+	return true
+}
 
 func ShouldRunIntegrationTests() bool {
 	return os.Getenv("RUN_EXCHANGE_INTEGRATION") == "true"
@@ -258,6 +275,9 @@ func MakeDPNWorkItem() *models.DPNWorkItem {
 		QueuedAt:    &queuedAt,
 		CompletedAt: nil,
 		Note:        &note,
+		Retry:       true,
+		Stage:       constants.StageRequested,
+		Status:      constants.StatusPending,
 		CreatedAt:   createdAt,
 		UpdatedAt:   createdAt,
 	}

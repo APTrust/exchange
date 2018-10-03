@@ -8,7 +8,6 @@ import (
 	"github.com/APTrust/exchange/network"
 	"github.com/APTrust/exchange/util/testutil"
 	"github.com/APTrust/exchange/workers"
-	"github.com/nsqio/go-nsq"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"io/ioutil"
@@ -362,7 +361,7 @@ func TestSaveWorkItemState(t *testing.T) {
 
 func TestFinishWithError(t *testing.T) {
 	worker, state := getTestComponents(t, "object")
-	delegate := NewNSQTestDelegate()
+	delegate := testutil.NewNSQTestDelegate()
 	state.NSQMessage.Delegate = delegate
 	state.WorkSummary.AddError("Error 1")
 	state.WorkSummary.AddError("Error 2")
@@ -376,7 +375,7 @@ func TestFinishWithError(t *testing.T) {
 
 func TestRequeueForAdditionalRequests(t *testing.T) {
 	worker, state := getTestComponents(t, "object")
-	delegate := NewNSQTestDelegate()
+	delegate := testutil.NewNSQTestDelegate()
 	state.NSQMessage.Delegate = delegate
 	worker.RequeueForAdditionalRequests(state)
 	assert.Equal(t, "requeue", delegate.Operation)
@@ -389,7 +388,7 @@ func TestRequeueForAdditionalRequests(t *testing.T) {
 
 func TestRequeueToCheckState(t *testing.T) {
 	worker, state := getTestComponents(t, "object")
-	delegate := NewNSQTestDelegate()
+	delegate := testutil.NewNSQTestDelegate()
 	state.NSQMessage.Delegate = delegate
 	worker.RequeueToCheckState(state)
 	assert.Equal(t, "requeue", delegate.Operation)
@@ -447,7 +446,7 @@ func TestRequestAllFiles(t *testing.T) {
 
 func TestRequestFile(t *testing.T) {
 	worker, state := getTestComponents(t, "file")
-	delegate := NewNSQTestDelegate()
+	delegate := testutil.NewNSQTestDelegate()
 	state.NSQMessage.Delegate = delegate
 
 	gf, err := worker.GetGenericFile(state)
@@ -652,7 +651,7 @@ func TestInitializeRetrieval(t *testing.T) {
 
 //	worker, state := getTestComponents(t, "object")
 //	//state.IntellectualObject = testutil.MakeIntellectualObject(12, 0, 0, 0)
-//	delegate := NewNSQTestDelegate()
+//	delegate := testutil.NewNSQTestDelegate()
 //	state.NSQMessage.Delegate = delegate
 
 //	// Create a post-test channel to check the state of various
@@ -693,7 +692,7 @@ func TestGlacierAcceptNow(t *testing.T) {
 
 	worker, state := getTestComponents(t, "object")
 	state.IntellectualObject = testutil.MakeIntellectualObject(12, 0, 0, 0)
-	delegate := NewNSQTestDelegate()
+	delegate := testutil.NewNSQTestDelegate()
 	state.NSQMessage.Delegate = delegate
 
 	worker.PostTestChannel = make(chan *models.GlacierRestoreState)
@@ -735,7 +734,7 @@ func TestGlacierAcceptNow(t *testing.T) {
 
 //	worker, state := getTestComponents(t, "object")
 //	state.IntellectualObject = testutil.MakeIntellectualObject(12, 0, 0, 0)
-//	delegate := NewNSQTestDelegate()
+//	delegate := testutil.NewNSQTestDelegate()
 //	state.NSQMessage.Delegate = delegate
 
 //	worker.PostTestChannel = make(chan *models.GlacierRestoreState)
@@ -774,7 +773,7 @@ func TestGlacierInProgressHead(t *testing.T) {
 
 	worker, state := getTestComponents(t, "object")
 	state.IntellectualObject = testutil.MakeIntellectualObject(12, 0, 0, 0)
-	delegate := NewNSQTestDelegate()
+	delegate := testutil.NewNSQTestDelegate()
 	state.NSQMessage.Delegate = delegate
 
 	worker.PostTestChannel = make(chan *models.GlacierRestoreState)
@@ -813,7 +812,7 @@ func TestGlacierInProgressGlacier(t *testing.T) {
 
 	worker, state := getTestComponents(t, "object")
 	state.IntellectualObject = testutil.MakeIntellectualObject(12, 0, 0, 0)
-	delegate := NewNSQTestDelegate()
+	delegate := testutil.NewNSQTestDelegate()
 	state.NSQMessage.Delegate = delegate
 
 	worker.PostTestChannel = make(chan *models.GlacierRestoreState)
@@ -853,7 +852,7 @@ func TestGlacierCompleted(t *testing.T) {
 
 	worker, state := getTestComponents(t, "object")
 	state.IntellectualObject = testutil.MakeIntellectualObject(12, 0, 0, 0)
-	delegate := NewNSQTestDelegate()
+	delegate := testutil.NewNSQTestDelegate()
 	state.NSQMessage.Delegate = delegate
 
 	worker.PostTestChannel = make(chan *models.GlacierRestoreState)
@@ -1076,32 +1075,4 @@ func s3Handler(w http.ResponseWriter, r *http.Request) {
 		// available in S3 until a specific date/time.
 		network.S3HeadRestoreCompletedHandler(w, r)
 	}
-}
-
-type NSQTestDelegate struct {
-	Message   *nsq.Message
-	Delay     time.Duration
-	Backoff   bool
-	Operation string
-}
-
-func NewNSQTestDelegate() *NSQTestDelegate {
-	return &NSQTestDelegate{}
-}
-
-func (delegate *NSQTestDelegate) OnFinish(message *nsq.Message) {
-	delegate.Message = message
-	delegate.Operation = "finish"
-}
-
-func (delegate *NSQTestDelegate) OnRequeue(message *nsq.Message, delay time.Duration, backoff bool) {
-	delegate.Message = message
-	delegate.Delay = delay
-	delegate.Backoff = backoff
-	delegate.Operation = "requeue"
-}
-
-func (delegate *NSQTestDelegate) OnTouch(message *nsq.Message) {
-	delegate.Message = message
-	delegate.Operation = "touch"
 }

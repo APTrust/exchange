@@ -3,13 +3,14 @@ package network_test
 import (
 	"github.com/APTrust/exchange/constants"
 	"github.com/APTrust/exchange/network"
+	"github.com/APTrust/exchange/util/testutil"
 	"github.com/stretchr/testify/assert"
 	"os"
 	"testing"
 )
 
 func TestNewS3ObjectList(t *testing.T) {
-	if !canTestS3() {
+	if !testutil.CanTestS3() {
 		return
 	}
 	s3ObjectList := network.NewS3ObjectList(
@@ -25,7 +26,7 @@ func TestNewS3ObjectList(t *testing.T) {
 }
 
 func TestS3ObjectGetList(t *testing.T) {
-	if !canTestS3() {
+	if !testutil.CanTestS3() {
 		return
 	}
 	s3ObjectList := network.NewS3ObjectList(
