@@ -201,7 +201,7 @@ func TestDPNFixityChecker_HandleMessageSuccess(t *testing.T) {
 			// Make sure the error message was copied into the DPNWorkItem note.
 			require.NotNil(t, helper.Manifest.DPNWorkItem.Note)
 			assert.True(t, strings.HasPrefix(*helper.Manifest.DPNWorkItem.Note,
-				"Fixity check complete. Saved to DPN"))
+				"Fixity check complete: fixity matches. Saved to DPN"))
 
 			// Make sure we closed out the WorkSummary correctly.
 			assert.True(t, helper.Manifest.ValidationSummary.Started())
@@ -212,7 +212,7 @@ func TestDPNFixityChecker_HandleMessageSuccess(t *testing.T) {
 			assert.Equal(t, constants.StatusSuccess, helper.Manifest.DPNWorkItem.Status)
 			require.NotNil(t, helper.Manifest.DPNWorkItem.Note)
 			assert.True(t, strings.HasPrefix(*helper.Manifest.DPNWorkItem.Note,
-				"Fixity check complete. Saved to DPN with FixityCheckId"))
+				"Fixity check complete: fixity matches. Saved to DPN with FixityCheckId"))
 			assert.Nil(t, helper.Manifest.DPNWorkItem.ProcessingNode)
 			assert.Equal(t, 0, helper.Manifest.DPNWorkItem.Pid)
 			assert.True(t, helper.Manifest.DPNWorkItem.Retry)
