@@ -13,6 +13,10 @@ import (
 	"time"
 )
 
+// As we're still in the probationary period, limit the number
+// fixity checks queued on each run.
+const MAX_FIXITY_CHECKS_PER_RUN = 5
+
 // DPNQueue queues DPN ingest requests (found in the Pharos WorkItems table)
 // and DPN replication requests (found in the Pharos DPNWorkItems table).
 // These items will go into the proper NSQ topics for DPN ingest or
@@ -324,20 +328,30 @@ func (dpnQueue *DPNQueue) queueItemsNeedingFixity() {
 				queueItem.ItemId = dpnWorkItem.Id
 				if dpnWorkItem.QueuedAt == nil || dpnWorkItem.QueuedAt.IsZero() {
 					dpnQueue.queueDPNWorkItem(dpnWorkItem, constants.DPNTaskFixity)
+					queueItem.QueuedAt = *dpnWorkItem.QueuedAt
+					dpnQueue.QueueResult.AddFixity(queueItem)
+				} else {
+					// This item already exists in Pharos
+					dpnQueue.Context.MessageLog.Info("Skipping: Bag %s is already queued for fixity check",
+						bag.UUID)
+					continue
 				}
-				queueItem.QueuedAt = *dpnWorkItem.QueuedAt
-				dpnQueue.QueueResult.AddFixity(queueItem)
+			}
+			if len(dpnQueue.QueueResult.Fixities) >= MAX_FIXITY_CHECKS_PER_RUN {
+				break
 			}
 		}
-		// TODO: Remove after trial period.
-		dpnQueue.Context.MessageLog.Warning("***** Requested only one batch of files for DPN fixity because we're in a trial period. *****")
-		break
-		// if dpnResp.Next == nil {
-		// 	break
-		// } else {
-		// 	pageNumber += 1
-		// 	params = dpnQueue.fixityBagParams(pageNumber)
-		// }
+		if dpnResp.Next == nil {
+			dpnQueue.Context.MessageLog.Info("Reached end of fixity results from DPN REST server")
+			break
+		} else if len(dpnQueue.QueueResult.Fixities) >= MAX_FIXITY_CHECKS_PER_RUN {
+			dpnQueue.Context.MessageLog.Info("Queued max %d fixity checks for this run",
+				MAX_FIXITY_CHECKS_PER_RUN)
+			break
+		} else {
+			pageNumber += 1
+			params = dpnQueue.fixityBagParams(pageNumber)
+		}
 	}
 }
 
@@ -346,9 +360,7 @@ func (dpnQueue *DPNQueue) fixityBagParams(pageNumber int) url.Values {
 	twoYearsAgo := time.Now().UTC().AddDate(-2, 0, 0)
 	params.Set("before", twoYearsAgo.Format(time.RFC3339))
 	params.Set("order_by", "created_at")
-	// TODO: Increase after trial period.
-	params.Set("page_size", "2")
-	//params.Set("page_size", "10")
+	params.Set("page_size", "25")
 	params.Set("page", strconv.Itoa(pageNumber))
 	return params
 }
@@ -418,6 +430,10 @@ func (dpnQueue *DPNQueue) getOrCreateWorkItem(identifier, remoteNode, taskType s
 	params := url.Values{}
 	params.Set("identifier", identifier)
 	params.Set("task", taskType)
+	if taskType == constants.DPNTaskFixity {
+		twoYearsAgo := time.Now().UTC().AddDate(-2, 0, 0)
+		params.Set("queued_after", twoYearsAgo.Format(time.RFC3339))
+	}
 	getResp := dpnQueue.Context.PharosClient.DPNWorkItemList(params)
 	if getResp.Error != nil {
 		dpnQueue.err("Error getting DPNWorkItemList from Pharos: %v", getResp.Error)
