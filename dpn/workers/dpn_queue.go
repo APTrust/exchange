@@ -10,6 +10,7 @@ import (
 	apt_models "github.com/APTrust/exchange/models"
 	"net/url"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -301,6 +302,10 @@ func (dpnQueue *DPNQueue) queueIngest(workItem *apt_models.WorkItem) {
  Fixity Methods
 ***************************************************************************/
 func (dpnQueue *DPNQueue) queueItemsNeedingFixity() {
+	if strings.Contains(dpnQueue.Context.Config.PharosURL, "demo.aptrust.org") {
+		dpnQueue.Context.MessageLog.Info("NOT queuing DPN fixity items because we're running on demo.")
+		return
+	}
 	pageNumber := 1
 	params := dpnQueue.fixityBagParams(pageNumber)
 	for {
