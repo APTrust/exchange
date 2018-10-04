@@ -21,7 +21,7 @@ const RETRIEVAL_OPTION = "Bulk"
 // After a Glacier restore request has been accepted, we will check
 // S3 periodically to see if the item has been restored. This is the
 // interval between checks.
-const HOURS_BETWEEN_CHECKS = 3
+const HOURS_BETWEEN_CHECKS = 2
 
 // Keep the files in S3 up to 10 days, in case we're
 // having system problems and we need to attempt the
@@ -99,7 +99,7 @@ func (restorer *DPNGlacierRestoreInit) HandleMessage(message *nsq.Message) error
 
 	helper.WorkSummary.ClearErrors()
 	helper.WorkSummary.Attempted = true
-	helper.WorkSummary.AttemptNumber += 1
+	helper.WorkSummary.AttemptNumber = message.Attempts
 	helper.WorkSummary.Start()
 	helper.Manifest.DPNWorkItem.Status = constants.StatusStarted
 	helper.SaveDPNWorkItem()
