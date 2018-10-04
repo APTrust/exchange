@@ -156,12 +156,16 @@ func (restorer *DPNGlacierRestoreInit) FinishWithSuccess(helper *DPNRestoreHelpe
 		helper.Manifest.DPNWorkItem.Note = &note
 		helper.Manifest.DPNWorkItem.Stage = constants.StageAvailableInS3
 		helper.SaveDPNWorkItem()
+		restorer.Context.MessageLog.Info("Sending %s (DPNWorkItem %d) to download queue",
+			helper.Manifest.GlacierKey, helper.Manifest.DPNWorkItem.Id)
 		restorer.SendToDownloadQueue(helper)
 	} else {
 		helper.Manifest.DPNWorkItem.Note = &note
 		restorer.Context.MessageLog.Info("Requested %s from Glacier. %s", helper.Manifest.GlacierKey, note)
 		helper.Manifest.DPNWorkItem.Retry = true
 		helper.SaveDPNWorkItem()
+		restorer.Context.MessageLog.Info("Requeueing %s (DPNWorkItem %d). Will check again in %d hours.",
+			helper.Manifest.GlacierKey, helper.Manifest.DPNWorkItem.Id, HOURS_BETWEEN_CHECKS)
 		helper.Manifest.NsqMessage.Requeue(HOURS_BETWEEN_CHECKS * time.Hour)
 	}
 	helper.Manifest.NsqMessage.Finish()
@@ -204,7 +208,7 @@ func (restorer *DPNGlacierRestoreInit) FinishWithError(helper *DPNRestoreHelper)
 		helper.Manifest.DPNWorkItem.Retry = false
 		helper.Manifest.NsqMessage.Finish()
 	} else {
-		restorer.Context.MessageLog.Info("Error for %s is transient. Requeueing.",
+		restorer.Context.MessageLog.Info("Error for %s is transient. Requeueing for 1 minute.",
 			helper.Manifest.DPNWorkItem.Identifier)
 		helper.Manifest.DPNWorkItem.Retry = true
 		helper.Manifest.NsqMessage.Requeue(1 * time.Minute)
