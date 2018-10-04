@@ -12,6 +12,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"time"
 )
 
 type DPNRestoreHelper struct {
@@ -122,6 +123,8 @@ func (helper *DPNRestoreHelper) getDPNWorkItem() error {
 		note := "Requesting Glacier restoration for fixity"
 		helper.Manifest.DPNWorkItem.Note = &note
 	}
+	helper.context.MessageLog.Info("Loaded DPNWorkItem %d with QueuedAt = %s",
+		helper.Manifest.DPNWorkItem.Id, helper.Manifest.DPNWorkItem.QueuedAt.Format(time.RFC3339))
 	return nil
 }
 
@@ -180,6 +183,8 @@ func (helper *DPNRestoreHelper) SaveDPNWorkItem() {
 	helper.Manifest.DPNWorkItem.State = &jsonData
 	helper.Manifest.DPNWorkItem.Retry = !helper.WorkSummary.ErrorIsFatal
 
+	helper.context.MessageLog.Info("Saving DPNWorkItem %d with QueuedAt = %s",
+		helper.Manifest.DPNWorkItem.Id, helper.Manifest.DPNWorkItem.QueuedAt.Format(time.RFC3339))
 	resp := helper.context.PharosClient.DPNWorkItemSave(helper.Manifest.DPNWorkItem)
 	if resp.Error != nil {
 		rawResponse := "[Unavailable]"

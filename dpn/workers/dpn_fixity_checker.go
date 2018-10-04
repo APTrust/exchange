@@ -304,6 +304,8 @@ func (checker *DPNFixityChecker) FinishWithSuccess(helper *DPNRestoreHelper) {
 	note := fmt.Sprintf("Fixity check complete: fixity matches. Saved to DPN with FixityCheckId %s",
 		helper.Manifest.FixityCheck.FixityCheckId)
 	helper.Manifest.DPNWorkItem.Note = &note
+	utcNow := time.Now().UTC()
+	helper.Manifest.DPNWorkItem.CompletedAt = &utcNow
 	// TODO: To repurpose this code to support restoration,
 	// branch here. If DPNWorkItem.Task is fixity check,
 	// set Status to Success. If Task is restore, set Stage
@@ -331,6 +333,8 @@ func (checker *DPNFixityChecker) FinishWithError(helper *DPNRestoreHelper) {
 			helper.Manifest.DPNWorkItem.Identifier)
 		helper.Manifest.DPNWorkItem.Status = constants.StatusFailed
 		helper.Manifest.DPNWorkItem.Retry = false
+		utcNow := time.Now().UTC()
+		helper.Manifest.DPNWorkItem.CompletedAt = &utcNow
 		helper.SaveDPNWorkItem()
 		helper.Manifest.NsqMessage.Finish()
 	} else {
