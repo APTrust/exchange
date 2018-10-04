@@ -65,6 +65,8 @@ func GetDPNWorkItem(_context *context.Context, manifest *models.ReplicationManif
 		workSummary.AddError(msg)
 		workSummary.ErrorIsFatal = true
 	}
+	_context.MessageLog.Info("Loaded DPNWorkItem %d with QueuedAt = %s",
+		dpnWorkItem.Id, dpnWorkItem.QueuedAt.Format(time.RFC3339))
 }
 
 // GetWorkItem fetches the WorkItem associated with this message
@@ -457,6 +459,8 @@ func SaveDPNWorkItemState(_context *context.Context, manifest *models.Replicatio
 		_context.MessageLog.Error(msg)
 		workSummary.AddError(msg)
 	}
+	_context.MessageLog.Info("Saved DPNWorkItem %d with QueuedAt = %s",
+		dpnWorkItem.Id, dpnWorkItem.QueuedAt.Format(time.RFC3339))
 }
 
 // SetupReplicationManifest loads the existing ReplicationManifest associated with
