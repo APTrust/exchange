@@ -298,9 +298,10 @@ func (checker *DPNFixityChecker) SaveFixityRecord(helper *DPNRestoreHelper) {
 
 func (checker *DPNFixityChecker) FinishWithSuccess(helper *DPNRestoreHelper) {
 	helper.Manifest.DPNWorkItem.ClearNodeAndPid()
-	checker.Context.MessageLog.Info("Completed fixity check for %s. Saved to DPN with FixityCheckId %s",
+	checker.Context.MessageLog.Info("Completed fixity check for %s: fixity matches. "+
+		"Saved to DPN with FixityCheckId %s",
 		helper.Manifest.DPNBag.UUID, helper.Manifest.FixityCheck.FixityCheckId)
-	note := fmt.Sprintf("Fixity check complete. Saved to DPN with FixityCheckId %s",
+	note := fmt.Sprintf("Fixity check complete: fixity matches. Saved to DPN with FixityCheckId %s",
 		helper.Manifest.FixityCheck.FixityCheckId)
 	helper.Manifest.DPNWorkItem.Note = &note
 	// TODO: To repurpose this code to support restoration,
