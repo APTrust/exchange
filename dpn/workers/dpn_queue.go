@@ -92,7 +92,11 @@ func (dpnQueue *DPNQueue) Run() {
 	dpnQueue.queueReplicationRequests()
 	dpnQueue.queueRestoreRequests()
 	dpnQueue.queueIngestRequests()
-	dpnQueue.queueItemsNeedingFixity()
+	// *********************************************
+	// A.D. 2018-10-04: Stop queuing until we figure
+	// out what NSQ is doing with requeues.
+	// *********************************************
+	// dpnQueue.queueItemsNeedingFixity()
 	dpnQueue.QueueResult.EndTime = time.Now().UTC()
 	dpnQueue.logResults()
 }
