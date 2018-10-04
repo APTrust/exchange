@@ -182,9 +182,15 @@ func (helper *DPNRestoreHelper) SaveDPNWorkItem() {
 
 	resp := helper.context.PharosClient.DPNWorkItemSave(helper.Manifest.DPNWorkItem)
 	if resp.Error != nil {
+		rawResponse := "[Unavailable]"
+		data, _ := resp.RawResponseData()
+		if data != nil {
+			rawResponse = string(data)
+		}
 		msg := fmt.Sprintf("Could not save DPNWorkItem %d "+
-			"for fixity on bag %s to Pharos: %v",
-			helper.Manifest.DPNWorkItem.Id, helper.Manifest.DPNWorkItem.Identifier, err)
+			"for fixity on bag %s to Pharos: %v ... Raw Response: %s",
+			helper.Manifest.DPNWorkItem.Id, helper.Manifest.DPNWorkItem.Identifier,
+			err, rawResponse)
 		helper.context.MessageLog.Error(msg)
 		helper.WorkSummary.AddError(msg)
 	}

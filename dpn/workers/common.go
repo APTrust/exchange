@@ -445,9 +445,15 @@ func SaveDPNWorkItemState(_context *context.Context, manifest *models.Replicatio
 	dpnWorkItem.State = &newState
 	resp := _context.PharosClient.DPNWorkItemSave(dpnWorkItem)
 	if resp.Error != nil {
+		rawResponse := "[Unavailable]"
+		data, _ := resp.RawResponseData()
+		if data != nil {
+			rawResponse = string(data)
+		}
 		msg := fmt.Sprintf("Could not save DPNWorkItem %d "+
-			"for replication %s to Pharos: %v",
-			manifest.DPNWorkItem.Id, manifest.DPNWorkItem.Identifier, err)
+			"for replication %s to Pharos: %v ... Raw Response: %s",
+			manifest.DPNWorkItem.Id, manifest.DPNWorkItem.Identifier,
+			err, rawResponse)
 		_context.MessageLog.Error(msg)
 		workSummary.AddError(msg)
 	}
