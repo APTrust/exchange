@@ -881,7 +881,7 @@ func (client *PharosClient) DPNWorkItemSave(obj *models.DPNWorkItem) *PharosResp
 	relativeUrl := fmt.Sprintf("/api/%s/dpn_items/", client.apiVersion)
 	httpMethod := "POST"
 	if obj.Id > 0 {
-		// URL should look like /api/v2/items/46956/
+		// URL should look like /api/v2/dpn_items/46956/
 		relativeUrl = fmt.Sprintf("%s%d/", relativeUrl, obj.Id)
 		httpMethod = "PUT"
 	}
