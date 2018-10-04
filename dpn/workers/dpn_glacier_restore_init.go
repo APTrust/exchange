@@ -159,6 +159,7 @@ func (restorer *DPNGlacierRestoreInit) FinishWithSuccess(helper *DPNRestoreHelpe
 		restorer.Context.MessageLog.Info("Sending %s (DPNWorkItem %d) to download queue",
 			helper.Manifest.GlacierKey, helper.Manifest.DPNWorkItem.Id)
 		restorer.SendToDownloadQueue(helper)
+		helper.Manifest.NsqMessage.Finish()
 	} else {
 		helper.Manifest.DPNWorkItem.Note = &note
 		restorer.Context.MessageLog.Info("Requested %s from Glacier. %s", helper.Manifest.GlacierKey, note)
@@ -168,7 +169,6 @@ func (restorer *DPNGlacierRestoreInit) FinishWithSuccess(helper *DPNRestoreHelpe
 			helper.Manifest.GlacierKey, helper.Manifest.DPNWorkItem.Id, HOURS_BETWEEN_CHECKS)
 		helper.Manifest.NsqMessage.Requeue(HOURS_BETWEEN_CHECKS * time.Hour)
 	}
-	helper.Manifest.NsqMessage.Finish()
 }
 
 func (restorer *DPNGlacierRestoreInit) SendToDownloadQueue(helper *DPNRestoreHelper) {
