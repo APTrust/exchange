@@ -31,6 +31,7 @@ func CreateNsqConsumer(config *models.Config, workerConfig *models.WorkerConfig)
 	nsqConfig.Set("read_timeout", workerConfig.ReadTimeout)
 	nsqConfig.Set("write_timeout", workerConfig.WriteTimeout)
 	nsqConfig.Set("msg_timeout", workerConfig.MessageTimeout)
+	nsqConfig.Set("max_req_timeout", "4h0m")
 	return nsq.NewConsumer(workerConfig.NsqTopic, workerConfig.NsqChannel, nsqConfig)
 }
 
