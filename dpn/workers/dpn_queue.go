@@ -92,7 +92,13 @@ func (dpnQueue *DPNQueue) Run() {
 	dpnQueue.queueReplicationRequests()
 	dpnQueue.queueRestoreRequests()
 	dpnQueue.queueIngestRequests()
-	dpnQueue.queueItemsNeedingFixity()
+	// ---------------------------------------------------
+	// A.D. 2018-10-05
+	// Off again temporarily to test some changes
+	// while the production server catches up on
+	// outstanding replications.
+	// ---------------------------------------------------
+	// dpnQueue.queueItemsNeedingFixity()
 	dpnQueue.QueueResult.EndTime = time.Now().UTC()
 	dpnQueue.logResults()
 }
