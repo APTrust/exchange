@@ -167,7 +167,7 @@ func (restorer *DPNGlacierRestoreInit) FinishWithSuccess(helper *DPNRestoreHelpe
 		helper.SaveDPNWorkItem()
 		restorer.Context.MessageLog.Info("Requeueing %s (DPNWorkItem %d). Will check again in %d hours.",
 			helper.Manifest.GlacierKey, helper.Manifest.DPNWorkItem.Id, HOURS_BETWEEN_CHECKS)
-		helper.Manifest.NsqMessage.Requeue(HOURS_BETWEEN_CHECKS * time.Hour)
+		helper.Manifest.NsqMessage.RequeueWithoutBackoff(HOURS_BETWEEN_CHECKS * time.Hour)
 	}
 }
 
