@@ -82,6 +82,7 @@ func DPNNewGlacierRestoreInit(_context *context.Context) (*DPNGlacierRestoreInit
 
 // This is the callback that NSQ workers use to handle messages from NSQ.
 func (restorer *DPNGlacierRestoreInit) HandleMessage(message *nsq.Message) error {
+	message.DisableAutoResponse()
 	helper, err := NewDPNRestoreHelper(message, restorer.Context,
 		restorer.LocalDPNRestClient, constants.ActionFixityCheck,
 		"GlacierRestoreSummary")
@@ -167,7 +168,7 @@ func (restorer *DPNGlacierRestoreInit) FinishWithSuccess(helper *DPNRestoreHelpe
 		helper.SaveDPNWorkItem()
 		restorer.Context.MessageLog.Info("Requeueing %s (DPNWorkItem %d). Will check again in %d hours.",
 			helper.Manifest.GlacierKey, helper.Manifest.DPNWorkItem.Id, HOURS_BETWEEN_CHECKS)
-		helper.Manifest.NsqMessage.RequeueWithoutBackoff(HOURS_BETWEEN_CHECKS * time.Hour)
+		helper.Manifest.NsqMessage.Requeue(HOURS_BETWEEN_CHECKS * time.Hour)
 	}
 }
 
