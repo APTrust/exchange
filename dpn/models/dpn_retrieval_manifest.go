@@ -144,7 +144,12 @@ func DPNRetrievalManifestFromJson(jsonString string) (*DPNRetrievalManifest, err
 }
 
 func (manifest *DPNRetrievalManifest) ToJson() (string, error) {
+	// Don't serialize DPNWorkItem because state
+	// gets longer each time it's reserialized.
+	workItem := manifest.DPNWorkItem
+	manifest.DPNWorkItem = nil
 	jsonStr, err := json.Marshal(manifest)
+	manifest.DPNWorkItem = workItem
 	if err != nil {
 		return "", err
 	}
