@@ -16,7 +16,7 @@ import (
 
 // As we're still in the probationary period, limit the number
 // fixity checks queued on each run.
-const MAX_FIXITY_CHECKS_PER_RUN = 10
+const MAX_FIXITY_CHECKS_PER_RUN = 20
 
 // DPNQueue queues DPN ingest requests (found in the Pharos WorkItems table)
 // and DPN replication requests (found in the Pharos DPNWorkItems table).
@@ -92,13 +92,7 @@ func (dpnQueue *DPNQueue) Run() {
 	dpnQueue.queueReplicationRequests()
 	dpnQueue.queueRestoreRequests()
 	dpnQueue.queueIngestRequests()
-	// ---------------------------------------------------
-	// A.D. 2018-10-05
-	// Off again temporarily to test some changes
-	// while the production server catches up on
-	// outstanding replications.
-	// ---------------------------------------------------
-	// dpnQueue.queueItemsNeedingFixity()
+	dpnQueue.queueItemsNeedingFixity()
 	dpnQueue.QueueResult.EndTime = time.Now().UTC()
 	dpnQueue.logResults()
 }
