@@ -157,7 +157,7 @@ func TestDGIHandleAcceptedButNotComplete(t *testing.T) {
 
 func test_DGIHandleAcceptedButNotComplete(t *testing.T) {
 	worker, message, delegate, _ := getDGITestItems(t)
-	expectedNote := "Glacier restore initiated. Will check availability in S3 every 3 hours."
+	expectedNote := "Glacier restore initiated. Will check availability in S3 every 2 hours."
 
 	// Create a PostTestChannel. The worker will send the
 	// DPNRetrievalManifest object into this channel when
@@ -179,7 +179,7 @@ func test_DGIHandleAcceptedButNotComplete(t *testing.T) {
 
 			// Make sure we requeued to recheck progress later.
 			assert.Equal(t, "requeue", delegate.Operation)
-			assert.Equal(t, 3*time.Hour, delegate.Delay)
+			assert.Equal(t, 2*time.Hour, delegate.Delay)
 
 			// Make sure the error message was copied into the DPNWorkItem note.
 			require.NotNil(t, helper.Manifest.DPNWorkItem.Note)
@@ -364,12 +364,12 @@ func TestDGIFinishWithSuccess(t *testing.T) {
 	helper.Manifest.DPNWorkItem.ProcessingNode = &node
 	helper.Manifest.DPNWorkItem.Pid = pid
 	worker.FinishWithSuccess(helper)
-	assert.Equal(t, "Glacier restore initiated. Will check availability in S3 every 3 hours.",
+	assert.Equal(t, "Glacier restore initiated. Will check availability in S3 every 2 hours.",
 		*helper.Manifest.DPNWorkItem.Note)
 	assert.Nil(t, helper.Manifest.DPNWorkItem.ProcessingNode)
 	assert.Equal(t, 0, helper.Manifest.DPNWorkItem.Pid)
 	assert.Equal(t, "requeue", delegate.Operation)
-	assert.Equal(t, 3*time.Hour, delegate.Delay)
+	assert.Equal(t, 2*time.Hour, delegate.Delay)
 }
 
 func TestDGIFinishWithError(t *testing.T) {

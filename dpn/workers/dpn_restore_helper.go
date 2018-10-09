@@ -12,6 +12,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"time"
 )
 
 type DPNRestoreHelper struct {
@@ -122,6 +123,12 @@ func (helper *DPNRestoreHelper) getDPNWorkItem() error {
 		note := "Requesting Glacier restoration for fixity"
 		helper.Manifest.DPNWorkItem.Note = &note
 	}
+	queuedAt := time.Time{}
+	if helper.Manifest.DPNWorkItem.QueuedAt != nil {
+		queuedAt = *helper.Manifest.DPNWorkItem.QueuedAt
+	}
+	helper.context.MessageLog.Info("Loaded DPNWorkItem %d with QueuedAt = %s",
+		helper.Manifest.DPNWorkItem.Id, queuedAt.Format(time.RFC3339))
 	return nil
 }
 
@@ -180,11 +187,23 @@ func (helper *DPNRestoreHelper) SaveDPNWorkItem() {
 	helper.Manifest.DPNWorkItem.State = &jsonData
 	helper.Manifest.DPNWorkItem.Retry = !helper.WorkSummary.ErrorIsFatal
 
+	queuedAt := time.Time{}
+	if helper.Manifest.DPNWorkItem.QueuedAt != nil {
+		queuedAt = *helper.Manifest.DPNWorkItem.QueuedAt
+	}
+	helper.context.MessageLog.Info("Saving DPNWorkItem %d with QueuedAt = %s",
+		helper.Manifest.DPNWorkItem.Id, queuedAt.Format(time.RFC3339))
 	resp := helper.context.PharosClient.DPNWorkItemSave(helper.Manifest.DPNWorkItem)
 	if resp.Error != nil {
+		rawResponse := "[Unavailable]"
+		data, _ := resp.RawResponseData()
+		if data != nil {
+			rawResponse = string(data)
+		}
 		msg := fmt.Sprintf("Could not save DPNWorkItem %d "+
-			"for fixity on bag %s to Pharos: %v",
-			helper.Manifest.DPNWorkItem.Id, helper.Manifest.DPNWorkItem.Identifier, err)
+			"for fixity on bag %s to Pharos: %v ... Raw Response: %s",
+			helper.Manifest.DPNWorkItem.Id, helper.Manifest.DPNWorkItem.Identifier,
+			err, rawResponse)
 		helper.context.MessageLog.Error(msg)
 		helper.WorkSummary.AddError(msg)
 	}

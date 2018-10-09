@@ -21,13 +21,13 @@ const RETRIEVAL_OPTION = "Bulk"
 // After a Glacier restore request has been accepted, we will check
 // S3 periodically to see if the item has been restored. This is the
 // interval between checks.
-const HOURS_BETWEEN_CHECKS = 3
+const HOURS_BETWEEN_CHECKS = 2
 
-// Keep the files in S3 up to 10 days, in case we're
+// Keep the files in S3 up to X days, in case we're
 // having system problems and we need to attempt the
 // restore multiple times. We'll have other processes
 // clean out the S3 bucket when necessary.
-const DAYS_TO_KEEP_IN_S3 = 10
+const DAYS_TO_KEEP_IN_S3 = 3
 
 // Requests that an object be restored from Glacier to S3. This is
 // the first step toward performing fixity checks on DPN bags, and
@@ -82,6 +82,7 @@ func DPNNewGlacierRestoreInit(_context *context.Context) (*DPNGlacierRestoreInit
 
 // This is the callback that NSQ workers use to handle messages from NSQ.
 func (restorer *DPNGlacierRestoreInit) HandleMessage(message *nsq.Message) error {
+	message.DisableAutoResponse()
 	helper, err := NewDPNRestoreHelper(message, restorer.Context,
 		restorer.LocalDPNRestClient, constants.ActionFixityCheck,
 		"GlacierRestoreSummary")
@@ -99,7 +100,7 @@ func (restorer *DPNGlacierRestoreInit) HandleMessage(message *nsq.Message) error
 
 	helper.WorkSummary.ClearErrors()
 	helper.WorkSummary.Attempted = true
-	helper.WorkSummary.AttemptNumber += 1
+	helper.WorkSummary.AttemptNumber = message.Attempts
 	helper.WorkSummary.Start()
 	helper.Manifest.DPNWorkItem.Status = constants.StatusStarted
 	helper.SaveDPNWorkItem()
@@ -156,15 +157,19 @@ func (restorer *DPNGlacierRestoreInit) FinishWithSuccess(helper *DPNRestoreHelpe
 		helper.Manifest.DPNWorkItem.Note = &note
 		helper.Manifest.DPNWorkItem.Stage = constants.StageAvailableInS3
 		helper.SaveDPNWorkItem()
+		restorer.Context.MessageLog.Info("Sending %s (DPNWorkItem %d) to download queue",
+			helper.Manifest.GlacierKey, helper.Manifest.DPNWorkItem.Id)
 		restorer.SendToDownloadQueue(helper)
+		helper.Manifest.NsqMessage.Finish()
 	} else {
 		helper.Manifest.DPNWorkItem.Note = &note
 		restorer.Context.MessageLog.Info("Requested %s from Glacier. %s", helper.Manifest.GlacierKey, note)
 		helper.Manifest.DPNWorkItem.Retry = true
 		helper.SaveDPNWorkItem()
+		restorer.Context.MessageLog.Info("Requeueing %s (DPNWorkItem %d). Will check again in %d hours.",
+			helper.Manifest.GlacierKey, helper.Manifest.DPNWorkItem.Id, HOURS_BETWEEN_CHECKS)
 		helper.Manifest.NsqMessage.Requeue(HOURS_BETWEEN_CHECKS * time.Hour)
 	}
-	helper.Manifest.NsqMessage.Finish()
 }
 
 func (restorer *DPNGlacierRestoreInit) SendToDownloadQueue(helper *DPNRestoreHelper) {
@@ -204,7 +209,7 @@ func (restorer *DPNGlacierRestoreInit) FinishWithError(helper *DPNRestoreHelper)
 		helper.Manifest.DPNWorkItem.Retry = false
 		helper.Manifest.NsqMessage.Finish()
 	} else {
-		restorer.Context.MessageLog.Info("Error for %s is transient. Requeueing.",
+		restorer.Context.MessageLog.Info("Error for %s is transient. Requeueing for 1 minute.",
 			helper.Manifest.DPNWorkItem.Identifier)
 		helper.Manifest.DPNWorkItem.Retry = true
 		helper.Manifest.NsqMessage.Requeue(1 * time.Minute)

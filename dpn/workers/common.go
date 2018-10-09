@@ -65,6 +65,8 @@ func GetDPNWorkItem(_context *context.Context, manifest *models.ReplicationManif
 		workSummary.AddError(msg)
 		workSummary.ErrorIsFatal = true
 	}
+	_context.MessageLog.Info("Loaded DPNWorkItem %d with QueuedAt = %s",
+		dpnWorkItem.Id, dpnWorkItem.QueuedAt.Format(time.RFC3339))
 }
 
 // GetWorkItem fetches the WorkItem associated with this message
@@ -445,12 +447,20 @@ func SaveDPNWorkItemState(_context *context.Context, manifest *models.Replicatio
 	dpnWorkItem.State = &newState
 	resp := _context.PharosClient.DPNWorkItemSave(dpnWorkItem)
 	if resp.Error != nil {
+		rawResponse := "[Unavailable]"
+		data, _ := resp.RawResponseData()
+		if data != nil {
+			rawResponse = string(data)
+		}
 		msg := fmt.Sprintf("Could not save DPNWorkItem %d "+
-			"for replication %s to Pharos: %v",
-			manifest.DPNWorkItem.Id, manifest.DPNWorkItem.Identifier, err)
+			"for replication %s to Pharos: %v ... Raw Response: %s",
+			manifest.DPNWorkItem.Id, manifest.DPNWorkItem.Identifier,
+			err, rawResponse)
 		_context.MessageLog.Error(msg)
 		workSummary.AddError(msg)
 	}
+	_context.MessageLog.Info("Saved DPNWorkItem %d with QueuedAt = %s",
+		dpnWorkItem.Id, dpnWorkItem.QueuedAt.Format(time.RFC3339))
 }
 
 // SetupReplicationManifest loads the existing ReplicationManifest associated with
