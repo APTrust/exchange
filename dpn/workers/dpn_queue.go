@@ -92,7 +92,8 @@ func (dpnQueue *DPNQueue) Run() {
 	dpnQueue.queueReplicationRequests()
 	dpnQueue.queueRestoreRequests()
 	dpnQueue.queueIngestRequests()
-	dpnQueue.queueItemsNeedingFixity()
+	// A.D. 2018-10-10 Fixity queue turned off.
+	// dpnQueue.queueItemsNeedingFixity()
 	dpnQueue.QueueResult.EndTime = time.Now().UTC()
 	dpnQueue.logResults()
 }
