@@ -179,6 +179,8 @@ func (item *WorkItem) SerializeForPharos() ([]byte, error) {
 		"needs_admin_review": item.NeedsAdminReview,
 		"queued_at":          item.QueuedAt,
 		"user":               item.User,
+		"inst_approver":      item.InstitutionalApprover,
+		"aptrust_approver":   item.APTrustApprover,
 	})
 }
 
