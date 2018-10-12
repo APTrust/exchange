@@ -99,6 +99,21 @@ type IntellectualObject struct {
 	// bag (or some part of it) was ingested a second time.
 	UpdatedAt time.Time `json:"updated_at,omitempty"`
 
+	// FileCount is the number of files this object includes. We do not
+	// set this ever, and it will always be zero during the ingest process.
+	// This is a calculated field returned by Pharos. Consider it read-only.
+	// It will only ever be populated by Pharos, when retrieving records
+	// through the Admin REST API. Added for Restoration spot tests.
+	FileCount int `json:"file_count,omitempty"`
+
+	// FileSize is the total size (in bytes) of the files that make up this
+	// object. We do not set this ever, and it will always be zero during
+	// the ingest process. This is a calculated field returned by Pharos.
+	// Consider it read-only. It will only ever be populated by Pharos,
+	// when retrieving records through the Admin REST API. Added for
+	// Restoration spot tests.
+	FileSize int64 `json:"file_count,omitempty"`
+
 	// IngestS3Bucket is the bucket to which the depositor uploaded
 	// this bag. We fetch it from there to a local staging area for
 	// processing.
