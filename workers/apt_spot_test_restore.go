@@ -10,14 +10,14 @@ import (
 	"time"
 )
 
-type APTRestoreSpotTest struct {
+type APTSpotTestRestore struct {
 	Context          *context.Context
 	CreatedBefore    time.Time
 	NotRestoredSince time.Time
 	MaxSize          int64
 }
 
-// NewAPTRestoreSpotTest creates a new restore spot test worker.
+// NewAPTSpotTestRestore creates a new restore spot test worker.
 // This is meant to run as a cron job.
 //
 // Param maxSize tells the worker to choose bags no larger than
@@ -25,8 +25,8 @@ type APTRestoreSpotTest struct {
 // created before this date. Param notRestoredSince means choose
 // bags that have not been restored since this date (which helps
 // prevent us restoring the same bag again and again).
-func NewAPTRestoreSpotTest(_context *context.Context, maxSize int64, createdBefore, notRestoredSince time.Time) *APTRestoreSpotTest {
-	return &APTRestoreSpotTest{
+func NewAPTSpotTestRestore(_context *context.Context, maxSize int64, createdBefore, notRestoredSince time.Time) *APTSpotTestRestore {
+	return &APTSpotTestRestore{
 		Context:          _context,
 		CreatedBefore:    createdBefore,
 		NotRestoredSince: notRestoredSince,
@@ -39,7 +39,7 @@ func NewAPTRestoreSpotTest(_context *context.Context, maxSize int64, createdBefo
 // the specified date and notRestoredSince the specified date).
 // It creates a Restore WorkItem for each bag, and returns the WorkItems
 // it created. The caller can get the WorkItem.Id and object identifier from there.
-func (restoreTest *APTRestoreSpotTest) Run() ([]*models.WorkItem, error) {
+func (restoreTest *APTSpotTestRestore) Run() ([]*models.WorkItem, error) {
 	workItems := make([]*models.WorkItem, 0)
 	institutions, err := restoreTest.GetInstitutions()
 	if err != nil {
@@ -68,7 +68,7 @@ func (restoreTest *APTRestoreSpotTest) Run() ([]*models.WorkItem, error) {
 }
 
 // GetInstitutions returns a list of all depositing institutions from Pharos.
-func (restoreTest *APTRestoreSpotTest) GetInstitutions() ([]*models.Institution, error) {
+func (restoreTest *APTSpotTestRestore) GetInstitutions() ([]*models.Institution, error) {
 	resp := restoreTest.Context.PharosClient.InstitutionList(url.Values{})
 	if resp.Error != nil {
 		return nil, resp.Error
@@ -93,7 +93,7 @@ func (restoreTest *APTRestoreSpotTest) GetInstitutions() ([]*models.Institution,
 // state - is "A" for active
 //
 // access - is not "restricted"
-func (restoreTest *APTRestoreSpotTest) GetObjectFor(institution string) (*models.IntellectualObject, error) {
+func (restoreTest *APTSpotTestRestore) GetObjectFor(institution string) (*models.IntellectualObject, error) {
 	var obj *models.IntellectualObject
 	var err error
 	hasMoreResults := true
@@ -114,7 +114,7 @@ func (restoreTest *APTRestoreSpotTest) GetObjectFor(institution string) (*models
 // Returns an IntellectualObject (or nil if none match our criteria), a boolean
 // indicating whether Pharos has more results to fetch, and an error
 // if there is one.
-func (restoreTest *APTRestoreSpotTest) findOne(institution string, pageNumber int) (*models.IntellectualObject, bool, error) {
+func (restoreTest *APTSpotTestRestore) findOne(institution string, pageNumber int) (*models.IntellectualObject, bool, error) {
 	var selectedObject *models.IntellectualObject
 	params := url.Values{}
 	params.Set("institution", institution)
@@ -154,7 +154,7 @@ func (restoreTest *APTRestoreSpotTest) findOne(institution string, pageNumber in
 
 // HasCompletedRestore returns true if the object with the specified identifier
 // has been successfully restored since NotRestoredSince.
-func (restoreTest *APTRestoreSpotTest) HasCompletedRestore(objIdentifier string) (bool, error) {
+func (restoreTest *APTSpotTestRestore) HasCompletedRestore(objIdentifier string) (bool, error) {
 	params := url.Values{}
 	params.Set("object_identifier", objIdentifier)
 	params.Set("action", constants.ActionRestore)
@@ -170,7 +170,7 @@ func (restoreTest *APTRestoreSpotTest) HasCompletedRestore(objIdentifier string)
 	return hasRestore, nil
 }
 
-func (restoreTest *APTRestoreSpotTest) GetLastIngestWorkItem(objIdentifier string) (*models.WorkItem, error) {
+func (restoreTest *APTSpotTestRestore) GetLastIngestWorkItem(objIdentifier string) (*models.WorkItem, error) {
 	params := url.Values{}
 	params.Set("object_identifier", objIdentifier)
 	params.Set("action", constants.ActionIngest)
@@ -186,7 +186,7 @@ func (restoreTest *APTRestoreSpotTest) GetLastIngestWorkItem(objIdentifier strin
 }
 
 // CreateWorkItem creates the Restore WorkItem for the specified object identifier.
-func (restoreTest *APTRestoreSpotTest) CreateWorkItem(obj *models.IntellectualObject) (*models.WorkItem, error) {
+func (restoreTest *APTSpotTestRestore) CreateWorkItem(obj *models.IntellectualObject) (*models.WorkItem, error) {
 	lastIngestItem, err := restoreTest.GetLastIngestWorkItem(obj.Identifier)
 	if err != nil {
 		return nil, fmt.Errorf("Cannot find last ingest WorkItem for %s: %v", obj.Identifier, err)
