@@ -133,6 +133,11 @@ func (restoreTest *APTSpotTestRestore) findOne(institution string, pageNumber in
 			restoreTest.Context.MessageLog.Info("Skipping %s: restricted", obj.Identifier)
 			continue
 		}
+		if obj.FileSize == 0 {
+			restoreTest.Context.MessageLog.Info("Skipping %s: FileSize zero seems incorrect",
+				obj.Identifier)
+			continue
+		}
 		if obj.FileSize > restoreTest.MaxSize {
 			restoreTest.Context.MessageLog.Info("Skipping %s: size %d is greater than max %d",
 				obj.Identifier, obj.FileSize, restoreTest.MaxSize)
@@ -145,8 +150,11 @@ func (restoreTest *APTSpotTestRestore) findOne(institution string, pageNumber in
 			continue
 		}
 		if !hasCompletedRestore {
+			restoreTest.Context.MessageLog.Info("Object %s meets all criteria", obj.Identifier)
 			selectedObject = obj
 			break
+		} else {
+			restoreTest.Context.MessageLog.Info("Object %s disqualified by recent restore", obj.Identifier)
 		}
 	}
 	return selectedObject, resp.HasNextPage(), nil
@@ -162,6 +170,7 @@ func (restoreTest *APTSpotTestRestore) HasCompletedRestore(objIdentifier string)
 	params.Set("updated_after", restoreTest.NotRestoredSince.Format(time.RFC3339))
 	params.Set("page", "1")
 	params.Set("per_page", "1")
+	restoreTest.Context.MessageLog.Info("Checking recent restorations for %s", objIdentifier)
 	resp := restoreTest.Context.PharosClient.WorkItemList(params)
 	if resp.Error != nil {
 		return false, resp.Error

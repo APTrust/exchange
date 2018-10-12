@@ -13,11 +13,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
-	//	"os"
-	//	"regexp"
-	//	"strconv"
 	"strings"
-	//	"sync"
 	"testing"
 	"time"
 )
@@ -47,6 +43,46 @@ func TestSpotGetInsitutions(t *testing.T) {
 	assert.Equal(t, 4, len(institutions))
 }
 
+func TestSpotGetObjectFor(t *testing.T) {
+	worker := getSpotRestoreWorker(t)
+	obj, err := worker.GetObjectFor("example.edu")
+	require.Nil(t, err)
+	assert.NotNil(t, obj)
+}
+
+func TestSpotHasCompletedRestore(t *testing.T) {
+	worker := getSpotRestoreWorker(t)
+	hasRestore, err := worker.HasCompletedRestore("example.edu/bag")
+	require.Nil(t, err)
+	assert.False(t, hasRestore)
+}
+
+func TestGetLastIngestWorkItem(t *testing.T) {
+	worker := getSpotRestoreWorker(t)
+	item, err := worker.GetLastIngestWorkItem("example.edu")
+	require.Nil(t, err)
+	assert.NotNil(t, item)
+}
+
+func TestSpotCreateWorkItem(t *testing.T) {
+	worker := getSpotRestoreWorker(t)
+	obj, err := worker.GetObjectFor("example.edu")
+	assert.Nil(t, err)
+	require.NotNil(t, obj)
+	item, err := worker.CreateWorkItem(obj)
+	assert.Nil(t, err)
+	require.NotNil(t, item)
+	assert.Equal(t, "Automated object restoration spot test created by system", item.Note)
+}
+
+func TestSpotRun(t *testing.T) {
+	worker := getSpotRestoreWorker(t)
+	items, err := worker.Run()
+	require.Nil(t, err)
+	require.NotNil(t, items)
+	assert.Equal(t, 4, len(items))
+}
+
 func spotInstitutionGetHandler(w http.ResponseWriter, r *http.Request) {
 	list := make([]*models.Institution, 4)
 	for i := 0; i < len(list); i++ {
@@ -62,13 +98,21 @@ func spotInstitutionGetHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintln(w, string(dataJson))
 }
 
-func spotIntellectualObjectGetHandler(w http.ResponseWriter, r *http.Request) {
-	obj := testutil.MakeIntellectualObject(12, 0, 0, 0)
+func spotIntellectualObjectListHandler(w http.ResponseWriter, r *http.Request) {
+	obj := testutil.MakeIntellectualObject(1, 0, 0, 0)
 	obj.Access = "consortia"
 	obj.CreatedAt, _ = time.Parse(time.RFC3339, "2016-08-06T15:33:00+00:00")
-	objJson, _ := json.Marshal(obj)
+	obj.FileSize = int64(56)
+	list := make([]*models.IntellectualObject, 1)
+	list[0] = obj
+	data := make(map[string]interface{})
+	data["count"] = 4
+	data["next"] = nil
+	data["previous"] = nil
+	data["results"] = list
+	dataJson, _ := json.Marshal(data)
 	w.Header().Set("Content-Type", "application/json")
-	fmt.Fprintln(w, string(objJson))
+	fmt.Fprintln(w, string(dataJson))
 }
 
 func spotWorkItemGetHandler(w http.ResponseWriter, r *http.Request) {
@@ -76,9 +120,29 @@ func spotWorkItemGetHandler(w http.ResponseWriter, r *http.Request) {
 	obj.Action = constants.ActionIngest
 	obj.Stage = constants.StageCleanup
 	obj.Status = constants.StatusSuccess
-	objJson, _ := json.Marshal(obj)
+	list := make([]*models.WorkItem, 1)
+	list[0] = obj
+	data := make(map[string]interface{})
+	data["count"] = 4
+	data["next"] = nil
+	data["previous"] = nil
+	data["results"] = list
+	dataJson, _ := json.Marshal(data)
 	w.Header().Set("Content-Type", "application/json")
-	fmt.Fprintln(w, string(objJson))
+	fmt.Fprintln(w, string(dataJson))
+}
+
+// Returns an empty WorkItems list
+func spotWorkItemEmptyGetHandler(w http.ResponseWriter, r *http.Request) {
+	list := make([]*models.WorkItem, 0)
+	data := make(map[string]interface{})
+	data["count"] = 4
+	data["next"] = nil
+	data["previous"] = nil
+	data["results"] = list
+	dataJson, _ := json.Marshal(data)
+	w.Header().Set("Content-Type", "application/json")
+	fmt.Fprintln(w, string(dataJson))
 }
 
 func spotWorkItemPostHandler(w http.ResponseWriter, r *http.Request) {
@@ -97,7 +161,9 @@ func spotWorkItemPostHandler(w http.ResponseWriter, r *http.Request) {
 func spotPharosHandler(w http.ResponseWriter, r *http.Request) {
 	url := r.URL.String()
 	if strings.Contains(url, "/objects/") {
-		spotIntellectualObjectGetHandler(w, r)
+		spotIntellectualObjectListHandler(w, r)
+	} else if strings.Contains(url, "action=Restore") {
+		spotWorkItemEmptyGetHandler(w, r)
 	} else if strings.Contains(url, "/items/") {
 		if r.Method == http.MethodGet {
 			spotWorkItemGetHandler(w, r)

@@ -188,6 +188,8 @@ func MakeIntellectualObject(fileCount, eventCount, checksumCount, tagCount int) 
 		UpdatedAt:           RandomDateTime(),
 		DPNUUID:             uuid.NewV4().String(),
 		ETag:                fake.Word(),
+		FileSize:            int64(rand.Intn(50000) + 1),
+		FileCount:           rand.Intn(100) + 1,
 		State:               "A",
 		StorageOption:       constants.StorageStandard,
 		IngestS3Bucket:      fmt.Sprintf("%s.%s", constants.ReceiveTestBucketPrefix, inst),

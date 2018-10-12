@@ -8,6 +8,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 )
@@ -274,4 +275,24 @@ func TestObjPropagateIdsToChildren(t *testing.T) {
 			assert.Equal(t, gf.Id, checksum.GenericFileId)
 		}
 	}
+}
+
+// Test because we had some problems with this
+// while developing a separate feature.
+func TestJSON_PharosFields(t *testing.T) {
+	obj := testutil.MakeIntellectualObject(2, 0, 0, 0)
+	obj.FileCount = 123
+	obj.FileSize = int64(456)
+	jsonData, _ := json.Marshal(obj)
+	require.NotNil(t, jsonData)
+	jsonString := string(jsonData)
+	assert.True(t, strings.Contains(jsonString, `"file_count":123`))
+	assert.True(t, strings.Contains(jsonString, `"file_size":456`))
+
+	newObj := &models.IntellectualObject{}
+	err := json.Unmarshal(jsonData, newObj)
+	require.Nil(t, err)
+	require.NotNil(t, newObj)
+	assert.Equal(t, 123, newObj.FileCount)
+	assert.Equal(t, int64(456), newObj.FileSize)
 }
