@@ -43,6 +43,7 @@ class Context
 	  'apt_record' => App.new('apt_record', 'service'),
 	  'apt_restore' => App.new('apt_restore', 'service'),
 	  'apt_restore_from_glacier' => App.new('apt_restore_from_glacier', 'application'),
+	  'apt_spot_test_restore' => App.new('apt_spot_test_restore', 'application'),
 	  'apt_store' => App.new('apt_store', 'service'),
 	  'apt_volume_service' => App.new('apt_volume_service', 'service'),
 	  'dpn_cleanup' => App.new('dpn_cleanup', 'application'),
