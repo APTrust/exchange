@@ -15,6 +15,7 @@ type APTSpotTestRestore struct {
 	CreatedBefore    time.Time
 	NotRestoredSince time.Time
 	MaxSize          int64
+	DryRun           bool
 }
 
 // NewAPTSpotTestRestore creates a new restore spot test worker.
@@ -31,6 +32,7 @@ func NewAPTSpotTestRestore(_context *context.Context, maxSize int64, createdBefo
 		CreatedBefore:    createdBefore,
 		NotRestoredSince: notRestoredSince,
 		MaxSize:          maxSize,
+		DryRun:           false,
 	}
 }
 
@@ -40,6 +42,7 @@ func NewAPTSpotTestRestore(_context *context.Context, maxSize int64, createdBefo
 // It creates a Restore WorkItem for each bag, and returns the WorkItems
 // it created. The caller can get the WorkItem.Id and object identifier from there.
 func (restoreTest *APTSpotTestRestore) Run() ([]*models.WorkItem, error) {
+	restoreTest.logFacts()
 	workItems := make([]*models.WorkItem, 0)
 	institutions, err := restoreTest.GetInstitutions()
 	if err != nil {
@@ -65,6 +68,17 @@ func (restoreTest *APTSpotTestRestore) Run() ([]*models.WorkItem, error) {
 	}
 
 	return workItems, nil
+}
+
+// logFacts logs our basic working parameters.
+func (restoreTest *APTSpotTestRestore) logFacts() {
+	restoreTest.Context.MessageLog.Info("MaxSize: %d, CreatedBefore: %s, NotRestoredSince: %s",
+		restoreTest.MaxSize,
+		restoreTest.CreatedBefore.Format(time.RFC3339),
+		restoreTest.NotRestoredSince.Format(time.RFC3339))
+	if restoreTest.DryRun {
+		restoreTest.Context.MessageLog.Info("This is a DRY RUN, so no WorkItems will be created.")
+	}
 }
 
 // GetInstitutions returns a list of all depositing institutions from Pharos.
@@ -219,9 +233,13 @@ func (restoreTest *APTSpotTestRestore) CreateWorkItem(obj *models.IntellectualOb
 		Retry:            true,
 		Note:             "Automated object restoration spot test created by system",
 	}
-	resp := restoreTest.Context.PharosClient.WorkItemSave(workItem)
-	if resp.Error != nil {
-		return nil, resp.Error
+	if !restoreTest.DryRun {
+		resp := restoreTest.Context.PharosClient.WorkItemSave(workItem)
+		if resp.Error != nil {
+			return nil, resp.Error
+		}
+		// Returned item includes Id.
+		workItem = resp.WorkItem()
 	}
-	return resp.WorkItem(), nil
+	return workItem, nil
 }
