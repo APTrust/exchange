@@ -235,6 +235,7 @@ func (restoreTest *APTSpotTestRestore) CreateWorkItem(obj *models.IntellectualOb
 		Note:             "Automated object restoration spot test created by system",
 	}
 	if !restoreTest.DryRun {
+		restoreTest.Context.MessageLog.Info("Creating Restore WorkItem for %s", obj.Identifier)
 		resp := restoreTest.Context.PharosClient.WorkItemSave(workItem)
 		if resp.Error != nil {
 			return nil, resp.Error
