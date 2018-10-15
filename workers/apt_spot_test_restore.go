@@ -49,6 +49,7 @@ func (restoreTest *APTSpotTestRestore) Run() ([]*models.WorkItem, error) {
 		return workItems, fmt.Errorf("Error getting list of institutions from Pharos: %v", err)
 	}
 	for _, inst := range institutions {
+		restoreTest.Context.MessageLog.Info("Looking up objects for %s", inst.Identifier)
 		obj, err := restoreTest.GetObjectFor(inst.Identifier)
 		if err != nil {
 			restoreTest.Context.MessageLog.Error(err.Error())

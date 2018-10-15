@@ -178,7 +178,7 @@ func TestIntellectualObjectList(t *testing.T) {
 	// Make sure params are added to URL
 	params := sampleParams()
 	response = client.IntellectualObjectList(params)
-	expectedUrl := fmt.Sprintf("/api/v2/objects/?%s", params.Encode())
+	expectedUrl := fmt.Sprintf("/api/v2/objects/aptrust.org?%s", params.Encode())
 	assert.Equal(t, expectedUrl, response.Request.URL.Opaque)
 }
 

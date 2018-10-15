@@ -152,8 +152,11 @@ func (client *PharosClient) IntellectualObjectList(params url.Values) *PharosRes
 	resp := NewPharosResponse(PharosIntellectualObject)
 	resp.objects = make([]*models.IntellectualObject, 0)
 
+	institution := params.Get("institution")
+	params.Del("institution")
+
 	// Build the url and the request object
-	relativeUrl := fmt.Sprintf("/api/%s/objects/?%s", client.apiVersion, encodeParams(params))
+	relativeUrl := fmt.Sprintf("/api/%s/objects/%s?%s", client.apiVersion, institution, encodeParams(params))
 	absoluteUrl := client.BuildUrl(relativeUrl)
 
 	// Run the request
