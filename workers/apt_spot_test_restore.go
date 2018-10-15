@@ -225,6 +225,7 @@ func (restoreTest *APTSpotTestRestore) CreateWorkItem(obj *models.IntellectualOb
 		ETag:             lastIngestItem.ETag,
 		Size:             obj.FileSize, // may have changed with file deletions or overwrites
 		BagDate:          lastIngestItem.BagDate,
+		Date:             time.Now().UTC(),
 		InstitutionId:    lastIngestItem.InstitutionId,
 		User:             "system@aptrust.org", // because this is an automated spot test
 		Action:           constants.ActionRestore,
