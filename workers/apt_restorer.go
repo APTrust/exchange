@@ -22,6 +22,8 @@ import (
 	"time"
 )
 
+const PREMIS_EVENTS_FILE = "PremisEvents.json"
+
 // APTRestorer restores bags by reassmbling their contents and
 // pushing them into the depositor's restoration bucket.
 type APTRestorer struct {
@@ -952,7 +954,7 @@ func (restorer *APTRestorer) fetchAllFiles(restoreState *models.RestoreState) {
 // bag, so users can see which files have been deleted or overwritten
 // during the bag's time in APTrust.
 func (restorer *APTRestorer) WritePremisEventFile(restoreState *models.RestoreState) {
-	premisFile := path.Join(restoreState.LocalBagDir, "PremisEvents.json")
+	premisFile := path.Join(restoreState.LocalBagDir, PREMIS_EVENTS_FILE)
 	restorer.Context.MessageLog.Info("Starting to load Premis events for %s into %s",
 		restoreState.WorkItem.ObjectIdentifier, premisFile)
 	jsonFile, err := os.OpenFile(premisFile, os.O_RDWR|os.O_CREATE, 0644)
@@ -997,6 +999,8 @@ func (restorer *APTRestorer) WritePremisEventFile(restoreState *models.RestoreSt
 	io.WriteString(jsonFile, "]\n")
 	restorer.Context.MessageLog.Info("Wrote %d Premis events to file %s",
 		eventNumber, premisFile)
+
+	restorer.addPremisFileChecksums(restoreState)
 }
 
 func (restorer *APTRestorer) getBatchOfPremisEvents(restoreState *models.RestoreState, pageNumber int) ([]*models.PremisEvent, bool, error) {
@@ -1017,6 +1021,65 @@ func (restorer *APTRestorer) getBatchOfPremisEvents(restoreState *models.Restore
 			pageNumber, restoreState.WorkItem.ObjectIdentifier)
 	}
 	return events, hasMoreItems, nil
+}
+
+// addPremisFileChecksums adds the PremisEvents.json file and its checksums
+// to the in-memory version of the IntellectualObject.
+//
+// If we haven't already done it on a prior aborted run,
+// add the PremisEvents file as a GenericFile. The GenericFile
+// record will not be saved back to Pharos, but the functions
+// that write out the tag manifests will see it and will
+// create the required tag manifest entries. All we need for
+// that to work is the GenericFile.Identifier.
+func (restorer *APTRestorer) addPremisFileChecksums(restoreState *models.RestoreState) {
+	premisFile := path.Join(restoreState.LocalBagDir, PREMIS_EVENTS_FILE)
+	obj := restoreState.IntellectualObject
+	gf := obj.FindGenericFile(PREMIS_EVENTS_FILE)
+	if gf == nil {
+		// Need both IntelObjIdentifier and Identifier for gf.OriginalPath() to work
+		gf = &models.GenericFile{
+			IntellectualObjectIdentifier: obj.Identifier,
+			Identifier:                   fmt.Sprintf("%s/PremisEvents.json", obj.Identifier),
+		}
+		obj.GenericFiles = append(obj.GenericFiles, gf)
+	}
+	restorer.Context.MessageLog.Info("Calculating checksums for %s", premisFile)
+	md5Digest, err := fileutil.CalculateChecksum(premisFile, constants.AlgMd5)
+	if err != nil {
+		restoreState.PackageSummary.AddError(
+			"Error calculating md5 checksum for PremisEvent file %s: %v",
+			premisFile, err)
+		return
+	}
+	sha256Digest, err := fileutil.CalculateChecksum(premisFile, constants.AlgSha256)
+	if err != nil {
+		restoreState.PackageSummary.AddError(
+			"Error calculating sha256 checksum for PremisEvent file %s: %v",
+			premisFile, err)
+		return
+	}
+	// If there are any old checksums from a prior aborted run,
+	// we want to clear them out and make sure the CURRENT
+	// checksums are there.
+	gf.Checksums = make([]*models.Checksum, 0)
+	now := time.Now().UTC()
+	md5Checksum := &models.Checksum{
+		Algorithm: constants.AlgMd5,
+		Digest:    md5Digest,
+		DateTime:  now,
+		CreatedAt: now,
+		UpdatedAt: now,
+	}
+	sha256Checksum := &models.Checksum{
+		Algorithm: constants.AlgSha256,
+		Digest:    sha256Digest,
+		DateTime:  now,
+		CreatedAt: now,
+		UpdatedAt: now,
+	}
+	gf.Checksums = append(gf.Checksums, md5Checksum)
+	gf.Checksums = append(gf.Checksums, sha256Checksum)
 }
 
 // LogJson dumps the WorkItemState.State into the JSON log, surrounded by
