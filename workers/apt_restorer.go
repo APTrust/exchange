@@ -12,8 +12,12 @@ import (
 	"github.com/APTrust/exchange/util/fileutil"
 	"github.com/APTrust/exchange/validation"
 	"github.com/nsqio/go-nsq"
+	"io"
+	"net/url"
 	"os"
+	"path"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -149,10 +153,14 @@ func (restorer *APTRestorer) buildBag() {
 		restorer.writeAPTrustInfoFile(restoreState)
 		restorer.writeBagitFile(restoreState)
 		restorer.writeBagInfoFile(restoreState)
+		restorer.WritePremisEventFile(restoreState)
 		restorer.writeManifest(constants.PAYLOAD_MANIFEST, constants.AlgMd5, restoreState)
 		restorer.writeManifest(constants.PAYLOAD_MANIFEST, constants.AlgSha256, restoreState)
 		restorer.writeManifest(constants.TAG_MANIFEST, constants.AlgMd5, restoreState)
 		restorer.writeManifest(constants.TAG_MANIFEST, constants.AlgSha256, restoreState)
+
+		// Now that the heavy work is done, see if any errors
+		// occured anywhere along the line.
 		if restoreState.PackageSummary.HasErrors() {
 			restorer.PostProcessChannel <- restoreState
 			continue
@@ -938,6 +946,68 @@ func (restorer *APTRestorer) fetchAllFiles(restoreState *models.RestoreState) {
 		restoreState.PackageSummary.AddError(msg)
 		restorer.Context.MessageLog.Error(msg)
 	}
+}
+
+// WritePremisEventFile: dump all PREMIS events to a file inside the restored
+// bag, so users can see which files have been deleted or overwritten
+// during the bag's time in APTrust.
+func (restorer *APTRestorer) WritePremisEventFile(restoreState *models.RestoreState) {
+	premisFile := path.Join(restoreState.LocalBagDir, "PremisEvents.json")
+	jsonFile, err := os.OpenFile(premisFile, os.O_RDWR|os.O_CREATE, 0644)
+	if err != nil {
+		restoreState.PackageSummary.AddError("Error creating PREMIS events JSON "+
+			"file at %s: %v", premisFile, err)
+		return
+	}
+	defer jsonFile.Close()
+
+	// Write the open JSON array bracket.
+	io.WriteString(jsonFile, "[\n")
+
+	var events []*models.PremisEvent
+	hasMoreResults := true
+	pageNumber := 1
+
+	// Keep getting batches, as long as we have more results.
+	for hasMoreResults {
+		events, hasMoreResults, err = restorer.getBatchOfPremisEvents(restoreState, pageNumber)
+		if err != nil {
+			restoreState.PackageSummary.AddError(
+				"Error getting page %d of Premis Events for %s from Pharos: %v",
+				pageNumber, restoreState.WorkItem.ObjectIdentifier, err)
+			break
+		} else {
+			// Stream each event record into the file.
+			for _, event := range events {
+				eventJson, _ := json.MarshalIndent(event, "", "  ")
+				io.WriteString(jsonFile, string(eventJson)+"\n")
+			}
+		}
+		pageNumber++
+	}
+
+	// Closing JSON array bracket.
+	io.WriteString(jsonFile, "]\n")
+}
+
+func (restorer *APTRestorer) getBatchOfPremisEvents(restoreState *models.RestoreState, pageNumber int) ([]*models.PremisEvent, bool, error) {
+	params := url.Values{}
+	params.Set("object_identifier", restoreState.WorkItem.ObjectIdentifier)
+	params.Set("page", strconv.Itoa(pageNumber))
+	params.Set("per_page", "500")
+	resp := restorer.Context.PharosClient.PremisEventList(params)
+	if resp.Error != nil {
+		return nil, false, resp.Error
+	}
+	events := resp.PremisEvents()
+	hasMoreItems := resp.HasNextPage()
+	restorer.Context.MessageLog.Info("Page %d of Premis events for %s returned %d items",
+		pageNumber, restoreState.WorkItem.ObjectIdentifier, len(events))
+	if !hasMoreItems {
+		restorer.Context.MessageLog.Info("Page %d is the last page of Premis events for %s",
+			pageNumber, restoreState.WorkItem.ObjectIdentifier)
+	}
+	return events, hasMoreItems, nil
 }
 
 // LogJson dumps the WorkItemState.State into the JSON log, surrounded by
