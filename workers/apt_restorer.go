@@ -953,6 +953,8 @@ func (restorer *APTRestorer) fetchAllFiles(restoreState *models.RestoreState) {
 // during the bag's time in APTrust.
 func (restorer *APTRestorer) WritePremisEventFile(restoreState *models.RestoreState) {
 	premisFile := path.Join(restoreState.LocalBagDir, "PremisEvents.json")
+	restorer.Context.MessageLog.Info("Starting to load Premis events for %s into %s",
+		restoreState.WorkItem.ObjectIdentifier, premisFile)
 	jsonFile, err := os.OpenFile(premisFile, os.O_RDWR|os.O_CREATE, 0644)
 	if err != nil {
 		restoreState.PackageSummary.AddError("Error creating PREMIS events JSON "+
@@ -962,11 +964,12 @@ func (restorer *APTRestorer) WritePremisEventFile(restoreState *models.RestoreSt
 	defer jsonFile.Close()
 
 	// Write the open JSON array bracket.
-	io.WriteString(jsonFile, "[\n")
+	io.WriteString(jsonFile, "[")
 
 	var events []*models.PremisEvent
 	hasMoreResults := true
 	pageNumber := 1
+	eventNumber := 0
 
 	// Keep getting batches, as long as we have more results.
 	for hasMoreResults {
@@ -980,7 +983,11 @@ func (restorer *APTRestorer) WritePremisEventFile(restoreState *models.RestoreSt
 			// Stream each event record into the file.
 			for _, event := range events {
 				eventJson, _ := json.MarshalIndent(event, "", "  ")
-				io.WriteString(jsonFile, string(eventJson)+"\n")
+				if eventNumber > 0 {
+					io.WriteString(jsonFile, ",\n")
+				}
+				io.WriteString(jsonFile, string(eventJson))
+				eventNumber++
 			}
 		}
 		pageNumber++
@@ -988,6 +995,8 @@ func (restorer *APTRestorer) WritePremisEventFile(restoreState *models.RestoreSt
 
 	// Closing JSON array bracket.
 	io.WriteString(jsonFile, "]\n")
+	restorer.Context.MessageLog.Info("Wrote %d Premis events to file %s",
+		eventNumber, premisFile)
 }
 
 func (restorer *APTRestorer) getBatchOfPremisEvents(restoreState *models.RestoreState, pageNumber int) ([]*models.PremisEvent, bool, error) {
