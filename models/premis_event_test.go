@@ -65,8 +65,8 @@ func TestNewEventObjectIngest(t *testing.T) {
 	assert.Equal(t, "Copied all files to perservation bucket", event.Detail)
 	assert.Equal(t, "Success", event.Outcome)
 	assert.Equal(t, "300 files copied", event.OutcomeDetail)
-	assert.Equal(t, "goamz S3 client", event.Object)
-	assert.Equal(t, "https://github.com/crowdmob/goamz", event.Agent)
+	assert.Equal(t, "AWS Go SDK S3 client", event.Object)
+	assert.Equal(t, "https://github.com/aws/aws-sdk-go", event.Agent)
 	assert.Equal(t, "Multipart put using md5 checksum", event.OutcomeInformation)
 }
 
@@ -149,8 +149,8 @@ func TestNewEventGenericFileIngest(t *testing.T) {
 	assert.Equal(t, "Completed copy to S3 (c5c34a8c-4c70-4140-8442-594f4fcaf4b9)", event.Detail)
 	assert.Equal(t, "Success", event.Outcome)
 	assert.Equal(t, md5_digest, event.OutcomeDetail)
-	assert.Equal(t, "exchange + goamz S3 client", event.Object)
-	assert.Equal(t, "https://github.com/APTrust/exchange", event.Agent)
+	assert.Equal(t, "exchange + AWS Go SDK S3 client", event.Object)
+	assert.Equal(t, "https://github.com/aws/aws-sdk-go", event.Agent)
 	assert.Equal(t, "Put using md5 checksum", event.OutcomeInformation)
 }
 
@@ -299,7 +299,7 @@ func TestNewEventGenericFileIdentifierAssignment(t *testing.T) {
 	assert.True(t, strings.HasPrefix(event.Detail, "Assigned new storage URL identifier"))
 	assert.Equal(t, "Success", event.Outcome)
 	assert.Equal(t, "https://example.com/000-000-999", event.OutcomeDetail)
-	assert.Equal(t, "Go uuid library + goamz S3 library", event.Object)
+	assert.Equal(t, "Go uuid library + AWS Go SDK S3 library", event.Object)
 	assert.Equal(t, "http://github.com/satori/go.uuid", event.Agent)
 	assert.Equal(t, "Assigned url identifier", event.OutcomeInformation)
 
@@ -329,7 +329,7 @@ func TestNewEventGenericFileReplication(t *testing.T) {
 	assert.Equal(t, "Copied to replication storage and assigned replication URL identifier", event.Detail)
 	assert.Equal(t, "Success", event.Outcome)
 	assert.Equal(t, "https://example.com/123456789", event.OutcomeDetail)
-	assert.Equal(t, "Go uuid library + goamz S3 library", event.Object)
+	assert.Equal(t, "Go uuid library + AWS Go SDK S3 library", event.Object)
 	assert.Equal(t, "http://github.com/satori/go.uuid", event.Agent)
 	assert.Equal(t, "Replicated to secondary storage", event.OutcomeInformation)
 }

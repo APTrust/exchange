@@ -118,8 +118,8 @@ func NewEventObjectIngest(numberOfFilesIngested int) (*PremisEvent, error) {
 		Detail:             "Copied all files to perservation bucket",
 		Outcome:            string(constants.StatusSuccess),
 		OutcomeDetail:      fmt.Sprintf("%d files copied", numberOfFilesIngested),
-		Object:             "goamz S3 client",
-		Agent:              "https://github.com/crowdmob/goamz",
+		Object:             "AWS Go SDK S3 client",
+		Agent:              "https://github.com/aws/aws-sdk-go",
 		OutcomeInformation: "Multipart put using md5 checksum",
 	}, nil
 }
@@ -181,8 +181,8 @@ func NewEventGenericFileIngest(storedAt time.Time, md5Digest, _uuid string) (*Pr
 		Detail:             fmt.Sprintf("Completed copy to S3 (%s)", _uuid),
 		Outcome:            string(constants.StatusSuccess),
 		OutcomeDetail:      fmt.Sprintf("md5:%s", md5Digest),
-		Object:             "exchange + goamz S3 client",
-		Agent:              "https://github.com/APTrust/exchange",
+		Object:             "exchange + AWS Go SDK S3 client",
+		Agent:              "https://github.com/aws/aws-sdk-go",
 		OutcomeInformation: "Put using md5 checksum",
 	}, nil
 }
@@ -277,7 +277,7 @@ func NewEventGenericFileIdentifierAssignment(identifierGeneratedAt time.Time, id
 	agent := "https://github.com/APTrust/exchange"
 	detail := "Assigned new institution.bag/path identifier"
 	if identifierType == constants.IdTypeStorageURL {
-		object = "Go uuid library + goamz S3 library"
+		object = "Go uuid library + AWS Go SDK S3 library"
 		agent = "http://github.com/satori/go.uuid"
 		// Don't change these words. They're used in IsUrlAssignment below.
 		detail = fmt.Sprintf("Assigned new storage URL identifier, and item was stored at %s",
@@ -313,7 +313,7 @@ func NewEventGenericFileReplication(replicatedAt time.Time, replicationUrl strin
 		Detail:             "Copied to replication storage and assigned replication URL identifier",
 		Outcome:            string(constants.StatusSuccess),
 		OutcomeDetail:      replicationUrl,
-		Object:             "Go uuid library + goamz S3 library",
+		Object:             "Go uuid library + AWS Go SDK S3 library",
 		Agent:              "http://github.com/satori/go.uuid",
 		OutcomeInformation: "Replicated to secondary storage",
 	}, nil
