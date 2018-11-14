@@ -1,6 +1,7 @@
 package models_test
 
 import (
+	"fmt"
 	"github.com/APTrust/exchange/constants"
 	"github.com/APTrust/exchange/models"
 	"github.com/APTrust/exchange/util/testutil"
@@ -341,27 +342,27 @@ func TestNewEventFileDeletion(t *testing.T) {
 	assert.Len(t, event.Identifier, 36)
 	assert.Equal(t, "deletion", event.EventType)
 	assert.Equal(t, utcNow, event.DateTime)
-	assert.Equal(t, "File deleted from long-term storage.", event.Detail)
+	assert.Equal(t, fmt.Sprintf("File %s deleted from long-term storage.", fileUUID), event.Detail)
 	assert.Equal(t, "Success", event.Outcome)
 	assert.Equal(t, "File deleted at the request of user@example.com. Institutional approver: admin@example.com.",
 		event.OutcomeInformation)
 	assert.Equal(t, "APTrust Exchange apt_delete service", event.Object)
 	assert.Equal(t, "https://github.com/APTrust/exchange", event.Agent)
-	assert.True(t, strings.HasSuffix(event.OutcomeDetail, "deleted from preservation storage."))
+	assert.Equal(t, "user@example.com", event.OutcomeDetail)
 
 	event = models.NewEventFileDeletion(fileUUID, "user@example.com",
 		"admin@example.com", "someone@aptrust.org", utcNow)
 	assert.Len(t, event.Identifier, 36)
 	assert.Equal(t, "deletion", event.EventType)
 	assert.Equal(t, utcNow, event.DateTime)
-	assert.Equal(t, "File deleted from long-term storage.", event.Detail)
+	assert.Equal(t, fmt.Sprintf("File %s deleted from long-term storage.", fileUUID), event.Detail)
 	assert.Equal(t, "Success", event.Outcome)
 	assert.Equal(t,
 		"File deleted at the request of user@example.com. Institutional approver: admin@example.com. APTrust approver: someone@aptrust.org.",
 		event.OutcomeInformation)
 	assert.Equal(t, "APTrust Exchange apt_delete service", event.Object)
 	assert.Equal(t, "https://github.com/APTrust/exchange", event.Agent)
-	assert.True(t, strings.HasSuffix(event.OutcomeDetail, "deleted from preservation storage."))
+	assert.Equal(t, "user@example.com", event.OutcomeDetail)
 }
 
 func TestPremisEventMergeAttributes(t *testing.T) {
