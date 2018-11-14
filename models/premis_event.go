@@ -322,13 +322,13 @@ func NewEventGenericFileReplication(replicatedAt time.Time, replicationUrl strin
 // NewEventFileDeletion creates a new file deletion event.
 func NewEventFileDeletion(fileUUID, requestedBy, instApprover, aptrustApprover string, timestamp time.Time) *PremisEvent {
 	eventId := uuid.NewV4()
-	outcomeInfo := fmt.Sprintf("File %s deleted from preservation storage.", fileUUID)
-	outcomeDetail := fmt.Sprintf("File deleted at the request of %s.", requestedBy)
+	outcomeDetail := fmt.Sprintf("File %s deleted from preservation storage.", fileUUID)
+	outcomeInfo := fmt.Sprintf("File deleted at the request of %s.", requestedBy)
 	if instApprover != "" {
-		outcomeDetail += fmt.Sprintf(" Institutional approver: %s.", instApprover)
+		outcomeInfo += fmt.Sprintf(" Institutional approver: %s.", instApprover)
 	}
 	if aptrustApprover != "" {
-		outcomeDetail += fmt.Sprintf(" APTrust approver: %s.", aptrustApprover)
+		outcomeInfo += fmt.Sprintf(" APTrust approver: %s.", aptrustApprover)
 	}
 	return &PremisEvent{
 		Identifier:         eventId.String(),

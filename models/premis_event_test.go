@@ -344,10 +344,10 @@ func TestNewEventFileDeletion(t *testing.T) {
 	assert.Equal(t, "File deleted from long-term storage.", event.Detail)
 	assert.Equal(t, "Success", event.Outcome)
 	assert.Equal(t, "File deleted at the request of user@example.com. Institutional approver: admin@example.com.",
-		event.OutcomeDetail)
+		event.OutcomeInformation)
 	assert.Equal(t, "APTrust Exchange apt_delete service", event.Object)
 	assert.Equal(t, "https://github.com/APTrust/exchange", event.Agent)
-	assert.True(t, strings.HasSuffix(event.OutcomeInformation, "deleted from preservation storage."))
+	assert.True(t, strings.HasSuffix(event.OutcomeDetail, "deleted from preservation storage."))
 
 	event = models.NewEventFileDeletion(fileUUID, "user@example.com",
 		"admin@example.com", "someone@aptrust.org", utcNow)
@@ -358,10 +358,10 @@ func TestNewEventFileDeletion(t *testing.T) {
 	assert.Equal(t, "Success", event.Outcome)
 	assert.Equal(t,
 		"File deleted at the request of user@example.com. Institutional approver: admin@example.com. APTrust approver: someone@aptrust.org.",
-		event.OutcomeDetail)
+		event.OutcomeInformation)
 	assert.Equal(t, "APTrust Exchange apt_delete service", event.Object)
 	assert.Equal(t, "https://github.com/APTrust/exchange", event.Agent)
-	assert.True(t, strings.HasSuffix(event.OutcomeInformation, "deleted from preservation storage."))
+	assert.True(t, strings.HasSuffix(event.OutcomeDetail, "deleted from preservation storage."))
 }
 
 func TestPremisEventMergeAttributes(t *testing.T) {
