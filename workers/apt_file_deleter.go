@@ -350,10 +350,10 @@ func (deleter *APTFileDeleter) markObjectDeletedIfAppropriate(deleteState *model
 		deleter.Context.MessageLog.Info("No delete event for object %s", objIdentifier)
 		return
 	}
-	// If we know we have a delete event on this object, check to see if the
+	// If there is no delete event on this object since last ingest, check to see if the
 	// object still has any active files. This call is can be expensive, so
 	// we avoid it until this point.
-	if lastDelete.After(lastIngest) {
+	if !lastDelete.After(lastIngest) {
 		resp = deleter.Context.PharosClient.IntellectualObjectGet(objIdentifier, true, false)
 		if resp.Error != nil {
 			deleteState.DeleteSummary.AddError(
@@ -371,7 +371,8 @@ func (deleter *APTFileDeleter) markObjectDeletedIfAppropriate(deleteState *model
 		deleter.Context.MessageLog.Info("No recent delete event for object %s", objIdentifier)
 		return
 	}
-	if len(obj.GenericFiles) == 0 {
+	// No recent delete, and no files left: Create object delete event.
+	if !lastDelete.After(lastIngest) && len(obj.GenericFiles) == 0 {
 		resp := deleter.Context.PharosClient.IntellectualObjectFinishDelete(objIdentifier)
 		if resp.Error != nil {
 			deleteState.DeleteSummary.AddError("Error marking %s as deleted: %v",
