@@ -267,3 +267,7 @@ var EventTypes []string = []string{
 	EventValidation,
 	EventVirusCheck,
 }
+
+// Event outcomes
+const OutcomeSuccess = "Success"
+const OutcomeFailure = "Failure"

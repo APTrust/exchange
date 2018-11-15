@@ -340,9 +340,9 @@ func (deleter *APTFileDeleter) markObjectDeletedIfAppropriate(deleteState *model
 	lastDelete := time.Time{}
 	// Typical object has ~5 events
 	for _, event := range obj.PremisEvents {
-		if event.EventType == constants.EventIngestion && event.DateTime.After(lastIngest) {
+		if event.EventType == constants.EventIngestion && event.Outcome == constants.OutcomeSuccess && event.DateTime.After(lastIngest) {
 			lastIngest = event.DateTime
-		} else if event.EventType == constants.EventDeletion && event.DateTime.After(lastDelete) {
+		} else if event.EventType == constants.EventDeletion && event.Outcome == constants.OutcomeSuccess && event.DateTime.After(lastDelete) {
 			lastDelete = event.DateTime
 		}
 	}
