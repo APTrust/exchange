@@ -368,11 +368,11 @@ func (deleter *APTFileDeleter) markObjectDeletedIfAppropriate(deleteState *model
 			return
 		}
 	} else {
-		deleter.Context.MessageLog.Info("No recent delete event for object %s", objIdentifier)
+		deleter.Context.MessageLog.Info("Delete event already recorded for object %s", objIdentifier)
 		return
 	}
-	// No recent delete, and no files left: Create object delete event.
-	if !lastDelete.After(lastIngest) && len(obj.GenericFiles) == 0 {
+	// All files have been deleted. Mark object deleted.
+	if len(obj.GenericFiles) == 0 {
 		resp := deleter.Context.PharosClient.IntellectualObjectFinishDelete(objIdentifier)
 		if resp.Error != nil {
 			deleteState.DeleteSummary.AddError("Error marking %s as deleted: %v",
