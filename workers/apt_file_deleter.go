@@ -340,16 +340,20 @@ func (deleter *APTFileDeleter) markObjectDeletedIfAppropriate(deleteState *model
 	lastDelete := time.Time{}
 	// Typical object has ~5 events
 	for _, event := range obj.PremisEvents {
+		if event.GenericFileIdentifier != "" {
+			// This is a file-level event, not an object-level event
+			continue
+		}
 		if event.EventType == constants.EventIngestion && event.Outcome == constants.OutcomeSuccess && event.DateTime.After(lastIngest) {
 			lastIngest = event.DateTime
 		} else if event.EventType == constants.EventDeletion && event.Outcome == constants.OutcomeSuccess && event.DateTime.After(lastDelete) {
 			lastDelete = event.DateTime
 		}
 	}
-	if lastDelete.IsZero() {
-		deleter.Context.MessageLog.Info("No delete event for object %s", objIdentifier)
-		return
-	}
+
+	deleter.Context.MessageLog.Info("Last ingest for %s: %s", objIdentifier, lastIngest.Format(time.RFC3339))
+	deleter.Context.MessageLog.Info("Last deletion for %s: %s", objIdentifier, lastDelete.Format(time.RFC3339))
+
 	// If there is no delete event on this object since last ingest, check to see if the
 	// object still has any active files. This call is can be expensive, so
 	// we avoid it until this point.
@@ -367,6 +371,11 @@ func (deleter *APTFileDeleter) markObjectDeletedIfAppropriate(deleteState *model
 				objIdentifier, resp.Error)
 			return
 		}
+		// Try to detect race condition when deleting multiple files from same object.
+		if obj.State == "D" {
+			deleter.Context.MessageLog.Info("Object %s is already marked deleted", objIdentifier)
+			return
+		}
 	} else {
 		deleter.Context.MessageLog.Info("Delete event already recorded for object %s", objIdentifier)
 		return
@@ -379,7 +388,7 @@ func (deleter *APTFileDeleter) markObjectDeletedIfAppropriate(deleteState *model
 				deleteState.GenericFile.Identifier, resp.Error)
 		} else {
 			deleter.Context.MessageLog.Info(
-				"Marked IntellectualObject %s as deleted (has delete event and no more active files)",
+				"Marked IntellectualObject %s as deleted (no delete event no more active files)",
 				objIdentifier)
 		}
 	}

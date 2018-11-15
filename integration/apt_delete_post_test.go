@@ -47,12 +47,12 @@ func TestDeleteResults(t *testing.T) {
 	params.Set("per_page", "100")
 	resp := _context.PharosClient.PremisEventList(params)
 
-	// One event for each of six files.
+	// One event for each of six files, plus one for the object.
 	// We need to somehow record that the object was deleted as well
 	// if all of its generic files have been deleted.
 	require.Nil(t, resp.Error)
 	events := resp.PremisEvents()
-	assert.Equal(t, 6, len(events))
+	assert.Equal(t, 7, len(events))
 
 	maxKeys := int64(10)
 	s3Client := network.NewS3ObjectList(
