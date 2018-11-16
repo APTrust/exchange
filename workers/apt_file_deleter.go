@@ -24,6 +24,15 @@ type APTFileDeleter struct {
 	// the outcome of the deletion in Pharos and finish or
 	// requeue the NSQ message.
 	PostProcessChannel chan *models.DeleteState
+	// RingList keeps track of IntellectualObject identifiers so we don't
+	// spam Pharos with requests to api/v2/objects/<id>/finish_delete.
+	// Because Rails runs multiple processes, issuing multiple concurrent
+	// finish_delete requests (which is proven to happen regularly) results
+	// in multiple IntellectualObject 'deletion' PREMIS events. The Rails
+	// code includes guards to prevent that, but they don't work across
+	// multiple processes, so we have to implement a guard here.
+	// This list is for object identifiers only, not generic file identifiers.
+	RecentlyDeleted *models.RingList
 	// isIntegrationTest will be true if we're running in the
 	// integration test context.
 	isIntegrationTest bool
@@ -31,7 +40,8 @@ type APTFileDeleter struct {
 
 func NewAPTFileDeleter(_context *context.Context) *APTFileDeleter {
 	deleter := &APTFileDeleter{
-		Context: _context,
+		Context:         _context,
+		RecentlyDeleted: models.NewRingList(20),
 	}
 
 	// Set up buffered channels
@@ -318,6 +328,12 @@ func (deleter *APTFileDeleter) markObjectDeletedIfAppropriate(deleteState *model
 	// Get the object with its events, but don't get GenericFiles, because
 	// there may be thousands of them.
 	objIdentifier := deleteState.GenericFile.IntellectualObjectIdentifier
+
+	if deleter.RecentlyDeleted.Contains(objIdentifier) {
+		deleter.Context.MessageLog.Info("%s already marked deleted", objIdentifier)
+		return
+	}
+
 	resp := deleter.Context.PharosClient.IntellectualObjectGet(objIdentifier, false, true)
 	if resp.Error != nil {
 		deleteState.DeleteSummary.AddError(
@@ -381,7 +397,8 @@ func (deleter *APTFileDeleter) markObjectDeletedIfAppropriate(deleteState *model
 		return
 	}
 	// All files have been deleted. Mark object deleted.
-	if len(obj.GenericFiles) == 0 {
+	if len(obj.GenericFiles) == 0 && !deleter.RecentlyDeleted.Contains(objIdentifier) {
+		deleter.RecentlyDeleted.Add(objIdentifier)
 		resp := deleter.Context.PharosClient.IntellectualObjectFinishDelete(objIdentifier)
 		if resp.Error != nil {
 			deleteState.DeleteSummary.AddError("Error marking %s as deleted: %v",
