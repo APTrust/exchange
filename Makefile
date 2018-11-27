@@ -37,16 +37,16 @@ build: ## Build the Exchange containers
 	echo "Needs loop support for multiple apps"
 
 up: ## Start Exchange+NSQ containers
-	docker-compose -p exchange -d up
+	sudo docker-compose -p exchange up -d
 
 stop: ## Stop Exchange+NSQ containers
-	docker-compose -p exchange -d stop
+	sudo docker-compose -p exchange stop
 
 destroy: ## Stop and remove all Exchange+NSQ containers, networks, images, and volumes
-	docker-compose -p exchange down
+	sudo docker-compose -p exchange down
 
 run: ## Run Exchange services in foreground
-	docker-compose -p exchange up
+	sudo docker-compose -p exchange up
 
 
 publish:
