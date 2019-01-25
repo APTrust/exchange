@@ -704,8 +704,8 @@ class IntegrationTest
 	env['RUN_EXCHANGE_INTEGRATION'] = 'true'
 	dir = "#{@context.exchange_root}/integration"
 	cmd = "go test #{test_file}"
-	print "Running #{test_file}... "
 	pid = Process.spawn(env, cmd, chdir: dir)
+	puts "Running #{test_file} with pid #{pid}... "
 	Process.wait pid
 	return $?.exitstatus == 0
   end
