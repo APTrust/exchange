@@ -106,6 +106,11 @@ Once you have all that, simply run `ruby ./scripts/test.rb --help` to see which 
 - `./scripts/tesh.sh dpn_ingest` - This exercises most APTrust operations, along with DPN ingest. (Pushing items from APTrust into DPN.)
 - `./scripts/tesh.sh apt_fixity` - This exercises most APTrust operations, along with DPN replication. (Copying and storing items from other simulated DPN nodes.)
 
+The integration tests may hang after the startup of the NSQ service if you killed a
+prior run of integration tests before they completed. Check your system using top,
+Task Manager, or Mac's Activity Monitor for stray ruby processes. Kill those processes
+and then try re-running the tests.
+
 ## Setting up Postgres
 
 If you're on a Mac, get the Postgres app from https://postgresapp.com/.
