@@ -17,6 +17,7 @@ func TestOwnerOf(t *testing.T) {
 	if util.OwnerOf("aptrust.restore.unc.edu") != "unc.edu" {
 		t.Error("OwnerOf misidentified restoration bucket owner")
 	}
+	assert.Equal(t, "test.edu", util.OwnerOf("aptrust.receiving.test.edu"))
 }
 
 func TestRestorationBucketFor(t *testing.T) {

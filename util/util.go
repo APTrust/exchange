@@ -18,7 +18,7 @@ var reLegal *regexp.Regexp = regexp.MustCompile("^[A-Za-z0-9\\-_\\.]+$")
 // specified bucket. For example, if bucketName is 'aptrust.receiving.unc.edu'
 // the return value will be 'unc.edu'.
 func OwnerOf(bucketName string) (institution string) {
-	if bucketName == constants.ReceiveTestBucketPrefix {
+	if bucketName == constants.ReceiveTestBucketPrefix+"edu" {
 		// Actual test.edu receiving bucket for production.
 		// Didn't anticipate this case back in 2014. Oops.
 		institution = "test.edu"
