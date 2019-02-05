@@ -761,6 +761,35 @@ func TestWorkItemGet(t *testing.T) {
 	assert.True(t, obj.Retry)
 }
 
+func TestFinishRestorationSpotTest(t *testing.T) {
+	testServer := httptest.NewServer(http.HandlerFunc(workItemGetHandler))
+	defer testServer.Close()
+
+	client, err := network.NewPharosClient(testServer.URL, "v2", "user", "key")
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	response := client.FinishRestorationSpotTest(999)
+
+	// Check the request URL and method
+	assert.Equal(t, "GET", response.Request.Method)
+	assert.Equal(t, "/api/v2/notifications/spot_test_restoration/999/", response.Request.URL.Opaque)
+
+	// Basic sanity check on response values
+	assert.Nil(t, response.Error)
+
+	obj := response.WorkItem()
+	assert.EqualValues(t, "WorkItem", response.ObjectType())
+	if obj == nil {
+		t.Errorf("WorkItem should not be nil")
+	}
+	assert.NotEqual(t, "", obj.Action)
+	assert.NotEqual(t, "", obj.Status)
+	assert.True(t, obj.Retry)
+}
+
 func TestWorkItemList(t *testing.T) {
 	testServer := httptest.NewServer(http.HandlerFunc(workItemListHandler))
 	defer testServer.Close()

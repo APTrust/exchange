@@ -899,6 +899,33 @@ func (client *PharosClient) WorkItemStateGet(workItemStateId int) *PharosRespons
 	return resp
 }
 
+// FinishRestorationSpotTest tells Pharos to send an email to institutional
+// admins saying APTrust has randomly restored one of their bags as part of a
+// spot test.
+func (client *PharosClient) FinishRestorationSpotTest(workItemId int) *PharosResponse {
+	// Set up the response object
+	resp := NewPharosResponse(PharosWorkItem)
+	resp.workItems = make([]*models.WorkItem, 1)
+
+	// Build the url and the request object
+	relativeUrl := fmt.Sprintf("/api/%s/notifications/spot_test_restoration/%d/", client.apiVersion, workItemId)
+	absoluteUrl := client.BuildUrl(relativeUrl)
+
+	// Run the request
+	client.DoRequest(resp, "GET", absoluteUrl, nil)
+	if resp.Error != nil {
+		return resp
+	}
+
+	// Parse the JSON from the response body
+	workItem := &models.WorkItem{}
+	resp.Error = json.Unmarshal(resp.data, workItem)
+	if resp.Error == nil {
+		resp.workItems[0] = workItem
+	}
+	return resp
+}
+
 // DPNWorkItemList returns a list of DPNWorkItems that match the specified
 // criteria. Valid params include node, task, identifier, queued_before,
 // queued_after, completed_before and completed_after.
