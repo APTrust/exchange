@@ -1,10 +1,12 @@
 package integration_test
 
 import (
+	"bufio"
 	"github.com/APTrust/exchange/models"
 	"github.com/APTrust/exchange/util/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -69,6 +71,15 @@ func TestRetoreResults(t *testing.T) {
 			"RestoredToURL should not be empty for %s", gfIdentifier)
 
 	}
+
+	// This happens last...
+	for _, bagName := range testutil.INTEGRATION_GOOD_BAGS[0:7] {
+		objIdentifier := strings.Replace(bagName, "aptrust.integration.test", "test.edu", 1)
+		objIdentifier = strings.Replace(objIdentifier, ".tar", "", 1)
+		assert.True(t, emailSentFor(objIdentifier, config),
+			"Did not send restoration spot test email for %s", objIdentifier)
+	}
+
 	require.False(t, testFailed, "One or more tests failed")
 }
 
@@ -114,4 +125,19 @@ func restoreTestCommon(t *testing.T, objIdentifier string, restoreState *models.
 		"BagDirDeletedAt should not be empty for %s", objIdentifier)
 	assert.False(t, restoreState.TarFileDeletedAt.IsZero(),
 		"TarFileDeletedAt should not be empty for %s", objIdentifier)
+}
+
+// Did we record sending a restoration spot test email for this item?
+func emailSentFor(objIdentifier string, config *models.Config) bool {
+	file, _ := os.Open(filepath.Join(config.LogDirectory, "apt_restore.log"))
+	defer file.Close()
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		line := scanner.Text()
+		if strings.Contains(line, "Sent restoration spot test email") &&
+			strings.Contains(line, objIdentifier) {
+			return true
+		}
+	}
+	return false
 }
