@@ -514,6 +514,26 @@ func (restorer *APTRestorer) saveWorkItem(restoreState *models.RestoreState) {
 			restoreState.WorkItem.Status,
 			restoreState.WorkItem.ObjectIdentifier,
 			resp.Error)
+	} else {
+		if restoreState.WorkItem.User == constants.APTrustSystemUser {
+			restorer.finishRestorationSpotTest(restoreState)
+		}
+	}
+}
+
+func (restorer *APTRestorer) finishRestorationSpotTest(restoreState *models.RestoreState) {
+	resp := restorer.Context.PharosClient.FinishRestorationSpotTest(restoreState.WorkItem.Id)
+	if resp.Error != nil {
+		restorer.Context.MessageLog.Warning(
+			"Error sending restoration email for WorkItem %d (%s): %v",
+			restoreState.WorkItem.Id,
+			restoreState.WorkItem.ObjectIdentifier,
+			resp.Error)
+	} else {
+		restorer.Context.MessageLog.Info(
+			"Sent restoration spot test email for WorkItem %d (%s)",
+			restoreState.WorkItem.Id,
+			restoreState.WorkItem.ObjectIdentifier)
 	}
 }
 
