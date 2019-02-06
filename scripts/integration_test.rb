@@ -290,7 +290,7 @@ class IntegrationTest
 	  @service.app_start(@context.apps['apt_restore'])
 	  @service.app_start(@context.apps['apt_file_restore'])
 	  @service.app_start(@context.apps['apt_file_delete'])
-	  sleep 60
+	  sleep 90
 
 	  # Run the post tests.
 	  @results['apt_restore_test'] = run('apt_restore_post_test.go')

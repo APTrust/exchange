@@ -351,6 +351,10 @@ func (restorer *APTRestorer) finishWithSuccess(restoreState *models.RestoreState
 	restorer.saveWorkItem(restoreState)
 	restorer.saveWorkItemState(restoreState)
 
+	if restoreState.WorkItem.User == constants.APTrustSystemUser {
+		restorer.finishRestorationSpotTest(restoreState)
+	}
+
 	// Tell NSQ we're done storing this.
 	restoreState.NSQMessage.Finish()
 }
@@ -514,10 +518,6 @@ func (restorer *APTRestorer) saveWorkItem(restoreState *models.RestoreState) {
 			restoreState.WorkItem.Status,
 			restoreState.WorkItem.ObjectIdentifier,
 			resp.Error)
-	} else {
-		if restoreState.WorkItem.User == constants.APTrustSystemUser {
-			restorer.finishRestorationSpotTest(restoreState)
-		}
 	}
 }
 
