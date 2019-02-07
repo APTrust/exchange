@@ -218,6 +218,10 @@ func (restoreTest *APTSpotTestRestore) CreateWorkItem(obj *models.IntellectualOb
 	if lastIngestItem == nil {
 		return nil, fmt.Errorf("Last ingest WorkItem is missing for %s", obj.Identifier)
 	}
+	action := constants.ActionRestore
+	if obj.StorageOption != constants.StorageStandard {
+		action = constants.ActionGlacierRestore
+	}
 	workItem := &models.WorkItem{
 		ObjectIdentifier: obj.Identifier,
 		Name:             lastIngestItem.Name,
@@ -228,7 +232,7 @@ func (restoreTest *APTSpotTestRestore) CreateWorkItem(obj *models.IntellectualOb
 		Date:             time.Now().UTC(),
 		InstitutionId:    lastIngestItem.InstitutionId,
 		User:             "system@aptrust.org", // because this is an automated spot test
-		Action:           constants.ActionRestore,
+		Action:           action,
 		Stage:            constants.StageRequested,
 		Status:           constants.StatusPending,
 		Outcome:          "Pending",
