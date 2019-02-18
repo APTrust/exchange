@@ -677,9 +677,14 @@ class IntegrationTest
   # run_all_unit_tests runs all of the APTrust and DPN unit tests.
   # These tests do not require any outside services to run, and
   # they omit a handful of tests that do require outside services.
+  #
+  # A.D. 2019-02-18: Stop running the DPN unit tests. They take
+  # longer than all other unit tests, and we're not running DPN
+  # code anymore. To reactivate, remove "| grep -v /dpn/" from
+  # the command below.
   def run_all_unit_tests
 	env = @context.env_hash
-	cmd = "go test $(go list ./... | grep -v /vendor/)"
+	cmd = "go test $(go list ./... | grep -v /vendor/ | grep -v /dpn/)"
 	pid = Process.spawn(env, cmd, chdir: @context.exchange_root)
 	Process.wait pid
 	return $?.exitstatus == 0
