@@ -22,6 +22,10 @@ var PosixFileNamePattern = regexp.MustCompile("^[A-Za-z0-9\\._\\-]+$")
 
 // Permissive matches anything that does not contain ASCII bells, form-feeds,
 // tabs, newlines, carriage returns or vertical tabs.
+//
+// Not that even when we use this permissive pattern, our validator will
+// still reject file names that appear to contain UTF-8 control characters.
+// See Util.ContainsControlCharacter() and util.LooksLikeEscapedControl().
 var PermissivePattern = regexp.MustCompile("[^\\a\\f\\t\\n\\r\\v]+")
 
 // APTrustSystemUser is the APTrust system user in Pharos.

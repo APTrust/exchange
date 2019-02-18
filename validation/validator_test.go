@@ -1,6 +1,7 @@
 package validation_test
 
 import (
+	"fmt"
 	"github.com/APTrust/exchange/constants"
 	"github.com/APTrust/exchange/testhelper"
 	"github.com/APTrust/exchange/util"
@@ -484,6 +485,18 @@ func TestValidator_WrongFolderName(t *testing.T) {
 	require.True(t, summary.HasErrors())
 	assert.Equal(t, 1, len(summary.Errors))
 	assert.True(t, util.StringListContains(summary.Errors, "Tarred bag should untar to directory 'example.edu.sample_wrong_folder_name', not 'wrong_folder_name'"))
+}
+
+func TestValidator_IllegalControlCharacter(t *testing.T) {
+	validator := validatorWithOptionalSpec(t, "example.edu.sample_illegal_control.tar")
+	defer deleteFile(validator.DBName())
+	summary, err := validator.Validate()
+	assert.Nil(t, err)
+	assert.NotNil(t, summary)
+	require.True(t, summary.HasErrors())
+	fmt.Println(summary.Errors)
+	assert.Equal(t, 1, len(summary.Errors))
+	assert.True(t, util.StringListContains(summary.Errors, "File name 'data/datastream\\u007f.txt' contains an illegal unicode control character"))
 }
 
 var gfIdentifiers = []string{

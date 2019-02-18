@@ -254,3 +254,15 @@ func ContainsControlCharacter(str string) bool {
 	}
 	return false
 }
+
+// LooksLikeEscapedControl returns true if string str contains
+// something that looks like an escaped UTF-8 control character.
+// The Mac OS file system seems to silently escape UTF-8 control
+// characters. That causes problems when we try to copy a file
+// over to another file system that won't accept the control
+// character in a file name. The bag validator looks for file names
+// matching these patterns and rejects them.
+func LooksLikeEscapedControl(str string) bool {
+	reControl := regexp.MustCompile("\\\\[Uu]00[0189][0-9A-Fa-f]|\\\\[Uu]007[Ff]")
+	return reControl.MatchString(str)
+}

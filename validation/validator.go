@@ -250,6 +250,7 @@ func (validator *Validator) addFile(readIterator fileutil.ReadIterator) error {
 	if !fileSummary.IsRegularFile {
 		return nil
 	}
+
 	gf := models.NewGenericFile()
 	gf.Identifier = fmt.Sprintf("%s/%s", validator.ObjIdentifier, fileSummary.RelPath)
 
@@ -799,7 +800,12 @@ func (validator *Validator) verifyGenericFiles() {
 				gf.OriginalPath())
 		}
 		// Make sure name is valid
-		if validator.BagValidationConfig.FileNameRegex != nil {
+		if util.ContainsControlCharacter(gf.OriginalPath()) ||
+			util.LooksLikeEscapedControl(gf.OriginalPath()) {
+			validator.summary.AddError(
+				"File name '%s' contains an illegal unicode control character",
+				gf.OriginalPath())
+		} else if validator.BagValidationConfig.FileNameRegex != nil {
 			for _, pathComponent := range strings.Split(gf.OriginalPath(), "/") {
 				if !validator.BagValidationConfig.FileNameRegex.MatchString(pathComponent) {
 					validator.summary.AddError(
