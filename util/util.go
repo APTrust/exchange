@@ -8,6 +8,7 @@ import (
 	"path"
 	"regexp"
 	"strings"
+	"unicode"
 )
 
 var reManifest *regexp.Regexp = regexp.MustCompile("^manifest-[A-Za-z0-9]+\\.txt$")
@@ -239,4 +240,17 @@ func DeleteFromStringList(list []string, item string) []string {
 		}
 	}
 	return newList
+}
+
+// ContainsControlCharacter returns true if string str contains a
+// Unicode control character. We use this to test file names, which
+// should not contain control characters.
+func ContainsControlCharacter(str string) bool {
+	runes := []rune(str)
+	for _, _rune := range runes {
+		if unicode.IsControl(_rune) {
+			return true
+		}
+	}
+	return false
 }
