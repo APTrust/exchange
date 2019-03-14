@@ -25,6 +25,7 @@ func TestLoadBagValidationConfig(t *testing.T) {
 	if errors != nil && len(errors) > 0 {
 		assert.Fail(t, errors[0].Error())
 	}
+	assert.False(t, conf.AllowFetchTxt)
 	assert.True(t, conf.AllowMiscTopLevelFiles)
 	assert.True(t, conf.AllowMiscDirectories)
 	assert.True(t, conf.TopLevelDirMustMatchBagName)

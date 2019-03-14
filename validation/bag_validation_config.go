@@ -75,6 +75,11 @@ type BagValidationConfig struct {
 	// tag name (e.g. Source-Organization or Internal-Sender-Description)
 	// and the value is the TagSpec.
 	TagSpecs map[string]TagSpec
+	// AllowFetchTxt describes whether we should allow the fetch.txt file
+	// to be present in a bag. APTrust prohibits this, because honoring
+	// fetch.txt involves downloading remote files, validating their
+	// checksums, and saving them in preservation storage.
+	AllowFetchTxt bool
 	// AllowMiscTopLevelFiles describes whether a valid bag can
 	// contain files not specifically defined in the config.
 	AllowMiscTopLevelFiles bool

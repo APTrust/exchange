@@ -1,4 +1,5 @@
 {
+    "AllowFetchTxt": false,
     "AllowMiscTopLevelFiles": true,
     "AllowMiscDirectories": true,
     "TopLevelDirMustMatchBagName": true,
