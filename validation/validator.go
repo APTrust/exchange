@@ -687,6 +687,7 @@ func (validator *Validator) verifyFileSpecs() {
 		} else if fileSpec.Presence == FORBIDDEN && util.StringListContains(validator.forbiddenFiles, gfPath) {
 			validator.summary.AddError("Bag contains forbidden file '%s'.", gfPath)
 		}
+
 	}
 }
 
@@ -775,6 +776,11 @@ func (validator *Validator) verifyGenericFiles() {
 	gfIdentifiers := validator.db.FileIdentifiers()
 	for _, gfIdentifier := range gfIdentifiers {
 		gf, err := validator.db.GetGenericFile(gfIdentifier)
+
+		// Flag illegal fetch.txt
+		if gf.OriginalPath() == "fetch.txt" && validator.BagValidationConfig.AllowFetchTxt == false {
+			validator.summary.AddError("Bag contains a fetch.txt file, but the profile does not allow it.")
+		}
 
 		// Md5 digests
 		if gf.IngestManifestMd5 != "" && gf.IngestManifestMd5 != gf.IngestMd5 {

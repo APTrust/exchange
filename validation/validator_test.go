@@ -1,7 +1,6 @@
 package validation_test
 
 import (
-	"fmt"
 	"github.com/APTrust/exchange/constants"
 	"github.com/APTrust/exchange/testhelper"
 	"github.com/APTrust/exchange/util"
@@ -494,7 +493,6 @@ func TestValidator_IllegalControlCharacter(t *testing.T) {
 	assert.Nil(t, err)
 	assert.NotNil(t, summary)
 	require.True(t, summary.HasErrors())
-	fmt.Println(summary.Errors)
 	assert.Equal(t, 1, len(summary.Errors))
 	assert.True(t, util.StringListContains(summary.Errors, "File name 'data/datastream\\u007f.txt' contains an illegal unicode control character"))
 }
@@ -673,4 +671,40 @@ func TestValidator_SetsStorageOption(t *testing.T) {
 			assert.Equal(t, expectedOption, gf.StorageOption)
 		}
 	}
+}
+
+// Bag has a fetch.txt file, and config says it's allowed
+func TestNewValidator_LegalFetchTxt(t *testing.T) {
+	bagValidationConfig, err := getValidationConfig()
+	if err != nil {
+		assert.Fail(t, "Could not load BagValidationConfig: %v", err)
+	}
+	bagValidationConfig.AllowFetchTxt = true
+	pathToBag := getBagPath(t, "example.edu.fetchtxt.tar")
+	validator, err := validation.NewValidator(pathToBag, bagValidationConfig, true)
+	require.Nil(t, err)
+	defer deleteFile(validator.DBName())
+	summary, err := validator.Validate()
+	assert.Nil(t, err)
+	assert.NotNil(t, summary)
+	assert.False(t, summary.HasErrors())
+}
+
+// Bag has a fetch.txt file, and config says it's NOT allowed
+func TestNewValidator_IllegalFetchTxt(t *testing.T) {
+	bagValidationConfig, err := getValidationConfig()
+	if err != nil {
+		assert.Fail(t, "Could not load BagValidationConfig: %v", err)
+	}
+	bagValidationConfig.AllowFetchTxt = false
+	pathToBag := getBagPath(t, "example.edu.fetchtxt.tar")
+	validator, err := validation.NewValidator(pathToBag, bagValidationConfig, true)
+	require.Nil(t, err)
+	defer deleteFile(validator.DBName())
+	summary, err := validator.Validate()
+	assert.Nil(t, err)
+	assert.NotNil(t, summary)
+	assert.True(t, summary.HasErrors())
+	assert.True(t, util.StringListContains(summary.Errors, "Bag contains a fetch.txt file, but the profile does not allow it."))
+
 }
