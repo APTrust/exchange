@@ -679,14 +679,17 @@ func (restorer *APTRestorer) writeBagInfoFile(restoreState *models.RestoreState)
 	// away from size limits, and we're going to restore bags all in one piece.
 	// So Bag-Count will be "1 of 1".
 
-	// TODO: Payload-Oxum
-
 	fmt.Fprintln(bagInfoFile, "Source-Organization:", restoreState.IntellectualObject.Institution)
 	fmt.Fprintln(bagInfoFile, "Bagging-Date:", time.Now().UTC().Format(time.RFC3339))
 	fmt.Fprintln(bagInfoFile, "Bag-Count:", "1 of 1")
 	fmt.Fprintln(bagInfoFile, "Bag-Group-Identifier:", restoreState.IntellectualObject.BagGroupIdentifier)
 	fmt.Fprintln(bagInfoFile, "Internal-Sender-Description:", restoreState.IntellectualObject.Description)
 	fmt.Fprintln(bagInfoFile, "Internal-Sender-Identifier:", restoreState.IntellectualObject.AltIdentifier)
+
+	byteCount, fileCount := restoreState.IntellectualObject.PayloadBytesAndFiles()
+	payloadOxum := fmt.Sprintf("%d.%d", byteCount, fileCount)
+	fmt.Fprintln(bagInfoFile, "Payload-Oxum:", payloadOxum)
+
 	bagInfoFile.Close()
 
 	restorer.addFile(restoreState, bagInfoPath, "bag-info.txt")
