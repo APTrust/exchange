@@ -2,6 +2,7 @@ package models_test
 
 import (
 	"encoding/json"
+	//	"fmt"
 	"github.com/APTrust/exchange/constants"
 	"github.com/APTrust/exchange/models"
 	"github.com/APTrust/exchange/util/testutil"
@@ -30,6 +31,26 @@ func TestTotalFileSize(t *testing.T) {
 	if obj.TotalFileSize() != 686 {
 		t.Errorf("TotalFileSize() returned '%d', expected 686", obj.TotalFileSize())
 	}
+}
+
+func TestPayloadBytesAndFiles(t *testing.T) {
+	obj := testutil.MakeIntellectualObject(20, 0, 0, 0)
+	for _, gf := range obj.GenericFiles {
+		gf.Size = 1000
+		gf.Identifier = strings.Replace(gf.Identifier, obj.Identifier, obj.Identifier+"/data", 1)
+	}
+	// Add a few non-payload files
+	obj.GenericFiles = append(obj.GenericFiles, testutil.MakeGenericFile(0, 0, obj.Identifier))
+	obj.GenericFiles = append(obj.GenericFiles, testutil.MakeGenericFile(0, 0, obj.Identifier))
+
+	// We should get values suitable for constructing the Payload-Oxum, which
+	// means the values describe the payload only.
+	//
+	// Expecting 20 payload files (not 22, because items not in /data don't count)
+	// Those files are 1000 bytes each, so should be 20000 bytes total.
+	byteCount, fileCount := obj.PayloadBytesAndFiles()
+	assert.Equal(t, int64(20000), byteCount)
+	assert.Equal(t, 20, fileCount)
 }
 
 func TestSerializeObjectForPharos(t *testing.T) {

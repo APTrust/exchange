@@ -271,15 +271,36 @@ func NewTag(sourceFile, label, value string) *Tag {
 }
 
 // Returns the total number of bytes of all of the generic
-// files in this object. The object's bag size will be slightly
-// larger than this, because it will include a manifest, tag
-// files and tar header.
+// files in this object, including tag files. The object's bag
+// size will be slightly larger than this, because it will
+// include manifests, and a tar header.
+//
+// If you're looking for the number of bytes the payload only,
+// See PayloadBytesAndFiles
 func (obj *IntellectualObject) TotalFileSize() int64 {
 	total := int64(0)
 	for _, genericFile := range obj.GenericFiles {
 		total += genericFile.Size
 	}
 	return total
+}
+
+// PayloadBytesAndFiles returns the total number of bytes
+// and files in the object's payload directory. Use this method
+// to calculate the Payload-Oxum value of a BagIt bag.
+//
+// Return values byteCount and fileCount correspond to the BagIt
+// spec's _OctetCount_ and _StreamCount_. See the Payload-Oxum
+// tag documentation under
+// https://tools.ietf.org/html/draft-kunze-bagit-17#section-2.2.2
+func (obj *IntellectualObject) PayloadBytesAndFiles() (byteCount int64, fileCount int) {
+	for _, genericFile := range obj.GenericFiles {
+		if strings.HasPrefix(genericFile.OriginalPath(), "data/") {
+			byteCount += genericFile.Size
+			fileCount += 1
+		}
+	}
+	return byteCount, fileCount
 }
 
 // AccessValid returns true or false to indicate whether the
