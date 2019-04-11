@@ -158,6 +158,7 @@
 
 	"ReceivingBuckets": [
 		"aptrust.receiving.test.columbia.edu",
+		"aptrust.receiving.test.fulcrum.org",
 		"aptrust.receiving.test.georgetown.edu",
 		"aptrust.receiving.test.indiana.edu",
 		"aptrust.receiving.test.jhu.edu",
