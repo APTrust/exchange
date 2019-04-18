@@ -184,7 +184,7 @@ class Service
   def pharos_reset_db
 	puts "Resetting Pharos DB"
 	env = @context.env_hash
-	cmd = 'rbenv exec rake db:reset'
+	cmd = 'bundle exec rake db:reset'
 	log_file = "#{@context.log_dir}/pharos.log"
 	pid = Process.spawn(env, cmd, chdir: @context.pharos_root)
 	Process.wait pid
@@ -194,7 +194,7 @@ class Service
   def pharos_load_fixtures
 	puts "Loading Pharos fixtures"
 	env = @context.env_hash
-	cmd = 'rbenv exec rake db:fixtures:load'
+	cmd = 'bundle exec rake db:fixtures:load'
 	log_file = "#{@context.log_dir}/pharos.log"
 	pid = Process.spawn(env, cmd, chdir: @context.pharos_root)
 	Process.wait pid
@@ -204,7 +204,7 @@ class Service
   def pharos_start
 	if @pharos_pid == 0
 	  env = @context.env_hash
-	  cmd = 'rbenv exec rails server'
+	  cmd = 'bundle exec rails server'
 	  log_file = "#{@context.log_dir}/pharos.log"
 	  @pharos_pid = Process.spawn(env,
 								  cmd,
