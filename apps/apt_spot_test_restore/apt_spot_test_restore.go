@@ -10,8 +10,8 @@ import (
 	"time"
 )
 
-// 20 GB
-const MAX_FILE_SIZE = int64(21474836480)
+// 53687091200 = 50 GB
+const MAX_FILE_SIZE = int64(53687091200)
 const DAYS_SINCE_INGEST = 180
 const DAYS_SINCE_LAST_RESTORE = 180
 
@@ -22,8 +22,8 @@ func main() {
 		fmt.Fprintf(os.Stderr, err.Error())
 		os.Exit(1)
 	}
-	createdBefore := time.Now().UTC().AddDate(0, 0, DAYS_SINCE_INGEST)
-	notRestoredSince := time.Now().UTC().AddDate(0, 0, DAYS_SINCE_LAST_RESTORE)
+	createdBefore := time.Now().UTC().AddDate(0, 0, (-1 * DAYS_SINCE_INGEST))
+	notRestoredSince := time.Now().UTC().AddDate(0, 0, (-1 * DAYS_SINCE_LAST_RESTORE))
 	_context := context.NewContext(config)
 	worker := workers.NewAPTSpotTestRestore(_context, MAX_FILE_SIZE, createdBefore, notRestoredSince)
 	worker.DryRun = dryRun
