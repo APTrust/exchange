@@ -11,6 +11,8 @@ import (
 	"net/http/cookiejar"
 	"net/url"
 	"strings"
+
+	"golang.org/x/net/http2"
 )
 
 // PharosClient supports basic calls to the Pharos Admin REST API.
@@ -37,7 +39,8 @@ func NewPharosClient(hostUrl, apiVersion, apiUser, apiKey string) (*PharosClient
 	if err != nil {
 		return nil, fmt.Errorf("Can't create cookie jar for HTTP client: %v", err)
 	}
-	transport := &http.Transport{
+	// C.D. 2019-05-06 https://posener.github.io/http2/
+	transport := &http2.Transport{
 
 	// C.D. 2019-05-06 disabled for HTTP/2 compat. https://golang.org/pkg/net/http/#Transport
 	//	MaxIdleConnsPerHost: 8,
