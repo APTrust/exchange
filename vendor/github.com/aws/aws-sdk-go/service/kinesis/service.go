@@ -11,11 +11,12 @@ import (
 	"github.com/aws/aws-sdk-go/private/protocol/jsonrpc"
 )
 
-// Amazon Kinesis Streams is a managed service that scales elastically for real
-// time processing of streaming big data.
-// The service client's operations are safe to be used concurrently.
-// It is not safe to mutate any of the client's properties though.
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/kinesis-2013-12-02
+// Kinesis provides the API operation methods for making requests to
+// Amazon Kinesis. See this package's package overview docs
+// for details on the service.
+//
+// Kinesis methods are safe to use concurrently. It is not safe to
+// modify mutate any of the struct's properties though.
 type Kinesis struct {
 	*client.Client
 }
@@ -28,8 +29,9 @@ var initRequest func(*request.Request)
 
 // Service information constants
 const (
-	ServiceName = "kinesis"   // Service endpoint prefix API calls made to.
-	EndpointsID = ServiceName // Service ID for Regions and Endpoints metadata.
+	ServiceName = "kinesis"   // Name of service.
+	EndpointsID = ServiceName // ID to lookup a service endpoint with.
+	ServiceID   = "Kinesis"   // ServiceID is a unique identifer of a specific service.
 )
 
 // New creates a new instance of the Kinesis client with a session.
@@ -54,6 +56,7 @@ func newClient(cfg aws.Config, handlers request.Handlers, endpoint, signingRegio
 			cfg,
 			metadata.ClientInfo{
 				ServiceName:   ServiceName,
+				ServiceID:     ServiceID,
 				SigningName:   signingName,
 				SigningRegion: signingRegion,
 				Endpoint:      endpoint,
@@ -71,6 +74,8 @@ func newClient(cfg aws.Config, handlers request.Handlers, endpoint, signingRegio
 	svc.Handlers.Unmarshal.PushBackNamed(jsonrpc.UnmarshalHandler)
 	svc.Handlers.UnmarshalMeta.PushBackNamed(jsonrpc.UnmarshalMetaHandler)
 	svc.Handlers.UnmarshalError.PushBackNamed(jsonrpc.UnmarshalErrorHandler)
+
+	svc.Handlers.UnmarshalStream.PushBackNamed(jsonrpc.UnmarshalHandler)
 
 	// Run custom client initialization if present
 	if initClient != nil {

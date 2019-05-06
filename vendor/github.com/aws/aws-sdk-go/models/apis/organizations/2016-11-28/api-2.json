@@ -7,9 +7,9 @@
     "protocol":"json",
     "serviceAbbreviation":"Organizations",
     "serviceFullName":"AWS Organizations",
+    "serviceId":"Organizations",
     "signatureVersion":"v4",
     "targetPrefix":"AWSOrganizationsV20161128",
-    "timestampFormat":"unixTimestamp",
     "uid":"organizations-2016-11-28"
   },
   "operations":{
@@ -31,7 +31,8 @@
         {"shape":"InvalidInputException"},
         {"shape":"ConcurrentModificationException"},
         {"shape":"ServiceException"},
-        {"shape":"TooManyRequestsException"}
+        {"shape":"TooManyRequestsException"},
+        {"shape":"AccessDeniedForDependencyException"}
       ]
     },
     "AttachPolicy":{
@@ -65,6 +66,7 @@
       "output":{"shape":"CancelHandshakeResponse"},
       "errors":[
         {"shape":"AccessDeniedException"},
+        {"shape":"ConcurrentModificationException"},
         {"shape":"HandshakeNotFoundException"},
         {"shape":"InvalidHandshakeTransitionException"},
         {"shape":"HandshakeAlreadyInStateException"},
@@ -84,11 +86,33 @@
       "errors":[
         {"shape":"AccessDeniedException"},
         {"shape":"AWSOrganizationsNotInUseException"},
+        {"shape":"ConcurrentModificationException"},
         {"shape":"ConstraintViolationException"},
         {"shape":"InvalidInputException"},
         {"shape":"FinalizingOrganizationException"},
         {"shape":"ServiceException"},
-        {"shape":"TooManyRequestsException"}
+        {"shape":"TooManyRequestsException"},
+        {"shape":"UnsupportedAPIEndpointException"}
+      ]
+    },
+    "CreateGovCloudAccount":{
+      "name":"CreateGovCloudAccount",
+      "http":{
+        "method":"POST",
+        "requestUri":"/"
+      },
+      "input":{"shape":"CreateGovCloudAccountRequest"},
+      "output":{"shape":"CreateGovCloudAccountResponse"},
+      "errors":[
+        {"shape":"AccessDeniedException"},
+        {"shape":"AWSOrganizationsNotInUseException"},
+        {"shape":"ConcurrentModificationException"},
+        {"shape":"ConstraintViolationException"},
+        {"shape":"InvalidInputException"},
+        {"shape":"FinalizingOrganizationException"},
+        {"shape":"ServiceException"},
+        {"shape":"TooManyRequestsException"},
+        {"shape":"UnsupportedAPIEndpointException"}
       ]
     },
     "CreateOrganization":{
@@ -106,7 +130,8 @@
         {"shape":"ConstraintViolationException"},
         {"shape":"InvalidInputException"},
         {"shape":"ServiceException"},
-        {"shape":"TooManyRequestsException"}
+        {"shape":"TooManyRequestsException"},
+        {"shape":"AccessDeniedForDependencyException"}
       ]
     },
     "CreateOrganizationalUnit":{
@@ -120,6 +145,7 @@
       "errors":[
         {"shape":"AccessDeniedException"},
         {"shape":"AWSOrganizationsNotInUseException"},
+        {"shape":"ConcurrentModificationException"},
         {"shape":"ConstraintViolationException"},
         {"shape":"DuplicateOrganizationalUnitException"},
         {"shape":"InvalidInputException"},
@@ -159,6 +185,7 @@
       "output":{"shape":"DeclineHandshakeResponse"},
       "errors":[
         {"shape":"AccessDeniedException"},
+        {"shape":"ConcurrentModificationException"},
         {"shape":"HandshakeNotFoundException"},
         {"shape":"InvalidHandshakeTransitionException"},
         {"shape":"HandshakeAlreadyInStateException"},
@@ -250,7 +277,8 @@
         {"shape":"CreateAccountStatusNotFoundException"},
         {"shape":"InvalidInputException"},
         {"shape":"ServiceException"},
-        {"shape":"TooManyRequestsException"}
+        {"shape":"TooManyRequestsException"},
+        {"shape":"UnsupportedAPIEndpointException"}
       ]
     },
     "DescribeHandshake":{
@@ -263,6 +291,7 @@
       "output":{"shape":"DescribeHandshakeResponse"},
       "errors":[
         {"shape":"AccessDeniedException"},
+        {"shape":"ConcurrentModificationException"},
         {"shape":"HandshakeNotFoundException"},
         {"shape":"InvalidInputException"},
         {"shape":"ServiceException"},
@@ -279,6 +308,7 @@
       "errors":[
         {"shape":"AccessDeniedException"},
         {"shape":"AWSOrganizationsNotInUseException"},
+        {"shape":"ConcurrentModificationException"},
         {"shape":"ServiceException"},
         {"shape":"TooManyRequestsException"}
       ]
@@ -337,6 +367,23 @@
         {"shape":"TooManyRequestsException"}
       ]
     },
+    "DisableAWSServiceAccess":{
+      "name":"DisableAWSServiceAccess",
+      "http":{
+        "method":"POST",
+        "requestUri":"/"
+      },
+      "input":{"shape":"DisableAWSServiceAccessRequest"},
+      "errors":[
+        {"shape":"AccessDeniedException"},
+        {"shape":"AWSOrganizationsNotInUseException"},
+        {"shape":"ConcurrentModificationException"},
+        {"shape":"ConstraintViolationException"},
+        {"shape":"InvalidInputException"},
+        {"shape":"ServiceException"},
+        {"shape":"TooManyRequestsException"}
+      ]
+    },
     "DisablePolicyType":{
       "name":"DisablePolicyType",
       "http":{
@@ -357,6 +404,23 @@
         {"shape":"TooManyRequestsException"}
       ]
     },
+    "EnableAWSServiceAccess":{
+      "name":"EnableAWSServiceAccess",
+      "http":{
+        "method":"POST",
+        "requestUri":"/"
+      },
+      "input":{"shape":"EnableAWSServiceAccessRequest"},
+      "errors":[
+        {"shape":"AccessDeniedException"},
+        {"shape":"AWSOrganizationsNotInUseException"},
+        {"shape":"ConcurrentModificationException"},
+        {"shape":"ConstraintViolationException"},
+        {"shape":"InvalidInputException"},
+        {"shape":"ServiceException"},
+        {"shape":"TooManyRequestsException"}
+      ]
+    },
     "EnableAllFeatures":{
       "name":"EnableAllFeatures",
       "http":{
@@ -368,6 +432,7 @@
       "errors":[
         {"shape":"AccessDeniedException"},
         {"shape":"AWSOrganizationsNotInUseException"},
+        {"shape":"ConcurrentModificationException"},
         {"shape":"HandshakeConstraintViolationException"},
         {"shape":"InvalidInputException"},
         {"shape":"ServiceException"},
@@ -406,6 +471,8 @@
       "errors":[
         {"shape":"AccessDeniedException"},
         {"shape":"AWSOrganizationsNotInUseException"},
+        {"shape":"AccountOwnerNotVerifiedException"},
+        {"shape":"ConcurrentModificationException"},
         {"shape":"HandshakeConstraintViolationException"},
         {"shape":"DuplicateHandshakeException"},
         {"shape":"InvalidInputException"},
@@ -428,6 +495,23 @@
         {"shape":"ConstraintViolationException"},
         {"shape":"InvalidInputException"},
         {"shape":"MasterCannotLeaveOrganizationException"},
+        {"shape":"ServiceException"},
+        {"shape":"TooManyRequestsException"}
+      ]
+    },
+    "ListAWSServiceAccessForOrganization":{
+      "name":"ListAWSServiceAccessForOrganization",
+      "http":{
+        "method":"POST",
+        "requestUri":"/"
+      },
+      "input":{"shape":"ListAWSServiceAccessForOrganizationRequest"},
+      "output":{"shape":"ListAWSServiceAccessForOrganizationResponse"},
+      "errors":[
+        {"shape":"AccessDeniedException"},
+        {"shape":"AWSOrganizationsNotInUseException"},
+        {"shape":"ConstraintViolationException"},
+        {"shape":"InvalidInputException"},
         {"shape":"ServiceException"},
         {"shape":"TooManyRequestsException"}
       ]
@@ -495,7 +579,8 @@
         {"shape":"AWSOrganizationsNotInUseException"},
         {"shape":"InvalidInputException"},
         {"shape":"ServiceException"},
-        {"shape":"TooManyRequestsException"}
+        {"shape":"TooManyRequestsException"},
+        {"shape":"UnsupportedAPIEndpointException"}
       ]
     },
     "ListHandshakesForAccount":{
@@ -508,6 +593,7 @@
       "output":{"shape":"ListHandshakesForAccountResponse"},
       "errors":[
         {"shape":"AccessDeniedException"},
+        {"shape":"ConcurrentModificationException"},
         {"shape":"InvalidInputException"},
         {"shape":"ServiceException"},
         {"shape":"TooManyRequestsException"}
@@ -524,6 +610,7 @@
       "errors":[
         {"shape":"AccessDeniedException"},
         {"shape":"AWSOrganizationsNotInUseException"},
+        {"shape":"ConcurrentModificationException"},
         {"shape":"InvalidInputException"},
         {"shape":"ServiceException"},
         {"shape":"TooManyRequestsException"}
@@ -737,11 +824,24 @@
       },
       "exception":true
     },
+    "AccessDeniedForDependencyException":{
+      "type":"structure",
+      "members":{
+        "Message":{"shape":"ExceptionMessage"},
+        "Reason":{"shape":"AccessDeniedForDependencyExceptionReason"}
+      },
+      "exception":true
+    },
+    "AccessDeniedForDependencyExceptionReason":{
+      "type":"string",
+      "enum":["ACCESS_DENIED_DURING_CREATE_SERVICE_LINKED_ROLE"]
+    },
     "Account":{
       "type":"structure",
       "members":{
         "Id":{"shape":"AccountId"},
         "Arn":{"shape":"AccountArn"},
+        "Email":{"shape":"Email"},
         "Name":{"shape":"AccountName"},
         "Status":{"shape":"AccountStatus"},
         "JoinedMethod":{"shape":"AccountJoinedMethod"},
@@ -767,9 +867,17 @@
       "type":"string",
       "max":50,
       "min":1,
+      "pattern":"[\\u0020-\\u007E]+",
       "sensitive":true
     },
     "AccountNotFoundException":{
+      "type":"structure",
+      "members":{
+        "Message":{"shape":"ExceptionMessage"}
+      },
+      "exception":true
+    },
+    "AccountOwnerNotVerifiedException":{
       "type":"structure",
       "members":{
         "Message":{"shape":"ExceptionMessage"}
@@ -792,7 +900,8 @@
       "enum":[
         "INVITE",
         "ENABLE_ALL_FEATURES",
-        "APPROVE_ALL_FEATURES"
+        "APPROVE_ALL_FEATURES",
+        "ADD_ORGANIZATIONS_SERVICE_LINKED_ROLE"
       ]
     },
     "AlreadyInOrganizationException":{
@@ -882,8 +991,18 @@
         "MAX_POLICY_TYPE_ATTACHMENT_LIMIT_EXCEEDED",
         "MIN_POLICY_TYPE_ATTACHMENT_LIMIT_EXCEEDED",
         "ACCOUNT_CANNOT_LEAVE_ORGANIZATION",
+        "ACCOUNT_CANNOT_LEAVE_WITHOUT_EULA",
+        "ACCOUNT_CANNOT_LEAVE_WITHOUT_PHONE_VERIFICATION",
         "MASTER_ACCOUNT_PAYMENT_INSTRUMENT_REQUIRED",
-        "ACCOUNT_CREATION_RATE_LIMIT_EXCEEDED"
+        "MEMBER_ACCOUNT_PAYMENT_INSTRUMENT_REQUIRED",
+        "ACCOUNT_CREATION_RATE_LIMIT_EXCEEDED",
+        "MASTER_ACCOUNT_ADDRESS_DOES_NOT_MATCH_MARKETPLACE",
+        "MASTER_ACCOUNT_MISSING_CONTACT_INFO",
+        "MASTER_ACCOUNT_NOT_GOVCLOUD_ENABLED",
+        "ORGANIZATION_NOT_IN_ALL_FEATURES_MODE",
+        "CREATE_ORGANIZATION_IN_BILLING_MODE_UNSUPPORTED_REGION",
+        "EMAIL_VERIFICATION_CODE_EXPIRED",
+        "WAIT_PERIOD_ACTIVE"
       ]
     },
     "CreateAccountFailureReason":{
@@ -892,6 +1011,8 @@
         "ACCOUNT_LIMIT_EXCEEDED",
         "EMAIL_ALREADY_EXISTS",
         "INVALID_ADDRESS",
+        "INVALID_EMAIL",
+        "CONCURRENT_ACCOUNT_MODIFICATION",
         "INTERNAL_FAILURE"
       ]
     },
@@ -939,6 +1060,7 @@
         "RequestedTimestamp":{"shape":"Timestamp"},
         "CompletedTimestamp":{"shape":"Timestamp"},
         "AccountId":{"shape":"AccountId"},
+        "GovCloudAccountId":{"shape":"AccountId"},
         "FailureReason":{"shape":"CreateAccountFailureReason"}
       }
     },
@@ -952,6 +1074,25 @@
     "CreateAccountStatuses":{
       "type":"list",
       "member":{"shape":"CreateAccountStatus"}
+    },
+    "CreateGovCloudAccountRequest":{
+      "type":"structure",
+      "required":[
+        "Email",
+        "AccountName"
+      ],
+      "members":{
+        "Email":{"shape":"Email"},
+        "AccountName":{"shape":"AccountName"},
+        "RoleName":{"shape":"RoleName"},
+        "IamUserAccessToBilling":{"shape":"IAMUserAccessToBilling"}
+      }
+    },
+    "CreateGovCloudAccountResponse":{
+      "type":"structure",
+      "members":{
+        "CreateAccountStatus":{"shape":"CreateAccountStatus"}
+      }
     },
     "CreateOrganizationRequest":{
       "type":"structure",
@@ -1119,6 +1260,13 @@
         "TargetId":{"shape":"PolicyTargetId"}
       }
     },
+    "DisableAWSServiceAccessRequest":{
+      "type":"structure",
+      "required":["ServicePrincipal"],
+      "members":{
+        "ServicePrincipal":{"shape":"ServicePrincipal"}
+      }
+    },
     "DisablePolicyTypeRequest":{
       "type":"structure",
       "required":[
@@ -1175,8 +1323,15 @@
       "type":"string",
       "max":64,
       "min":6,
-      "pattern":"[\\w+=,.-]+@[\\w.-]+\\.[\\w]+",
+      "pattern":"[^\\s@]+@[^\\s@]+\\.[^\\s@]+",
       "sensitive":true
+    },
+    "EnableAWSServiceAccessRequest":{
+      "type":"structure",
+      "required":["ServicePrincipal"],
+      "members":{
+        "ServicePrincipal":{"shape":"ServicePrincipal"}
+      }
     },
     "EnableAllFeaturesRequest":{
       "type":"structure",
@@ -1205,6 +1360,17 @@
       "members":{
         "Root":{"shape":"Root"}
       }
+    },
+    "EnabledServicePrincipal":{
+      "type":"structure",
+      "members":{
+        "ServicePrincipal":{"shape":"ServicePrincipal"},
+        "DateEnabled":{"shape":"Timestamp"}
+      }
+    },
+    "EnabledServicePrincipals":{
+      "type":"list",
+      "member":{"shape":"EnabledServicePrincipal"}
     },
     "ExceptionMessage":{"type":"string"},
     "ExceptionType":{"type":"string"},
@@ -1293,6 +1459,10 @@
     },
     "HandshakeParty":{
       "type":"structure",
+      "required":[
+        "Id",
+        "Type"
+      ],
       "members":{
         "Id":{"shape":"HandshakePartyId"},
         "Type":{"shape":"HandshakePartyType"}
@@ -1396,7 +1566,10 @@
         "INPUT_REQUIRED",
         "INVALID_NEXT_TOKEN",
         "MAX_LIMIT_EXCEEDED_FILTER",
-        "MOVING_ACCOUNT_BETWEEN_DIFFERENT_ROOTS"
+        "MOVING_ACCOUNT_BETWEEN_DIFFERENT_ROOTS",
+        "INVALID_FULL_NAME_TARGET",
+        "UNRECOGNIZED_SERVICE_PRINCIPAL",
+        "INVALID_ROLE_NAME"
       ]
     },
     "InviteAccountToOrganizationRequest":{
@@ -1411,6 +1584,20 @@
       "type":"structure",
       "members":{
         "Handshake":{"shape":"Handshake"}
+      }
+    },
+    "ListAWSServiceAccessForOrganizationRequest":{
+      "type":"structure",
+      "members":{
+        "NextToken":{"shape":"NextToken"},
+        "MaxResults":{"shape":"MaxResults"}
+      }
+    },
+    "ListAWSServiceAccessForOrganizationResponse":{
+      "type":"structure",
+      "members":{
+        "EnabledServicePrincipals":{"shape":"EnabledServicePrincipals"},
+        "NextToken":{"shape":"NextToken"}
       }
     },
     "ListAccountsForParentRequest":{
@@ -1919,6 +2106,12 @@
       },
       "exception":true
     },
+    "ServicePrincipal":{
+      "type":"string",
+      "max":128,
+      "min":1,
+      "pattern":"[\\w+=,.@-]*"
+    },
     "SourceParentNotFoundException":{
       "type":"structure",
       "members":{
@@ -1951,6 +2144,13 @@
       "type":"structure",
       "members":{
         "Type":{"shape":"ExceptionType"},
+        "Message":{"shape":"ExceptionMessage"}
+      },
+      "exception":true
+    },
+    "UnsupportedAPIEndpointException":{
+      "type":"structure",
+      "members":{
         "Message":{"shape":"ExceptionMessage"}
       },
       "exception":true

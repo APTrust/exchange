@@ -11,26 +11,12 @@ import (
 	"github.com/aws/aws-sdk-go/private/protocol/restjson"
 )
 
-// AWS Batch enables you to run batch computing workloads on the AWS Cloud.
-// Batch computing is a common way for developers, scientists, and engineers
-// to access large amounts of compute resources, and AWS Batch removes the undifferentiated
-// heavy lifting of configuring and managing the required infrastructure. AWS
-// Batch will be familiar to users of traditional batch computing software.
-// This service can efficiently provision resources in response to jobs submitted
-// in order to eliminate capacity constraints, reduce compute costs, and deliver
-// results quickly.
+// Batch provides the API operation methods for making requests to
+// AWS Batch. See this package's package overview docs
+// for details on the service.
 //
-// As a fully managed service, AWS Batch enables developers, scientists, and
-// engineers to run batch computing workloads of any scale. AWS Batch automatically
-// provisions compute resources and optimizes the workload distribution based
-// on the quantity and scale of the workloads. With AWS Batch, there is no need
-// to install or manage batch computing software, which allows you to focus
-// on analyzing results and solving problems. AWS Batch reduces operational
-// complexities, saves time, and reduces costs, which makes it easy for developers,
-// scientists, and engineers to run their batch jobs in the AWS Cloud.
-// The service client's operations are safe to be used concurrently.
-// It is not safe to mutate any of the client's properties though.
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/batch-2016-08-10
+// Batch methods are safe to use concurrently. It is not safe to
+// modify mutate any of the struct's properties though.
 type Batch struct {
 	*client.Client
 }
@@ -43,8 +29,9 @@ var initRequest func(*request.Request)
 
 // Service information constants
 const (
-	ServiceName = "batch"     // Service endpoint prefix API calls made to.
-	EndpointsID = ServiceName // Service ID for Regions and Endpoints metadata.
+	ServiceName = "batch"     // Name of service.
+	EndpointsID = ServiceName // ID to lookup a service endpoint with.
+	ServiceID   = "Batch"     // ServiceID is a unique identifer of a specific service.
 )
 
 // New creates a new instance of the Batch client with a session.
@@ -69,11 +56,11 @@ func newClient(cfg aws.Config, handlers request.Handlers, endpoint, signingRegio
 			cfg,
 			metadata.ClientInfo{
 				ServiceName:   ServiceName,
+				ServiceID:     ServiceID,
 				SigningName:   signingName,
 				SigningRegion: signingRegion,
 				Endpoint:      endpoint,
 				APIVersion:    "2016-08-10",
-				JSONVersion:   "1.1",
 			},
 			handlers,
 		),

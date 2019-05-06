@@ -11,9 +11,12 @@ import (
 	"github.com/aws/aws-sdk-go/private/protocol/jsonrpc"
 )
 
-// Definition of the public APIs exposed by Amazon Machine Learning
-// The service client's operations are safe to be used concurrently.
-// It is not safe to mutate any of the client's properties though.
+// MachineLearning provides the API operation methods for making requests to
+// Amazon Machine Learning. See this package's package overview docs
+// for details on the service.
+//
+// MachineLearning methods are safe to use concurrently. It is not safe to
+// modify mutate any of the struct's properties though.
 type MachineLearning struct {
 	*client.Client
 }
@@ -26,8 +29,9 @@ var initRequest func(*request.Request)
 
 // Service information constants
 const (
-	ServiceName = "machinelearning" // Service endpoint prefix API calls made to.
-	EndpointsID = ServiceName       // Service ID for Regions and Endpoints metadata.
+	ServiceName = "machinelearning"  // Name of service.
+	EndpointsID = ServiceName        // ID to lookup a service endpoint with.
+	ServiceID   = "Machine Learning" // ServiceID is a unique identifer of a specific service.
 )
 
 // New creates a new instance of the MachineLearning client with a session.
@@ -52,6 +56,7 @@ func newClient(cfg aws.Config, handlers request.Handlers, endpoint, signingRegio
 			cfg,
 			metadata.ClientInfo{
 				ServiceName:   ServiceName,
+				ServiceID:     ServiceID,
 				SigningName:   signingName,
 				SigningRegion: signingRegion,
 				Endpoint:      endpoint,

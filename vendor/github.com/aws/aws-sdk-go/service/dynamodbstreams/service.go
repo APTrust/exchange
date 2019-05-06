@@ -11,13 +11,12 @@ import (
 	"github.com/aws/aws-sdk-go/private/protocol/jsonrpc"
 )
 
-// Amazon DynamoDB Streams provides API actions for accessing streams and processing
-// stream records. To learn more about application development with Streams,
-// see Capturing Table Activity with DynamoDB Streams (http://docs.aws.amazon.com/amazondynamodb/latest/developerguide/Streams.html)
-// in the Amazon DynamoDB Developer Guide.
-// The service client's operations are safe to be used concurrently.
-// It is not safe to mutate any of the client's properties though.
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/streams-dynamodb-2012-08-10
+// DynamoDBStreams provides the API operation methods for making requests to
+// Amazon DynamoDB Streams. See this package's package overview docs
+// for details on the service.
+//
+// DynamoDBStreams methods are safe to use concurrently. It is not safe to
+// modify mutate any of the struct's properties though.
 type DynamoDBStreams struct {
 	*client.Client
 }
@@ -30,8 +29,9 @@ var initRequest func(*request.Request)
 
 // Service information constants
 const (
-	ServiceName = "streams.dynamodb" // Service endpoint prefix API calls made to.
-	EndpointsID = ServiceName        // Service ID for Regions and Endpoints metadata.
+	ServiceName = "streams.dynamodb" // Name of service.
+	EndpointsID = ServiceName        // ID to lookup a service endpoint with.
+	ServiceID   = "DynamoDB Streams" // ServiceID is a unique identifer of a specific service.
 )
 
 // New creates a new instance of the DynamoDBStreams client with a session.
@@ -46,19 +46,20 @@ const (
 //     svc := dynamodbstreams.New(mySession, aws.NewConfig().WithRegion("us-west-2"))
 func New(p client.ConfigProvider, cfgs ...*aws.Config) *DynamoDBStreams {
 	c := p.ClientConfig(EndpointsID, cfgs...)
+	if c.SigningNameDerived || len(c.SigningName) == 0 {
+		c.SigningName = "dynamodb"
+	}
 	return newClient(*c.Config, c.Handlers, c.Endpoint, c.SigningRegion, c.SigningName)
 }
 
 // newClient creates, initializes and returns a new service client instance.
 func newClient(cfg aws.Config, handlers request.Handlers, endpoint, signingRegion, signingName string) *DynamoDBStreams {
-	if len(signingName) == 0 {
-		signingName = "dynamodb"
-	}
 	svc := &DynamoDBStreams{
 		Client: client.New(
 			cfg,
 			metadata.ClientInfo{
 				ServiceName:   ServiceName,
+				ServiceID:     ServiceID,
 				SigningName:   signingName,
 				SigningRegion: signingRegion,
 				Endpoint:      endpoint,
