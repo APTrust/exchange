@@ -1,5 +1,5 @@
 hash: 7c26de46773a1c8de8348f72e92f0be489364af1d2f0c853451037dc2c7634c7
-updated: 2019-05-06T11:40:50.320083-04:00
+updated: 2019-05-06T10:49:17.97225-04:00
 imports:
 - name: github.com/APTrust/bagins
   version: 5bc94534149810750faf248f6ac948b48cbb2fc5
@@ -110,21 +110,11 @@ imports:
 - name: golang.org/x/net
   version: f4e77d36d62c17c2336347bb2670ddbd02d092b7
   subpackages:
-  - http/httpguts
   - http2
-  - http2/hpack
-  - idna
 - name: golang.org/x/sys
   version: 9ccfe848b9db8435a24c424abbc07a921adf1df5
   subpackages:
   - unix
-- name: golang.org/x/text
-  version: 342b2e1fbaa52c93f31447ad2c6abc048c63e475
-  subpackages:
-  - secure/bidirule
-  - transform
-  - unicode/bidi
-  - unicode/norm
 - name: gopkg.in/check.v1
   version: 4f90aeace3a26ad7021961c297b22c42160c7b25
 testImports:
