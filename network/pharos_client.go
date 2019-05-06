@@ -38,10 +38,8 @@ func NewPharosClient(hostUrl, apiVersion, apiUser, apiKey string) (*PharosClient
 		return nil, fmt.Errorf("Can't create cookie jar for HTTP client: %v", err)
 	}
 	transport := &http.Transport{
-
-	// C.D. 2019-05-06 disabled for HTTP/2 compat. https://golang.org/pkg/net/http/#Transport
-	//	MaxIdleConnsPerHost: 8,
-	//	DisableKeepAlives:   true, // A.D. 2019-05-06: to work with HTTP/2
+		MaxIdleConnsPerHost: 8,
+		DisableKeepAlives:   true, // A.D. 2019-05-06: to work with HTTP/2
 	}
 	httpClient := &http.Client{Jar: cookieJar, Transport: transport}
 	return &PharosClient{
