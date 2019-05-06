@@ -7,13 +7,11 @@ const (
 	// ErrCodeCodeStorageExceededException for service response error code
 	// "CodeStorageExceededException".
 	//
-	// You have exceeded your maximum total code size per account. Learn more (https://docs.aws.amazon.com/lambda/latest/dg/limits.html)
+	// You have exceeded your maximum total code size per account. Limits (http://docs.aws.amazon.com/lambda/latest/dg/limits.html)
 	ErrCodeCodeStorageExceededException = "CodeStorageExceededException"
 
 	// ErrCodeEC2AccessDeniedException for service response error code
 	// "EC2AccessDeniedException".
-	//
-	// Need additional permissions to configure VPC settings.
 	ErrCodeEC2AccessDeniedException = "EC2AccessDeniedException"
 
 	// ErrCodeEC2ThrottledException for service response error code
@@ -52,12 +50,6 @@ const (
 	// The request body could not be parsed as JSON.
 	ErrCodeInvalidRequestContentException = "InvalidRequestContentException"
 
-	// ErrCodeInvalidRuntimeException for service response error code
-	// "InvalidRuntimeException".
-	//
-	// The runtime or runtime version specified is not supported.
-	ErrCodeInvalidRuntimeException = "InvalidRuntimeException"
-
 	// ErrCodeInvalidSecurityGroupIDException for service response error code
 	// "InvalidSecurityGroupIDException".
 	//
@@ -74,7 +66,7 @@ const (
 	// ErrCodeInvalidZipFileException for service response error code
 	// "InvalidZipFileException".
 	//
-	// AWS Lambda could not unzip the deployment package.
+	// AWS Lambda could not unzip the function zip file.
 	ErrCodeInvalidZipFileException = "InvalidZipFileException"
 
 	// ErrCodeKMSAccessDeniedException for service response error code
@@ -108,22 +100,14 @@ const (
 	// ErrCodePolicyLengthExceededException for service response error code
 	// "PolicyLengthExceededException".
 	//
-	// The permissions policy for the resource is too large. Learn more (https://docs.aws.amazon.com/lambda/latest/dg/limits.html)
+	// Lambda function access policy is limited to 20 KB.
 	ErrCodePolicyLengthExceededException = "PolicyLengthExceededException"
-
-	// ErrCodePreconditionFailedException for service response error code
-	// "PreconditionFailedException".
-	//
-	// The RevisionId provided does not match the latest RevisionId for the Lambda
-	// function or alias. Call the GetFunction or the GetAlias API to retrieve the
-	// latest RevisionId for your resource.
-	ErrCodePreconditionFailedException = "PreconditionFailedException"
 
 	// ErrCodeRequestTooLargeException for service response error code
 	// "RequestTooLargeException".
 	//
 	// The request payload exceeded the Invoke request body JSON input limit. For
-	// more information, see Limits (https://docs.aws.amazon.com/lambda/latest/dg/limits.html).
+	// more information, see Limits (http://docs.aws.amazon.com/lambda/latest/dg/limits.html).
 	ErrCodeRequestTooLargeException = "RequestTooLargeException"
 
 	// ErrCodeResourceConflictException for service response error code
@@ -131,14 +115,6 @@ const (
 	//
 	// The resource already exists.
 	ErrCodeResourceConflictException = "ResourceConflictException"
-
-	// ErrCodeResourceInUseException for service response error code
-	// "ResourceInUseException".
-	//
-	// The operation conflicts with the resource's availability. For example, you
-	// attempted to update an EventSource Mapping in CREATING, or tried to delete
-	// a EventSource mapping currently in the UPDATING state.
-	ErrCodeResourceInUseException = "ResourceInUseException"
 
 	// ErrCodeResourceNotFoundException for service response error code
 	// "ResourceNotFoundException".
@@ -162,8 +138,6 @@ const (
 
 	// ErrCodeTooManyRequestsException for service response error code
 	// "TooManyRequestsException".
-	//
-	// Request throughput limit exceeded.
 	ErrCodeTooManyRequestsException = "TooManyRequestsException"
 
 	// ErrCodeUnsupportedMediaTypeException for service response error code

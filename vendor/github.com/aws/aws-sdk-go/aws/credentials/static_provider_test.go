@@ -1,6 +1,7 @@
 package credentials
 
 import (
+	"github.com/stretchr/testify/assert"
 	"testing"
 )
 
@@ -14,18 +15,10 @@ func TestStaticProviderGet(t *testing.T) {
 	}
 
 	creds, err := s.Retrieve()
-	if err != nil {
-		t.Errorf("expect nil, got %v", err)
-	}
-	if e, a := "AKID", creds.AccessKeyID; e != a {
-		t.Errorf("expect %v, got %v", e, a)
-	}
-	if e, a := "SECRET", creds.SecretAccessKey; e != a {
-		t.Errorf("expect %v, got %v", e, a)
-	}
-	if v := creds.SessionToken; len(v) != 0 {
-		t.Errorf("Expect no session token, %v", v)
-	}
+	assert.Nil(t, err, "Expect no error")
+	assert.Equal(t, "AKID", creds.AccessKeyID, "Expect access key ID to match")
+	assert.Equal(t, "SECRET", creds.SecretAccessKey, "Expect secret access key to match")
+	assert.Empty(t, creds.SessionToken, "Expect no session token")
 }
 
 func TestStaticProviderIsExpired(t *testing.T) {
@@ -37,7 +30,5 @@ func TestStaticProviderIsExpired(t *testing.T) {
 		},
 	}
 
-	if s.IsExpired() {
-		t.Errorf("Expect static credentials to never expire")
-	}
+	assert.False(t, s.IsExpired(), "Expect static credentials to never expire")
 }

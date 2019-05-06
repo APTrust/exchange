@@ -11,12 +11,16 @@ import (
 	"github.com/aws/aws-sdk-go/private/protocol/jsonrpc"
 )
 
-// WAF provides the API operation methods for making requests to
-// AWS WAF. See this package's package overview docs
-// for details on the service.
-//
-// WAF methods are safe to use concurrently. It is not safe to
-// modify mutate any of the struct's properties though.
+// This is the AWS WAF API Reference for using AWS WAF with Amazon CloudFront.
+// The AWS WAF actions and data types listed in the reference are available
+// for protecting Amazon CloudFront distributions. You can use these actions
+// and data types via the endpoint waf.amazonaws.com. This guide is for developers
+// who need detailed information about the AWS WAF API actions, data types,
+// and errors. For detailed information about AWS WAF features and an overview
+// of how to use the AWS WAF API, see the AWS WAF Developer Guide (http://docs.aws.amazon.com/waf/latest/developerguide/).
+// The service client's operations are safe to be used concurrently.
+// It is not safe to mutate any of the client's properties though.
+// Please also see https://docs.aws.amazon.com/goto/WebAPI/waf-2015-08-24
 type WAF struct {
 	*client.Client
 }
@@ -29,9 +33,8 @@ var initRequest func(*request.Request)
 
 // Service information constants
 const (
-	ServiceName = "waf"       // Name of service.
-	EndpointsID = ServiceName // ID to lookup a service endpoint with.
-	ServiceID   = "WAF"       // ServiceID is a unique identifer of a specific service.
+	ServiceName = "waf"       // Service endpoint prefix API calls made to.
+	EndpointsID = ServiceName // Service ID for Regions and Endpoints metadata.
 )
 
 // New creates a new instance of the WAF client with a session.
@@ -56,7 +59,6 @@ func newClient(cfg aws.Config, handlers request.Handlers, endpoint, signingRegio
 			cfg,
 			metadata.ClientInfo{
 				ServiceName:   ServiceName,
-				ServiceID:     ServiceID,
 				SigningName:   signingName,
 				SigningRegion: signingRegion,
 				Endpoint:      endpoint,

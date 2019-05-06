@@ -7,36 +7,36 @@ const (
 	// ErrCodeBadRequestException for service response error code
 	// "BadRequestException".
 	//
-	// Simple message object.
+	// 400 response
 	ErrCodeBadRequestException = "BadRequestException"
 
 	// ErrCodeForbiddenException for service response error code
 	// "ForbiddenException".
 	//
-	// Simple message object.
+	// 403 response
 	ErrCodeForbiddenException = "ForbiddenException"
 
 	// ErrCodeInternalServerErrorException for service response error code
 	// "InternalServerErrorException".
 	//
-	// Simple message object.
+	// 500 response
 	ErrCodeInternalServerErrorException = "InternalServerErrorException"
 
 	// ErrCodeMethodNotAllowedException for service response error code
 	// "MethodNotAllowedException".
 	//
-	// Simple message object.
+	// 405 response
 	ErrCodeMethodNotAllowedException = "MethodNotAllowedException"
 
 	// ErrCodeNotFoundException for service response error code
 	// "NotFoundException".
 	//
-	// Simple message object.
+	// 404 response
 	ErrCodeNotFoundException = "NotFoundException"
 
 	// ErrCodeTooManyRequestsException for service response error code
 	// "TooManyRequestsException".
 	//
-	// Simple message object.
+	// 429 response
 	ErrCodeTooManyRequestsException = "TooManyRequestsException"
 )

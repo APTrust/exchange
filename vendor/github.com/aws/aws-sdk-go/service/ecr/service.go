@@ -11,12 +11,15 @@ import (
 	"github.com/aws/aws-sdk-go/private/protocol/jsonrpc"
 )
 
-// ECR provides the API operation methods for making requests to
-// Amazon EC2 Container Registry. See this package's package overview docs
-// for details on the service.
-//
-// ECR methods are safe to use concurrently. It is not safe to
-// modify mutate any of the struct's properties though.
+// Amazon EC2 Container Registry (Amazon ECR) is a managed AWS Docker registry
+// service. Customers can use the familiar Docker CLI to push, pull, and manage
+// images. Amazon ECR provides a secure, scalable, and reliable registry. Amazon
+// ECR supports private Docker repositories with resource-based permissions
+// using AWS IAM so that specific users or Amazon EC2 instances can access repositories
+// and images. Developers can use the Docker CLI to author and manage images.
+// The service client's operations are safe to be used concurrently.
+// It is not safe to mutate any of the client's properties though.
+// Please also see https://docs.aws.amazon.com/goto/WebAPI/ecr-2015-09-21
 type ECR struct {
 	*client.Client
 }
@@ -29,9 +32,8 @@ var initRequest func(*request.Request)
 
 // Service information constants
 const (
-	ServiceName = "ecr"     // Name of service.
-	EndpointsID = "api.ecr" // ID to lookup a service endpoint with.
-	ServiceID   = "ECR"     // ServiceID is a unique identifer of a specific service.
+	ServiceName = "ecr"       // Service endpoint prefix API calls made to.
+	EndpointsID = ServiceName // Service ID for Regions and Endpoints metadata.
 )
 
 // New creates a new instance of the ECR client with a session.
@@ -46,9 +48,6 @@ const (
 //     svc := ecr.New(mySession, aws.NewConfig().WithRegion("us-west-2"))
 func New(p client.ConfigProvider, cfgs ...*aws.Config) *ECR {
 	c := p.ClientConfig(EndpointsID, cfgs...)
-	if c.SigningNameDerived || len(c.SigningName) == 0 {
-		c.SigningName = "ecr"
-	}
 	return newClient(*c.Config, c.Handlers, c.Endpoint, c.SigningRegion, c.SigningName)
 }
 
@@ -59,7 +58,6 @@ func newClient(cfg aws.Config, handlers request.Handlers, endpoint, signingRegio
 			cfg,
 			metadata.ClientInfo{
 				ServiceName:   ServiceName,
-				ServiceID:     ServiceID,
 				SigningName:   signingName,
 				SigningRegion: signingRegion,
 				Endpoint:      endpoint,

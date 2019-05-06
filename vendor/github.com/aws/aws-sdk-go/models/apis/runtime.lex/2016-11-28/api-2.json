@@ -6,7 +6,6 @@
     "jsonVersion":"1.1",
     "protocol":"rest-json",
     "serviceFullName":"Amazon Lex Runtime Service",
-    "serviceId":"Lex Runtime Service",
     "signatureVersion":"v4",
     "signingName":"lex",
     "uid":"runtime.lex-2016-11-28"
@@ -57,10 +56,6 @@
   },
   "shapes":{
     "Accept":{"type":"string"},
-    "AttributesString":{
-      "type":"string",
-      "sensitive":true
-    },
     "BadGatewayException":{
       "type":"structure",
       "members":{
@@ -178,15 +173,6 @@
       "error":{"httpStatusCode":508},
       "exception":true
     },
-    "MessageFormatType":{
-      "type":"string",
-      "enum":[
-        "PlainText",
-        "CustomPayload",
-        "SSML",
-        "Composite"
-      ]
-    },
     "NotAcceptableException":{
       "type":"structure",
       "members":{
@@ -229,16 +215,10 @@
           "locationName":"userId"
         },
         "sessionAttributes":{
-          "shape":"AttributesString",
+          "shape":"String",
           "jsonvalue":true,
           "location":"header",
           "locationName":"x-amz-lex-session-attributes"
-        },
-        "requestAttributes":{
-          "shape":"AttributesString",
-          "jsonvalue":true,
-          "location":"header",
-          "locationName":"x-amz-lex-request-attributes"
         },
         "contentType":{
           "shape":"HttpContentType",
@@ -284,11 +264,6 @@
           "location":"header",
           "locationName":"x-amz-lex-message"
         },
-        "messageFormat":{
-          "shape":"MessageFormatType",
-          "location":"header",
-          "locationName":"x-amz-lex-message-format"
-        },
         "dialogState":{
           "shape":"DialogState",
           "location":"header",
@@ -333,7 +308,6 @@
           "locationName":"userId"
         },
         "sessionAttributes":{"shape":"StringMap"},
-        "requestAttributes":{"shape":"StringMap"},
         "inputText":{"shape":"Text"}
       }
     },
@@ -344,7 +318,6 @@
         "slots":{"shape":"StringMap"},
         "sessionAttributes":{"shape":"StringMap"},
         "message":{"shape":"Text"},
-        "messageFormat":{"shape":"MessageFormatType"},
         "dialogState":{"shape":"DialogState"},
         "slotToElicit":{"shape":"String"},
         "responseCard":{"shape":"ResponseCard"}
@@ -370,8 +343,7 @@
     "StringMap":{
       "type":"map",
       "key":{"shape":"String"},
-      "value":{"shape":"String"},
-      "sensitive":true
+      "value":{"shape":"String"}
     },
     "StringUrlWithLength":{
       "type":"string",
@@ -386,8 +358,7 @@
     "Text":{
       "type":"string",
       "max":1024,
-      "min":1,
-      "sensitive":true
+      "min":1
     },
     "UnsupportedMediaTypeException":{
       "type":"structure",

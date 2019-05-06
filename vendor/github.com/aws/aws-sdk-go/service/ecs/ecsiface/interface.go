@@ -21,7 +21,7 @@ import (
 //
 // The best way to use this interface is so the SDK's service client's calls
 // can be stubbed out for unit testing your code with the SDK without needing
-// to inject custom request handlers into the SDK's request pipeline.
+// to inject custom request handlers into the the SDK's request pipeline.
 //
 //    // myFunc uses an SDK service client to make a request to
 //    // Amazon EC2 Container Service.
@@ -68,14 +68,6 @@ type ECSAPI interface {
 	CreateServiceWithContext(aws.Context, *ecs.CreateServiceInput, ...request.Option) (*ecs.CreateServiceOutput, error)
 	CreateServiceRequest(*ecs.CreateServiceInput) (*request.Request, *ecs.CreateServiceOutput)
 
-	CreateTaskSet(*ecs.CreateTaskSetInput) (*ecs.CreateTaskSetOutput, error)
-	CreateTaskSetWithContext(aws.Context, *ecs.CreateTaskSetInput, ...request.Option) (*ecs.CreateTaskSetOutput, error)
-	CreateTaskSetRequest(*ecs.CreateTaskSetInput) (*request.Request, *ecs.CreateTaskSetOutput)
-
-	DeleteAccountSetting(*ecs.DeleteAccountSettingInput) (*ecs.DeleteAccountSettingOutput, error)
-	DeleteAccountSettingWithContext(aws.Context, *ecs.DeleteAccountSettingInput, ...request.Option) (*ecs.DeleteAccountSettingOutput, error)
-	DeleteAccountSettingRequest(*ecs.DeleteAccountSettingInput) (*request.Request, *ecs.DeleteAccountSettingOutput)
-
 	DeleteAttributes(*ecs.DeleteAttributesInput) (*ecs.DeleteAttributesOutput, error)
 	DeleteAttributesWithContext(aws.Context, *ecs.DeleteAttributesInput, ...request.Option) (*ecs.DeleteAttributesOutput, error)
 	DeleteAttributesRequest(*ecs.DeleteAttributesInput) (*request.Request, *ecs.DeleteAttributesOutput)
@@ -87,10 +79,6 @@ type ECSAPI interface {
 	DeleteService(*ecs.DeleteServiceInput) (*ecs.DeleteServiceOutput, error)
 	DeleteServiceWithContext(aws.Context, *ecs.DeleteServiceInput, ...request.Option) (*ecs.DeleteServiceOutput, error)
 	DeleteServiceRequest(*ecs.DeleteServiceInput) (*request.Request, *ecs.DeleteServiceOutput)
-
-	DeleteTaskSet(*ecs.DeleteTaskSetInput) (*ecs.DeleteTaskSetOutput, error)
-	DeleteTaskSetWithContext(aws.Context, *ecs.DeleteTaskSetInput, ...request.Option) (*ecs.DeleteTaskSetOutput, error)
-	DeleteTaskSetRequest(*ecs.DeleteTaskSetInput) (*request.Request, *ecs.DeleteTaskSetOutput)
 
 	DeregisterContainerInstance(*ecs.DeregisterContainerInstanceInput) (*ecs.DeregisterContainerInstanceOutput, error)
 	DeregisterContainerInstanceWithContext(aws.Context, *ecs.DeregisterContainerInstanceInput, ...request.Option) (*ecs.DeregisterContainerInstanceOutput, error)
@@ -116,10 +104,6 @@ type ECSAPI interface {
 	DescribeTaskDefinitionWithContext(aws.Context, *ecs.DescribeTaskDefinitionInput, ...request.Option) (*ecs.DescribeTaskDefinitionOutput, error)
 	DescribeTaskDefinitionRequest(*ecs.DescribeTaskDefinitionInput) (*request.Request, *ecs.DescribeTaskDefinitionOutput)
 
-	DescribeTaskSets(*ecs.DescribeTaskSetsInput) (*ecs.DescribeTaskSetsOutput, error)
-	DescribeTaskSetsWithContext(aws.Context, *ecs.DescribeTaskSetsInput, ...request.Option) (*ecs.DescribeTaskSetsOutput, error)
-	DescribeTaskSetsRequest(*ecs.DescribeTaskSetsInput) (*request.Request, *ecs.DescribeTaskSetsOutput)
-
 	DescribeTasks(*ecs.DescribeTasksInput) (*ecs.DescribeTasksOutput, error)
 	DescribeTasksWithContext(aws.Context, *ecs.DescribeTasksInput, ...request.Option) (*ecs.DescribeTasksOutput, error)
 	DescribeTasksRequest(*ecs.DescribeTasksInput) (*request.Request, *ecs.DescribeTasksOutput)
@@ -127,10 +111,6 @@ type ECSAPI interface {
 	DiscoverPollEndpoint(*ecs.DiscoverPollEndpointInput) (*ecs.DiscoverPollEndpointOutput, error)
 	DiscoverPollEndpointWithContext(aws.Context, *ecs.DiscoverPollEndpointInput, ...request.Option) (*ecs.DiscoverPollEndpointOutput, error)
 	DiscoverPollEndpointRequest(*ecs.DiscoverPollEndpointInput) (*request.Request, *ecs.DiscoverPollEndpointOutput)
-
-	ListAccountSettings(*ecs.ListAccountSettingsInput) (*ecs.ListAccountSettingsOutput, error)
-	ListAccountSettingsWithContext(aws.Context, *ecs.ListAccountSettingsInput, ...request.Option) (*ecs.ListAccountSettingsOutput, error)
-	ListAccountSettingsRequest(*ecs.ListAccountSettingsInput) (*request.Request, *ecs.ListAccountSettingsOutput)
 
 	ListAttributes(*ecs.ListAttributesInput) (*ecs.ListAttributesOutput, error)
 	ListAttributesWithContext(aws.Context, *ecs.ListAttributesInput, ...request.Option) (*ecs.ListAttributesOutput, error)
@@ -157,10 +137,6 @@ type ECSAPI interface {
 	ListServicesPages(*ecs.ListServicesInput, func(*ecs.ListServicesOutput, bool) bool) error
 	ListServicesPagesWithContext(aws.Context, *ecs.ListServicesInput, func(*ecs.ListServicesOutput, bool) bool, ...request.Option) error
 
-	ListTagsForResource(*ecs.ListTagsForResourceInput) (*ecs.ListTagsForResourceOutput, error)
-	ListTagsForResourceWithContext(aws.Context, *ecs.ListTagsForResourceInput, ...request.Option) (*ecs.ListTagsForResourceOutput, error)
-	ListTagsForResourceRequest(*ecs.ListTagsForResourceInput) (*request.Request, *ecs.ListTagsForResourceOutput)
-
 	ListTaskDefinitionFamilies(*ecs.ListTaskDefinitionFamiliesInput) (*ecs.ListTaskDefinitionFamiliesOutput, error)
 	ListTaskDefinitionFamiliesWithContext(aws.Context, *ecs.ListTaskDefinitionFamiliesInput, ...request.Option) (*ecs.ListTaskDefinitionFamiliesOutput, error)
 	ListTaskDefinitionFamiliesRequest(*ecs.ListTaskDefinitionFamiliesInput) (*request.Request, *ecs.ListTaskDefinitionFamiliesOutput)
@@ -181,14 +157,6 @@ type ECSAPI interface {
 
 	ListTasksPages(*ecs.ListTasksInput, func(*ecs.ListTasksOutput, bool) bool) error
 	ListTasksPagesWithContext(aws.Context, *ecs.ListTasksInput, func(*ecs.ListTasksOutput, bool) bool, ...request.Option) error
-
-	PutAccountSetting(*ecs.PutAccountSettingInput) (*ecs.PutAccountSettingOutput, error)
-	PutAccountSettingWithContext(aws.Context, *ecs.PutAccountSettingInput, ...request.Option) (*ecs.PutAccountSettingOutput, error)
-	PutAccountSettingRequest(*ecs.PutAccountSettingInput) (*request.Request, *ecs.PutAccountSettingOutput)
-
-	PutAccountSettingDefault(*ecs.PutAccountSettingDefaultInput) (*ecs.PutAccountSettingDefaultOutput, error)
-	PutAccountSettingDefaultWithContext(aws.Context, *ecs.PutAccountSettingDefaultInput, ...request.Option) (*ecs.PutAccountSettingDefaultOutput, error)
-	PutAccountSettingDefaultRequest(*ecs.PutAccountSettingDefaultInput) (*request.Request, *ecs.PutAccountSettingDefaultOutput)
 
 	PutAttributes(*ecs.PutAttributesInput) (*ecs.PutAttributesOutput, error)
 	PutAttributesWithContext(aws.Context, *ecs.PutAttributesInput, ...request.Option) (*ecs.PutAttributesOutput, error)
@@ -222,14 +190,6 @@ type ECSAPI interface {
 	SubmitTaskStateChangeWithContext(aws.Context, *ecs.SubmitTaskStateChangeInput, ...request.Option) (*ecs.SubmitTaskStateChangeOutput, error)
 	SubmitTaskStateChangeRequest(*ecs.SubmitTaskStateChangeInput) (*request.Request, *ecs.SubmitTaskStateChangeOutput)
 
-	TagResource(*ecs.TagResourceInput) (*ecs.TagResourceOutput, error)
-	TagResourceWithContext(aws.Context, *ecs.TagResourceInput, ...request.Option) (*ecs.TagResourceOutput, error)
-	TagResourceRequest(*ecs.TagResourceInput) (*request.Request, *ecs.TagResourceOutput)
-
-	UntagResource(*ecs.UntagResourceInput) (*ecs.UntagResourceOutput, error)
-	UntagResourceWithContext(aws.Context, *ecs.UntagResourceInput, ...request.Option) (*ecs.UntagResourceOutput, error)
-	UntagResourceRequest(*ecs.UntagResourceInput) (*request.Request, *ecs.UntagResourceOutput)
-
 	UpdateContainerAgent(*ecs.UpdateContainerAgentInput) (*ecs.UpdateContainerAgentOutput, error)
 	UpdateContainerAgentWithContext(aws.Context, *ecs.UpdateContainerAgentInput, ...request.Option) (*ecs.UpdateContainerAgentOutput, error)
 	UpdateContainerAgentRequest(*ecs.UpdateContainerAgentInput) (*request.Request, *ecs.UpdateContainerAgentOutput)
@@ -241,14 +201,6 @@ type ECSAPI interface {
 	UpdateService(*ecs.UpdateServiceInput) (*ecs.UpdateServiceOutput, error)
 	UpdateServiceWithContext(aws.Context, *ecs.UpdateServiceInput, ...request.Option) (*ecs.UpdateServiceOutput, error)
 	UpdateServiceRequest(*ecs.UpdateServiceInput) (*request.Request, *ecs.UpdateServiceOutput)
-
-	UpdateServicePrimaryTaskSet(*ecs.UpdateServicePrimaryTaskSetInput) (*ecs.UpdateServicePrimaryTaskSetOutput, error)
-	UpdateServicePrimaryTaskSetWithContext(aws.Context, *ecs.UpdateServicePrimaryTaskSetInput, ...request.Option) (*ecs.UpdateServicePrimaryTaskSetOutput, error)
-	UpdateServicePrimaryTaskSetRequest(*ecs.UpdateServicePrimaryTaskSetInput) (*request.Request, *ecs.UpdateServicePrimaryTaskSetOutput)
-
-	UpdateTaskSet(*ecs.UpdateTaskSetInput) (*ecs.UpdateTaskSetOutput, error)
-	UpdateTaskSetWithContext(aws.Context, *ecs.UpdateTaskSetInput, ...request.Option) (*ecs.UpdateTaskSetOutput, error)
-	UpdateTaskSetRequest(*ecs.UpdateTaskSetInput) (*request.Request, *ecs.UpdateTaskSetOutput)
 
 	WaitUntilServicesInactive(*ecs.DescribeServicesInput) error
 	WaitUntilServicesInactiveWithContext(aws.Context, *ecs.DescribeServicesInput, ...request.WaiterOption) error

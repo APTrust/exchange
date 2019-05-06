@@ -11,12 +11,13 @@ import (
 	"github.com/aws/aws-sdk-go/private/protocol/restjson"
 )
 
-// APIGateway provides the API operation methods for making requests to
-// Amazon API Gateway. See this package's package overview docs
-// for details on the service.
-//
-// APIGateway methods are safe to use concurrently. It is not safe to
-// modify mutate any of the struct's properties though.
+// Amazon API Gateway helps developers deliver robust, secure, and scalable
+// mobile and web application back ends. Amazon API Gateway allows developers
+// to securely connect mobile and web applications to APIs that run on AWS Lambda,
+// Amazon EC2, or other publicly addressable web services that are hosted outside
+// of AWS.
+// The service client's operations are safe to be used concurrently.
+// It is not safe to mutate any of the client's properties though.
 type APIGateway struct {
 	*client.Client
 }
@@ -29,9 +30,8 @@ var initRequest func(*request.Request)
 
 // Service information constants
 const (
-	ServiceName = "apigateway"  // Name of service.
-	EndpointsID = ServiceName   // ID to lookup a service endpoint with.
-	ServiceID   = "API Gateway" // ServiceID is a unique identifer of a specific service.
+	ServiceName = "apigateway" // Service endpoint prefix API calls made to.
+	EndpointsID = ServiceName  // Service ID for Regions and Endpoints metadata.
 )
 
 // New creates a new instance of the APIGateway client with a session.
@@ -56,7 +56,6 @@ func newClient(cfg aws.Config, handlers request.Handlers, endpoint, signingRegio
 			cfg,
 			metadata.ClientInfo{
 				ServiceName:   ServiceName,
-				ServiceID:     ServiceID,
 				SigningName:   signingName,
 				SigningRegion: signingRegion,
 				Endpoint:      endpoint,

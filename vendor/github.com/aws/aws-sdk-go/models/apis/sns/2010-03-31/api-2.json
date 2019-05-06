@@ -1,14 +1,13 @@
 {
   "version":"2.0",
   "metadata":{
+    "uid":"sns-2010-03-31",
     "apiVersion":"2010-03-31",
     "endpointPrefix":"sns",
     "protocol":"query",
     "serviceAbbreviation":"Amazon SNS",
     "serviceFullName":"Amazon Simple Notification Service",
-    "serviceId":"SNS",
     "signatureVersion":"v4",
-    "uid":"sns-2010-03-31",
     "xmlNamespace":"http://sns.amazonaws.com/doc/2010-03-31/"
   },
   "operations":{
@@ -60,8 +59,7 @@
         {"shape":"InvalidParameterException"},
         {"shape":"NotFoundException"},
         {"shape":"InternalErrorException"},
-        {"shape":"AuthorizationErrorException"},
-        {"shape":"FilterPolicyLimitExceededException"}
+        {"shape":"AuthorizationErrorException"}
       ]
     },
     "CreatePlatformApplication":{
@@ -114,12 +112,7 @@
         {"shape":"InvalidParameterException"},
         {"shape":"TopicLimitExceededException"},
         {"shape":"InternalErrorException"},
-        {"shape":"AuthorizationErrorException"},
-        {"shape":"InvalidSecurityException"},
-        {"shape":"TagLimitExceededException"},
-        {"shape":"StaleTagException"},
-        {"shape":"TagPolicyException"},
-        {"shape":"ConcurrentAccessException"}
+        {"shape":"AuthorizationErrorException"}
       ]
     },
     "DeleteEndpoint":{
@@ -159,10 +152,7 @@
         {"shape":"InvalidParameterException"},
         {"shape":"InternalErrorException"},
         {"shape":"AuthorizationErrorException"},
-        {"shape":"NotFoundException"},
-        {"shape":"StaleTagException"},
-        {"shape":"TagPolicyException"},
-        {"shape":"ConcurrentAccessException"}
+        {"shape":"NotFoundException"}
       ]
     },
     "GetEndpointAttributes":{
@@ -252,8 +242,7 @@
         {"shape":"InvalidParameterException"},
         {"shape":"InternalErrorException"},
         {"shape":"NotFoundException"},
-        {"shape":"AuthorizationErrorException"},
-        {"shape":"InvalidSecurityException"}
+        {"shape":"AuthorizationErrorException"}
       ]
     },
     "ListEndpointsByPlatformApplication":{
@@ -344,25 +333,6 @@
         {"shape":"AuthorizationErrorException"}
       ]
     },
-    "ListTagsForResource":{
-      "name":"ListTagsForResource",
-      "http":{
-        "method":"POST",
-        "requestUri":"/"
-      },
-      "input":{"shape":"ListTagsForResourceRequest"},
-      "output":{
-        "shape":"ListTagsForResourceResponse",
-        "resultWrapper":"ListTagsForResourceResult"
-      },
-      "errors":[
-        {"shape":"ResourceNotFoundException"},
-        {"shape":"TagPolicyException"},
-        {"shape":"InvalidParameterException"},
-        {"shape":"AuthorizationErrorException"},
-        {"shape":"ConcurrentAccessException"}
-      ]
-    },
     "ListTopics":{
       "name":"ListTopics",
       "http":{
@@ -416,14 +386,7 @@
         {"shape":"NotFoundException"},
         {"shape":"EndpointDisabledException"},
         {"shape":"PlatformApplicationDisabledException"},
-        {"shape":"AuthorizationErrorException"},
-        {"shape":"KMSDisabledException"},
-        {"shape":"KMSInvalidStateException"},
-        {"shape":"KMSNotFoundException"},
-        {"shape":"KMSOptInRequired"},
-        {"shape":"KMSThrottlingException"},
-        {"shape":"KMSAccessDeniedException"},
-        {"shape":"InvalidSecurityException"}
+        {"shape":"AuthorizationErrorException"}
       ]
     },
     "RemovePermission":{
@@ -495,7 +458,6 @@
       "input":{"shape":"SetSubscriptionAttributesInput"},
       "errors":[
         {"shape":"InvalidParameterException"},
-        {"shape":"FilterPolicyLimitExceededException"},
         {"shape":"InternalErrorException"},
         {"shape":"NotFoundException"},
         {"shape":"AuthorizationErrorException"}
@@ -512,8 +474,7 @@
         {"shape":"InvalidParameterException"},
         {"shape":"InternalErrorException"},
         {"shape":"NotFoundException"},
-        {"shape":"AuthorizationErrorException"},
-        {"shape":"InvalidSecurityException"}
+        {"shape":"AuthorizationErrorException"}
       ]
     },
     "Subscribe":{
@@ -529,33 +490,10 @@
       },
       "errors":[
         {"shape":"SubscriptionLimitExceededException"},
-        {"shape":"FilterPolicyLimitExceededException"},
         {"shape":"InvalidParameterException"},
         {"shape":"InternalErrorException"},
         {"shape":"NotFoundException"},
-        {"shape":"AuthorizationErrorException"},
-        {"shape":"InvalidSecurityException"}
-      ]
-    },
-    "TagResource":{
-      "name":"TagResource",
-      "http":{
-        "method":"POST",
-        "requestUri":"/"
-      },
-      "input":{"shape":"TagResourceRequest"},
-      "output":{
-        "shape":"TagResourceResponse",
-        "resultWrapper":"TagResourceResult"
-      },
-      "errors":[
-        {"shape":"ResourceNotFoundException"},
-        {"shape":"TagLimitExceededException"},
-        {"shape":"StaleTagException"},
-        {"shape":"TagPolicyException"},
-        {"shape":"InvalidParameterException"},
-        {"shape":"AuthorizationErrorException"},
-        {"shape":"ConcurrentAccessException"}
+        {"shape":"AuthorizationErrorException"}
       ]
     },
     "Unsubscribe":{
@@ -569,29 +507,7 @@
         {"shape":"InvalidParameterException"},
         {"shape":"InternalErrorException"},
         {"shape":"AuthorizationErrorException"},
-        {"shape":"NotFoundException"},
-        {"shape":"InvalidSecurityException"}
-      ]
-    },
-    "UntagResource":{
-      "name":"UntagResource",
-      "http":{
-        "method":"POST",
-        "requestUri":"/"
-      },
-      "input":{"shape":"UntagResourceRequest"},
-      "output":{
-        "shape":"UntagResourceResponse",
-        "resultWrapper":"UntagResourceResult"
-      },
-      "errors":[
-        {"shape":"ResourceNotFoundException"},
-        {"shape":"TagLimitExceededException"},
-        {"shape":"StaleTagException"},
-        {"shape":"TagPolicyException"},
-        {"shape":"InvalidParameterException"},
-        {"shape":"AuthorizationErrorException"},
-        {"shape":"ConcurrentAccessException"}
+        {"shape":"NotFoundException"}
       ]
     }
   },
@@ -614,11 +530,6 @@
         "AWSAccountId":{"shape":"DelegatesList"},
         "ActionName":{"shape":"ActionsList"}
       }
-    },
-    "AmazonResourceName":{
-      "type":"string",
-      "max":1011,
-      "min":1
     },
     "AuthorizationErrorException":{
       "type":"structure",
@@ -645,18 +556,6 @@
       "members":{
         "isOptedOut":{"shape":"boolean"}
       }
-    },
-    "ConcurrentAccessException":{
-      "type":"structure",
-      "members":{
-        "message":{"shape":"string"}
-      },
-      "error":{
-        "code":"ConcurrentAccess",
-        "httpStatusCode":400,
-        "senderFault":true
-      },
-      "exception":true
     },
     "ConfirmSubscriptionInput":{
       "type":"structure",
@@ -718,9 +617,7 @@
       "type":"structure",
       "required":["Name"],
       "members":{
-        "Name":{"shape":"topicName"},
-        "Attributes":{"shape":"TopicAttributesMap"},
-        "Tags":{"shape":"TagList"}
+        "Name":{"shape":"topicName"}
       }
     },
     "CreateTopicResponse":{
@@ -769,18 +666,6 @@
       "error":{
         "code":"EndpointDisabled",
         "httpStatusCode":400,
-        "senderFault":true
-      },
-      "exception":true
-    },
-    "FilterPolicyLimitExceededException":{
-      "type":"structure",
-      "members":{
-        "message":{"shape":"string"}
-      },
-      "error":{
-        "code":"FilterPolicyLimitExceeded",
-        "httpStatusCode":403,
         "senderFault":true
       },
       "exception":true
@@ -885,90 +770,6 @@
       },
       "exception":true
     },
-    "InvalidSecurityException":{
-      "type":"structure",
-      "members":{
-        "message":{"shape":"string"}
-      },
-      "error":{
-        "code":"InvalidSecurity",
-        "httpStatusCode":403,
-        "senderFault":true
-      },
-      "exception":true
-    },
-    "KMSAccessDeniedException":{
-      "type":"structure",
-      "members":{
-        "message":{"shape":"string"}
-      },
-      "error":{
-        "code":"KMSAccessDenied",
-        "httpStatusCode":400,
-        "senderFault":true
-      },
-      "exception":true
-    },
-    "KMSDisabledException":{
-      "type":"structure",
-      "members":{
-        "message":{"shape":"string"}
-      },
-      "error":{
-        "code":"KMSDisabled",
-        "httpStatusCode":400,
-        "senderFault":true
-      },
-      "exception":true
-    },
-    "KMSInvalidStateException":{
-      "type":"structure",
-      "members":{
-        "message":{"shape":"string"}
-      },
-      "error":{
-        "code":"KMSInvalidState",
-        "httpStatusCode":400,
-        "senderFault":true
-      },
-      "exception":true
-    },
-    "KMSNotFoundException":{
-      "type":"structure",
-      "members":{
-        "message":{"shape":"string"}
-      },
-      "error":{
-        "code":"KMSNotFound",
-        "httpStatusCode":400,
-        "senderFault":true
-      },
-      "exception":true
-    },
-    "KMSOptInRequired":{
-      "type":"structure",
-      "members":{
-        "message":{"shape":"string"}
-      },
-      "error":{
-        "code":"KMSOptInRequired",
-        "httpStatusCode":403,
-        "senderFault":true
-      },
-      "exception":true
-    },
-    "KMSThrottlingException":{
-      "type":"structure",
-      "members":{
-        "message":{"shape":"string"}
-      },
-      "error":{
-        "code":"KMSThrottling",
-        "httpStatusCode":400,
-        "senderFault":true
-      },
-      "exception":true
-    },
     "ListEndpointsByPlatformApplicationInput":{
       "type":"structure",
       "required":["PlatformApplicationArn"],
@@ -1048,19 +849,6 @@
       "members":{
         "Subscriptions":{"shape":"SubscriptionsList"},
         "NextToken":{"shape":"nextToken"}
-      }
-    },
-    "ListTagsForResourceRequest":{
-      "type":"structure",
-      "required":["ResourceArn"],
-      "members":{
-        "ResourceArn":{"shape":"AmazonResourceName"}
-      }
-    },
-    "ListTagsForResourceResponse":{
-      "type":"structure",
-      "members":{
-        "Tags":{"shape":"TagList"}
       }
     },
     "ListTopicsInput":{
@@ -1179,18 +967,6 @@
         "Label":{"shape":"label"}
       }
     },
-    "ResourceNotFoundException":{
-      "type":"structure",
-      "members":{
-        "message":{"shape":"string"}
-      },
-      "error":{
-        "code":"ResourceNotFound",
-        "httpStatusCode":404,
-        "senderFault":true
-      },
-      "exception":true
-    },
     "SetEndpointAttributesInput":{
       "type":"structure",
       "required":[
@@ -1249,18 +1025,6 @@
         "AttributeValue":{"shape":"attributeValue"}
       }
     },
-    "StaleTagException":{
-      "type":"structure",
-      "members":{
-        "message":{"shape":"string"}
-      },
-      "error":{
-        "code":"StaleTag",
-        "httpStatusCode":400,
-        "senderFault":true
-      },
-      "exception":true
-    },
     "String":{"type":"string"},
     "SubscribeInput":{
       "type":"structure",
@@ -1271,9 +1035,7 @@
       "members":{
         "TopicArn":{"shape":"topicARN"},
         "Protocol":{"shape":"protocol"},
-        "Endpoint":{"shape":"endpoint"},
-        "Attributes":{"shape":"SubscriptionAttributesMap"},
-        "ReturnSubscriptionArn":{"shape":"boolean"}
+        "Endpoint":{"shape":"endpoint"}
       }
     },
     "SubscribeResponse":{
@@ -1312,75 +1074,6 @@
     "SubscriptionsList":{
       "type":"list",
       "member":{"shape":"Subscription"}
-    },
-    "Tag":{
-      "type":"structure",
-      "required":[
-        "Key",
-        "Value"
-      ],
-      "members":{
-        "Key":{"shape":"TagKey"},
-        "Value":{"shape":"TagValue"}
-      }
-    },
-    "TagKey":{
-      "type":"string",
-      "max":128,
-      "min":1
-    },
-    "TagKeyList":{
-      "type":"list",
-      "member":{"shape":"TagKey"}
-    },
-    "TagLimitExceededException":{
-      "type":"structure",
-      "members":{
-        "message":{"shape":"string"}
-      },
-      "error":{
-        "code":"TagLimitExceeded",
-        "httpStatusCode":400,
-        "senderFault":true
-      },
-      "exception":true
-    },
-    "TagList":{
-      "type":"list",
-      "member":{"shape":"Tag"}
-    },
-    "TagPolicyException":{
-      "type":"structure",
-      "members":{
-        "message":{"shape":"string"}
-      },
-      "error":{
-        "code":"TagPolicy",
-        "httpStatusCode":400,
-        "senderFault":true
-      },
-      "exception":true
-    },
-    "TagResourceRequest":{
-      "type":"structure",
-      "required":[
-        "ResourceArn",
-        "Tags"
-      ],
-      "members":{
-        "ResourceArn":{"shape":"AmazonResourceName"},
-        "Tags":{"shape":"TagList"}
-      }
-    },
-    "TagResourceResponse":{
-      "type":"structure",
-      "members":{
-      }
-    },
-    "TagValue":{
-      "type":"string",
-      "max":256,
-      "min":0
     },
     "ThrottledException":{
       "type":"structure",
@@ -1426,22 +1119,6 @@
       "required":["SubscriptionArn"],
       "members":{
         "SubscriptionArn":{"shape":"subscriptionARN"}
-      }
-    },
-    "UntagResourceRequest":{
-      "type":"structure",
-      "required":[
-        "ResourceArn",
-        "TagKeys"
-      ],
-      "members":{
-        "ResourceArn":{"shape":"AmazonResourceName"},
-        "TagKeys":{"shape":"TagKeyList"}
-      }
-    },
-    "UntagResourceResponse":{
-      "type":"structure",
-      "members":{
       }
     },
     "account":{"type":"string"},

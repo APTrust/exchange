@@ -7,7 +7,6 @@
     "protocol":"query",
     "serviceAbbreviation":"AWS STS",
     "serviceFullName":"AWS Security Token Service",
-    "serviceId":"STS",
     "signatureVersion":"v4",
     "uid":"sts-2011-06-15",
     "xmlNamespace":"https://sts.amazonaws.com/doc/2011-06-15/"
@@ -406,14 +405,14 @@
     },
     "SAMLAssertionType":{
       "type":"string",
-      "max":100000,
+      "max":50000,
       "min":4
     },
     "Subject":{"type":"string"},
     "SubjectType":{"type":"string"},
     "accessKeyIdType":{
       "type":"string",
-      "max":128,
+      "max":32,
       "min":16,
       "pattern":"[\\w]*"
     },
@@ -427,7 +426,7 @@
     },
     "assumedRoleIdType":{
       "type":"string",
-      "max":193,
+      "max":96,
       "min":2,
       "pattern":"[\\w+=,.@:-]*"
     },
@@ -457,7 +456,7 @@
     },
     "federatedIdType":{
       "type":"string",
-      "max":193,
+      "max":96,
       "min":2,
       "pattern":"[\\w+=,.@\\:-]*"
     },
@@ -474,7 +473,7 @@
     "regionDisabledMessage":{"type":"string"},
     "roleDurationSecondsType":{
       "type":"integer",
-      "max":43200,
+      "max":3600,
       "min":900
     },
     "roleSessionNameType":{

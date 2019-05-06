@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/aws/aws-sdk-go/internal/sdkio"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestOffsetReaderRead(t *testing.T) {
@@ -19,44 +19,26 @@ func TestOffsetReaderRead(t *testing.T) {
 
 	n, err := reader.Read(tempBuf)
 
-	if e, a := n, len(buf); e != a {
-		t.Errorf("expect %v, got %v", e, a)
-	}
-	if err != nil {
-		t.Errorf("expect nil, %v", err)
-	}
-	if e, a := buf, tempBuf; !bytes.Equal(e, a) {
-		t.Errorf("expect %v, got %v", e, a)
-	}
+	assert.Equal(t, n, len(buf))
+	assert.Nil(t, err)
+	assert.Equal(t, buf, tempBuf)
 }
 
 func TestOffsetReaderSeek(t *testing.T) {
 	buf := []byte("testData")
 	reader := newOffsetReader(bytes.NewReader(buf), 0)
 
-	orig, err := reader.Seek(0, sdkio.SeekCurrent)
-	if err != nil {
-		t.Errorf("expect nil, %v", err)
-	}
-	if e, a := int64(0), orig; e != a {
-		t.Errorf("expect %v, got %v", e, a)
-	}
+	orig, err := reader.Seek(0, 1)
+	assert.NoError(t, err)
+	assert.Equal(t, int64(0), orig)
 
-	n, err := reader.Seek(0, sdkio.SeekEnd)
-	if err != nil {
-		t.Errorf("expect nil, %v", err)
-	}
-	if e, a := int64(len(buf)), n; e != a {
-		t.Errorf("expect %v, got %v", e, a)
-	}
+	n, err := reader.Seek(0, 2)
+	assert.NoError(t, err)
+	assert.Equal(t, int64(len(buf)), n)
 
-	n, err = reader.Seek(orig, sdkio.SeekStart)
-	if err != nil {
-		t.Errorf("expect nil, %v", err)
-	}
-	if e, a := int64(0), n; e != a {
-		t.Errorf("expect %v, got %v", e, a)
-	}
+	n, err = reader.Seek(orig, 0)
+	assert.NoError(t, err)
+	assert.Equal(t, int64(0), n)
 }
 
 func TestOffsetReaderClose(t *testing.T) {
@@ -64,18 +46,12 @@ func TestOffsetReaderClose(t *testing.T) {
 	reader := &offsetReader{buf: bytes.NewReader(buf)}
 
 	err := reader.Close()
-	if err != nil {
-		t.Errorf("expect nil, %v", err)
-	}
+	assert.Nil(t, err)
 
 	tempBuf := make([]byte, len(buf))
 	n, err := reader.Read(tempBuf)
-	if e, a := n, 0; e != a {
-		t.Errorf("expect %v, got %v", e, a)
-	}
-	if e, a := err, io.EOF; e != a {
-		t.Errorf("expect %v, got %v", e, a)
-	}
+	assert.Equal(t, n, 0)
+	assert.Equal(t, err, io.EOF)
 }
 
 func TestOffsetReaderCloseAndCopy(t *testing.T) {
@@ -86,23 +62,13 @@ func TestOffsetReaderCloseAndCopy(t *testing.T) {
 	newReader := reader.CloseAndCopy(0)
 
 	n, err := reader.Read(tempBuf)
-	if e, a := n, 0; e != a {
-		t.Errorf("expect %v, got %v", e, a)
-	}
-	if e, a := err, io.EOF; e != a {
-		t.Errorf("expect %v, got %v", e, a)
-	}
+	assert.Equal(t, n, 0)
+	assert.Equal(t, err, io.EOF)
 
 	n, err = newReader.Read(tempBuf)
-	if e, a := n, len(buf); e != a {
-		t.Errorf("expect %v, got %v", e, a)
-	}
-	if err != nil {
-		t.Errorf("expect nil, %v", err)
-	}
-	if e, a := buf, tempBuf; !bytes.Equal(e, a) {
-		t.Errorf("expect %v, got %v", e, a)
-	}
+	assert.Equal(t, n, len(buf))
+	assert.Nil(t, err)
+	assert.Equal(t, buf, tempBuf)
 }
 
 func TestOffsetReaderCloseAndCopyOffset(t *testing.T) {
@@ -112,17 +78,11 @@ func TestOffsetReaderCloseAndCopyOffset(t *testing.T) {
 
 	newReader := reader.CloseAndCopy(4)
 	n, err := newReader.Read(tempBuf)
-	if e, a := n, len(buf)-4; e != a {
-		t.Errorf("expect %v, got %v", e, a)
-	}
-	if err != nil {
-		t.Errorf("expect nil, %v", err)
-	}
+	assert.Equal(t, n, len(buf)-4)
+	assert.Nil(t, err)
 
 	expected := []byte{'D', 'a', 't', 'a', 0, 0, 0, 0}
-	if e, a := expected, tempBuf; !bytes.Equal(e, a) {
-		t.Errorf("expect %v, got %v", e, a)
-	}
+	assert.Equal(t, expected, tempBuf)
 }
 
 func TestOffsetReaderRace(t *testing.T) {

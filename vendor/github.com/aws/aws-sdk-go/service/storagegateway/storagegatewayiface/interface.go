@@ -21,7 +21,7 @@ import (
 //
 // The best way to use this interface is so the SDK's service client's calls
 // can be stubbed out for unit testing your code with the SDK without needing
-// to inject custom request handlers into the SDK's request pipeline.
+// to inject custom request handlers into the the SDK's request pipeline.
 //
 //    // myFunc uses an SDK service client to make a request to
 //    // AWS Storage Gateway.
@@ -80,10 +80,6 @@ type StorageGatewayAPI interface {
 	AddWorkingStorageWithContext(aws.Context, *storagegateway.AddWorkingStorageInput, ...request.Option) (*storagegateway.AddWorkingStorageOutput, error)
 	AddWorkingStorageRequest(*storagegateway.AddWorkingStorageInput) (*request.Request, *storagegateway.AddWorkingStorageOutput)
 
-	AttachVolume(*storagegateway.AttachVolumeInput) (*storagegateway.AttachVolumeOutput, error)
-	AttachVolumeWithContext(aws.Context, *storagegateway.AttachVolumeInput, ...request.Option) (*storagegateway.AttachVolumeOutput, error)
-	AttachVolumeRequest(*storagegateway.AttachVolumeInput) (*request.Request, *storagegateway.AttachVolumeOutput)
-
 	CancelArchival(*storagegateway.CancelArchivalInput) (*storagegateway.CancelArchivalOutput, error)
 	CancelArchivalWithContext(aws.Context, *storagegateway.CancelArchivalInput, ...request.Option) (*storagegateway.CancelArchivalOutput, error)
 	CancelArchivalRequest(*storagegateway.CancelArchivalInput) (*request.Request, *storagegateway.CancelArchivalOutput)
@@ -99,10 +95,6 @@ type StorageGatewayAPI interface {
 	CreateNFSFileShare(*storagegateway.CreateNFSFileShareInput) (*storagegateway.CreateNFSFileShareOutput, error)
 	CreateNFSFileShareWithContext(aws.Context, *storagegateway.CreateNFSFileShareInput, ...request.Option) (*storagegateway.CreateNFSFileShareOutput, error)
 	CreateNFSFileShareRequest(*storagegateway.CreateNFSFileShareInput) (*request.Request, *storagegateway.CreateNFSFileShareOutput)
-
-	CreateSMBFileShare(*storagegateway.CreateSMBFileShareInput) (*storagegateway.CreateSMBFileShareOutput, error)
-	CreateSMBFileShareWithContext(aws.Context, *storagegateway.CreateSMBFileShareInput, ...request.Option) (*storagegateway.CreateSMBFileShareOutput, error)
-	CreateSMBFileShareRequest(*storagegateway.CreateSMBFileShareInput) (*request.Request, *storagegateway.CreateSMBFileShareOutput)
 
 	CreateSnapshot(*storagegateway.CreateSnapshotInput) (*storagegateway.CreateSnapshotOutput, error)
 	CreateSnapshotWithContext(aws.Context, *storagegateway.CreateSnapshotInput, ...request.Option) (*storagegateway.CreateSnapshotOutput, error)
@@ -184,14 +176,6 @@ type StorageGatewayAPI interface {
 	DescribeNFSFileSharesWithContext(aws.Context, *storagegateway.DescribeNFSFileSharesInput, ...request.Option) (*storagegateway.DescribeNFSFileSharesOutput, error)
 	DescribeNFSFileSharesRequest(*storagegateway.DescribeNFSFileSharesInput) (*request.Request, *storagegateway.DescribeNFSFileSharesOutput)
 
-	DescribeSMBFileShares(*storagegateway.DescribeSMBFileSharesInput) (*storagegateway.DescribeSMBFileSharesOutput, error)
-	DescribeSMBFileSharesWithContext(aws.Context, *storagegateway.DescribeSMBFileSharesInput, ...request.Option) (*storagegateway.DescribeSMBFileSharesOutput, error)
-	DescribeSMBFileSharesRequest(*storagegateway.DescribeSMBFileSharesInput) (*request.Request, *storagegateway.DescribeSMBFileSharesOutput)
-
-	DescribeSMBSettings(*storagegateway.DescribeSMBSettingsInput) (*storagegateway.DescribeSMBSettingsOutput, error)
-	DescribeSMBSettingsWithContext(aws.Context, *storagegateway.DescribeSMBSettingsInput, ...request.Option) (*storagegateway.DescribeSMBSettingsOutput, error)
-	DescribeSMBSettingsRequest(*storagegateway.DescribeSMBSettingsInput) (*request.Request, *storagegateway.DescribeSMBSettingsOutput)
-
 	DescribeSnapshotSchedule(*storagegateway.DescribeSnapshotScheduleInput) (*storagegateway.DescribeSnapshotScheduleOutput, error)
 	DescribeSnapshotScheduleWithContext(aws.Context, *storagegateway.DescribeSnapshotScheduleInput, ...request.Option) (*storagegateway.DescribeSnapshotScheduleOutput, error)
 	DescribeSnapshotScheduleRequest(*storagegateway.DescribeSnapshotScheduleInput) (*request.Request, *storagegateway.DescribeSnapshotScheduleOutput)
@@ -236,24 +220,13 @@ type StorageGatewayAPI interface {
 	DescribeWorkingStorageWithContext(aws.Context, *storagegateway.DescribeWorkingStorageInput, ...request.Option) (*storagegateway.DescribeWorkingStorageOutput, error)
 	DescribeWorkingStorageRequest(*storagegateway.DescribeWorkingStorageInput) (*request.Request, *storagegateway.DescribeWorkingStorageOutput)
 
-	DetachVolume(*storagegateway.DetachVolumeInput) (*storagegateway.DetachVolumeOutput, error)
-	DetachVolumeWithContext(aws.Context, *storagegateway.DetachVolumeInput, ...request.Option) (*storagegateway.DetachVolumeOutput, error)
-	DetachVolumeRequest(*storagegateway.DetachVolumeInput) (*request.Request, *storagegateway.DetachVolumeOutput)
-
 	DisableGateway(*storagegateway.DisableGatewayInput) (*storagegateway.DisableGatewayOutput, error)
 	DisableGatewayWithContext(aws.Context, *storagegateway.DisableGatewayInput, ...request.Option) (*storagegateway.DisableGatewayOutput, error)
 	DisableGatewayRequest(*storagegateway.DisableGatewayInput) (*request.Request, *storagegateway.DisableGatewayOutput)
 
-	JoinDomain(*storagegateway.JoinDomainInput) (*storagegateway.JoinDomainOutput, error)
-	JoinDomainWithContext(aws.Context, *storagegateway.JoinDomainInput, ...request.Option) (*storagegateway.JoinDomainOutput, error)
-	JoinDomainRequest(*storagegateway.JoinDomainInput) (*request.Request, *storagegateway.JoinDomainOutput)
-
 	ListFileShares(*storagegateway.ListFileSharesInput) (*storagegateway.ListFileSharesOutput, error)
 	ListFileSharesWithContext(aws.Context, *storagegateway.ListFileSharesInput, ...request.Option) (*storagegateway.ListFileSharesOutput, error)
 	ListFileSharesRequest(*storagegateway.ListFileSharesInput) (*request.Request, *storagegateway.ListFileSharesOutput)
-
-	ListFileSharesPages(*storagegateway.ListFileSharesInput, func(*storagegateway.ListFileSharesOutput, bool) bool) error
-	ListFileSharesPagesWithContext(aws.Context, *storagegateway.ListFileSharesInput, func(*storagegateway.ListFileSharesOutput, bool) bool, ...request.Option) error
 
 	ListGateways(*storagegateway.ListGatewaysInput) (*storagegateway.ListGatewaysOutput, error)
 	ListGatewaysWithContext(aws.Context, *storagegateway.ListGatewaysInput, ...request.Option) (*storagegateway.ListGatewaysOutput, error)
@@ -270,15 +243,9 @@ type StorageGatewayAPI interface {
 	ListTagsForResourceWithContext(aws.Context, *storagegateway.ListTagsForResourceInput, ...request.Option) (*storagegateway.ListTagsForResourceOutput, error)
 	ListTagsForResourceRequest(*storagegateway.ListTagsForResourceInput) (*request.Request, *storagegateway.ListTagsForResourceOutput)
 
-	ListTagsForResourcePages(*storagegateway.ListTagsForResourceInput, func(*storagegateway.ListTagsForResourceOutput, bool) bool) error
-	ListTagsForResourcePagesWithContext(aws.Context, *storagegateway.ListTagsForResourceInput, func(*storagegateway.ListTagsForResourceOutput, bool) bool, ...request.Option) error
-
 	ListTapes(*storagegateway.ListTapesInput) (*storagegateway.ListTapesOutput, error)
 	ListTapesWithContext(aws.Context, *storagegateway.ListTapesInput, ...request.Option) (*storagegateway.ListTapesOutput, error)
 	ListTapesRequest(*storagegateway.ListTapesInput) (*request.Request, *storagegateway.ListTapesOutput)
-
-	ListTapesPages(*storagegateway.ListTapesInput, func(*storagegateway.ListTapesOutput, bool) bool) error
-	ListTapesPagesWithContext(aws.Context, *storagegateway.ListTapesInput, func(*storagegateway.ListTapesOutput, bool) bool, ...request.Option) error
 
 	ListVolumeInitiators(*storagegateway.ListVolumeInitiatorsInput) (*storagegateway.ListVolumeInitiatorsOutput, error)
 	ListVolumeInitiatorsWithContext(aws.Context, *storagegateway.ListVolumeInitiatorsInput, ...request.Option) (*storagegateway.ListVolumeInitiatorsOutput, error)
@@ -294,10 +261,6 @@ type StorageGatewayAPI interface {
 
 	ListVolumesPages(*storagegateway.ListVolumesInput, func(*storagegateway.ListVolumesOutput, bool) bool) error
 	ListVolumesPagesWithContext(aws.Context, *storagegateway.ListVolumesInput, func(*storagegateway.ListVolumesOutput, bool) bool, ...request.Option) error
-
-	NotifyWhenUploaded(*storagegateway.NotifyWhenUploadedInput) (*storagegateway.NotifyWhenUploadedOutput, error)
-	NotifyWhenUploadedWithContext(aws.Context, *storagegateway.NotifyWhenUploadedInput, ...request.Option) (*storagegateway.NotifyWhenUploadedOutput, error)
-	NotifyWhenUploadedRequest(*storagegateway.NotifyWhenUploadedInput) (*request.Request, *storagegateway.NotifyWhenUploadedOutput)
 
 	RefreshCache(*storagegateway.RefreshCacheInput) (*storagegateway.RefreshCacheOutput, error)
 	RefreshCacheWithContext(aws.Context, *storagegateway.RefreshCacheInput, ...request.Option) (*storagegateway.RefreshCacheOutput, error)
@@ -322,10 +285,6 @@ type StorageGatewayAPI interface {
 	SetLocalConsolePassword(*storagegateway.SetLocalConsolePasswordInput) (*storagegateway.SetLocalConsolePasswordOutput, error)
 	SetLocalConsolePasswordWithContext(aws.Context, *storagegateway.SetLocalConsolePasswordInput, ...request.Option) (*storagegateway.SetLocalConsolePasswordOutput, error)
 	SetLocalConsolePasswordRequest(*storagegateway.SetLocalConsolePasswordInput) (*request.Request, *storagegateway.SetLocalConsolePasswordOutput)
-
-	SetSMBGuestPassword(*storagegateway.SetSMBGuestPasswordInput) (*storagegateway.SetSMBGuestPasswordOutput, error)
-	SetSMBGuestPasswordWithContext(aws.Context, *storagegateway.SetSMBGuestPasswordInput, ...request.Option) (*storagegateway.SetSMBGuestPasswordOutput, error)
-	SetSMBGuestPasswordRequest(*storagegateway.SetSMBGuestPasswordInput) (*request.Request, *storagegateway.SetSMBGuestPasswordOutput)
 
 	ShutdownGateway(*storagegateway.ShutdownGatewayInput) (*storagegateway.ShutdownGatewayOutput, error)
 	ShutdownGatewayWithContext(aws.Context, *storagegateway.ShutdownGatewayInput, ...request.Option) (*storagegateway.ShutdownGatewayOutput, error)
@@ -358,10 +317,6 @@ type StorageGatewayAPI interface {
 	UpdateNFSFileShare(*storagegateway.UpdateNFSFileShareInput) (*storagegateway.UpdateNFSFileShareOutput, error)
 	UpdateNFSFileShareWithContext(aws.Context, *storagegateway.UpdateNFSFileShareInput, ...request.Option) (*storagegateway.UpdateNFSFileShareOutput, error)
 	UpdateNFSFileShareRequest(*storagegateway.UpdateNFSFileShareInput) (*request.Request, *storagegateway.UpdateNFSFileShareOutput)
-
-	UpdateSMBFileShare(*storagegateway.UpdateSMBFileShareInput) (*storagegateway.UpdateSMBFileShareOutput, error)
-	UpdateSMBFileShareWithContext(aws.Context, *storagegateway.UpdateSMBFileShareInput, ...request.Option) (*storagegateway.UpdateSMBFileShareOutput, error)
-	UpdateSMBFileShareRequest(*storagegateway.UpdateSMBFileShareInput) (*request.Request, *storagegateway.UpdateSMBFileShareOutput)
 
 	UpdateSnapshotSchedule(*storagegateway.UpdateSnapshotScheduleInput) (*storagegateway.UpdateSnapshotScheduleOutput, error)
 	UpdateSnapshotScheduleWithContext(aws.Context, *storagegateway.UpdateSnapshotScheduleInput, ...request.Option) (*storagegateway.UpdateSnapshotScheduleOutput, error)

@@ -28,26 +28,9 @@ const (
 	// You tried to create more rules or add more targets to a rule than is allowed.
 	ErrCodeLimitExceededException = "LimitExceededException"
 
-	// ErrCodeManagedRuleException for service response error code
-	// "ManagedRuleException".
-	//
-	// This rule was created by an AWS service on behalf of your account. It is
-	// managed by that service. If you see this error in response to DeleteRule
-	// or RemoveTargets, you can use the Force parameter in those calls to delete
-	// the rule or remove targets from the rule. You cannot modify these managed
-	// rules by using DisableRule, EnableRule, PutTargets, PutRule, TagResource,
-	// or UntagResource.
-	ErrCodeManagedRuleException = "ManagedRuleException"
-
-	// ErrCodePolicyLengthExceededException for service response error code
-	// "PolicyLengthExceededException".
-	//
-	// The event bus policy is too long. For more information, see the limits.
-	ErrCodePolicyLengthExceededException = "PolicyLengthExceededException"
-
 	// ErrCodeResourceNotFoundException for service response error code
 	// "ResourceNotFoundException".
 	//
-	// An entity that you specified does not exist.
+	// The rule does not exist.
 	ErrCodeResourceNotFoundException = "ResourceNotFoundException"
 )

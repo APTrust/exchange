@@ -11,12 +11,27 @@ import (
 	"github.com/aws/aws-sdk-go/private/protocol/jsonrpc"
 )
 
-// CloudWatchEvents provides the API operation methods for making requests to
-// Amazon CloudWatch Events. See this package's package overview docs
-// for details on the service.
+// Amazon CloudWatch Events helps you to respond to state changes in your AWS
+// resources. When your resources change state, they automatically send events
+// into an event stream. You can create rules that match selected events in
+// the stream and route them to targets to take action. You can also use rules
+// to take action on a pre-determined schedule. For example, you can configure
+// rules to:
 //
-// CloudWatchEvents methods are safe to use concurrently. It is not safe to
-// modify mutate any of the struct's properties though.
+//    * Automatically invoke an AWS Lambda function to update DNS entries when
+//    an event notifies you that Amazon EC2 instance enters the running state.
+//
+//    * Direct specific API records from CloudTrail to an Amazon Kinesis stream
+//    for detailed analysis of potential security or availability risks.
+//
+//    * Periodically invoke a built-in target to create a snapshot of an Amazon
+//    EBS volume.
+//
+// For more information about the features of Amazon CloudWatch Events, see
+// the Amazon CloudWatch Events User Guide (http://docs.aws.amazon.com/AmazonCloudWatch/latest/events).
+// The service client's operations are safe to be used concurrently.
+// It is not safe to mutate any of the client's properties though.
+// Please also see https://docs.aws.amazon.com/goto/WebAPI/events-2015-10-07
 type CloudWatchEvents struct {
 	*client.Client
 }
@@ -29,9 +44,8 @@ var initRequest func(*request.Request)
 
 // Service information constants
 const (
-	ServiceName = "events"            // Name of service.
-	EndpointsID = ServiceName         // ID to lookup a service endpoint with.
-	ServiceID   = "CloudWatch Events" // ServiceID is a unique identifer of a specific service.
+	ServiceName = "events"    // Service endpoint prefix API calls made to.
+	EndpointsID = ServiceName // Service ID for Regions and Endpoints metadata.
 )
 
 // New creates a new instance of the CloudWatchEvents client with a session.
@@ -56,7 +70,6 @@ func newClient(cfg aws.Config, handlers request.Handlers, endpoint, signingRegio
 			cfg,
 			metadata.ClientInfo{
 				ServiceName:   ServiceName,
-				ServiceID:     ServiceID,
 				SigningName:   signingName,
 				SigningRegion: signingRegion,
 				Endpoint:      endpoint,

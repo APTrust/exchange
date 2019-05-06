@@ -1,13 +1,11 @@
-// +build !appengine,!plan9
+// +build !appengine
 
 package request_test
 
 import (
 	"net"
+	"os"
 	"syscall"
 )
 
-var (
-	errAcceptConnectionResetStub = &net.OpError{Op: "accept", Err: syscall.ECONNRESET}
-	errReadConnectionResetStub   = &net.OpError{Op: "read", Err: syscall.ECONNRESET}
-)
+var stubConnectionResetError = &net.OpError{Err: &os.SyscallError{Syscall: "read", Err: syscall.ECONNRESET}}

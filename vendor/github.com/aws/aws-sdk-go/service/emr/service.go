@@ -11,12 +11,13 @@ import (
 	"github.com/aws/aws-sdk-go/private/protocol/jsonrpc"
 )
 
-// EMR provides the API operation methods for making requests to
-// Amazon Elastic MapReduce. See this package's package overview docs
-// for details on the service.
-//
-// EMR methods are safe to use concurrently. It is not safe to
-// modify mutate any of the struct's properties though.
+// Amazon EMR is a web service that makes it easy to process large amounts of
+// data efficiently. Amazon EMR uses Hadoop processing combined with several
+// AWS products to do tasks such as web indexing, data mining, log file analysis,
+// machine learning, scientific simulation, and data warehousing.
+// The service client's operations are safe to be used concurrently.
+// It is not safe to mutate any of the client's properties though.
+// Please also see https://docs.aws.amazon.com/goto/WebAPI/elasticmapreduce-2009-03-31
 type EMR struct {
 	*client.Client
 }
@@ -29,9 +30,8 @@ var initRequest func(*request.Request)
 
 // Service information constants
 const (
-	ServiceName = "elasticmapreduce" // Name of service.
-	EndpointsID = ServiceName        // ID to lookup a service endpoint with.
-	ServiceID   = "EMR"              // ServiceID is a unique identifer of a specific service.
+	ServiceName = "elasticmapreduce" // Service endpoint prefix API calls made to.
+	EndpointsID = ServiceName        // Service ID for Regions and Endpoints metadata.
 )
 
 // New creates a new instance of the EMR client with a session.
@@ -56,7 +56,6 @@ func newClient(cfg aws.Config, handlers request.Handlers, endpoint, signingRegio
 			cfg,
 			metadata.ClientInfo{
 				ServiceName:   ServiceName,
-				ServiceID:     ServiceID,
 				SigningName:   signingName,
 				SigningRegion: signingRegion,
 				Endpoint:      endpoint,

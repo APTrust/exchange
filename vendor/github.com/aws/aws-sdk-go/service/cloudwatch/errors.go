@@ -4,24 +4,6 @@ package cloudwatch
 
 const (
 
-	// ErrCodeConcurrentModificationException for service response error code
-	// "ConcurrentModificationException".
-	//
-	// More than one process tried to modify a resource at the same time.
-	ErrCodeConcurrentModificationException = "ConcurrentModificationException"
-
-	// ErrCodeDashboardInvalidInputError for service response error code
-	// "InvalidParameterInput".
-	//
-	// Some part of the dashboard data is invalid.
-	ErrCodeDashboardInvalidInputError = "InvalidParameterInput"
-
-	// ErrCodeDashboardNotFoundError for service response error code
-	// "ResourceNotFound".
-	//
-	// The specified dashboard does not exist.
-	ErrCodeDashboardNotFoundError = "ResourceNotFound"
-
 	// ErrCodeInternalServiceFault for service response error code
 	// "InternalServiceError".
 	//
@@ -43,7 +25,7 @@ const (
 	// ErrCodeInvalidParameterCombinationException for service response error code
 	// "InvalidParameterCombination".
 	//
-	// Parameters were used together that cannot be used together.
+	// Parameters that cannot be used together were used together.
 	ErrCodeInvalidParameterCombinationException = "InvalidParameterCombination"
 
 	// ErrCodeInvalidParameterValueException for service response error code
@@ -69,10 +51,4 @@ const (
 	//
 	// The named resource does not exist.
 	ErrCodeResourceNotFound = "ResourceNotFound"
-
-	// ErrCodeResourceNotFoundException for service response error code
-	// "ResourceNotFoundException".
-	//
-	// The named resource does not exist.
-	ErrCodeResourceNotFoundException = "ResourceNotFoundException"
 )

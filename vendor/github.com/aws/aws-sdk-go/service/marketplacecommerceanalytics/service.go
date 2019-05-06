@@ -11,12 +11,10 @@ import (
 	"github.com/aws/aws-sdk-go/private/protocol/jsonrpc"
 )
 
-// MarketplaceCommerceAnalytics provides the API operation methods for making requests to
-// AWS Marketplace Commerce Analytics. See this package's package overview docs
-// for details on the service.
-//
-// MarketplaceCommerceAnalytics methods are safe to use concurrently. It is not safe to
-// modify mutate any of the struct's properties though.
+// Provides AWS Marketplace business intelligence data on-demand.
+// The service client's operations are safe to be used concurrently.
+// It is not safe to mutate any of the client's properties though.
+// Please also see https://docs.aws.amazon.com/goto/WebAPI/marketplacecommerceanalytics-2015-07-01
 type MarketplaceCommerceAnalytics struct {
 	*client.Client
 }
@@ -29,9 +27,8 @@ var initRequest func(*request.Request)
 
 // Service information constants
 const (
-	ServiceName = "marketplacecommerceanalytics"   // Name of service.
-	EndpointsID = ServiceName                      // ID to lookup a service endpoint with.
-	ServiceID   = "Marketplace Commerce Analytics" // ServiceID is a unique identifer of a specific service.
+	ServiceName = "marketplacecommerceanalytics" // Service endpoint prefix API calls made to.
+	EndpointsID = ServiceName                    // Service ID for Regions and Endpoints metadata.
 )
 
 // New creates a new instance of the MarketplaceCommerceAnalytics client with a session.
@@ -46,20 +43,19 @@ const (
 //     svc := marketplacecommerceanalytics.New(mySession, aws.NewConfig().WithRegion("us-west-2"))
 func New(p client.ConfigProvider, cfgs ...*aws.Config) *MarketplaceCommerceAnalytics {
 	c := p.ClientConfig(EndpointsID, cfgs...)
-	if c.SigningNameDerived || len(c.SigningName) == 0 {
-		c.SigningName = "marketplacecommerceanalytics"
-	}
 	return newClient(*c.Config, c.Handlers, c.Endpoint, c.SigningRegion, c.SigningName)
 }
 
 // newClient creates, initializes and returns a new service client instance.
 func newClient(cfg aws.Config, handlers request.Handlers, endpoint, signingRegion, signingName string) *MarketplaceCommerceAnalytics {
+	if len(signingName) == 0 {
+		signingName = "marketplacecommerceanalytics"
+	}
 	svc := &MarketplaceCommerceAnalytics{
 		Client: client.New(
 			cfg,
 			metadata.ClientInfo{
 				ServiceName:   ServiceName,
-				ServiceID:     ServiceID,
 				SigningName:   signingName,
 				SigningRegion: signingRegion,
 				Endpoint:      endpoint,

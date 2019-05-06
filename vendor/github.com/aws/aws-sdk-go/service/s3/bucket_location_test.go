@@ -11,6 +11,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/request"
 	"github.com/aws/aws-sdk-go/awstesting/unit"
 	"github.com/aws/aws-sdk-go/service/s3"
+	"github.com/stretchr/testify/assert"
 )
 
 var s3LocationTests = []struct {
@@ -31,10 +32,7 @@ func TestGetBucketLocation(t *testing.T) {
 		})
 
 		resp, err := s.GetBucketLocation(&s3.GetBucketLocationInput{Bucket: aws.String("bucket")})
-		if err != nil {
-			t.Errorf("expected no error, but received %v", err)
-		}
-
+		assert.NoError(t, err)
 		if test.loc == "" {
 			if v := resp.LocationConstraint; v != nil {
 				t.Errorf("expect location constraint to be nil, got %s", *v)
@@ -114,15 +112,15 @@ func TestPopulateLocationConstraint(t *testing.T) {
 func TestNoPopulateLocationConstraintIfProvided(t *testing.T) {
 	s := s3.New(unit.Session)
 	req, _ := s.CreateBucketRequest(&s3.CreateBucketInput{
-		Bucket:                    aws.String("bucket"),
+		Bucket: aws.String("bucket"),
 		CreateBucketConfiguration: &s3.CreateBucketConfiguration{},
 	})
 	if err := req.Build(); err != nil {
 		t.Fatalf("expect no error, got %v", err)
 	}
 	v, _ := awsutil.ValuesAtPath(req.Params, "CreateBucketConfiguration.LocationConstraint")
-	if l := len(v); l != 0 {
-		t.Errorf("expect no values, got %d", l)
+	if v := len(v); v != 0 {
+		t.Errorf("expect no values, got %d", v)
 	}
 }
 
@@ -135,7 +133,7 @@ func TestNoPopulateLocationConstraintIfClassic(t *testing.T) {
 		t.Fatalf("expect no error, got %v", err)
 	}
 	v, _ := awsutil.ValuesAtPath(req.Params, "CreateBucketConfiguration.LocationConstraint")
-	if l := len(v); l != 0 {
-		t.Errorf("expect no values, got %d", l)
+	if v := len(v); v != 0 {
+		t.Errorf("expect no values, got %d", v)
 	}
 }

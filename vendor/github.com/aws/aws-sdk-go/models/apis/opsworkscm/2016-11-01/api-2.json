@@ -7,7 +7,6 @@
     "protocol":"json",
     "serviceAbbreviation":"OpsWorksCM",
     "serviceFullName":"AWS OpsWorks for Chef Automate",
-    "serviceId":"OpsWorksCM",
     "signatureVersion":"v4",
     "signingName":"opsworks-cm",
     "targetPrefix":"OpsWorksCM_V2016_11_01",
@@ -162,20 +161,6 @@
         {"shape":"InvalidStateException"},
         {"shape":"ResourceNotFoundException"},
         {"shape":"ValidationException"}
-      ]
-    },
-    "ExportServerEngineAttribute":{
-      "name":"ExportServerEngineAttribute",
-      "http":{
-        "method":"POST",
-        "requestUri":"/"
-      },
-      "input":{"shape":"ExportServerEngineAttributeRequest"},
-      "output":{"shape":"ExportServerEngineAttributeResponse"},
-      "errors":[
-        {"shape":"ValidationException"},
-        {"shape":"ResourceNotFoundException"},
-        {"shape":"InvalidStateException"}
       ]
     },
     "RestoreServer":{
@@ -467,8 +452,7 @@
     "DescribeNodeAssociationStatusResponse":{
       "type":"structure",
       "members":{
-        "NodeAssociationStatus":{"shape":"NodeAssociationStatus"},
-        "EngineAttributes":{"shape":"EngineAttributes"}
+        "NodeAssociationStatus":{"shape":"NodeAssociationStatus"}
       }
     },
     "DescribeServersRequest":{
@@ -519,25 +503,6 @@
     "EngineAttributes":{
       "type":"list",
       "member":{"shape":"EngineAttribute"}
-    },
-    "ExportServerEngineAttributeRequest":{
-      "type":"structure",
-      "required":[
-        "ExportAttributeName",
-        "ServerName"
-      ],
-      "members":{
-        "ExportAttributeName":{"shape":"String"},
-        "ServerName":{"shape":"ServerName"},
-        "InputAttributes":{"shape":"EngineAttributes"}
-      }
-    },
-    "ExportServerEngineAttributeResponse":{
-      "type":"structure",
-      "members":{
-        "EngineAttribute":{"shape":"EngineAttribute"},
-        "ServerName":{"shape":"ServerName"}
-      }
     },
     "InstanceProfileArn":{
       "type":"string",
@@ -700,8 +665,7 @@
       "type":"structure",
       "required":["ServerName"],
       "members":{
-        "ServerName":{"shape":"ServerName"},
-        "EngineAttributes":{"shape":"EngineAttributes"}
+        "ServerName":{"shape":"ServerName"}
       }
     },
     "StartMaintenanceResponse":{

@@ -11,12 +11,22 @@ import (
 	"github.com/aws/aws-sdk-go/private/protocol/query"
 )
 
-// SNS provides the API operation methods for making requests to
-// Amazon Simple Notification Service. See this package's package overview docs
-// for details on the service.
+// Amazon Simple Notification Service (Amazon SNS) is a web service that enables
+// you to build distributed web-enabled applications. Applications can use Amazon
+// SNS to easily push real-time notification messages to interested subscribers
+// over multiple delivery protocols. For more information about this product
+// see http://aws.amazon.com/sns (http://aws.amazon.com/sns/). For detailed
+// information about Amazon SNS features and their associated API calls, see
+// the Amazon SNS Developer Guide (http://docs.aws.amazon.com/sns/latest/dg/).
 //
-// SNS methods are safe to use concurrently. It is not safe to
-// modify mutate any of the struct's properties though.
+// We also provide SDKs that enable you to access Amazon SNS from your preferred
+// programming language. The SDKs contain functionality that automatically takes
+// care of tasks such as: cryptographically signing your service requests, retrying
+// requests, and handling error responses. For a list of available SDKs, go
+// to Tools for Amazon Web Services (http://aws.amazon.com/tools/).
+// The service client's operations are safe to be used concurrently.
+// It is not safe to mutate any of the client's properties though.
+// Please also see https://docs.aws.amazon.com/goto/WebAPI/sns-2010-03-31
 type SNS struct {
 	*client.Client
 }
@@ -29,9 +39,8 @@ var initRequest func(*request.Request)
 
 // Service information constants
 const (
-	ServiceName = "sns"       // Name of service.
-	EndpointsID = ServiceName // ID to lookup a service endpoint with.
-	ServiceID   = "SNS"       // ServiceID is a unique identifer of a specific service.
+	ServiceName = "sns"       // Service endpoint prefix API calls made to.
+	EndpointsID = ServiceName // Service ID for Regions and Endpoints metadata.
 )
 
 // New creates a new instance of the SNS client with a session.
@@ -56,7 +65,6 @@ func newClient(cfg aws.Config, handlers request.Handlers, endpoint, signingRegio
 			cfg,
 			metadata.ClientInfo{
 				ServiceName:   ServiceName,
-				ServiceID:     ServiceID,
 				SigningName:   signingName,
 				SigningRegion: signingRegion,
 				Endpoint:      endpoint,

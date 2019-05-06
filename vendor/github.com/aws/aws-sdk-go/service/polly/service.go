@@ -11,12 +11,16 @@ import (
 	"github.com/aws/aws-sdk-go/private/protocol/restjson"
 )
 
-// Polly provides the API operation methods for making requests to
-// Amazon Polly. See this package's package overview docs
-// for details on the service.
+// Amazon Polly is a web service that makes it easy to synthesize speech from
+// text.
 //
-// Polly methods are safe to use concurrently. It is not safe to
-// modify mutate any of the struct's properties though.
+// The Amazon Polly service provides API operations for synthesizing high-quality
+// speech from plain text and Speech Synthesis Markup Language (SSML), along
+// with managing pronunciations lexicons that enable you to get the best results
+// for your application domain.
+// The service client's operations are safe to be used concurrently.
+// It is not safe to mutate any of the client's properties though.
+// Please also see https://docs.aws.amazon.com/goto/WebAPI/polly-2016-06-10
 type Polly struct {
 	*client.Client
 }
@@ -29,9 +33,8 @@ var initRequest func(*request.Request)
 
 // Service information constants
 const (
-	ServiceName = "polly"     // Name of service.
-	EndpointsID = ServiceName // ID to lookup a service endpoint with.
-	ServiceID   = "Polly"     // ServiceID is a unique identifer of a specific service.
+	ServiceName = "polly"     // Service endpoint prefix API calls made to.
+	EndpointsID = ServiceName // Service ID for Regions and Endpoints metadata.
 )
 
 // New creates a new instance of the Polly client with a session.
@@ -56,7 +59,6 @@ func newClient(cfg aws.Config, handlers request.Handlers, endpoint, signingRegio
 			cfg,
 			metadata.ClientInfo{
 				ServiceName:   ServiceName,
-				ServiceID:     ServiceID,
 				SigningName:   signingName,
 				SigningRegion: signingRegion,
 				Endpoint:      endpoint,

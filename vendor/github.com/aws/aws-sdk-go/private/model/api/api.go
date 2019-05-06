@@ -5,17 +5,16 @@ package api
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"path"
+	"path/filepath"
 	"regexp"
 	"sort"
 	"strings"
 	"text/template"
-	"unicode"
 )
-
-// SDKImportRoot is the root import path of the SDK.
-const SDKImportRoot = "github.com/aws/aws-sdk-go"
 
 // An API defines a service API's definition. and logic to serialize the definition.
 type API struct {
@@ -24,8 +23,6 @@ type API struct {
 	Shapes        map[string]*Shape
 	Waiters       []Waiter
 	Documentation string
-	Examples      Examples
-	SmokeTests    SmokeTestSuite
 
 	// Set to true to avoid removing unused shapes
 	NoRemoveUnusedShapes bool
@@ -48,7 +45,7 @@ type API struct {
 	// Set to true to not generate struct field accessors
 	NoGenStructFieldAccessors bool
 
-	BaseImportPath string
+	SvcClientImportPath string
 
 	initialized bool
 	imports     map[string]bool
@@ -56,10 +53,6 @@ type API struct {
 	path        string
 
 	BaseCrosslinkURL string
-
-	HasEventStream bool `json:"-"`
-
-	EndpointDiscoveryOp *Operation
 }
 
 // A Metadata is the metadata about an API's definition.
@@ -73,18 +66,21 @@ type Metadata struct {
 	JSONVersion         string
 	TargetPrefix        string
 	Protocol            string
-	ProtocolSettings    ProtocolSettings
 	UID                 string
 	EndpointsID         string
-	ServiceID           string
 
 	NoResolveEndpoint bool
 }
 
-// ProtocolSettings define how the SDK should handle requests in the context
-// of of a protocol.
-type ProtocolSettings struct {
-	HTTP2 string `json:"h2,omitempty"`
+var serviceAliases map[string]string
+
+func Bootstrap() error {
+	b, err := ioutil.ReadFile(filepath.Join("..", "models", "customizations", "service-aliases.json"))
+	if err != nil {
+		return err
+	}
+
+	return json.Unmarshal(b, &serviceAliases)
 }
 
 // PackageName name of the API package
@@ -92,58 +88,28 @@ func (a *API) PackageName() string {
 	return strings.ToLower(a.StructName())
 }
 
-// ImportPath returns the client's full import path
-func (a *API) ImportPath() string {
-	return path.Join(a.BaseImportPath, a.PackageName())
-}
-
 // InterfacePackageName returns the package name for the interface.
 func (a *API) InterfacePackageName() string {
 	return a.PackageName() + "iface"
 }
 
-var stripServiceNamePrefixes = []string{
-	"Amazon",
-	"AWS",
-}
+var nameRegex = regexp.MustCompile(`^Amazon|AWS\s*|\(.*|\s+|\W+`)
 
 // StructName returns the struct name for a given API.
 func (a *API) StructName() string {
-	if len(a.name) != 0 {
-		return a.name
-	}
+	if a.name == "" {
+		name := a.Metadata.ServiceAbbreviation
+		if name == "" {
+			name = a.Metadata.ServiceFullName
+		}
 
-	name := a.Metadata.ServiceAbbreviation
-	if len(name) == 0 {
-		name = a.Metadata.ServiceFullName
-	}
+		name = nameRegex.ReplaceAllString(name, "")
 
-	name = strings.TrimSpace(name)
-
-	// Strip out prefix names not reflected in service client symbol names.
-	for _, prefix := range stripServiceNamePrefixes {
-		if strings.HasPrefix(name, prefix) {
-			name = name[len(prefix):]
-			break
+		a.name = name
+		if name, ok := serviceAliases[strings.ToLower(name)]; ok {
+			a.name = name
 		}
 	}
-
-	// Replace all Non-letter/number values with space
-	runes := []rune(name)
-	for i := 0; i < len(runes); i++ {
-		if r := runes[i]; !(unicode.IsNumber(r) || unicode.IsLetter(r)) {
-			runes[i] = ' '
-		}
-	}
-	name = string(runes)
-
-	// Title case name so its readable as a symbol.
-	name = strings.Title(name)
-
-	// Strip out spaces.
-	name = strings.Replace(name, " ", "", -1)
-
-	a.name = name
 	return a.name
 }
 
@@ -220,8 +186,8 @@ func (a *API) ShapeNames() []string {
 func (a *API) ShapeList() []*Shape {
 	list := make([]*Shape, 0, len(a.Shapes))
 	for _, n := range a.ShapeNames() {
-		// Ignore non-eventstream exception shapes in list.
-		if s := a.Shapes[n]; !(s.Exception && len(s.EventFor) == 0) {
+		// Ignore error shapes in list
+		if s := a.Shapes[n]; !s.IsError {
 			list = append(list, s)
 		}
 	}
@@ -233,7 +199,7 @@ func (a *API) ShapeListErrors() []*Shape {
 	list := []*Shape{}
 	for _, n := range a.ShapeNames() {
 		// Ignore error shapes in list
-		if s := a.Shapes[n]; s.Exception {
+		if s := a.Shapes[n]; s.IsError {
 			list = append(list, s)
 		}
 	}
@@ -242,7 +208,9 @@ func (a *API) ShapeListErrors() []*Shape {
 
 // resetImports resets the import map to default values.
 func (a *API) resetImports() {
-	a.imports = map[string]bool{}
+	a.imports = map[string]bool{
+		"github.com/aws/aws-sdk-go/aws": true,
+	}
 }
 
 // importsGoCode returns the generated Go import code.
@@ -294,28 +262,22 @@ var tplAPI = template.Must(template.New("api").Parse(`
 {{ end }}
 `))
 
-// AddImport adds the import path to the generated file's import.
-func (a *API) AddImport(v string) error {
-	a.imports[v] = true
-	return nil
-}
-
-// AddSDKImport adds a SDK package import to the generated file's import.
-func (a *API) AddSDKImport(v ...string) error {
-	e := make([]string, 0, 5)
-	e = append(e, SDKImportRoot)
-	e = append(e, v...)
-
-	a.imports[path.Join(e...)] = true
-	return nil
-}
-
 // APIGoCode renders the API in Go code. Returning it as a string
 func (a *API) APIGoCode() string {
 	a.resetImports()
-	a.AddSDKImport("aws")
-	a.AddSDKImport("aws/awsutil")
-	a.AddSDKImport("aws/request")
+	a.imports["github.com/aws/aws-sdk-go/aws/awsutil"] = true
+	a.imports["github.com/aws/aws-sdk-go/aws/request"] = true
+	if a.OperationHasOutputPlaceholder() {
+		a.imports["github.com/aws/aws-sdk-go/private/protocol/"+a.ProtocolPackage()] = true
+		a.imports["github.com/aws/aws-sdk-go/private/protocol"] = true
+	}
+
+	for _, op := range a.Operations {
+		if op.AuthType == "none" {
+			a.imports["github.com/aws/aws-sdk-go/aws/credentials"] = true
+			break
+		}
+	}
 
 	var buf bytes.Buffer
 	err := tplAPI.Execute(&buf, a)
@@ -328,169 +290,70 @@ func (a *API) APIGoCode() string {
 }
 
 var noCrossLinkServices = map[string]struct{}{
-	"apigateway":        {},
-	"budgets":           {},
-	"cloudsearch":       {},
-	"cloudsearchdomain": {},
-	"elastictranscoder": {},
-	"es":                {},
-	"glacier":           {},
-	"importexport":      {},
-	"iot":               {},
-	"iot-data":          {},
-	"machinelearning":   {},
-	"rekognition":       {},
-	"sdb":               {},
-	"swf":               {},
+	"apigateway":        struct{}{},
+	"budgets":           struct{}{},
+	"cloudsearch":       struct{}{},
+	"cloudsearchdomain": struct{}{},
+	"discovery":         struct{}{},
+	"elastictranscoder": struct{}{},
+	"es":                struct{}{},
+	"glacier":           struct{}{},
+	"importexport":      struct{}{},
+	"iot":               struct{}{},
+	"iot-data":          struct{}{},
+	"lambda":            struct{}{},
+	"machinelearning":   struct{}{},
+	"rekognition":       struct{}{},
+	"sdb":               struct{}{},
+	"swf":               struct{}{},
 }
 
-// HasCrosslinks will return whether or not a service has crosslinking .
-func HasCrosslinks(service string) bool {
-	_, ok := noCrossLinkServices[service]
-	return !ok
-}
-
-// GetCrosslinkURL returns the crosslinking URL for the shape based on the name and
-// uid provided. Empty string is returned if no crosslink link could be determined.
-func GetCrosslinkURL(baseURL, uid string, params ...string) string {
-	if uid == "" || baseURL == "" {
-		return ""
+func GetCrosslinkURL(baseURL, name, uid string, params ...string) string {
+	_, ok := noCrossLinkServices[strings.ToLower(name)]
+	if uid != "" && baseURL != "" && !ok {
+		return strings.Join(append([]string{baseURL, "goto", "WebAPI", uid}, params...), "/")
 	}
-
-	if !HasCrosslinks(strings.ToLower(ServiceIDFromUID(uid))) {
-		return ""
-	}
-
-	return strings.Join(append([]string{baseURL, "goto", "WebAPI", uid}, params...), "/")
+	return ""
 }
 
-// ServiceIDFromUID will parse the service id from the uid and return
-// the service id that was found.
-func ServiceIDFromUID(uid string) string {
-	found := 0
-	i := len(uid) - 1
-	for ; i >= 0; i-- {
-		if uid[i] == '-' {
-			found++
-		}
-		// Terminate after the date component is found, e.g. es-2017-11-11
-		if found == 3 {
-			break
-		}
-	}
-
-	return uid[0:i]
-}
-
-// APIName returns the API's service name.
 func (a *API) APIName() string {
 	return a.name
 }
 
-var tplServiceDoc = template.Must(template.New("service docs").Funcs(template.FuncMap{
-	"GetCrosslinkURL": GetCrosslinkURL,
-}).
-	Parse(`
-// Package {{ .PackageName }} provides the client and types for making API
-// requests to {{ .Metadata.ServiceFullName }}.
-{{ if .Documentation -}}
-//
-{{ .Documentation }}
-{{ end -}}
-{{ $crosslinkURL := GetCrosslinkURL $.BaseCrosslinkURL $.Metadata.UID -}}
-{{ if $crosslinkURL -}}
-//
-// See {{ $crosslinkURL }} for more information on this service.
-{{ end -}}
-//
-// See {{ .PackageName }} package documentation for more information.
-// https://docs.aws.amazon.com/sdk-for-go/api/service/{{ .PackageName }}/
-//
-// Using the Client
-//
-// To contact {{ .Metadata.ServiceFullName }} with the SDK use the New function to create
-// a new service client. With that client you can make API requests to the service.
-// These clients are safe to use concurrently.
-//
-// See the SDK's documentation for more information on how to use the SDK.
-// https://docs.aws.amazon.com/sdk-for-go/api/
-//
-// See aws.Config documentation for more information on configuring SDK clients.
-// https://docs.aws.amazon.com/sdk-for-go/api/aws/#Config
-//
-// See the {{ .Metadata.ServiceFullName }} client {{ .StructName }} for more
-// information on creating client for this service.
-// https://docs.aws.amazon.com/sdk-for-go/api/service/{{ .PackageName }}/#New
-`))
-
-var serviceIDRegex = regexp.MustCompile("[^a-zA-Z0-9 ]+")
-var prefixDigitRegex = regexp.MustCompile("^[0-9]+")
-
-// ServiceID will return a unique identifier specific to a service.
-func ServiceID(a *API) string {
-	if len(a.Metadata.ServiceID) > 0 {
-		return a.Metadata.ServiceID
-	}
-
-	name := a.Metadata.ServiceAbbreviation
-	if len(name) == 0 {
-		name = a.Metadata.ServiceFullName
-	}
-
-	name = strings.Replace(name, "Amazon", "", -1)
-	name = strings.Replace(name, "AWS", "", -1)
-	name = serviceIDRegex.ReplaceAllString(name, "")
-	name = prefixDigitRegex.ReplaceAllString(name, "")
-	name = strings.TrimSpace(name)
-	return name
-}
-
 // A tplService defines the template for the service generated code.
 var tplService = template.Must(template.New("service").Funcs(template.FuncMap{
-	"ServiceNameConstValue": ServiceName,
 	"ServiceNameValue": func(a *API) string {
-		if !a.NoConstServiceNames {
-			return "ServiceName"
+		if a.NoConstServiceNames {
+			return fmt.Sprintf("%q", a.Metadata.EndpointPrefix)
 		}
-		return fmt.Sprintf("%q", ServiceName(a))
+		return "ServiceName"
 	},
+	"GetCrosslinkURL": GetCrosslinkURL,
 	"EndpointsIDConstValue": func(a *API) string {
 		if a.NoConstServiceNames {
-			return fmt.Sprintf("%q", a.Metadata.EndpointsID)
+			return fmt.Sprintf("%q", a.Metadata.EndpointPrefix)
 		}
-		if a.Metadata.EndpointsID == ServiceName(a) {
+		if a.Metadata.EndpointPrefix == a.Metadata.EndpointsID {
 			return "ServiceName"
 		}
-
 		return fmt.Sprintf("%q", a.Metadata.EndpointsID)
 	},
 	"EndpointsIDValue": func(a *API) string {
 		if a.NoConstServiceNames {
-			return fmt.Sprintf("%q", a.Metadata.EndpointsID)
+			return fmt.Sprintf("%q", a.Metadata.EndpointPrefix)
 		}
 
 		return "EndpointsID"
 	},
-	"ServiceIDVar": func(a *API) string {
-		if a.NoConstServiceNames {
-			return fmt.Sprintf("%q", ServiceID(a))
-		}
-
-		return "ServiceID"
-	},
-	"ServiceID": ServiceID,
 }).Parse(`
-// {{ .StructName }} provides the API operation methods for making requests to
-// {{ .Metadata.ServiceFullName }}. See this package's package overview docs
-// for details on the service.
-//
-// {{ .StructName }} methods are safe to use concurrently. It is not safe to
-// modify mutate any of the struct's properties though.
+{{ .Documentation }}// The service client's operations are safe to be used concurrently.
+// It is not safe to mutate any of the client's properties though.
+{{ $crosslinkURL := GetCrosslinkURL $.BaseCrosslinkURL $.APIName $.Metadata.UID -}}
+{{ if ne $crosslinkURL "" -}} 
+// Please also see {{ $crosslinkURL }}
+{{ end -}}
 type {{ .StructName }} struct {
 	*client.Client
-	{{- if .EndpointDiscoveryOp }}
-	endpointCache *crr.EndpointCache
-	{{ end -}}
 }
 
 {{ if .UseInitMethods }}// Used for custom client initialization logic
@@ -504,9 +367,8 @@ var initRequest func(*request.Request)
 {{ if not .NoConstServiceNames -}}
 // Service information constants
 const (
-	ServiceName = "{{ ServiceNameConstValue . }}" // Name of service.
-	EndpointsID = {{ EndpointsIDConstValue . }} // ID to lookup a service endpoint with.
-	ServiceID = "{{ ServiceID . }}" // ServiceID is a unique identifer of a specific service.
+	ServiceName = "{{ .Metadata.EndpointPrefix }}" // Service endpoint prefix API calls made to.
+	EndpointsID = {{ EndpointsIDConstValue . }} // Service ID for Regions and Endpoints metadata.
 )
 {{- end }}
 
@@ -531,28 +393,26 @@ func New(p client.ConfigProvider, cfgs ...*aws.Config) *{{ .StructName }} {
 	{{- else -}}
 		c := p.ClientConfig({{ EndpointsIDValue . }}, cfgs...)
 	{{- end }}
-
-	{{- if .Metadata.SigningName }}
-		if c.SigningNameDerived || len(c.SigningName) == 0{
-			c.SigningName = "{{ .Metadata.SigningName }}"
-		}
-	{{- end }}
 	return newClient(*c.Config, c.Handlers, c.Endpoint, c.SigningRegion, c.SigningName)
 }
 
 // newClient creates, initializes and returns a new service client instance.
 func newClient(cfg aws.Config, handlers request.Handlers, endpoint, signingRegion, signingName string) *{{ .StructName }} {
+	{{- if .Metadata.SigningName }}
+		if len(signingName) == 0 {
+			signingName = "{{ .Metadata.SigningName }}"
+		}
+	{{- end }}
     svc := &{{ .StructName }}{
     	Client: client.New(
     		cfg,
     		metadata.ClientInfo{
 			ServiceName: {{ ServiceNameValue . }},
-			ServiceID : {{ ServiceIDVar . }},
 			SigningName: signingName,
 			SigningRegion: signingRegion,
 			Endpoint:     endpoint,
 			APIVersion:   "{{ .Metadata.APIVersion }}",
-			{{ if and (.Metadata.JSONVersion) (eq .Metadata.Protocol "json") -}}
+			{{ if .Metadata.JSONVersion -}}
 				JSONVersion:  "{{ .Metadata.JSONVersion }}",
 			{{- end }}
 			{{ if .Metadata.TargetPrefix -}}
@@ -563,22 +423,8 @@ func newClient(cfg aws.Config, handlers request.Handlers, endpoint, signingRegio
     	),
     }
 
-	{{- if .EndpointDiscoveryOp }}
-	svc.endpointCache = crr.NewEndpointCache(10)
-	{{- end }}
-
 	// Handlers
-	svc.Handlers.Sign.PushBackNamed(
-		{{- if eq .Metadata.SignatureVersion "v2" -}}
-			v2.SignRequestHandler
-		{{- else if or (eq .Metadata.SignatureVersion "s3") (eq .Metadata.SignatureVersion "s3v4") -}}
-			v4.BuildNamedHandler(v4.SignRequestHandler.Name, func(s *v4.Signer) {
-				s.DisableURIPathEscaping = true
-			})
-		{{- else -}}
-			v4.SignRequestHandler
-		{{- end -}}
-	)
+	svc.Handlers.Sign.PushBackNamed({{if eq .Metadata.SignatureVersion "v2"}}v2{{else}}v4{{end}}.SignRequestHandler)
 	{{- if eq .Metadata.SignatureVersion "v2" }}
 		svc.Handlers.Sign.PushBackNamed(corehandlers.BuildContentLengthHandler)
 	{{- end }}
@@ -586,9 +432,6 @@ func newClient(cfg aws.Config, handlers request.Handlers, endpoint, signingRegio
 	svc.Handlers.Unmarshal.PushBackNamed({{ .ProtocolPackage }}.UnmarshalHandler)
 	svc.Handlers.UnmarshalMeta.PushBackNamed({{ .ProtocolPackage }}.UnmarshalMetaHandler)
 	svc.Handlers.UnmarshalError.PushBackNamed({{ .ProtocolPackage }}.UnmarshalErrorHandler)
-	{{ if .HasEventStream }}
-	svc.Handlers.UnmarshalStream.PushBackNamed({{ .ProtocolPackage }}.UnmarshalHandler)
-	{{ end }}
 
 	{{ if .UseInitMethods }}// Run custom client initialization if present
 	if initClient != nil {
@@ -614,37 +457,19 @@ func (c *{{ .StructName }}) newRequest(op *request.Operation, params, data inter
 }
 `))
 
-// ServicePackageDoc generates the contents of the doc file for the service.
-//
-// Will also read in the custom doc templates for the service if found.
-func (a *API) ServicePackageDoc() string {
-	a.imports = map[string]bool{}
-
-	var buf bytes.Buffer
-	if err := tplServiceDoc.Execute(&buf, a); err != nil {
-		panic(err)
-	}
-
-	return buf.String()
-}
-
 // ServiceGoCode renders service go code. Returning it as a string.
 func (a *API) ServiceGoCode() string {
 	a.resetImports()
-	a.AddSDKImport("aws")
-	a.AddSDKImport("aws/client")
-	a.AddSDKImport("aws/client/metadata")
-	a.AddSDKImport("aws/request")
+	a.imports["github.com/aws/aws-sdk-go/aws/client"] = true
+	a.imports["github.com/aws/aws-sdk-go/aws/client/metadata"] = true
+	a.imports["github.com/aws/aws-sdk-go/aws/request"] = true
 	if a.Metadata.SignatureVersion == "v2" {
-		a.AddSDKImport("private/signer/v2")
-		a.AddSDKImport("aws/corehandlers")
+		a.imports["github.com/aws/aws-sdk-go/private/signer/v2"] = true
+		a.imports["github.com/aws/aws-sdk-go/aws/corehandlers"] = true
 	} else {
-		a.AddSDKImport("aws/signer/v4")
+		a.imports["github.com/aws/aws-sdk-go/aws/signer/v4"] = true
 	}
-	a.AddSDKImport("private/protocol", a.ProtocolPackage())
-	if a.EndpointDiscoveryOp != nil {
-		a.AddSDKImport("aws/crr")
-	}
+	a.imports["github.com/aws/aws-sdk-go/private/protocol/"+a.ProtocolPackage()] = true
 
 	var buf bytes.Buffer
 	err := tplService.Execute(&buf, a)
@@ -672,11 +497,11 @@ func (a *API) ExampleGoCode() string {
 		"bytes",
 		"fmt",
 		"time",
-		SDKImportRoot+"/aws",
-		SDKImportRoot+"/aws/session",
-		a.ImportPath(),
+		"github.com/aws/aws-sdk-go/aws",
+		"github.com/aws/aws-sdk-go/aws/session",
+		path.Join(a.SvcClientImportPath, a.PackageName()),
 	)
-	for k := range imports {
+	for k, _ := range imports {
 		code += fmt.Sprintf("%q\n", k)
 	}
 	code += ")\n\n"
@@ -694,7 +519,7 @@ var tplInterface = template.Must(template.New("interface").Parse(`
 //
 // The best way to use this interface is so the SDK's service client's calls
 // can be stubbed out for unit testing your code with the SDK without needing
-// to inject custom request handlers into the SDK's request pipeline.
+// to inject custom request handlers into the the SDK's request pipeline.
 //
 //    // myFunc uses an SDK service client to make a request to
 //    // {{.Metadata.ServiceFullName}}. {{ $opts := .OperationList }}{{ $opt := index $opts 0 }}
@@ -730,7 +555,7 @@ var tplInterface = template.Must(template.New("interface").Parse(`
 //
 // It is important to note that this interface will have breaking changes
 // when the service model is updated and adds new API operations, paginators,
-// and waiters. Its suggested to use the pattern above for testing, or using
+// and waiters. Its suggested to use the pattern above for testing, or using 
 // tooling to generate mocks to satisfy the interfaces.
 type {{ .StructName }}API interface {
     {{ range $_, $o := .OperationList }}
@@ -749,9 +574,11 @@ var _ {{ .StructName }}API = (*{{ .PackageName }}.{{ .StructName }})(nil)
 // package than the service API's package.
 func (a *API) InterfaceGoCode() string {
 	a.resetImports()
-	a.AddSDKImport("aws")
-	a.AddSDKImport("aws/request")
-	a.AddImport(a.ImportPath())
+	a.imports = map[string]bool{
+		"github.com/aws/aws-sdk-go/aws":                   true,
+		"github.com/aws/aws-sdk-go/aws/request":           true,
+		path.Join(a.SvcClientImportPath, a.PackageName()): true,
+	}
 
 	var buf bytes.Buffer
 	err := tplInterface.Execute(&buf, a)
@@ -789,6 +616,7 @@ func resolveShapeValidations(s *Shape, ancestry ...*Shape) {
 	children := []string{}
 	for _, name := range s.MemberNames() {
 		ref := s.MemberRefs[name]
+
 		if s.IsRequired(name) && !s.Validations.Has(ref, ShapeValidationRequired) {
 			s.Validations = append(s.Validations, ShapeValidation{
 				Name: name, Ref: ref, Type: ShapeValidationRequired,
@@ -796,12 +624,6 @@ func resolveShapeValidations(s *Shape, ancestry ...*Shape) {
 		}
 
 		if ref.Shape.Min != 0 && !s.Validations.Has(ref, ShapeValidationMinVal) {
-			s.Validations = append(s.Validations, ShapeValidation{
-				Name: name, Ref: ref, Type: ShapeValidationMinVal,
-			})
-		}
-
-		if !ref.CanBeEmpty() && !s.Validations.Has(ref, ShapeValidationMinVal) {
 			s.Validations = append(s.Validations, ShapeValidation{
 				Name: name, Ref: ref, Type: ShapeValidationMinVal,
 			})
@@ -869,61 +691,4 @@ func (a *API) APIErrorsGoCode() string {
 	}
 
 	return strings.TrimSpace(buf.String())
-}
-
-// removeOperation removes an operation, its input/output shapes, as well as
-// any references/shapes that are unique to this operation.
-func (a *API) removeOperation(name string) {
-	debugLogger.Logln("removing operation,", name)
-	op := a.Operations[name]
-
-	delete(a.Operations, name)
-	delete(a.Examples, name)
-
-	a.removeShape(op.InputRef.Shape)
-	a.removeShape(op.OutputRef.Shape)
-}
-
-// removeShape removes the given shape, and all form member's reference target
-// shapes. Will also remove member reference targeted shapes if those shapes do
-// not have any additional references.
-func (a *API) removeShape(s *Shape) {
-	debugLogger.Logln("removing shape,", s.ShapeName)
-
-	delete(a.Shapes, s.ShapeName)
-
-	for name, ref := range s.MemberRefs {
-		a.removeShapeRef(ref)
-		delete(s.MemberRefs, name)
-	}
-
-	for _, ref := range []*ShapeRef{&s.MemberRef, &s.KeyRef, &s.ValueRef} {
-		if ref.Shape == nil {
-			continue
-		}
-		a.removeShapeRef(ref)
-		*ref = ShapeRef{}
-	}
-}
-
-// removeShapeRef removes the shape reference from its target shape. If the
-// reference was the last reference to the target shape, the shape will also be
-// removed.
-func (a *API) removeShapeRef(ref *ShapeRef) {
-	if ref.Shape == nil {
-		return
-	}
-
-	ref.Shape.removeRef(ref)
-	if len(ref.Shape.refs) == 0 {
-		a.removeShape(ref.Shape)
-	}
-}
-
-func getDeprecatedMessage(msg string, name string) string {
-	if len(msg) == 0 {
-		return name + " has been deprecated"
-	}
-
-	return msg
 }

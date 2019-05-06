@@ -8,6 +8,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
+
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws/client"
@@ -90,7 +92,7 @@ func TestWaiterPathAll(t *testing.T) {
 	})
 	svc.Handlers.Unmarshal.PushBack(func(r *request.Request) {
 		if reqNum >= len(resps) {
-			t.Errorf("too many polling requests made")
+			assert.Fail(t, "too many polling requests made")
 			return
 		}
 		r.Data = resps[reqNum]
@@ -98,9 +100,8 @@ func TestWaiterPathAll(t *testing.T) {
 	})
 
 	w := request.Waiter{
-		MaxAttempts:      10,
-		Delay:            request.ConstantWaiterDelay(0),
-		SleepWithContext: aws.SleepWithContext,
+		MaxAttempts: 10,
+		Delay:       request.ConstantWaiterDelay(0),
 		Acceptors: []request.WaiterAcceptor{
 			{
 				State:    request.SuccessWaiterState,
@@ -113,15 +114,9 @@ func TestWaiterPathAll(t *testing.T) {
 	}
 
 	err := w.WaitWithContext(aws.BackgroundContext())
-	if err != nil {
-		t.Errorf("expect nil, %v", err)
-	}
-	if e, a := 3, numBuiltReq; e != a {
-		t.Errorf("expect %v, got %v", e, a)
-	}
-	if e, a := 3, reqNum; e != a {
-		t.Errorf("expect %v, got %v", e, a)
-	}
+	assert.NoError(t, err)
+	assert.Equal(t, 3, numBuiltReq)
+	assert.Equal(t, 3, reqNum)
 }
 
 func TestWaiterPath(t *testing.T) {
@@ -161,7 +156,7 @@ func TestWaiterPath(t *testing.T) {
 	})
 	svc.Handlers.Unmarshal.PushBack(func(r *request.Request) {
 		if reqNum >= len(resps) {
-			t.Errorf("too many polling requests made")
+			assert.Fail(t, "too many polling requests made")
 			return
 		}
 		r.Data = resps[reqNum]
@@ -169,9 +164,8 @@ func TestWaiterPath(t *testing.T) {
 	})
 
 	w := request.Waiter{
-		MaxAttempts:      10,
-		Delay:            request.ConstantWaiterDelay(0),
-		SleepWithContext: aws.SleepWithContext,
+		MaxAttempts: 10,
+		Delay:       request.ConstantWaiterDelay(0),
 		Acceptors: []request.WaiterAcceptor{
 			{
 				State:    request.SuccessWaiterState,
@@ -184,15 +178,9 @@ func TestWaiterPath(t *testing.T) {
 	}
 
 	err := w.WaitWithContext(aws.BackgroundContext())
-	if err != nil {
-		t.Errorf("expect nil, %v", err)
-	}
-	if e, a := 3, numBuiltReq; e != a {
-		t.Errorf("expect %v, got %v", e, a)
-	}
-	if e, a := 3, reqNum; e != a {
-		t.Errorf("expect %v, got %v", e, a)
-	}
+	assert.NoError(t, err)
+	assert.Equal(t, 3, numBuiltReq)
+	assert.Equal(t, 3, reqNum)
 }
 
 func TestWaiterFailure(t *testing.T) {
@@ -232,7 +220,7 @@ func TestWaiterFailure(t *testing.T) {
 	})
 	svc.Handlers.Unmarshal.PushBack(func(r *request.Request) {
 		if reqNum >= len(resps) {
-			t.Errorf("too many polling requests made")
+			assert.Fail(t, "too many polling requests made")
 			return
 		}
 		r.Data = resps[reqNum]
@@ -240,9 +228,8 @@ func TestWaiterFailure(t *testing.T) {
 	})
 
 	w := request.Waiter{
-		MaxAttempts:      10,
-		Delay:            request.ConstantWaiterDelay(0),
-		SleepWithContext: aws.SleepWithContext,
+		MaxAttempts: 10,
+		Delay:       request.ConstantWaiterDelay(0),
 		Acceptors: []request.WaiterAcceptor{
 			{
 				State:    request.SuccessWaiterState,
@@ -261,21 +248,11 @@ func TestWaiterFailure(t *testing.T) {
 	}
 
 	err := w.WaitWithContext(aws.BackgroundContext()).(awserr.Error)
-	if err == nil {
-		t.Errorf("expect error")
-	}
-	if e, a := request.WaiterResourceNotReadyErrorCode, err.Code(); e != a {
-		t.Errorf("expect %v, got %v", e, a)
-	}
-	if e, a := "failed waiting for successful resource state", err.Message(); e != a {
-		t.Errorf("expect %v, got %v", e, a)
-	}
-	if e, a := 3, numBuiltReq; e != a {
-		t.Errorf("expect %v, got %v", e, a)
-	}
-	if e, a := 3, reqNum; e != a {
-		t.Errorf("expect %v, got %v", e, a)
-	}
+	assert.Error(t, err)
+	assert.Equal(t, request.WaiterResourceNotReadyErrorCode, err.Code())
+	assert.Equal(t, "failed waiting for successful resource state", err.Message())
+	assert.Equal(t, 3, numBuiltReq)
+	assert.Equal(t, 3, reqNum)
 }
 
 func TestWaiterError(t *testing.T) {
@@ -328,7 +305,7 @@ func TestWaiterError(t *testing.T) {
 	})
 	svc.Handlers.Unmarshal.PushBack(func(r *request.Request) {
 		if reqNum >= len(resps) {
-			t.Errorf("too many polling requests made")
+			assert.Fail(t, "too many polling requests made")
 			return
 		}
 		r.Data = resps[reqNum]
@@ -344,9 +321,8 @@ func TestWaiterError(t *testing.T) {
 	})
 
 	w := request.Waiter{
-		MaxAttempts:      10,
-		Delay:            request.ConstantWaiterDelay(0),
-		SleepWithContext: aws.SleepWithContext,
+		MaxAttempts: 10,
+		Delay:       request.ConstantWaiterDelay(0),
 		Acceptors: []request.WaiterAcceptor{
 			{
 				State:    request.SuccessWaiterState,
@@ -413,9 +389,8 @@ func TestWaiterStatus(t *testing.T) {
 	})
 
 	w := request.Waiter{
-		MaxAttempts:      10,
-		Delay:            request.ConstantWaiterDelay(0),
-		SleepWithContext: aws.SleepWithContext,
+		MaxAttempts: 10,
+		Delay:       request.ConstantWaiterDelay(0),
 		Acceptors: []request.WaiterAcceptor{
 			{
 				State:    request.SuccessWaiterState,
@@ -428,12 +403,8 @@ func TestWaiterStatus(t *testing.T) {
 	}
 
 	err := w.WaitWithContext(aws.BackgroundContext())
-	if err != nil {
-		t.Errorf("expect nil, %v", err)
-	}
-	if e, a := 3, reqNum; e != a {
-		t.Errorf("expect %v, got %v", e, a)
-	}
+	assert.NoError(t, err)
+	assert.Equal(t, 3, reqNum)
 }
 
 func TestWaiter_ApplyOptions(t *testing.T) {
@@ -476,10 +447,9 @@ func TestWaiter_WithContextCanceled(t *testing.T) {
 	reqCount := 0
 
 	w := request.Waiter{
-		Name:             "TestWaiter",
-		MaxAttempts:      10,
-		Delay:            request.ConstantWaiterDelay(1 * time.Millisecond),
-		SleepWithContext: aws.SleepWithContext,
+		Name:        "TestWaiter",
+		MaxAttempts: 10,
+		Delay:       request.ConstantWaiterDelay(1 * time.Millisecond),
 		Acceptors: []request.WaiterAcceptor{
 			{
 				State:    request.SuccessWaiterState,
@@ -505,16 +475,6 @@ func TestWaiter_WithContextCanceled(t *testing.T) {
 		},
 	}
 
-	w.SleepWithContext = func(c aws.Context, delay time.Duration) error {
-		context := c.(*awstesting.FakeContext)
-		select {
-		case <-context.DoneCh:
-			return context.Err()
-		default:
-			return nil
-		}
-	}
-
 	err := w.WaitWithContext(ctx)
 
 	if err == nil {
@@ -538,10 +498,9 @@ func TestWaiter_WithContext(t *testing.T) {
 	statuses := []int{http.StatusNotFound, http.StatusOK}
 
 	w := request.Waiter{
-		Name:             "TestWaiter",
-		MaxAttempts:      10,
-		Delay:            request.ConstantWaiterDelay(1 * time.Millisecond),
-		SleepWithContext: aws.SleepWithContext,
+		Name:        "TestWaiter",
+		MaxAttempts: 10,
+		Delay:       request.ConstantWaiterDelay(1 * time.Millisecond),
 		Acceptors: []request.WaiterAcceptor{
 			{
 				State:    request.SuccessWaiterState,
@@ -584,10 +543,9 @@ func TestWaiter_AttemptsExpires(t *testing.T) {
 	reqCount := 0
 
 	w := request.Waiter{
-		Name:             "TestWaiter",
-		MaxAttempts:      2,
-		Delay:            request.ConstantWaiterDelay(1 * time.Millisecond),
-		SleepWithContext: aws.SleepWithContext,
+		Name:        "TestWaiter",
+		MaxAttempts: 2,
+		Delay:       request.ConstantWaiterDelay(1 * time.Millisecond),
 		Acceptors: []request.WaiterAcceptor{
 			{
 				State:    request.SuccessWaiterState,

@@ -11,12 +11,14 @@ import (
 	"github.com/aws/aws-sdk-go/private/protocol/jsonrpc"
 )
 
-// ACM provides the API operation methods for making requests to
-// AWS Certificate Manager. See this package's package overview docs
-// for details on the service.
+// Welcome to the AWS Certificate Manager (ACM) API documentation.
 //
-// ACM methods are safe to use concurrently. It is not safe to
-// modify mutate any of the struct's properties though.
+// You can use ACM to manage SSL/TLS certificates for your AWS-based websites
+// and applications. For general information about using ACM, see the AWS Certificate
+// Manager User Guide (http://docs.aws.amazon.com/acm/latest/userguide/).
+// The service client's operations are safe to be used concurrently.
+// It is not safe to mutate any of the client's properties though.
+// Please also see https://docs.aws.amazon.com/goto/WebAPI/acm-2015-12-08
 type ACM struct {
 	*client.Client
 }
@@ -29,9 +31,8 @@ var initRequest func(*request.Request)
 
 // Service information constants
 const (
-	ServiceName = "acm"       // Name of service.
-	EndpointsID = ServiceName // ID to lookup a service endpoint with.
-	ServiceID   = "ACM"       // ServiceID is a unique identifer of a specific service.
+	ServiceName = "acm"       // Service endpoint prefix API calls made to.
+	EndpointsID = ServiceName // Service ID for Regions and Endpoints metadata.
 )
 
 // New creates a new instance of the ACM client with a session.
@@ -56,7 +57,6 @@ func newClient(cfg aws.Config, handlers request.Handlers, endpoint, signingRegio
 			cfg,
 			metadata.ClientInfo{
 				ServiceName:   ServiceName,
-				ServiceID:     ServiceID,
 				SigningName:   signingName,
 				SigningRegion: signingRegion,
 				Endpoint:      endpoint,

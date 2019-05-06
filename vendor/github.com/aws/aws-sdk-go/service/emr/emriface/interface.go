@@ -21,7 +21,7 @@ import (
 //
 // The best way to use this interface is so the SDK's service client's calls
 // can be stubbed out for unit testing your code with the SDK without needing
-// to inject custom request handlers into the SDK's request pipeline.
+// to inject custom request handlers into the the SDK's request pipeline.
 //
 //    // myFunc uses an SDK service client to make a request to
 //    // Amazon Elastic MapReduce.
@@ -142,9 +142,6 @@ type EMRAPI interface {
 	ListSecurityConfigurations(*emr.ListSecurityConfigurationsInput) (*emr.ListSecurityConfigurationsOutput, error)
 	ListSecurityConfigurationsWithContext(aws.Context, *emr.ListSecurityConfigurationsInput, ...request.Option) (*emr.ListSecurityConfigurationsOutput, error)
 	ListSecurityConfigurationsRequest(*emr.ListSecurityConfigurationsInput) (*request.Request, *emr.ListSecurityConfigurationsOutput)
-
-	ListSecurityConfigurationsPages(*emr.ListSecurityConfigurationsInput, func(*emr.ListSecurityConfigurationsOutput, bool) bool) error
-	ListSecurityConfigurationsPagesWithContext(aws.Context, *emr.ListSecurityConfigurationsInput, func(*emr.ListSecurityConfigurationsOutput, bool) bool, ...request.Option) error
 
 	ListSteps(*emr.ListStepsInput) (*emr.ListStepsOutput, error)
 	ListStepsWithContext(aws.Context, *emr.ListStepsInput, ...request.Option) (*emr.ListStepsOutput, error)

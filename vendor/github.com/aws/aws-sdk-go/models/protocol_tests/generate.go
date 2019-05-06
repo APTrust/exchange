@@ -29,35 +29,10 @@ const (
 
 type testSuite struct {
 	*api.API
-	Description    string
-	ClientEndpoint string
-	Cases          []testCase
-	Type           uint
-	title          string
-}
-
-func (s *testSuite) UnmarshalJSON(p []byte) error {
-	type stub testSuite
-
-	var v stub
-	if err := json.Unmarshal(p, &v); err != nil {
-		return err
-	}
-
-	if len(v.ClientEndpoint) == 0 {
-		v.ClientEndpoint = "https://test"
-	}
-	for i := 0; i < len(v.Cases); i++ {
-		if len(v.Cases[i].InputTest.Host) == 0 {
-			v.Cases[i].InputTest.Host = "test"
-		}
-		if len(v.Cases[i].InputTest.URI) == 0 {
-			v.Cases[i].InputTest.URI = "/"
-		}
-	}
-
-	*s = testSuite(v)
-	return nil
+	Description string
+	Cases       []testCase
+	Type        uint
+	title       string
 }
 
 type testCase struct {
@@ -71,7 +46,6 @@ type testCase struct {
 
 type testExpectation struct {
 	Body       string
-	Host       string
 	URI        string
 	Headers    map[string]string
 	JSONValues map[string]string
@@ -124,6 +98,7 @@ var extraImports = []string{
 	"github.com/aws/aws-sdk-go/private/protocol",
 	"github.com/aws/aws-sdk-go/private/protocol/xml/xmlutil",
 	"github.com/aws/aws-sdk-go/private/util",
+	"github.com/stretchr/testify/assert",
 }
 
 func addImports(code string) string {
@@ -155,7 +130,7 @@ func (t *testSuite) TestSuite() string {
 
 var tplInputTestCase = template.Must(template.New("inputcase").Parse(`
 func Test{{ .OpName }}(t *testing.T) {
-	svc := New{{ .TestCase.TestSuite.API.StructName }}(unit.Session, &aws.Config{Endpoint: aws.String("{{ .TestCase.TestSuite.ClientEndpoint  }}")})
+	svc := New{{ .TestCase.TestSuite.API.StructName }}(unit.Session, &aws.Config{Endpoint: aws.String("https://test")})
 	{{ if ne .ParamsString "" }}input := {{ .ParamsString }}
 	{{ range $k, $v := .JSONValues -}}
 	input.{{ $k }} = {{ $v }} 
@@ -164,26 +139,19 @@ func Test{{ .OpName }}(t *testing.T) {
 	r := req.HTTPRequest
 
 	// build request
-	req.Build()
-	if req.Error != nil {
-		t.Errorf("expect no error, got %v", req.Error)
-	}
+	{{ .TestCase.TestSuite.API.ProtocolPackage }}.Build(req)
+	assert.NoError(t, req.Error)
 
 	{{ if ne .TestCase.InputTest.Body "" }}// assert body
-	if r.Body == nil {
-		t.Errorf("expect body not to be nil")
-	}
+	assert.NotNil(t, r.Body)
 	{{ .BodyAssertions }}{{ end }}
 
-	// assert URL
-	awstesting.AssertURL(t, "https://{{ .TestCase.InputTest.Host }}{{ .TestCase.InputTest.URI }}", r.URL.String())
+	{{ if ne .TestCase.InputTest.URI "" }}// assert URL
+	awstesting.AssertURL(t, "https://test{{ .TestCase.InputTest.URI }}", r.URL.String()){{ end }}
 
 	// assert headers
-	{{ range $k, $v := .TestCase.InputTest.Headers -}}
-		if e, a := "{{ $v }}", r.Header.Get("{{ $k }}"); e != a {
-			t.Errorf("expect %v, got %v", e, a)
-		}
-	{{ end }}
+{{ range $k, $v := .TestCase.InputTest.Headers }}assert.Equal(t, "{{ $v }}", r.Header.Get("{{ $k }}"))
+{{ end }}
 }
 `))
 
@@ -216,38 +184,23 @@ func (t tplInputTestCaseData) BodyAssertions() string {
 			fmt.Fprintf(code, "awstesting.AssertXML(t, `%s`, util.Trim(string(body)), %s{})",
 				expectedBody, t.TestCase.Given.InputRef.ShapeName)
 		} else {
-			code.WriteString(fmtAssertEqual(fmt.Sprintf("%q", expectedBody), "util.Trim(string(body))"))
+			fmt.Fprintf(code, "assert.Equal(t, `%s`, util.Trim(string(body)))",
+				expectedBody)
 		}
 	case "json", "jsonrpc", "rest-json":
 		if strings.HasPrefix(expectedBody, "{") {
 			fmt.Fprintf(code, "awstesting.AssertJSON(t, `%s`, util.Trim(string(body)))",
 				expectedBody)
 		} else {
-			code.WriteString(fmtAssertEqual(fmt.Sprintf("%q", expectedBody), "util.Trim(string(body))"))
+			fmt.Fprintf(code, "assert.Equal(t, `%s`, util.Trim(string(body)))",
+				expectedBody)
 		}
 	default:
-		code.WriteString(fmtAssertEqual(expectedBody, "util.Trim(string(body))"))
+		fmt.Fprintf(code, "assert.Equal(t, `%s`, util.Trim(string(body)))",
+			expectedBody)
 	}
 
 	return code.String()
-}
-
-func fmtAssertEqual(e, a string) string {
-	const format = `if e, a := %s, %s; e != a {
-		t.Errorf("expect %%v, got %%v", e, a)
-	}
-	`
-
-	return fmt.Sprintf(format, e, a)
-}
-
-func fmtAssertNil(v string) string {
-	const format = `if e := %s; e != nil {
-		t.Errorf("expect nil, got %%v", e)
-	}
-	`
-
-	return fmt.Sprintf(format, v)
 }
 
 var tplOutputTestCase = template.Must(template.New("outputcase").Parse(`
@@ -263,16 +216,12 @@ func Test{{ .OpName }}(t *testing.T) {
 	{{ end }}
 
 	// unmarshal response
-	req.Handlers.UnmarshalMeta.Run(req)
-	req.Handlers.Unmarshal.Run(req)
-	if req.Error != nil {
-		t.Errorf("expect not error, got %v", req.Error)
-	}
+	{{ .TestCase.TestSuite.API.ProtocolPackage }}.UnmarshalMeta(req)
+	{{ .TestCase.TestSuite.API.ProtocolPackage }}.Unmarshal(req)
+	assert.NoError(t, req.Error)
 
 	// assert response
-	if out == nil {
-		t.Errorf("expect not to be nil")
-	}
+	assert.NotNil(t, out) // ensure out variable is used
 	{{ .Assertions }}
 }
 `))
@@ -296,7 +245,7 @@ func (i *testCase) TestCase(idx int) string {
 		case "rest-xml":
 			i.InputTest.Body = util.SortXML(bytes.NewReader([]byte(i.InputTest.Body)))
 		case "json", "rest-json":
-			// Nothing to do
+			i.InputTest.Body = strings.Replace(i.InputTest.Body, " ", "", -1)
 		}
 
 		jsonValues := buildJSONValues(i.Given.InputRef.Shape)
@@ -355,7 +304,7 @@ func walkMap(m map[string]interface{}) string {
 		str += fmt.Sprintf("%q:", k)
 		switch v.(type) {
 		case bool:
-			str += fmt.Sprintf("%t,\n", v.(bool))
+			str += fmt.Sprintf("%b,\n", v.(bool))
 		case string:
 			str += fmt.Sprintf("%q,\n", v.(string))
 		case int:
@@ -420,7 +369,6 @@ func generateTestSuite(filename string) string {
 		suite.API.NoConstServiceNames = true // don't generate service names
 		suite.API.Setup()
 		suite.API.Metadata.EndpointPrefix = suite.API.PackageName()
-		suite.API.Metadata.EndpointsID = suite.API.Metadata.EndpointPrefix
 
 		// Sort in order for deterministic test generation
 		names := make([]string, 0, len(suite.API.Shapes))
@@ -486,7 +434,7 @@ func GenerateAssertions(out interface{}, shape *api.Shape, prefix string) string
 				code += GenerateAssertions(v, s, prefix+"[\""+k+"\"]")
 			}
 		} else if shape.Type == "jsonvalue" {
-			code += fmt.Sprintf("reflect.DeepEqual(%s, map[string]interface{}%s)\n", prefix, walkMap(out.(map[string]interface{})))
+			code += fmt.Sprintf("reflect.DeepEqual(%s, map[string]interface{}%s)", prefix, walkMap(out.(map[string]interface{})))
 		} else {
 			for _, k := range keys {
 				v := t[k]
@@ -506,28 +454,16 @@ func GenerateAssertions(out interface{}, shape *api.Shape, prefix string) string
 	default:
 		switch shape.Type {
 		case "timestamp":
-			return fmtAssertEqual(
-				fmt.Sprintf("time.Unix(%#v, 0).UTC().String()", out),
-				fmt.Sprintf("%s.UTC().String()", prefix),
-			)
+			return fmt.Sprintf("assert.Equal(t, time.Unix(%#v, 0).UTC().String(), %s.String())\n", out, prefix)
 		case "blob":
-			return fmtAssertEqual(
-				fmt.Sprintf("%#v", out),
-				fmt.Sprintf("string(%s)", prefix),
-			)
+			return fmt.Sprintf("assert.Equal(t, %#v, string(%s))\n", out, prefix)
 		case "integer", "long":
-			return fmtAssertEqual(
-				fmt.Sprintf("int64(%#v)", out),
-				fmt.Sprintf("*%s", prefix),
-			)
+			return fmt.Sprintf("assert.Equal(t, int64(%#v), *%s)\n", out, prefix)
 		default:
 			if !reflect.ValueOf(out).IsValid() {
-				return fmtAssertNil(prefix)
+				return fmt.Sprintf("assert.Nil(t, %s)\n", prefix)
 			}
-			return fmtAssertEqual(
-				fmt.Sprintf("%#v", out),
-				fmt.Sprintf("*%s", prefix),
-			)
+			return fmt.Sprintf("assert.Equal(t, %#v, *%s)\n", out, prefix)
 		}
 	}
 }
@@ -544,11 +480,6 @@ func getType(t string) uint {
 }
 
 func main() {
-	if len(os.Getenv("AWS_SDK_CODEGEN_DEBUG")) != 0 {
-		api.LogDebug(os.Stdout)
-	}
-
-	fmt.Println("Generating test suite", os.Args[1:])
 	out := generateTestSuite(os.Args[1])
 	if len(os.Args) == 3 {
 		f, err := os.Create(os.Args[2])

@@ -13,58 +13,18 @@ import (
 
 // An Operation defines a specific API Operation.
 type Operation struct {
-	API                 *API `json:"-"`
-	ExportedName        string
-	Name                string
-	Documentation       string
-	HTTP                HTTPInfo
-	Host                string     `json:"host"`
-	InputRef            ShapeRef   `json:"input"`
-	OutputRef           ShapeRef   `json:"output"`
-	ErrorRefs           []ShapeRef `json:"errors"`
-	Paginator           *Paginator
-	Deprecated          bool   `json:"deprecated"`
-	DeprecatedMsg       string `json:"deprecatedMessage"`
-	AuthType            string `json:"authtype"`
-	imports             map[string]bool
-	CustomBuildHandlers []string
-
-	EventStreamAPI *EventStreamAPI
-
-	IsEndpointDiscoveryOp bool               `json:"endpointoperation"`
-	EndpointDiscovery     *EndpointDiscovery `json:"endpointdiscovery"`
-	Endpoint              *EndpointTrait     `json:"endpoint"`
-}
-
-// EndpointTrait provides the structure of the modeled enpdoint trait, and its
-// properties.
-type EndpointTrait struct {
-	// Specifies the hostPrefix template to prepend to the operation's request
-	// endpoint host.
-	HostPrefix string `json:"hostPrefix"`
-}
-
-// EndpointDiscovery represents a map of key values pairs that represents
-// metadata about how a given API will make a call to the discovery endpoint.
-type EndpointDiscovery struct {
-	// Required indicates that for a given operation that endpoint is required.
-	// Any required endpoint discovery operation cannot have endpoint discovery
-	// turned off.
-	Required bool `json:"required"`
-}
-
-// OperationForMethod returns the API operation name that corresponds to the
-// client method name provided.
-func (a *API) OperationForMethod(name string) *Operation {
-	for _, op := range a.Operations {
-		for _, m := range op.Methods() {
-			if m == name {
-				return op
-			}
-		}
-	}
-
-	return nil
+	API           *API `json:"-"`
+	ExportedName  string
+	Name          string
+	Documentation string
+	HTTP          HTTPInfo
+	InputRef      ShapeRef   `json:"input"`
+	OutputRef     ShapeRef   `json:"output"`
+	ErrorRefs     []ShapeRef `json:"errors"`
+	Paginator     *Paginator
+	Deprecated    bool   `json:"deprecated"`
+	AuthType      string `json:"authtype"`
+	imports       map[string]bool
 }
 
 // A HTTPInfo defines the method of HTTP request for the Operation.
@@ -72,24 +32,6 @@ type HTTPInfo struct {
 	Method       string
 	RequestURI   string
 	ResponseCode uint
-}
-
-// Methods Returns a list of method names that will be generated.
-func (o *Operation) Methods() []string {
-	methods := []string{
-		o.ExportedName,
-		o.ExportedName + "Request",
-		o.ExportedName + "WithContext",
-	}
-
-	if o.Paginator != nil {
-		methods = append(methods, []string{
-			o.ExportedName + "Pages",
-			o.ExportedName + "PagesWithContext",
-		}...)
-	}
-
-	return methods
 }
 
 // HasInput returns if the Operation accepts an input paramater
@@ -102,18 +44,17 @@ func (o *Operation) HasOutput() bool {
 	return o.OutputRef.ShapeName != ""
 }
 
-// GetSigner returns the signer that should be used for a API request.
 func (o *Operation) GetSigner() string {
+	if o.AuthType == "v4-unsigned-body" {
+		o.API.imports["github.com/aws/aws-sdk-go/aws/signer/v4"] = true
+	}
+
 	buf := bytes.NewBuffer(nil)
 
 	switch o.AuthType {
 	case "none":
-		o.API.AddSDKImport("aws/credentials")
-
 		buf.WriteString("req.Config.Credentials = credentials.AnonymousCredentials")
 	case "v4-unsigned-body":
-		o.API.AddSDKImport("aws/signer/v4")
-
 		buf.WriteString("req.Handlers.Sign.Remove(v4.SignRequestHandler)\n")
 		buf.WriteString("handler := v4.BuildNamedHandler(\"v4.CustomSignerHandler\", v4.WithUnsignedPayload)\n")
 		buf.WriteString("req.Handlers.Sign.PushFrontNamed(handler)")
@@ -123,28 +64,27 @@ func (o *Operation) GetSigner() string {
 	return buf.String()
 }
 
-// operationTmpl defines a template for rendering an API Operation
-var operationTmpl = template.Must(template.New("operation").Funcs(template.FuncMap{
-	"GetCrosslinkURL":       GetCrosslinkURL,
-	"EnableStopOnSameToken": enableStopOnSameToken,
-	"GetDeprecatedMsg":      getDeprecatedMessage,
+// tplOperation defines a template for rendering an API Operation
+var tplOperation = template.Must(template.New("operation").Funcs(template.FuncMap{
+	"GetCrosslinkURL": GetCrosslinkURL,
 }).Parse(`
 const op{{ .ExportedName }} = "{{ .Name }}"
 
 // {{ .ExportedName }}Request generates a "aws/request.Request" representing the
 // client's request for the {{ .ExportedName }} operation. The "output" return
-// value will be populated with the request's response once the request completes
-// successfully.
+// value can be used to capture response data after the request's "Send" method
+// is called.
 //
-// Use "Send" method on the returned Request to send the API call to the service.
-// the "output" return value is not valid until after Send returns without error.
+// See {{ .ExportedName }} for usage and error information.
 //
-// See {{ .ExportedName }} for more information on using the {{ .ExportedName }}
-// API call, and error handling.
+// Creating a request object using this method should be used when you want to inject
+// custom logic into the request's lifecycle using a custom handler, or if you want to
+// access properties on the request object before or after sending the request. If
+// you just want the service response, call the {{ .ExportedName }} method directly
+// instead.
 //
-// This method is useful when you want to inject custom logic or configuration
-// into the SDK's request lifecycle. Such as custom headers, or retry logic.
-//
+// Note: You must call the "Send" method on the returned request object in order
+// to execute the request.
 //
 //    // Example sending a request using the {{ .ExportedName }}Request method.
 //    req, resp := client.{{ .ExportedName }}Request(params)
@@ -153,20 +93,17 @@ const op{{ .ExportedName }} = "{{ .Name }}"
 //    if err == nil { // resp is now filled
 //        fmt.Println(resp)
 //    }
-{{ $crosslinkURL := GetCrosslinkURL $.API.BaseCrosslinkURL $.API.Metadata.UID $.ExportedName -}}
-{{ if ne $crosslinkURL "" -}}
+{{ $crosslinkURL := GetCrosslinkURL $.API.BaseCrosslinkURL $.API.APIName $.API.Metadata.UID $.ExportedName -}}
+{{ if ne $crosslinkURL "" -}} 
 //
-// See also, {{ $crosslinkURL }}
-{{ end -}}
-{{- if .Deprecated }}//
-// Deprecated: {{ GetDeprecatedMsg .DeprecatedMsg .ExportedName }}
+// Please also see {{ $crosslinkURL }}
 {{ end -}}
 func (c *{{ .API.StructName }}) {{ .ExportedName }}Request(` +
 	`input {{ .InputRef.GoType }}) (req *request.Request, output {{ .OutputRef.GoType }}) {
 	{{ if (or .Deprecated (or .InputRef.Deprecated .OutputRef.Deprecated)) }}if c.Client.Config.Logger != nil {
 		c.Client.Config.Logger.Log("This operation, {{ .ExportedName }}, has been deprecated")
 	}
-	op := &request.Operation{ {{ else }} op := &request.Operation{ {{ end }}
+	op := &request.Operation{ {{ else }} op := &request.Operation{ {{ end }}	
 		Name:       op{{ .ExportedName }},
 		{{ if ne .HTTP.Method "" }}HTTPMethod: "{{ .HTTP.Method }}",
 		{{ end }}HTTPPath: {{ if ne .HTTP.RequestURI "" }}"{{ .HTTP.RequestURI }}"{{ else }}"/"{{ end }},
@@ -184,57 +121,10 @@ func (c *{{ .API.StructName }}) {{ .ExportedName }}Request(` +
 	}
 
 	output = &{{ .OutputRef.GoTypeElem }}{}
-	req = c.newRequest(op, input, output)
-	{{ if ne .AuthType "" }}{{ .GetSigner }}{{ end }}
-	{{- if .ShouldDiscardResponse -}}
-		{{- $_ := .API.AddSDKImport "private/protocol" -}}
-		{{- $_ := .API.AddSDKImport "private/protocol" .API.ProtocolPackage -}}
-		req.Handlers.Unmarshal.Swap({{ .API.ProtocolPackage }}.UnmarshalHandler.Name, protocol.UnmarshalDiscardBodyHandler)
-	{{ else if .OutputRef.Shape.EventStreamsMemberName -}}
-		{{- $_ := .API.AddSDKImport "private/protocol" .API.ProtocolPackage -}}
-		{{- $_ := .API.AddSDKImport "private/protocol/rest" -}}
-		req.Handlers.Send.Swap(client.LogHTTPResponseHandler.Name, client.LogHTTPResponseHeaderHandler)
-		req.Handlers.Unmarshal.Swap({{ .API.ProtocolPackage }}.UnmarshalHandler.Name, rest.UnmarshalHandler)
-		req.Handlers.Unmarshal.PushBack(output.runEventStreamLoop)
-		{{ if eq .API.Metadata.Protocol "json" -}}
-			req.Handlers.Unmarshal.PushBack(output.unmarshalInitialResponse)
-		{{ end -}}
-	{{ end -}}
-	{{ if .EndpointDiscovery -}}
-		{{if not .EndpointDiscovery.Required -}}
-			if aws.BoolValue(req.Config.EnableEndpointDiscovery) {
-		{{end -}}
-		de := discoverer{{ .API.EndpointDiscoveryOp.Name }}{
-			Required: {{ .EndpointDiscovery.Required }},
-			EndpointCache: c.endpointCache,
-			Params: map[string]*string{
-				"op": aws.String(req.Operation.Name),
-				{{ range $key, $ref := .InputRef.Shape.MemberRefs -}}
-				{{ if $ref.EndpointDiscoveryID -}}
-				"{{ $ref.OrigShapeName }}": input.{{ $key }},
-				{{ end -}}
-				{{- end }}
-			},
-			Client: c,
-		}
-
-		for k, v := range de.Params {
-			if v == nil {
-				delete(de.Params, k)
-			}
-		}
-
-		req.Handlers.Build.PushFrontNamed(request.NamedHandler{
-			Name: "crr.endpointdiscovery",
-			Fn: de.Handler,
-		})
-		{{if not .EndpointDiscovery.Required -}}
-			}
-		{{ end -}}
-	{{ end -}}
-	{{- range $_, $handler := $.CustomBuildHandlers -}}
-		req.Handlers.Build.PushBackNamed({{ $handler }})
-	{{ end -}}
+	req = c.newRequest(op, input, output){{ if eq .OutputRef.Shape.Placeholder true }}
+	req.Handlers.Unmarshal.Remove({{ .API.ProtocolPackage }}.UnmarshalHandler)
+	req.Handlers.Unmarshal.PushBackNamed(protocol.UnmarshalDiscardBodyHandler){{ end }}
+	{{ if ne .AuthType "" }}{{ .GetSigner }}{{ end -}}
 	return
 }
 
@@ -261,12 +151,9 @@ func (c *{{ .API.StructName }}) {{ .ExportedName }}Request(` +
 //
 {{ end -}}
 {{ end -}}
-{{ $crosslinkURL := GetCrosslinkURL $.API.BaseCrosslinkURL $.API.Metadata.UID $.ExportedName -}}
-{{ if ne $crosslinkURL "" -}}
-// See also, {{ $crosslinkURL }}
-{{ end -}}
-{{- if .Deprecated }}//
-// Deprecated: {{ GetDeprecatedMsg .DeprecatedMsg .ExportedName }}
+{{ $crosslinkURL := GetCrosslinkURL $.API.BaseCrosslinkURL $.API.APIName $.API.Metadata.UID $.ExportedName -}}
+{{ if ne $crosslinkURL "" -}} 
+// Please also see {{ $crosslinkURL }}
 {{ end -}}
 func (c *{{ .API.StructName }}) {{ .ExportedName }}(` +
 	`input {{ .InputRef.GoType }}) ({{ .OutputRef.GoType }}, error) {
@@ -283,9 +170,6 @@ func (c *{{ .API.StructName }}) {{ .ExportedName }}(` +
 // the context is nil a panic will occur. In the future the SDK may create
 // sub-contexts for http.Requests. See https://golang.org/pkg/context/
 // for more information on using Contexts.
-{{ if .Deprecated }}//
-// Deprecated: {{ GetDeprecatedMsg .DeprecatedMsg (printf "%s%s" .ExportedName "WithContext") }}
-{{ end -}}
 func (c *{{ .API.StructName }}) {{ .ExportedName }}WithContext(` +
 	`ctx aws.Context, input {{ .InputRef.GoType }}, opts ...request.Option) ` +
 	`({{ .OutputRef.GoType }}, error) {
@@ -313,9 +197,6 @@ func (c *{{ .API.StructName }}) {{ .ExportedName }}WithContext(` +
 //            return pageNum <= 3
 //        })
 //
-{{ if .Deprecated }}//
-// Deprecated: {{ GetDeprecatedMsg .DeprecatedMsg (printf "%s%s" .ExportedName "Pages") }}
-{{ end -}}
 func (c *{{ .API.StructName }}) {{ .ExportedName }}Pages(` +
 	`input {{ .InputRef.GoType }}, fn func({{ .OutputRef.GoType }}, bool) bool) error {
 	return c.{{ .ExportedName }}PagesWithContext(aws.BackgroundContext(), input, fn)
@@ -328,17 +209,12 @@ func (c *{{ .API.StructName }}) {{ .ExportedName }}Pages(` +
 // the context is nil a panic will occur. In the future the SDK may create
 // sub-contexts for http.Requests. See https://golang.org/pkg/context/
 // for more information on using Contexts.
-{{ if .Deprecated }}//
-// Deprecated: {{ GetDeprecatedMsg .DeprecatedMsg (printf "%s%s" .ExportedName "PagesWithContext") }}
-{{ end -}}
 func (c *{{ .API.StructName }}) {{ .ExportedName }}PagesWithContext(` +
 	`ctx aws.Context, ` +
 	`input {{ .InputRef.GoType }}, ` +
 	`fn func({{ .OutputRef.GoType }}, bool) bool, ` +
 	`opts ...request.Option) error {
 	p := request.Pagination {
-		{{ if EnableStopOnSameToken .API.PackageName -}}EndPageOnSameToken: true,
-		{{ end -}}
 		NewRequest: func() (*request.Request, error) {
 			var inCpy {{ .InputRef.GoType }}
 			if input != nil  {
@@ -359,100 +235,12 @@ func (c *{{ .API.StructName }}) {{ .ExportedName }}PagesWithContext(` +
 	return p.Err()
 }
 {{ end }}
-
-{{ if .IsEndpointDiscoveryOp -}}
-
-type discoverer{{ .ExportedName }} struct {
-	Client *{{ .API.StructName }}
-	Required bool
-	EndpointCache *crr.EndpointCache
-	Params map[string]*string
-	Key string
-}
-
-func (d *discoverer{{ .ExportedName }}) Discover() (crr.Endpoint, error) {
-	input := &{{ .API.EndpointDiscoveryOp.InputRef.ShapeName }}{
-		{{ if .API.EndpointDiscoveryOp.InputRef.Shape.HasMember "Operation" -}}
-		Operation: d.Params["op"],
-		{{ end -}}
-		{{ if .API.EndpointDiscoveryOp.InputRef.Shape.HasMember "Identifiers" -}}
-		Identifiers: d.Params,
-		{{ end -}}
-	}
-
-	resp, err := d.Client.{{ .API.EndpointDiscoveryOp.Name }}(input)
-	if err != nil {
-		return crr.Endpoint{}, err
-	}
-
-	endpoint := crr.Endpoint{
-		Key: d.Key,
-	}
-
-	for _, e := range resp.Endpoints {
-		if e.Address == nil {
-			continue
-		}
-
-		cachedInMinutes := aws.Int64Value(e.CachePeriodInMinutes)
-		u, err := url.Parse(*e.Address)
-		if err != nil {
-			continue
-		}
-
-		addr := crr.WeightedAddress{
-			URL: u,
-			Expired:  time.Now().Add(time.Duration(cachedInMinutes) * time.Minute),
-		}
-
-		endpoint.Add(addr)
-	}
-
-	d.EndpointCache.Add(endpoint)
-
-	return endpoint, nil
-}
-
-func (d *discoverer{{ .ExportedName }}) Handler(r *request.Request) {
-	endpointKey := crr.BuildEndpointKey(d.Params)
-	d.Key = endpointKey
-
-	endpoint, err := d.EndpointCache.Get(d, endpointKey, d.Required)
-	if err != nil {
-		r.Error = err
-		return
-	}
-
-	if endpoint.URL != nil && len(endpoint.URL.String()) > 0 {
-		r.HTTPRequest.URL = endpoint.URL
-	}
-}
-{{ end -}}
-
 `))
 
 // GoCode returns a string of rendered GoCode for this Operation
 func (o *Operation) GoCode() string {
 	var buf bytes.Buffer
-
-	if len(o.OutputRef.Shape.EventStreamsMemberName) != 0 {
-		o.API.AddSDKImport("aws/client")
-		o.API.AddSDKImport("private/protocol")
-		o.API.AddSDKImport("private/protocol/rest")
-		o.API.AddSDKImport("private/protocol", o.API.ProtocolPackage())
-	}
-
-	if o.API.EndpointDiscoveryOp != nil {
-		o.API.AddSDKImport("aws/crr")
-		o.API.AddImport("time")
-		o.API.AddImport("net/url")
-	}
-
-	if o.Endpoint != nil && len(o.Endpoint.HostPrefix) != 0 {
-		setupEndpointHostPrefix(o)
-	}
-
-	err := operationTmpl.Execute(&buf, o)
+	err := tplOperation.Execute(&buf, o)
 	if err != nil {
 		panic(err)
 	}
@@ -521,7 +309,7 @@ func (o *Operation) Example() string {
 func (o *Operation) ExampleInput() string {
 	if len(o.InputRef.Shape.MemberRefs) == 0 {
 		if strings.Contains(o.InputRef.GoTypeElem(), ".") {
-			o.imports[SDKImportRoot+"service/"+strings.Split(o.InputRef.GoTypeElem(), ".")[0]] = true
+			o.imports["github.com/aws/aws-sdk-go/service/"+strings.Split(o.InputRef.GoTypeElem(), ".")[0]] = true
 			return fmt.Sprintf("var params *%s", o.InputRef.GoTypeElem())
 		}
 		return fmt.Sprintf("var params *%s.%s",
@@ -529,13 +317,6 @@ func (o *Operation) ExampleInput() string {
 	}
 	e := example{o, map[string]int{}}
 	return "params := " + e.traverseAny(o.InputRef.Shape, false, false)
-}
-
-// ShouldDiscardResponse returns if the operation should discard the response
-// returned by the service.
-func (o *Operation) ShouldDiscardResponse() bool {
-	s := o.OutputRef.Shape
-	return s.Placeholder || len(s.MemberRefs) == 0
 }
 
 // A example provides

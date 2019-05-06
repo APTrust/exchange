@@ -11,12 +11,15 @@ import (
 	"github.com/aws/aws-sdk-go/private/protocol/restjson"
 )
 
-// CloudDirectory provides the API operation methods for making requests to
-// Amazon CloudDirectory. See this package's package overview docs
-// for details on the service.
-//
-// CloudDirectory methods are safe to use concurrently. It is not safe to
-// modify mutate any of the struct's properties though.
+// Amazon Cloud Directory is a component of the AWS Directory Service that simplifies
+// the development and management of cloud-scale web, mobile and IoT applications.
+// This guide describes the Cloud Directory operations that you can call programatically
+// and includes detailed information on data types and errors. For information
+// about AWS Directory Services features, see AWS Directory Service (https://aws.amazon.com/directoryservice/)
+// and the AWS Directory Service Administration Guide (http://docs.aws.amazon.com/directoryservice/latest/admin-guide/what_is.html).
+// The service client's operations are safe to be used concurrently.
+// It is not safe to mutate any of the client's properties though.
+// Please also see https://docs.aws.amazon.com/goto/WebAPI/clouddirectory-2016-05-10
 type CloudDirectory struct {
 	*client.Client
 }
@@ -29,9 +32,8 @@ var initRequest func(*request.Request)
 
 // Service information constants
 const (
-	ServiceName = "clouddirectory" // Name of service.
-	EndpointsID = ServiceName      // ID to lookup a service endpoint with.
-	ServiceID   = "CloudDirectory" // ServiceID is a unique identifer of a specific service.
+	ServiceName = "clouddirectory" // Service endpoint prefix API calls made to.
+	EndpointsID = ServiceName      // Service ID for Regions and Endpoints metadata.
 )
 
 // New creates a new instance of the CloudDirectory client with a session.
@@ -46,24 +48,23 @@ const (
 //     svc := clouddirectory.New(mySession, aws.NewConfig().WithRegion("us-west-2"))
 func New(p client.ConfigProvider, cfgs ...*aws.Config) *CloudDirectory {
 	c := p.ClientConfig(EndpointsID, cfgs...)
-	if c.SigningNameDerived || len(c.SigningName) == 0 {
-		c.SigningName = "clouddirectory"
-	}
 	return newClient(*c.Config, c.Handlers, c.Endpoint, c.SigningRegion, c.SigningName)
 }
 
 // newClient creates, initializes and returns a new service client instance.
 func newClient(cfg aws.Config, handlers request.Handlers, endpoint, signingRegion, signingName string) *CloudDirectory {
+	if len(signingName) == 0 {
+		signingName = "clouddirectory"
+	}
 	svc := &CloudDirectory{
 		Client: client.New(
 			cfg,
 			metadata.ClientInfo{
 				ServiceName:   ServiceName,
-				ServiceID:     ServiceID,
 				SigningName:   signingName,
 				SigningRegion: signingRegion,
 				Endpoint:      endpoint,
-				APIVersion:    "2017-01-11",
+				APIVersion:    "2016-05-10",
 			},
 			handlers,
 		),

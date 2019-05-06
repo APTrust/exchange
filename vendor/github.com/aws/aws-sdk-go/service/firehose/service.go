@@ -11,12 +11,12 @@ import (
 	"github.com/aws/aws-sdk-go/private/protocol/jsonrpc"
 )
 
-// Firehose provides the API operation methods for making requests to
-// Amazon Kinesis Firehose. See this package's package overview docs
-// for details on the service.
-//
-// Firehose methods are safe to use concurrently. It is not safe to
-// modify mutate any of the struct's properties though.
+// Amazon Kinesis Firehose is a fully-managed service that delivers real-time
+// streaming data to destinations such as Amazon Simple Storage Service (Amazon
+// S3), Amazon Elasticsearch Service (Amazon ES), and Amazon Redshift.
+// The service client's operations are safe to be used concurrently.
+// It is not safe to mutate any of the client's properties though.
+// Please also see https://docs.aws.amazon.com/goto/WebAPI/firehose-2015-08-04
 type Firehose struct {
 	*client.Client
 }
@@ -29,9 +29,8 @@ var initRequest func(*request.Request)
 
 // Service information constants
 const (
-	ServiceName = "firehose"  // Name of service.
-	EndpointsID = ServiceName // ID to lookup a service endpoint with.
-	ServiceID   = "Firehose"  // ServiceID is a unique identifer of a specific service.
+	ServiceName = "firehose"  // Service endpoint prefix API calls made to.
+	EndpointsID = ServiceName // Service ID for Regions and Endpoints metadata.
 )
 
 // New creates a new instance of the Firehose client with a session.
@@ -56,7 +55,6 @@ func newClient(cfg aws.Config, handlers request.Handlers, endpoint, signingRegio
 			cfg,
 			metadata.ClientInfo{
 				ServiceName:   ServiceName,
-				ServiceID:     ServiceID,
 				SigningName:   signingName,
 				SigningRegion: signingRegion,
 				Endpoint:      endpoint,

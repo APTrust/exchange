@@ -3,6 +3,8 @@ package dynamodbattribute
 import (
 	"reflect"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestTagParse(t *testing.T) {
@@ -35,13 +37,11 @@ func TestTagParse(t *testing.T) {
 	for i, c := range cases {
 		actual := tag{}
 		if c.json {
-			actual.parseStructTag("json", c.in)
+			actual.parseJSONTag(c.in)
 		}
 		if c.av {
 			actual.parseAVTag(c.in)
 		}
-		if e, a := c.expect, actual; !reflect.DeepEqual(e, a) {
-			t.Errorf("case %d, expect %v, got %v", i, e, a)
-		}
+		assert.Equal(t, c.expect, actual, "case %d", i+1)
 	}
 }

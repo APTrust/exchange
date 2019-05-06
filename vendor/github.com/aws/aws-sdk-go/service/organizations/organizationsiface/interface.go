@@ -21,7 +21,7 @@ import (
 //
 // The best way to use this interface is so the SDK's service client's calls
 // can be stubbed out for unit testing your code with the SDK without needing
-// to inject custom request handlers into the SDK's request pipeline.
+// to inject custom request handlers into the the SDK's request pipeline.
 //
 //    // myFunc uses an SDK service client to make a request to
 //    // AWS Organizations.
@@ -75,10 +75,6 @@ type OrganizationsAPI interface {
 	CreateAccount(*organizations.CreateAccountInput) (*organizations.CreateAccountOutput, error)
 	CreateAccountWithContext(aws.Context, *organizations.CreateAccountInput, ...request.Option) (*organizations.CreateAccountOutput, error)
 	CreateAccountRequest(*organizations.CreateAccountInput) (*request.Request, *organizations.CreateAccountOutput)
-
-	CreateGovCloudAccount(*organizations.CreateGovCloudAccountInput) (*organizations.CreateGovCloudAccountOutput, error)
-	CreateGovCloudAccountWithContext(aws.Context, *organizations.CreateGovCloudAccountInput, ...request.Option) (*organizations.CreateGovCloudAccountOutput, error)
-	CreateGovCloudAccountRequest(*organizations.CreateGovCloudAccountInput) (*request.Request, *organizations.CreateGovCloudAccountOutput)
 
 	CreateOrganization(*organizations.CreateOrganizationInput) (*organizations.CreateOrganizationOutput, error)
 	CreateOrganizationWithContext(aws.Context, *organizations.CreateOrganizationInput, ...request.Option) (*organizations.CreateOrganizationOutput, error)
@@ -136,17 +132,9 @@ type OrganizationsAPI interface {
 	DetachPolicyWithContext(aws.Context, *organizations.DetachPolicyInput, ...request.Option) (*organizations.DetachPolicyOutput, error)
 	DetachPolicyRequest(*organizations.DetachPolicyInput) (*request.Request, *organizations.DetachPolicyOutput)
 
-	DisableAWSServiceAccess(*organizations.DisableAWSServiceAccessInput) (*organizations.DisableAWSServiceAccessOutput, error)
-	DisableAWSServiceAccessWithContext(aws.Context, *organizations.DisableAWSServiceAccessInput, ...request.Option) (*organizations.DisableAWSServiceAccessOutput, error)
-	DisableAWSServiceAccessRequest(*organizations.DisableAWSServiceAccessInput) (*request.Request, *organizations.DisableAWSServiceAccessOutput)
-
 	DisablePolicyType(*organizations.DisablePolicyTypeInput) (*organizations.DisablePolicyTypeOutput, error)
 	DisablePolicyTypeWithContext(aws.Context, *organizations.DisablePolicyTypeInput, ...request.Option) (*organizations.DisablePolicyTypeOutput, error)
 	DisablePolicyTypeRequest(*organizations.DisablePolicyTypeInput) (*request.Request, *organizations.DisablePolicyTypeOutput)
-
-	EnableAWSServiceAccess(*organizations.EnableAWSServiceAccessInput) (*organizations.EnableAWSServiceAccessOutput, error)
-	EnableAWSServiceAccessWithContext(aws.Context, *organizations.EnableAWSServiceAccessInput, ...request.Option) (*organizations.EnableAWSServiceAccessOutput, error)
-	EnableAWSServiceAccessRequest(*organizations.EnableAWSServiceAccessInput) (*request.Request, *organizations.EnableAWSServiceAccessOutput)
 
 	EnableAllFeatures(*organizations.EnableAllFeaturesInput) (*organizations.EnableAllFeaturesOutput, error)
 	EnableAllFeaturesWithContext(aws.Context, *organizations.EnableAllFeaturesInput, ...request.Option) (*organizations.EnableAllFeaturesOutput, error)
@@ -164,96 +152,53 @@ type OrganizationsAPI interface {
 	LeaveOrganizationWithContext(aws.Context, *organizations.LeaveOrganizationInput, ...request.Option) (*organizations.LeaveOrganizationOutput, error)
 	LeaveOrganizationRequest(*organizations.LeaveOrganizationInput) (*request.Request, *organizations.LeaveOrganizationOutput)
 
-	ListAWSServiceAccessForOrganization(*organizations.ListAWSServiceAccessForOrganizationInput) (*organizations.ListAWSServiceAccessForOrganizationOutput, error)
-	ListAWSServiceAccessForOrganizationWithContext(aws.Context, *organizations.ListAWSServiceAccessForOrganizationInput, ...request.Option) (*organizations.ListAWSServiceAccessForOrganizationOutput, error)
-	ListAWSServiceAccessForOrganizationRequest(*organizations.ListAWSServiceAccessForOrganizationInput) (*request.Request, *organizations.ListAWSServiceAccessForOrganizationOutput)
-
-	ListAWSServiceAccessForOrganizationPages(*organizations.ListAWSServiceAccessForOrganizationInput, func(*organizations.ListAWSServiceAccessForOrganizationOutput, bool) bool) error
-	ListAWSServiceAccessForOrganizationPagesWithContext(aws.Context, *organizations.ListAWSServiceAccessForOrganizationInput, func(*organizations.ListAWSServiceAccessForOrganizationOutput, bool) bool, ...request.Option) error
-
 	ListAccounts(*organizations.ListAccountsInput) (*organizations.ListAccountsOutput, error)
 	ListAccountsWithContext(aws.Context, *organizations.ListAccountsInput, ...request.Option) (*organizations.ListAccountsOutput, error)
 	ListAccountsRequest(*organizations.ListAccountsInput) (*request.Request, *organizations.ListAccountsOutput)
-
-	ListAccountsPages(*organizations.ListAccountsInput, func(*organizations.ListAccountsOutput, bool) bool) error
-	ListAccountsPagesWithContext(aws.Context, *organizations.ListAccountsInput, func(*organizations.ListAccountsOutput, bool) bool, ...request.Option) error
 
 	ListAccountsForParent(*organizations.ListAccountsForParentInput) (*organizations.ListAccountsForParentOutput, error)
 	ListAccountsForParentWithContext(aws.Context, *organizations.ListAccountsForParentInput, ...request.Option) (*organizations.ListAccountsForParentOutput, error)
 	ListAccountsForParentRequest(*organizations.ListAccountsForParentInput) (*request.Request, *organizations.ListAccountsForParentOutput)
 
-	ListAccountsForParentPages(*organizations.ListAccountsForParentInput, func(*organizations.ListAccountsForParentOutput, bool) bool) error
-	ListAccountsForParentPagesWithContext(aws.Context, *organizations.ListAccountsForParentInput, func(*organizations.ListAccountsForParentOutput, bool) bool, ...request.Option) error
-
 	ListChildren(*organizations.ListChildrenInput) (*organizations.ListChildrenOutput, error)
 	ListChildrenWithContext(aws.Context, *organizations.ListChildrenInput, ...request.Option) (*organizations.ListChildrenOutput, error)
 	ListChildrenRequest(*organizations.ListChildrenInput) (*request.Request, *organizations.ListChildrenOutput)
-
-	ListChildrenPages(*organizations.ListChildrenInput, func(*organizations.ListChildrenOutput, bool) bool) error
-	ListChildrenPagesWithContext(aws.Context, *organizations.ListChildrenInput, func(*organizations.ListChildrenOutput, bool) bool, ...request.Option) error
 
 	ListCreateAccountStatus(*organizations.ListCreateAccountStatusInput) (*organizations.ListCreateAccountStatusOutput, error)
 	ListCreateAccountStatusWithContext(aws.Context, *organizations.ListCreateAccountStatusInput, ...request.Option) (*organizations.ListCreateAccountStatusOutput, error)
 	ListCreateAccountStatusRequest(*organizations.ListCreateAccountStatusInput) (*request.Request, *organizations.ListCreateAccountStatusOutput)
 
-	ListCreateAccountStatusPages(*organizations.ListCreateAccountStatusInput, func(*organizations.ListCreateAccountStatusOutput, bool) bool) error
-	ListCreateAccountStatusPagesWithContext(aws.Context, *organizations.ListCreateAccountStatusInput, func(*organizations.ListCreateAccountStatusOutput, bool) bool, ...request.Option) error
-
 	ListHandshakesForAccount(*organizations.ListHandshakesForAccountInput) (*organizations.ListHandshakesForAccountOutput, error)
 	ListHandshakesForAccountWithContext(aws.Context, *organizations.ListHandshakesForAccountInput, ...request.Option) (*organizations.ListHandshakesForAccountOutput, error)
 	ListHandshakesForAccountRequest(*organizations.ListHandshakesForAccountInput) (*request.Request, *organizations.ListHandshakesForAccountOutput)
-
-	ListHandshakesForAccountPages(*organizations.ListHandshakesForAccountInput, func(*organizations.ListHandshakesForAccountOutput, bool) bool) error
-	ListHandshakesForAccountPagesWithContext(aws.Context, *organizations.ListHandshakesForAccountInput, func(*organizations.ListHandshakesForAccountOutput, bool) bool, ...request.Option) error
 
 	ListHandshakesForOrganization(*organizations.ListHandshakesForOrganizationInput) (*organizations.ListHandshakesForOrganizationOutput, error)
 	ListHandshakesForOrganizationWithContext(aws.Context, *organizations.ListHandshakesForOrganizationInput, ...request.Option) (*organizations.ListHandshakesForOrganizationOutput, error)
 	ListHandshakesForOrganizationRequest(*organizations.ListHandshakesForOrganizationInput) (*request.Request, *organizations.ListHandshakesForOrganizationOutput)
 
-	ListHandshakesForOrganizationPages(*organizations.ListHandshakesForOrganizationInput, func(*organizations.ListHandshakesForOrganizationOutput, bool) bool) error
-	ListHandshakesForOrganizationPagesWithContext(aws.Context, *organizations.ListHandshakesForOrganizationInput, func(*organizations.ListHandshakesForOrganizationOutput, bool) bool, ...request.Option) error
-
 	ListOrganizationalUnitsForParent(*organizations.ListOrganizationalUnitsForParentInput) (*organizations.ListOrganizationalUnitsForParentOutput, error)
 	ListOrganizationalUnitsForParentWithContext(aws.Context, *organizations.ListOrganizationalUnitsForParentInput, ...request.Option) (*organizations.ListOrganizationalUnitsForParentOutput, error)
 	ListOrganizationalUnitsForParentRequest(*organizations.ListOrganizationalUnitsForParentInput) (*request.Request, *organizations.ListOrganizationalUnitsForParentOutput)
-
-	ListOrganizationalUnitsForParentPages(*organizations.ListOrganizationalUnitsForParentInput, func(*organizations.ListOrganizationalUnitsForParentOutput, bool) bool) error
-	ListOrganizationalUnitsForParentPagesWithContext(aws.Context, *organizations.ListOrganizationalUnitsForParentInput, func(*organizations.ListOrganizationalUnitsForParentOutput, bool) bool, ...request.Option) error
 
 	ListParents(*organizations.ListParentsInput) (*organizations.ListParentsOutput, error)
 	ListParentsWithContext(aws.Context, *organizations.ListParentsInput, ...request.Option) (*organizations.ListParentsOutput, error)
 	ListParentsRequest(*organizations.ListParentsInput) (*request.Request, *organizations.ListParentsOutput)
 
-	ListParentsPages(*organizations.ListParentsInput, func(*organizations.ListParentsOutput, bool) bool) error
-	ListParentsPagesWithContext(aws.Context, *organizations.ListParentsInput, func(*organizations.ListParentsOutput, bool) bool, ...request.Option) error
-
 	ListPolicies(*organizations.ListPoliciesInput) (*organizations.ListPoliciesOutput, error)
 	ListPoliciesWithContext(aws.Context, *organizations.ListPoliciesInput, ...request.Option) (*organizations.ListPoliciesOutput, error)
 	ListPoliciesRequest(*organizations.ListPoliciesInput) (*request.Request, *organizations.ListPoliciesOutput)
-
-	ListPoliciesPages(*organizations.ListPoliciesInput, func(*organizations.ListPoliciesOutput, bool) bool) error
-	ListPoliciesPagesWithContext(aws.Context, *organizations.ListPoliciesInput, func(*organizations.ListPoliciesOutput, bool) bool, ...request.Option) error
 
 	ListPoliciesForTarget(*organizations.ListPoliciesForTargetInput) (*organizations.ListPoliciesForTargetOutput, error)
 	ListPoliciesForTargetWithContext(aws.Context, *organizations.ListPoliciesForTargetInput, ...request.Option) (*organizations.ListPoliciesForTargetOutput, error)
 	ListPoliciesForTargetRequest(*organizations.ListPoliciesForTargetInput) (*request.Request, *organizations.ListPoliciesForTargetOutput)
 
-	ListPoliciesForTargetPages(*organizations.ListPoliciesForTargetInput, func(*organizations.ListPoliciesForTargetOutput, bool) bool) error
-	ListPoliciesForTargetPagesWithContext(aws.Context, *organizations.ListPoliciesForTargetInput, func(*organizations.ListPoliciesForTargetOutput, bool) bool, ...request.Option) error
-
 	ListRoots(*organizations.ListRootsInput) (*organizations.ListRootsOutput, error)
 	ListRootsWithContext(aws.Context, *organizations.ListRootsInput, ...request.Option) (*organizations.ListRootsOutput, error)
 	ListRootsRequest(*organizations.ListRootsInput) (*request.Request, *organizations.ListRootsOutput)
 
-	ListRootsPages(*organizations.ListRootsInput, func(*organizations.ListRootsOutput, bool) bool) error
-	ListRootsPagesWithContext(aws.Context, *organizations.ListRootsInput, func(*organizations.ListRootsOutput, bool) bool, ...request.Option) error
-
 	ListTargetsForPolicy(*organizations.ListTargetsForPolicyInput) (*organizations.ListTargetsForPolicyOutput, error)
 	ListTargetsForPolicyWithContext(aws.Context, *organizations.ListTargetsForPolicyInput, ...request.Option) (*organizations.ListTargetsForPolicyOutput, error)
 	ListTargetsForPolicyRequest(*organizations.ListTargetsForPolicyInput) (*request.Request, *organizations.ListTargetsForPolicyOutput)
-
-	ListTargetsForPolicyPages(*organizations.ListTargetsForPolicyInput, func(*organizations.ListTargetsForPolicyOutput, bool) bool) error
-	ListTargetsForPolicyPagesWithContext(aws.Context, *organizations.ListTargetsForPolicyInput, func(*organizations.ListTargetsForPolicyOutput, bool) bool, ...request.Option) error
 
 	MoveAccount(*organizations.MoveAccountInput) (*organizations.MoveAccountOutput, error)
 	MoveAccountWithContext(aws.Context, *organizations.MoveAccountInput, ...request.Option) (*organizations.MoveAccountOutput, error)

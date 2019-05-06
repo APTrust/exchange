@@ -11,12 +11,16 @@ import (
 	"github.com/aws/aws-sdk-go/private/protocol/query"
 )
 
-// CloudSearch provides the API operation methods for making requests to
-// Amazon CloudSearch. See this package's package overview docs
-// for details on the service.
+// You use the Amazon CloudSearch configuration service to create, configure,
+// and manage search domains. Configuration service requests are submitted using
+// the AWS Query protocol. AWS Query requests are HTTP or HTTPS requests submitted
+// via HTTP GET or POST with a query parameter named Action.
 //
-// CloudSearch methods are safe to use concurrently. It is not safe to
-// modify mutate any of the struct's properties though.
+// The endpoint for configuration service requests is region-specific: cloudsearch.region.amazonaws.com.
+// For example, cloudsearch.us-east-1.amazonaws.com. For a current list of supported
+// regions and endpoints, see Regions and Endpoints (http://docs.aws.amazon.com/general/latest/gr/rande.html#cloudsearch_region).
+// The service client's operations are safe to be used concurrently.
+// It is not safe to mutate any of the client's properties though.
 type CloudSearch struct {
 	*client.Client
 }
@@ -29,9 +33,8 @@ var initRequest func(*request.Request)
 
 // Service information constants
 const (
-	ServiceName = "cloudsearch" // Name of service.
-	EndpointsID = ServiceName   // ID to lookup a service endpoint with.
-	ServiceID   = "CloudSearch" // ServiceID is a unique identifer of a specific service.
+	ServiceName = "cloudsearch" // Service endpoint prefix API calls made to.
+	EndpointsID = ServiceName   // Service ID for Regions and Endpoints metadata.
 )
 
 // New creates a new instance of the CloudSearch client with a session.
@@ -56,7 +59,6 @@ func newClient(cfg aws.Config, handlers request.Handlers, endpoint, signingRegio
 			cfg,
 			metadata.ClientInfo{
 				ServiceName:   ServiceName,
-				ServiceID:     ServiceID,
 				SigningName:   signingName,
 				SigningRegion: signingRegion,
 				Endpoint:      endpoint,

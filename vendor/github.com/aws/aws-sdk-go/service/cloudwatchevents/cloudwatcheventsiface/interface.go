@@ -21,7 +21,7 @@ import (
 //
 // The best way to use this interface is so the SDK's service client's calls
 // can be stubbed out for unit testing your code with the SDK without needing
-// to inject custom request handlers into the SDK's request pipeline.
+// to inject custom request handlers into the the SDK's request pipeline.
 //
 //    // myFunc uses an SDK service client to make a request to
 //    // Amazon CloudWatch Events.
@@ -64,10 +64,6 @@ type CloudWatchEventsAPI interface {
 	DeleteRuleWithContext(aws.Context, *cloudwatchevents.DeleteRuleInput, ...request.Option) (*cloudwatchevents.DeleteRuleOutput, error)
 	DeleteRuleRequest(*cloudwatchevents.DeleteRuleInput) (*request.Request, *cloudwatchevents.DeleteRuleOutput)
 
-	DescribeEventBus(*cloudwatchevents.DescribeEventBusInput) (*cloudwatchevents.DescribeEventBusOutput, error)
-	DescribeEventBusWithContext(aws.Context, *cloudwatchevents.DescribeEventBusInput, ...request.Option) (*cloudwatchevents.DescribeEventBusOutput, error)
-	DescribeEventBusRequest(*cloudwatchevents.DescribeEventBusInput) (*request.Request, *cloudwatchevents.DescribeEventBusOutput)
-
 	DescribeRule(*cloudwatchevents.DescribeRuleInput) (*cloudwatchevents.DescribeRuleOutput, error)
 	DescribeRuleWithContext(aws.Context, *cloudwatchevents.DescribeRuleInput, ...request.Option) (*cloudwatchevents.DescribeRuleOutput, error)
 	DescribeRuleRequest(*cloudwatchevents.DescribeRuleInput) (*request.Request, *cloudwatchevents.DescribeRuleOutput)
@@ -88,10 +84,6 @@ type CloudWatchEventsAPI interface {
 	ListRulesWithContext(aws.Context, *cloudwatchevents.ListRulesInput, ...request.Option) (*cloudwatchevents.ListRulesOutput, error)
 	ListRulesRequest(*cloudwatchevents.ListRulesInput) (*request.Request, *cloudwatchevents.ListRulesOutput)
 
-	ListTagsForResource(*cloudwatchevents.ListTagsForResourceInput) (*cloudwatchevents.ListTagsForResourceOutput, error)
-	ListTagsForResourceWithContext(aws.Context, *cloudwatchevents.ListTagsForResourceInput, ...request.Option) (*cloudwatchevents.ListTagsForResourceOutput, error)
-	ListTagsForResourceRequest(*cloudwatchevents.ListTagsForResourceInput) (*request.Request, *cloudwatchevents.ListTagsForResourceOutput)
-
 	ListTargetsByRule(*cloudwatchevents.ListTargetsByRuleInput) (*cloudwatchevents.ListTargetsByRuleOutput, error)
 	ListTargetsByRuleWithContext(aws.Context, *cloudwatchevents.ListTargetsByRuleInput, ...request.Option) (*cloudwatchevents.ListTargetsByRuleOutput, error)
 	ListTargetsByRuleRequest(*cloudwatchevents.ListTargetsByRuleInput) (*request.Request, *cloudwatchevents.ListTargetsByRuleOutput)
@@ -99,10 +91,6 @@ type CloudWatchEventsAPI interface {
 	PutEvents(*cloudwatchevents.PutEventsInput) (*cloudwatchevents.PutEventsOutput, error)
 	PutEventsWithContext(aws.Context, *cloudwatchevents.PutEventsInput, ...request.Option) (*cloudwatchevents.PutEventsOutput, error)
 	PutEventsRequest(*cloudwatchevents.PutEventsInput) (*request.Request, *cloudwatchevents.PutEventsOutput)
-
-	PutPermission(*cloudwatchevents.PutPermissionInput) (*cloudwatchevents.PutPermissionOutput, error)
-	PutPermissionWithContext(aws.Context, *cloudwatchevents.PutPermissionInput, ...request.Option) (*cloudwatchevents.PutPermissionOutput, error)
-	PutPermissionRequest(*cloudwatchevents.PutPermissionInput) (*request.Request, *cloudwatchevents.PutPermissionOutput)
 
 	PutRule(*cloudwatchevents.PutRuleInput) (*cloudwatchevents.PutRuleOutput, error)
 	PutRuleWithContext(aws.Context, *cloudwatchevents.PutRuleInput, ...request.Option) (*cloudwatchevents.PutRuleOutput, error)
@@ -112,25 +100,13 @@ type CloudWatchEventsAPI interface {
 	PutTargetsWithContext(aws.Context, *cloudwatchevents.PutTargetsInput, ...request.Option) (*cloudwatchevents.PutTargetsOutput, error)
 	PutTargetsRequest(*cloudwatchevents.PutTargetsInput) (*request.Request, *cloudwatchevents.PutTargetsOutput)
 
-	RemovePermission(*cloudwatchevents.RemovePermissionInput) (*cloudwatchevents.RemovePermissionOutput, error)
-	RemovePermissionWithContext(aws.Context, *cloudwatchevents.RemovePermissionInput, ...request.Option) (*cloudwatchevents.RemovePermissionOutput, error)
-	RemovePermissionRequest(*cloudwatchevents.RemovePermissionInput) (*request.Request, *cloudwatchevents.RemovePermissionOutput)
-
 	RemoveTargets(*cloudwatchevents.RemoveTargetsInput) (*cloudwatchevents.RemoveTargetsOutput, error)
 	RemoveTargetsWithContext(aws.Context, *cloudwatchevents.RemoveTargetsInput, ...request.Option) (*cloudwatchevents.RemoveTargetsOutput, error)
 	RemoveTargetsRequest(*cloudwatchevents.RemoveTargetsInput) (*request.Request, *cloudwatchevents.RemoveTargetsOutput)
 
-	TagResource(*cloudwatchevents.TagResourceInput) (*cloudwatchevents.TagResourceOutput, error)
-	TagResourceWithContext(aws.Context, *cloudwatchevents.TagResourceInput, ...request.Option) (*cloudwatchevents.TagResourceOutput, error)
-	TagResourceRequest(*cloudwatchevents.TagResourceInput) (*request.Request, *cloudwatchevents.TagResourceOutput)
-
 	TestEventPattern(*cloudwatchevents.TestEventPatternInput) (*cloudwatchevents.TestEventPatternOutput, error)
 	TestEventPatternWithContext(aws.Context, *cloudwatchevents.TestEventPatternInput, ...request.Option) (*cloudwatchevents.TestEventPatternOutput, error)
 	TestEventPatternRequest(*cloudwatchevents.TestEventPatternInput) (*request.Request, *cloudwatchevents.TestEventPatternOutput)
-
-	UntagResource(*cloudwatchevents.UntagResourceInput) (*cloudwatchevents.UntagResourceOutput, error)
-	UntagResourceWithContext(aws.Context, *cloudwatchevents.UntagResourceInput, ...request.Option) (*cloudwatchevents.UntagResourceOutput, error)
-	UntagResourceRequest(*cloudwatchevents.UntagResourceInput) (*request.Request, *cloudwatchevents.UntagResourceOutput)
 }
 
 var _ CloudWatchEventsAPI = (*cloudwatchevents.CloudWatchEvents)(nil)

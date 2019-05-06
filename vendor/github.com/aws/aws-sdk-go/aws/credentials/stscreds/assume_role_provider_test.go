@@ -7,6 +7,7 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/sts"
+	"github.com/stretchr/testify/assert"
 )
 
 type stubSTS struct {
@@ -37,30 +38,18 @@ func TestAssumeRoleProvider(t *testing.T) {
 	}
 
 	creds, err := p.Retrieve()
-	if err != nil {
-		t.Errorf("expect nil, got %v", err)
-	}
+	assert.Nil(t, err, "Expect no error")
 
-	if e, a := "roleARN", creds.AccessKeyID; e != a {
-		t.Errorf("expect %v, got %v", e, a)
-	}
-	if e, a := "assumedSecretAccessKey", creds.SecretAccessKey; e != a {
-		t.Errorf("expect %v, got %v", e, a)
-	}
-	if e, a := "assumedSessionToken", creds.SessionToken; e != a {
-		t.Errorf("expect %v, got %v", e, a)
-	}
+	assert.Equal(t, "roleARN", creds.AccessKeyID, "Expect access key ID to be reflected role ARN")
+	assert.Equal(t, "assumedSecretAccessKey", creds.SecretAccessKey, "Expect secret access key to match")
+	assert.Equal(t, "assumedSessionToken", creds.SessionToken, "Expect session token to match")
 }
 
 func TestAssumeRoleProvider_WithTokenCode(t *testing.T) {
 	stub := &stubSTS{
 		TestInput: func(in *sts.AssumeRoleInput) {
-			if e, a := "0123456789", *in.SerialNumber; e != a {
-				t.Errorf("expect %v, got %v", e, a)
-			}
-			if e, a := "code", *in.TokenCode; e != a {
-				t.Errorf("expect %v, got %v", e, a)
-			}
+			assert.Equal(t, "0123456789", *in.SerialNumber)
+			assert.Equal(t, "code", *in.TokenCode)
 		},
 	}
 	p := &AssumeRoleProvider{
@@ -71,30 +60,18 @@ func TestAssumeRoleProvider_WithTokenCode(t *testing.T) {
 	}
 
 	creds, err := p.Retrieve()
-	if err != nil {
-		t.Errorf("expect nil, got %v", err)
-	}
+	assert.Nil(t, err, "Expect no error")
 
-	if e, a := "roleARN", creds.AccessKeyID; e != a {
-		t.Errorf("expect %v, got %v", e, a)
-	}
-	if e, a := "assumedSecretAccessKey", creds.SecretAccessKey; e != a {
-		t.Errorf("expect %v, got %v", e, a)
-	}
-	if e, a := "assumedSessionToken", creds.SessionToken; e != a {
-		t.Errorf("expect %v, got %v", e, a)
-	}
+	assert.Equal(t, "roleARN", creds.AccessKeyID, "Expect access key ID to be reflected role ARN")
+	assert.Equal(t, "assumedSecretAccessKey", creds.SecretAccessKey, "Expect secret access key to match")
+	assert.Equal(t, "assumedSessionToken", creds.SessionToken, "Expect session token to match")
 }
 
 func TestAssumeRoleProvider_WithTokenProvider(t *testing.T) {
 	stub := &stubSTS{
 		TestInput: func(in *sts.AssumeRoleInput) {
-			if e, a := "0123456789", *in.SerialNumber; e != a {
-				t.Errorf("expect %v, got %v", e, a)
-			}
-			if e, a := "code", *in.TokenCode; e != a {
-				t.Errorf("expect %v, got %v", e, a)
-			}
+			assert.Equal(t, "0123456789", *in.SerialNumber)
+			assert.Equal(t, "code", *in.TokenCode)
 		},
 	}
 	p := &AssumeRoleProvider{
@@ -107,25 +84,17 @@ func TestAssumeRoleProvider_WithTokenProvider(t *testing.T) {
 	}
 
 	creds, err := p.Retrieve()
-	if err != nil {
-		t.Errorf("expect nil, got %v", err)
-	}
+	assert.Nil(t, err, "Expect no error")
 
-	if e, a := "roleARN", creds.AccessKeyID; e != a {
-		t.Errorf("expect %v, got %v", e, a)
-	}
-	if e, a := "assumedSecretAccessKey", creds.SecretAccessKey; e != a {
-		t.Errorf("expect %v, got %v", e, a)
-	}
-	if e, a := "assumedSessionToken", creds.SessionToken; e != a {
-		t.Errorf("expect %v, got %v", e, a)
-	}
+	assert.Equal(t, "roleARN", creds.AccessKeyID, "Expect access key ID to be reflected role ARN")
+	assert.Equal(t, "assumedSecretAccessKey", creds.SecretAccessKey, "Expect secret access key to match")
+	assert.Equal(t, "assumedSessionToken", creds.SessionToken, "Expect session token to match")
 }
 
 func TestAssumeRoleProvider_WithTokenProviderError(t *testing.T) {
 	stub := &stubSTS{
 		TestInput: func(in *sts.AssumeRoleInput) {
-			t.Errorf("API request should not of been called")
+			assert.Fail(t, "API request should not of been called")
 		},
 	}
 	p := &AssumeRoleProvider{
@@ -138,25 +107,17 @@ func TestAssumeRoleProvider_WithTokenProviderError(t *testing.T) {
 	}
 
 	creds, err := p.Retrieve()
-	if err == nil {
-		t.Errorf("expect error")
-	}
+	assert.Error(t, err)
 
-	if v := creds.AccessKeyID; len(v) != 0 {
-		t.Errorf("expect empty, got %v", v)
-	}
-	if v := creds.SecretAccessKey; len(v) != 0 {
-		t.Errorf("expect empty, got %v", v)
-	}
-	if v := creds.SessionToken; len(v) != 0 {
-		t.Errorf("expect empty, got %v", v)
-	}
+	assert.Empty(t, creds.AccessKeyID)
+	assert.Empty(t, creds.SecretAccessKey)
+	assert.Empty(t, creds.SessionToken)
 }
 
 func TestAssumeRoleProvider_MFAWithNoToken(t *testing.T) {
 	stub := &stubSTS{
 		TestInput: func(in *sts.AssumeRoleInput) {
-			t.Errorf("API request should not of been called")
+			assert.Fail(t, "API request should not of been called")
 		},
 	}
 	p := &AssumeRoleProvider{
@@ -166,19 +127,11 @@ func TestAssumeRoleProvider_MFAWithNoToken(t *testing.T) {
 	}
 
 	creds, err := p.Retrieve()
-	if err == nil {
-		t.Errorf("expect error")
-	}
+	assert.Error(t, err)
 
-	if v := creds.AccessKeyID; len(v) != 0 {
-		t.Errorf("expect empty, got %v", v)
-	}
-	if v := creds.SecretAccessKey; len(v) != 0 {
-		t.Errorf("expect empty, got %v", v)
-	}
-	if v := creds.SessionToken; len(v) != 0 {
-		t.Errorf("expect empty, got %v", v)
-	}
+	assert.Empty(t, creds.AccessKeyID)
+	assert.Empty(t, creds.SecretAccessKey)
+	assert.Empty(t, creds.SessionToken)
 }
 
 func BenchmarkAssumeRoleProvider(b *testing.B) {

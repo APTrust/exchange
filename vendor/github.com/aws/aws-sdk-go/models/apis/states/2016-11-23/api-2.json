@@ -7,7 +7,6 @@
     "protocol":"json",
     "serviceAbbreviation":"AWS SFN",
     "serviceFullName":"AWS Step Functions",
-    "serviceId":"SFN",
     "signatureVersion":"v4",
     "targetPrefix":"AWSStepFunctions",
     "uid":"states-2016-11-23"
@@ -23,8 +22,7 @@
       "output":{"shape":"CreateActivityOutput"},
       "errors":[
         {"shape":"ActivityLimitExceeded"},
-        {"shape":"InvalidName"},
-        {"shape":"TooManyTags"}
+        {"shape":"InvalidName"}
       ],
       "idempotent":true
     },
@@ -42,8 +40,7 @@
         {"shape":"InvalidName"},
         {"shape":"StateMachineAlreadyExists"},
         {"shape":"StateMachineDeleting"},
-        {"shape":"StateMachineLimitExceeded"},
-        {"shape":"TooManyTags"}
+        {"shape":"StateMachineLimitExceeded"}
       ],
       "idempotent":true
     },
@@ -110,19 +107,6 @@
         {"shape":"StateMachineDoesNotExist"}
       ]
     },
-    "DescribeStateMachineForExecution":{
-      "name":"DescribeStateMachineForExecution",
-      "http":{
-        "method":"POST",
-        "requestUri":"/"
-      },
-      "input":{"shape":"DescribeStateMachineForExecutionInput"},
-      "output":{"shape":"DescribeStateMachineForExecutionOutput"},
-      "errors":[
-        {"shape":"ExecutionDoesNotExist"},
-        {"shape":"InvalidArn"}
-      ]
-    },
     "GetActivityTask":{
       "name":"GetActivityTask",
       "http":{
@@ -187,19 +171,6 @@
       "output":{"shape":"ListStateMachinesOutput"},
       "errors":[
         {"shape":"InvalidToken"}
-      ]
-    },
-    "ListTagsForResource":{
-      "name":"ListTagsForResource",
-      "http":{
-        "method":"POST",
-        "requestUri":"/"
-      },
-      "input":{"shape":"ListTagsForResourceInput"},
-      "output":{"shape":"ListTagsForResourceOutput"},
-      "errors":[
-        {"shape":"InvalidArn"},
-        {"shape":"ResourceNotFound"}
       ]
     },
     "SendTaskFailure":{
@@ -276,50 +247,6 @@
         {"shape":"ExecutionDoesNotExist"},
         {"shape":"InvalidArn"}
       ]
-    },
-    "TagResource":{
-      "name":"TagResource",
-      "http":{
-        "method":"POST",
-        "requestUri":"/"
-      },
-      "input":{"shape":"TagResourceInput"},
-      "output":{"shape":"TagResourceOutput"},
-      "errors":[
-        {"shape":"InvalidArn"},
-        {"shape":"ResourceNotFound"},
-        {"shape":"TooManyTags"}
-      ]
-    },
-    "UntagResource":{
-      "name":"UntagResource",
-      "http":{
-        "method":"POST",
-        "requestUri":"/"
-      },
-      "input":{"shape":"UntagResourceInput"},
-      "output":{"shape":"UntagResourceOutput"},
-      "errors":[
-        {"shape":"InvalidArn"},
-        {"shape":"ResourceNotFound"}
-      ]
-    },
-    "UpdateStateMachine":{
-      "name":"UpdateStateMachine",
-      "http":{
-        "method":"POST",
-        "requestUri":"/"
-      },
-      "input":{"shape":"UpdateStateMachineInput"},
-      "output":{"shape":"UpdateStateMachineOutput"},
-      "errors":[
-        {"shape":"InvalidArn"},
-        {"shape":"InvalidDefinition"},
-        {"shape":"MissingRequiredParameter"},
-        {"shape":"StateMachineDeleting"},
-        {"shape":"StateMachineDoesNotExist"}
-      ],
-      "idempotent":true
     }
   },
   "shapes":{
@@ -333,8 +260,8 @@
     "ActivityFailedEventDetails":{
       "type":"structure",
       "members":{
-        "error":{"shape":"SensitiveError"},
-        "cause":{"shape":"SensitiveCause"}
+        "error":{"shape":"Error"},
+        "cause":{"shape":"Cause"}
       }
     },
     "ActivityLimitExceeded":{
@@ -364,8 +291,8 @@
     "ActivityScheduleFailedEventDetails":{
       "type":"structure",
       "members":{
-        "error":{"shape":"SensitiveError"},
-        "cause":{"shape":"SensitiveCause"}
+        "error":{"shape":"Error"},
+        "cause":{"shape":"Cause"}
       }
     },
     "ActivityScheduledEventDetails":{
@@ -373,7 +300,7 @@
       "required":["resource"],
       "members":{
         "resource":{"shape":"Arn"},
-        "input":{"shape":"SensitiveData"},
+        "input":{"shape":"Data"},
         "timeoutInSeconds":{
           "shape":"TimeoutInSeconds",
           "box":true
@@ -393,14 +320,14 @@
     "ActivitySucceededEventDetails":{
       "type":"structure",
       "members":{
-        "output":{"shape":"SensitiveData"}
+        "output":{"shape":"Data"}
       }
     },
     "ActivityTimedOutEventDetails":{
       "type":"structure",
       "members":{
-        "error":{"shape":"SensitiveError"},
-        "cause":{"shape":"SensitiveCause"}
+        "error":{"shape":"Error"},
+        "cause":{"shape":"Cause"}
       }
     },
     "ActivityWorkerLimitExceeded":{
@@ -415,18 +342,16 @@
       "max":256,
       "min":1
     },
-    "ConnectorParameters":{
+    "Cause":{
       "type":"string",
       "max":32768,
-      "min":0,
-      "sensitive":true
+      "min":0
     },
     "CreateActivityInput":{
       "type":"structure",
       "required":["name"],
       "members":{
-        "name":{"shape":"Name"},
-        "tags":{"shape":"TagList"}
+        "name":{"shape":"Name"}
       }
     },
     "CreateActivityOutput":{
@@ -450,8 +375,7 @@
       "members":{
         "name":{"shape":"Name"},
         "definition":{"shape":"Definition"},
-        "roleArn":{"shape":"Arn"},
-        "tags":{"shape":"TagList"}
+        "roleArn":{"shape":"Arn"}
       }
     },
     "CreateStateMachineOutput":{
@@ -465,11 +389,14 @@
         "creationDate":{"shape":"Timestamp"}
       }
     },
+    "Data":{
+      "type":"string",
+      "max":32768
+    },
     "Definition":{
       "type":"string",
       "max":1048576,
-      "min":1,
-      "sensitive":true
+      "min":1
     },
     "DeleteActivityInput":{
       "type":"structure",
@@ -538,32 +465,8 @@
         "status":{"shape":"ExecutionStatus"},
         "startDate":{"shape":"Timestamp"},
         "stopDate":{"shape":"Timestamp"},
-        "input":{"shape":"SensitiveData"},
-        "output":{"shape":"SensitiveData"}
-      }
-    },
-    "DescribeStateMachineForExecutionInput":{
-      "type":"structure",
-      "required":["executionArn"],
-      "members":{
-        "executionArn":{"shape":"Arn"}
-      }
-    },
-    "DescribeStateMachineForExecutionOutput":{
-      "type":"structure",
-      "required":[
-        "stateMachineArn",
-        "name",
-        "definition",
-        "roleArn",
-        "updateDate"
-      ],
-      "members":{
-        "stateMachineArn":{"shape":"Arn"},
-        "name":{"shape":"Name"},
-        "definition":{"shape":"Definition"},
-        "roleArn":{"shape":"Arn"},
-        "updateDate":{"shape":"Timestamp"}
+        "input":{"shape":"Data"},
+        "output":{"shape":"Data"}
       }
     },
     "DescribeStateMachineInput":{
@@ -591,13 +494,18 @@
         "creationDate":{"shape":"Timestamp"}
       }
     },
+    "Error":{
+      "type":"string",
+      "max":256,
+      "min":0
+    },
     "ErrorMessage":{"type":"string"},
     "EventId":{"type":"long"},
     "ExecutionAbortedEventDetails":{
       "type":"structure",
       "members":{
-        "error":{"shape":"SensitiveError"},
-        "cause":{"shape":"SensitiveCause"}
+        "error":{"shape":"Error"},
+        "cause":{"shape":"Cause"}
       }
     },
     "ExecutionAlreadyExists":{
@@ -617,8 +525,8 @@
     "ExecutionFailedEventDetails":{
       "type":"structure",
       "members":{
-        "error":{"shape":"SensitiveError"},
-        "cause":{"shape":"SensitiveCause"}
+        "error":{"shape":"Error"},
+        "cause":{"shape":"Cause"}
       }
     },
     "ExecutionLimitExceeded":{
@@ -653,7 +561,7 @@
     "ExecutionStartedEventDetails":{
       "type":"structure",
       "members":{
-        "input":{"shape":"SensitiveData"},
+        "input":{"shape":"Data"},
         "roleArn":{"shape":"Arn"}
       }
     },
@@ -670,14 +578,14 @@
     "ExecutionSucceededEventDetails":{
       "type":"structure",
       "members":{
-        "output":{"shape":"SensitiveData"}
+        "output":{"shape":"Data"}
       }
     },
     "ExecutionTimedOutEventDetails":{
       "type":"structure",
       "members":{
-        "error":{"shape":"SensitiveError"},
-        "cause":{"shape":"SensitiveCause"}
+        "error":{"shape":"Error"},
+        "cause":{"shape":"Cause"}
       }
     },
     "GetActivityTaskInput":{
@@ -692,7 +600,7 @@
       "type":"structure",
       "members":{
         "taskToken":{"shape":"TaskToken"},
-        "input":{"shape":"SensitiveDataJobInput"}
+        "input":{"shape":"Data"}
       }
     },
     "GetExecutionHistoryInput":{
@@ -731,14 +639,6 @@
         "activityStartedEventDetails":{"shape":"ActivityStartedEventDetails"},
         "activitySucceededEventDetails":{"shape":"ActivitySucceededEventDetails"},
         "activityTimedOutEventDetails":{"shape":"ActivityTimedOutEventDetails"},
-        "taskFailedEventDetails":{"shape":"TaskFailedEventDetails"},
-        "taskScheduledEventDetails":{"shape":"TaskScheduledEventDetails"},
-        "taskStartFailedEventDetails":{"shape":"TaskStartFailedEventDetails"},
-        "taskStartedEventDetails":{"shape":"TaskStartedEventDetails"},
-        "taskSubmitFailedEventDetails":{"shape":"TaskSubmitFailedEventDetails"},
-        "taskSubmittedEventDetails":{"shape":"TaskSubmittedEventDetails"},
-        "taskSucceededEventDetails":{"shape":"TaskSucceededEventDetails"},
-        "taskTimedOutEventDetails":{"shape":"TaskTimedOutEventDetails"},
         "executionFailedEventDetails":{"shape":"ExecutionFailedEventDetails"},
         "executionStartedEventDetails":{"shape":"ExecutionStartedEventDetails"},
         "executionSucceededEventDetails":{"shape":"ExecutionSucceededEventDetails"},
@@ -769,14 +669,6 @@
         "ActivityTimedOut",
         "ChoiceStateEntered",
         "ChoiceStateExited",
-        "TaskFailed",
-        "TaskScheduled",
-        "TaskStartFailed",
-        "TaskStarted",
-        "TaskSubmitFailed",
-        "TaskSubmitted",
-        "TaskSucceeded",
-        "TaskTimedOut",
         "ExecutionFailed",
         "ExecutionStarted",
         "ExecutionSucceeded",
@@ -792,18 +684,12 @@
         "LambdaFunctionTimedOut",
         "SucceedStateEntered",
         "SucceedStateExited",
-        "TaskStateAborted",
         "TaskStateEntered",
         "TaskStateExited",
         "PassStateEntered",
         "PassStateExited",
-        "ParallelStateAborted",
         "ParallelStateEntered",
         "ParallelStateExited",
-        "ParallelStateFailed",
-        "ParallelStateStarted",
-        "ParallelStateSucceeded",
-        "WaitStateAborted",
         "WaitStateEntered",
         "WaitStateExited"
       ]
@@ -857,15 +743,15 @@
     "LambdaFunctionFailedEventDetails":{
       "type":"structure",
       "members":{
-        "error":{"shape":"SensitiveError"},
-        "cause":{"shape":"SensitiveCause"}
+        "error":{"shape":"Error"},
+        "cause":{"shape":"Cause"}
       }
     },
     "LambdaFunctionScheduleFailedEventDetails":{
       "type":"structure",
       "members":{
-        "error":{"shape":"SensitiveError"},
-        "cause":{"shape":"SensitiveCause"}
+        "error":{"shape":"Error"},
+        "cause":{"shape":"Cause"}
       }
     },
     "LambdaFunctionScheduledEventDetails":{
@@ -873,7 +759,7 @@
       "required":["resource"],
       "members":{
         "resource":{"shape":"Arn"},
-        "input":{"shape":"SensitiveData"},
+        "input":{"shape":"Data"},
         "timeoutInSeconds":{
           "shape":"TimeoutInSeconds",
           "box":true
@@ -883,21 +769,21 @@
     "LambdaFunctionStartFailedEventDetails":{
       "type":"structure",
       "members":{
-        "error":{"shape":"SensitiveError"},
-        "cause":{"shape":"SensitiveCause"}
+        "error":{"shape":"Error"},
+        "cause":{"shape":"Cause"}
       }
     },
     "LambdaFunctionSucceededEventDetails":{
       "type":"structure",
       "members":{
-        "output":{"shape":"SensitiveData"}
+        "output":{"shape":"Data"}
       }
     },
     "LambdaFunctionTimedOutEventDetails":{
       "type":"structure",
       "members":{
-        "error":{"shape":"SensitiveError"},
-        "cause":{"shape":"SensitiveCause"}
+        "error":{"shape":"Error"},
+        "cause":{"shape":"Cause"}
       }
     },
     "ListActivitiesInput":{
@@ -948,26 +834,6 @@
         "nextToken":{"shape":"PageToken"}
       }
     },
-    "ListTagsForResourceInput":{
-      "type":"structure",
-      "required":["resourceArn"],
-      "members":{
-        "resourceArn":{"shape":"Arn"}
-      }
-    },
-    "ListTagsForResourceOutput":{
-      "type":"structure",
-      "members":{
-        "tags":{"shape":"TagList"}
-      }
-    },
-    "MissingRequiredParameter":{
-      "type":"structure",
-      "members":{
-        "message":{"shape":"ErrorMessage"}
-      },
-      "exception":true
-    },
     "Name":{
       "type":"string",
       "max":80,
@@ -983,22 +849,14 @@
       "max":1024,
       "min":1
     },
-    "ResourceNotFound":{
-      "type":"structure",
-      "members":{
-        "message":{"shape":"ErrorMessage"},
-        "resourceName":{"shape":"Arn"}
-      },
-      "exception":true
-    },
     "ReverseOrder":{"type":"boolean"},
     "SendTaskFailureInput":{
       "type":"structure",
       "required":["taskToken"],
       "members":{
         "taskToken":{"shape":"TaskToken"},
-        "error":{"shape":"SensitiveError"},
-        "cause":{"shape":"SensitiveCause"}
+        "error":{"shape":"Error"},
+        "cause":{"shape":"Cause"}
       }
     },
     "SendTaskFailureOutput":{
@@ -1026,7 +884,7 @@
       ],
       "members":{
         "taskToken":{"shape":"TaskToken"},
-        "output":{"shape":"SensitiveData"}
+        "output":{"shape":"Data"}
       }
     },
     "SendTaskSuccessOutput":{
@@ -1034,35 +892,13 @@
       "members":{
       }
     },
-    "SensitiveCause":{
-      "type":"string",
-      "max":32768,
-      "min":0,
-      "sensitive":true
-    },
-    "SensitiveData":{
-      "type":"string",
-      "max":32768,
-      "sensitive":true
-    },
-    "SensitiveDataJobInput":{
-      "type":"string",
-      "max":65536,
-      "sensitive":true
-    },
-    "SensitiveError":{
-      "type":"string",
-      "max":256,
-      "min":0,
-      "sensitive":true
-    },
     "StartExecutionInput":{
       "type":"structure",
       "required":["stateMachineArn"],
       "members":{
         "stateMachineArn":{"shape":"Arn"},
         "name":{"shape":"Name"},
-        "input":{"shape":"SensitiveData"}
+        "input":{"shape":"Data"}
       }
     },
     "StartExecutionOutput":{
@@ -1081,7 +917,7 @@
       "required":["name"],
       "members":{
         "name":{"shape":"Name"},
-        "input":{"shape":"SensitiveData"}
+        "input":{"shape":"Data"}
       }
     },
     "StateExitedEventDetails":{
@@ -1089,7 +925,7 @@
       "required":["name"],
       "members":{
         "name":{"shape":"Name"},
-        "output":{"shape":"SensitiveData"}
+        "output":{"shape":"Data"}
       }
     },
     "StateMachineAlreadyExists":{
@@ -1149,8 +985,8 @@
       "required":["executionArn"],
       "members":{
         "executionArn":{"shape":"Arn"},
-        "error":{"shape":"SensitiveError"},
-        "cause":{"shape":"SensitiveCause"}
+        "error":{"shape":"Error"},
+        "cause":{"shape":"Cause"}
       }
     },
     "StopExecutionOutput":{
@@ -1160,146 +996,12 @@
         "stopDate":{"shape":"Timestamp"}
       }
     },
-    "Tag":{
-      "type":"structure",
-      "members":{
-        "key":{"shape":"TagKey"},
-        "value":{"shape":"TagValue"}
-      }
-    },
-    "TagKey":{
-      "type":"string",
-      "max":128,
-      "min":1
-    },
-    "TagKeyList":{
-      "type":"list",
-      "member":{"shape":"TagKey"}
-    },
-    "TagList":{
-      "type":"list",
-      "member":{"shape":"Tag"}
-    },
-    "TagResourceInput":{
-      "type":"structure",
-      "required":[
-        "resourceArn",
-        "tags"
-      ],
-      "members":{
-        "resourceArn":{"shape":"Arn"},
-        "tags":{"shape":"TagList"}
-      }
-    },
-    "TagResourceOutput":{
-      "type":"structure",
-      "members":{
-      }
-    },
-    "TagValue":{
-      "type":"string",
-      "max":256,
-      "min":0
-    },
     "TaskDoesNotExist":{
       "type":"structure",
       "members":{
         "message":{"shape":"ErrorMessage"}
       },
       "exception":true
-    },
-    "TaskFailedEventDetails":{
-      "type":"structure",
-      "required":[
-        "resourceType",
-        "resource"
-      ],
-      "members":{
-        "resourceType":{"shape":"Name"},
-        "resource":{"shape":"Name"},
-        "error":{"shape":"SensitiveError"},
-        "cause":{"shape":"SensitiveCause"}
-      }
-    },
-    "TaskScheduledEventDetails":{
-      "type":"structure",
-      "required":[
-        "resourceType",
-        "resource",
-        "region",
-        "parameters"
-      ],
-      "members":{
-        "resourceType":{"shape":"Name"},
-        "resource":{"shape":"Name"},
-        "region":{"shape":"Name"},
-        "parameters":{"shape":"ConnectorParameters"},
-        "timeoutInSeconds":{
-          "shape":"TimeoutInSeconds",
-          "box":true
-        }
-      }
-    },
-    "TaskStartFailedEventDetails":{
-      "type":"structure",
-      "required":[
-        "resourceType",
-        "resource"
-      ],
-      "members":{
-        "resourceType":{"shape":"Name"},
-        "resource":{"shape":"Name"},
-        "error":{"shape":"SensitiveError"},
-        "cause":{"shape":"SensitiveCause"}
-      }
-    },
-    "TaskStartedEventDetails":{
-      "type":"structure",
-      "required":[
-        "resourceType",
-        "resource"
-      ],
-      "members":{
-        "resourceType":{"shape":"Name"},
-        "resource":{"shape":"Name"}
-      }
-    },
-    "TaskSubmitFailedEventDetails":{
-      "type":"structure",
-      "required":[
-        "resourceType",
-        "resource"
-      ],
-      "members":{
-        "resourceType":{"shape":"Name"},
-        "resource":{"shape":"Name"},
-        "error":{"shape":"SensitiveError"},
-        "cause":{"shape":"SensitiveCause"}
-      }
-    },
-    "TaskSubmittedEventDetails":{
-      "type":"structure",
-      "required":[
-        "resourceType",
-        "resource"
-      ],
-      "members":{
-        "resourceType":{"shape":"Name"},
-        "resource":{"shape":"Name"},
-        "output":{"shape":"SensitiveData"}
-      }
-    },
-    "TaskSucceededEventDetails":{
-      "type":"structure",
-      "required":[
-        "resourceType",
-        "resource"
-      ],
-      "members":{
-        "resourceType":{"shape":"Name"},
-        "resource":{"shape":"Name"},
-        "output":{"shape":"SensitiveData"}
-      }
     },
     "TaskTimedOut":{
       "type":"structure",
@@ -1308,65 +1010,12 @@
       },
       "exception":true
     },
-    "TaskTimedOutEventDetails":{
-      "type":"structure",
-      "required":[
-        "resourceType",
-        "resource"
-      ],
-      "members":{
-        "resourceType":{"shape":"Name"},
-        "resource":{"shape":"Name"},
-        "error":{"shape":"SensitiveError"},
-        "cause":{"shape":"SensitiveCause"}
-      }
-    },
     "TaskToken":{
       "type":"string",
       "max":1024,
       "min":1
     },
     "TimeoutInSeconds":{"type":"long"},
-    "Timestamp":{"type":"timestamp"},
-    "TooManyTags":{
-      "type":"structure",
-      "members":{
-        "message":{"shape":"ErrorMessage"},
-        "resourceName":{"shape":"Arn"}
-      },
-      "exception":true
-    },
-    "UntagResourceInput":{
-      "type":"structure",
-      "required":[
-        "resourceArn",
-        "tagKeys"
-      ],
-      "members":{
-        "resourceArn":{"shape":"Arn"},
-        "tagKeys":{"shape":"TagKeyList"}
-      }
-    },
-    "UntagResourceOutput":{
-      "type":"structure",
-      "members":{
-      }
-    },
-    "UpdateStateMachineInput":{
-      "type":"structure",
-      "required":["stateMachineArn"],
-      "members":{
-        "stateMachineArn":{"shape":"Arn"},
-        "definition":{"shape":"Definition"},
-        "roleArn":{"shape":"Arn"}
-      }
-    },
-    "UpdateStateMachineOutput":{
-      "type":"structure",
-      "required":["updateDate"],
-      "members":{
-        "updateDate":{"shape":"Timestamp"}
-      }
-    }
+    "Timestamp":{"type":"timestamp"}
   }
 }

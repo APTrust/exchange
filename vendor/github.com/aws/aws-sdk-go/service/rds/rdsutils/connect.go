@@ -9,36 +9,16 @@ import (
 	"github.com/aws/aws-sdk-go/aws/signer/v4"
 )
 
-// BuildAuthToken will return an authorization token used as the password for a DB
-// connection.
+// BuildAuthToken is used for generate a autherized presigned URL to connect to
+// the database.
 //
-// * endpoint - Endpoint consists of the port needed to connect to the DB. <host>:<port>
-// * region - Region is the location of where the DB is
-// * dbUser - User account within the database to sign in with
-// * creds - Credentials to be signed with
+// The endpoint consists of the scheme, hostname, and port. IE {scheme}://{hostname}[:port]. The
+// region is the region of database that the auth token would be generated for. The dbUser is the user
+// that the request would be authenticated with. The creds are the credentials the auth token is signed
+// with.
 //
-// The following example shows how to use BuildAuthToken to create an authentication
-// token for connecting to a MySQL database in RDS.
-//
-//   authToken, err := BuildAuthToken(dbEndpoint, awsRegion, dbUser, awsCreds)
-//
-//   // Create the MySQL DNS string for the DB connection
-//   // user:password@protocol(endpoint)/dbname?<params>
-//   connectStr = fmt.Sprintf("%s:%s@tcp(%s)/%s?allowCleartextPasswords=true&tls=rds",
-//      dbUser, authToken, dbEndpoint, dbName,
-//   )
-//
-//   // Use db to perform SQL operations on database
-//   db, err := sql.Open("mysql", connectStr)
-//
-// See http://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/UsingWithRDS.IAMDBAuth.html
-// for more information on using IAM database authentication with RDS.
+// The url that is returned will not contain the scheme.
 func BuildAuthToken(endpoint, region, dbUser string, creds *credentials.Credentials) (string, error) {
-	// the scheme is arbitrary and is only needed because validation of the URL requires one.
-	if !(strings.HasPrefix(endpoint, "http://") || strings.HasPrefix(endpoint, "https://")) {
-		endpoint = "https://" + endpoint
-	}
-
 	req, err := http.NewRequest("GET", endpoint, nil)
 	if err != nil {
 		return "", err

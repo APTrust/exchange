@@ -11,12 +11,9 @@ import (
 	"github.com/aws/aws-sdk-go/private/protocol/jsonrpc"
 )
 
-// Rekognition provides the API operation methods for making requests to
-// Amazon Rekognition. See this package's package overview docs
-// for details on the service.
-//
-// Rekognition methods are safe to use concurrently. It is not safe to
-// modify mutate any of the struct's properties though.
+// This is the Amazon Rekognition API reference.
+// The service client's operations are safe to be used concurrently.
+// It is not safe to mutate any of the client's properties though.
 type Rekognition struct {
 	*client.Client
 }
@@ -29,9 +26,8 @@ var initRequest func(*request.Request)
 
 // Service information constants
 const (
-	ServiceName = "rekognition" // Name of service.
-	EndpointsID = ServiceName   // ID to lookup a service endpoint with.
-	ServiceID   = "Rekognition" // ServiceID is a unique identifer of a specific service.
+	ServiceName = "rekognition" // Service endpoint prefix API calls made to.
+	EndpointsID = ServiceName   // Service ID for Regions and Endpoints metadata.
 )
 
 // New creates a new instance of the Rekognition client with a session.
@@ -56,7 +52,6 @@ func newClient(cfg aws.Config, handlers request.Handlers, endpoint, signingRegio
 			cfg,
 			metadata.ClientInfo{
 				ServiceName:   ServiceName,
-				ServiceID:     ServiceID,
 				SigningName:   signingName,
 				SigningRegion: signingRegion,
 				Endpoint:      endpoint,

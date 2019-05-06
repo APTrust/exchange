@@ -7,27 +7,28 @@ const (
 	// ErrCodeDuplicateReportNameException for service response error code
 	// "DuplicateReportNameException".
 	//
-	// A report with the specified name already exists in the account. Specify a
-	// different report name.
+	// This exception is thrown when putting a report preference with a name that
+	// already exists.
 	ErrCodeDuplicateReportNameException = "DuplicateReportNameException"
 
 	// ErrCodeInternalErrorException for service response error code
 	// "InternalErrorException".
 	//
-	// An error on the server occurred during the processing of your request. Try
-	// again later.
+	// This exception is thrown on a known dependency failure.
 	ErrCodeInternalErrorException = "InternalErrorException"
 
 	// ErrCodeReportLimitReachedException for service response error code
 	// "ReportLimitReachedException".
 	//
-	// This account already has five reports defined. To define a new report, you
-	// must delete an existing report.
+	// This exception is thrown when the number of report preference reaches max
+	// limit. The max number is 5.
 	ErrCodeReportLimitReachedException = "ReportLimitReachedException"
 
 	// ErrCodeValidationException for service response error code
 	// "ValidationException".
 	//
-	// The input fails to satisfy the constraints specified by an AWS service.
+	// This exception is thrown when providing an invalid input. eg. Put a report
+	// preference with an invalid report name, or Delete a report preference with
+	// an empty report name.
 	ErrCodeValidationException = "ValidationException"
 )

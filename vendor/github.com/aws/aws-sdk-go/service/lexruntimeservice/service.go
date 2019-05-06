@@ -11,12 +11,20 @@ import (
 	"github.com/aws/aws-sdk-go/private/protocol/restjson"
 )
 
-// LexRuntimeService provides the API operation methods for making requests to
-// Amazon Lex Runtime Service. See this package's package overview docs
-// for details on the service.
-//
-// LexRuntimeService methods are safe to use concurrently. It is not safe to
-// modify mutate any of the struct's properties though.
+// Amazon Lex provides both build and runtime endpoints. Each endpoint provides
+// a set of operations (API). Your conversational bot uses the runtime API to
+// understand user utterances (user input text or voice). For example, suppose
+// a user says "I want pizza", your bot sends this input to Amazon Lex using
+// the runtime API. Amazon Lex recognizes that the user request is for the OrderPizza
+// intent (one of the intents defined in the bot). Then Amazon Lex engages in
+// user conversation on behalf of the bot to elicit required information (slot
+// values, such as pizza size and crust type), and then performs fulfillment
+// activity (that you configured when you created the bot). You use the build-time
+// API to create and manage your Amazon Lex bot. For a list of build-time operations,
+// see the build-time API, .
+// The service client's operations are safe to be used concurrently.
+// It is not safe to mutate any of the client's properties though.
+// Please also see https://docs.aws.amazon.com/goto/WebAPI/runtime.lex-2016-11-28
 type LexRuntimeService struct {
 	*client.Client
 }
@@ -29,9 +37,8 @@ var initRequest func(*request.Request)
 
 // Service information constants
 const (
-	ServiceName = "runtime.lex"         // Name of service.
-	EndpointsID = ServiceName           // ID to lookup a service endpoint with.
-	ServiceID   = "Lex Runtime Service" // ServiceID is a unique identifer of a specific service.
+	ServiceName = "runtime.lex" // Service endpoint prefix API calls made to.
+	EndpointsID = ServiceName   // Service ID for Regions and Endpoints metadata.
 )
 
 // New creates a new instance of the LexRuntimeService client with a session.
@@ -46,24 +53,24 @@ const (
 //     svc := lexruntimeservice.New(mySession, aws.NewConfig().WithRegion("us-west-2"))
 func New(p client.ConfigProvider, cfgs ...*aws.Config) *LexRuntimeService {
 	c := p.ClientConfig(EndpointsID, cfgs...)
-	if c.SigningNameDerived || len(c.SigningName) == 0 {
-		c.SigningName = "lex"
-	}
 	return newClient(*c.Config, c.Handlers, c.Endpoint, c.SigningRegion, c.SigningName)
 }
 
 // newClient creates, initializes and returns a new service client instance.
 func newClient(cfg aws.Config, handlers request.Handlers, endpoint, signingRegion, signingName string) *LexRuntimeService {
+	if len(signingName) == 0 {
+		signingName = "lex"
+	}
 	svc := &LexRuntimeService{
 		Client: client.New(
 			cfg,
 			metadata.ClientInfo{
 				ServiceName:   ServiceName,
-				ServiceID:     ServiceID,
 				SigningName:   signingName,
 				SigningRegion: signingRegion,
 				Endpoint:      endpoint,
 				APIVersion:    "2016-11-28",
+				JSONVersion:   "1.1",
 			},
 			handlers,
 		),

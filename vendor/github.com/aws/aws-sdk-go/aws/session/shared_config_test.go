@@ -3,12 +3,11 @@ package session
 import (
 	"fmt"
 	"path/filepath"
-	"reflect"
-	"strings"
 	"testing"
 
 	"github.com/aws/aws-sdk-go/aws/credentials"
-	"github.com/aws/aws-sdk-go/internal/ini"
+	"github.com/go-ini/ini"
+	"github.com/stretchr/testify/assert"
 )
 
 var (
@@ -130,24 +129,18 @@ func TestLoadSharedConfig(t *testing.T) {
 	for i, c := range cases {
 		cfg, err := loadSharedConfig(c.Profile, c.Filenames)
 		if c.Err != nil {
-			if e, a := c.Err.Error(), err.Error(); !strings.Contains(a, e) {
-				t.Errorf("%d, expect %v, to contain %v", i, e, a)
-			}
+			assert.Contains(t, err.Error(), c.Err.Error(), "expected error, %d", i)
 			continue
 		}
 
-		if err != nil {
-			t.Errorf("%d, expect nil, %v", i, err)
-		}
-		if e, a := c.Expected, cfg; !reflect.DeepEqual(e,a) {
-			t.Errorf("%d, expect %v, got %v", i, e, a)
-		}
+		assert.NoError(t, err, "unexpected error, %d", i)
+		assert.Equal(t, c.Expected, cfg, "not equal, %d", i)
 	}
 }
 
 func TestLoadSharedConfigFromFile(t *testing.T) {
 	filename := testConfigFilename
-	f, err := ini.OpenFile(filename)
+	f, err := ini.Load(filename)
 	if err != nil {
 		t.Fatalf("failed to load test config file, %s, %v", filename, err)
 	}
@@ -240,18 +233,12 @@ func TestLoadSharedConfigFromFile(t *testing.T) {
 
 		err := cfg.setFromIniFile(c.Profile, iniFile)
 		if c.Err != nil {
-			if e, a := c.Err.Error(), err.Error(); !strings.Contains(a, e) {
-				t.Errorf("%d, expect %v, to contain %v", i, e, a)
-			}
+			assert.Contains(t, err.Error(), c.Err.Error(), "expected error, %d", i)
 			continue
 		}
 
-		if err != nil {
-			t.Errorf("%d, expect nil, %v", i, err)
-		}
-		if e, a := c.Expected, cfg; e != a {
-			t.Errorf("%d, expect %v, got %v", i, e, a)
-		}
+		assert.NoError(t, err, "unexpected error, %d", i)
+		assert.Equal(t, c.Expected, cfg, "not equal, %d", i)
 	}
 }
 
@@ -277,17 +264,11 @@ func TestLoadSharedConfigIniFiles(t *testing.T) {
 
 	for i, c := range cases {
 		files, err := loadSharedConfigIniFiles(c.Filenames)
-		if err != nil {
-			t.Errorf("%d, expect nil, %v", i, err)
-		}
-		if e, a := len(c.Expected), len(files); e != a {
-			t.Errorf("expect %v, got %v", e, a)
-		}
+		assert.NoError(t, err, "unexpected error, %d", i)
+		assert.Equal(t, len(c.Expected), len(files), "expected num files, %d", i)
 
 		for i, expectedFile := range c.Expected {
-			if e, a := expectedFile.Filename, files[i].Filename; e != a {
-				t.Errorf("expect %v, got %v", e, a)
-			}
+			assert.Equal(t, expectedFile.Filename, files[i].Filename)
 		}
 	}
 }
