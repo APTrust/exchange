@@ -149,6 +149,18 @@ type Config struct {
 	// bucket in Oregon, since this one is for the Glacier-only storage class.
 	GlacierBucketOR string
 
+	// GlacierBucketDeepVA is the name of the Glacier Deep Archive storage
+	// bucket in Virginia.
+	GlacierDeepBucketVA string
+
+	// GlacierDeepBucketOH is the name of the Glacier Deep Archive storage
+	// bucket in Ohio.
+	GlacierDeepBucketOH string
+
+	// GlacierDeepBucketOR is the name of the Glacier Deep Archive storage
+	// bucket in Oregon.
+	GlacierDeepBucketOR string
+
 	// GlacierRegionVA is the name of the AWS region in which the Virginia
 	// Glacier-only storage bucket is located.
 	GlacierRegionVA string

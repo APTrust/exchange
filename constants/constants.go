@@ -120,10 +120,13 @@ var ActionTypes []string = []string{
 // Storage options
 
 const (
-	StorageStandard  = "Standard"
-	StorageGlacierVA = "Glacier-VA"
-	StorageGlacierOH = "Glacier-OH"
-	StorageGlacierOR = "Glacier-OR"
+	StorageStandard      = "Standard"
+	StorageGlacierVA     = "Glacier-VA"
+	StorageGlacierOH     = "Glacier-OH"
+	StorageGlacierOR     = "Glacier-OR"
+	StorageGlacierDeepVA = "Glacier-Deep-VA"
+	StorageGlacierDeepOH = "Glacier-Deep-OH"
+	StorageGlacierDeepOR = "Glacier-Deep-OR"
 )
 
 var StorageOptions []string = []string{
@@ -131,6 +134,25 @@ var StorageOptions []string = []string{
 	StorageGlacierVA,
 	StorageGlacierOH,
 	StorageGlacierOR,
+	StorageGlacierDeepVA,
+	StorageGlacierDeepOH,
+	StorageGlacierDeepOR,
+}
+
+// GlacierStandardOptions lists all of the standard Glacier
+// storage options (NOT Glacier Deep Archive).
+var GlacierStandardOptions []string = []string{
+	StorageGlacierVA,
+	StorageGlacierOH,
+	StorageGlacierOR,
+}
+
+// GlacierStandardOptions lists all of the Glacier Deep
+// Archive storage options (excludes Glacier standard options).
+var GlacierDeepOptions []string = []string{
+	StorageGlacierDeepVA,
+	StorageGlacierDeepOH,
+	StorageGlacierDeepOR,
 }
 
 // DPN task types

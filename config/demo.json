@@ -35,6 +35,9 @@
 	"GlacierBucketVA": "aptrust.test.preservation.glacier.va",
 	"GlacierBucketOH": "aptrust.test.preservation.glacier.oh",
 	"GlacierBucketOR": "aptrust.test.preservation.glacier.or",
+	"GlacierDeepBucketVA": "aptrust.test.preservation.glacier-deep.va",
+	"GlacierDeepBucketOH": "aptrust.test.preservation.glacier-deep.oh",
+	"GlacierDeepBucketOR": "aptrust.test.preservation.glacier-deep.or",
 
 	"RestoreToTestBuckets": true,
 	"MaxDaysSinceFixityCheck": 90,

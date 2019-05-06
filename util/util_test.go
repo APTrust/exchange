@@ -1,6 +1,7 @@
 package util_test
 
 import (
+	"github.com/APTrust/exchange/constants"
 	"github.com/APTrust/exchange/util"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -216,6 +217,15 @@ func TestDeleteFromStringList(t *testing.T) {
 
 	anotherList := util.DeleteFromStringList(list, "item_does_not_exist")
 	assert.Equal(t, 3, len(anotherList))
+}
+
+func TestIsGlacierDeepArchive(t *testing.T) {
+	assert.True(t, util.IsGlacierDeepArchive(constants.StorageGlacierDeepVA))
+	assert.True(t, util.IsGlacierDeepArchive(constants.StorageGlacierDeepOH))
+	assert.True(t, util.IsGlacierDeepArchive(constants.StorageGlacierDeepOR))
+	assert.False(t, util.IsGlacierDeepArchive(constants.StorageGlacierVA))
+	assert.False(t, util.IsGlacierDeepArchive(constants.StorageGlacierOH))
+	assert.False(t, util.IsGlacierDeepArchive(constants.StorageGlacierOR))
 }
 
 func TestContainsControlCharacter(t *testing.T) {

@@ -794,6 +794,15 @@ func (storer *APTStorer) initUploader(storageSummary *models.StorageSummary, sen
 	} else if sendWhere == constants.StorageGlacierOR {
 		region = storer.Context.Config.GlacierRegionOR
 		bucket = storer.Context.Config.GlacierBucketOR
+	} else if sendWhere == constants.StorageGlacierDeepVA {
+		region = storer.Context.Config.GlacierRegionVA
+		bucket = storer.Context.Config.GlacierDeepBucketVA
+	} else if sendWhere == constants.StorageGlacierDeepOH {
+		region = storer.Context.Config.GlacierRegionOH
+		bucket = storer.Context.Config.GlacierDeepBucketOH
+	} else if sendWhere == constants.StorageGlacierDeepOR {
+		region = storer.Context.Config.GlacierRegionOR
+		bucket = storer.Context.Config.GlacierDeepBucketOR
 	} else {
 		storageSummary.StoreResult.AddError("Cannot save %s to %s because "+
 			"storer doesn't know where %s is", gf.Identifier, sendWhere, sendWhere)

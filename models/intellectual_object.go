@@ -85,7 +85,8 @@ type IntellectualObject struct {
 	// State of the object. A = active, D = deleted.
 	State string `json:"state"`
 
-	// Storage option: Standard, Glacier-OH, Glacier-OR, Glacier-VA.
+	// Storage option: Standard, Glacier-OH, Glacier-OR, Glacier-VA,
+	// "Glacier-Deep-OH", "Glacier-Deep-OR", "Glacier-Deep-VA"
 	StorageOption string `json:"storage_option"`
 
 	// CreatedAt is the Pharos timestamp describing when this

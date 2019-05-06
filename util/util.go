@@ -266,3 +266,9 @@ func LooksLikeEscapedControl(str string) bool {
 	reControl := regexp.MustCompile("\\\\[Uu]00[0189][0-9A-Fa-f]|\\\\[Uu]007[Ff]")
 	return reControl.MatchString(str)
 }
+
+// IsGlacierDeepArchive returns true if bucketName matches
+// any of our Glacier Deep Archive storage buckets.
+func IsGlacierDeepArchive(storageOption string) bool {
+	return StringListContains(constants.GlacierDeepOptions, storageOption)
+}

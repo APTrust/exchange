@@ -1,6 +1,7 @@
 package models
 
 import (
+	"fmt"
 	"github.com/nsqio/go-nsq"
 	"time"
 )
@@ -125,6 +126,16 @@ func (state *GlacierRestoreState) GetFileIdentifiers() []string {
 		}
 	}
 	return gfIdentifiers
+}
+
+func (state *GlacierRestoreState) GetStorageOption() (string, error) {
+	if state.IntellectualObject != nil {
+		return state.IntellectualObject.StorageOption, nil
+	} else if state.GenericFile != nil {
+		return state.GenericFile.StorageOption, nil
+	} else {
+		return "", fmt.Errorf("State has neither IntellectualObject nor GenericFile")
+	}
 }
 
 // GlacierRequestReport provides information on whether all Glacier

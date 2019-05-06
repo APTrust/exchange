@@ -7,6 +7,7 @@ import (
 	"github.com/APTrust/exchange/context"
 	"github.com/APTrust/exchange/models"
 	"github.com/APTrust/exchange/network"
+	"github.com/APTrust/exchange/util"
 	"github.com/nsqio/go-nsq"
 	"net/url"
 	"strings"
@@ -15,13 +16,25 @@ import (
 
 // TODO: Move constants to config file?
 
-// Standard retrieval is 3-5 hours
+// Standard retrieval is 3-5 hours for Glacier and
+// 12 hours for Glacier Deep Archive. We may want
+// to consider adding "Bulk" as a retrieval option
+// for Glacier Deep Archive, because it's 8x cheaper.
+// See the Glacier sections of https://aws.amazon.com/s3/pricing/
 const RETRIEVAL_OPTION = "Standard"
 
 // Keep the files in S3 up to 5 days, in case we're
 // having system problems and we need to attempt the
 // restore multiple times.
 const DAYS_TO_KEEP_IN_S3 = 5
+
+// After requesting a Glacier restoration, we need to recheck periodically
+// to see if the item has been restored to S3. Restoring from standard
+// Glacier storage typically takes 3-5 hours. Restoring from Glacier Deep
+// Archive typically takes 12+ hours, so we have different recheck intervals
+// for these two.
+const GLACIER_RECHECK_INTERVAL = 2 * time.Hour
+const GLACIER_DEEP_RECHECK_INTERVAL = 8 * time.Hour
 
 // Requests that an object be restored from Glacier to S3. This is
 // the first step toward restoring a Glacier-only bag.
@@ -411,7 +424,21 @@ func (restorer *APTGlacierRestoreInit) RequeueToCheckState(state *models.Glacier
 	state.WorkItem.Status = constants.StatusStarted
 	state.WorkItem.Retry = true
 	state.WorkItem.NeedsAdminReview = false
-	state.NSQMessage.RequeueWithoutBackoff(2 * time.Hour)
+
+	storageOption, err := state.GetStorageOption()
+	if err != nil {
+		// This should be impossible. Items without StorageOption can't
+		// even get into this queue.
+		restorer.Context.MessageLog.Error("Error getting StorageOption for WorkItem %d. ",
+			state.WorkItem.Id)
+	}
+	recheckInterval := GLACIER_RECHECK_INTERVAL
+	if util.IsGlacierDeepArchive(storageOption) {
+		recheckInterval = GLACIER_DEEP_RECHECK_INTERVAL
+		restorer.Context.MessageLog.Error("Setting longer polling interval because "+
+			"WorkItem %d is in Glacier Deep Archive.", state.WorkItem.Id)
+	}
+	state.NSQMessage.RequeueWithoutBackoff(recheckInterval)
 }
 
 // createRestoreWorkItem: We call this to create a normal WorkItem
@@ -531,6 +558,15 @@ func (restorer *APTGlacierRestoreInit) GetRequestDetails(gf *models.GenericFile)
 	} else if gf.StorageOption == constants.StorageGlacierVA {
 		details["region"] = restorer.Context.Config.GlacierRegionVA
 		details["bucket"] = restorer.Context.Config.GlacierBucketVA
+	} else if gf.StorageOption == constants.StorageGlacierDeepOH {
+		details["region"] = restorer.Context.Config.GlacierRegionOH
+		details["bucket"] = restorer.Context.Config.GlacierDeepBucketOH
+	} else if gf.StorageOption == constants.StorageGlacierDeepOR {
+		details["region"] = restorer.Context.Config.GlacierRegionOR
+		details["bucket"] = restorer.Context.Config.GlacierDeepBucketOR
+	} else if gf.StorageOption == constants.StorageGlacierDeepVA {
+		details["region"] = restorer.Context.Config.GlacierRegionVA
+		details["bucket"] = restorer.Context.Config.GlacierDeepBucketVA
 	} else if gf.StorageOption == constants.StorageStandard {
 		// Items in standard starage are in S3 Virginia and Glacier Oregon,
 		// but the Glacier Oregon bucket is aptrust.preservation.oregon.

@@ -146,7 +146,8 @@ func (client *PharosClient) IntellectualObjectGet(identifier string, includeFile
 // * name_contains - Return objects whose name contains the specified string.
 // * name_exact - Return only object with the exact name specified.
 // * state = 'A' for active records, 'D' for deleted. Default is 'A'
-// * storage_option - "Standard", "Glacier-OH", "Glacier-OR", "Glacier-VA"
+// * storage_option - "Standard", "Glacier-OH", "Glacier-OR", "Glacier-VA",
+// *                  "Glacier-Deep-OH", "Glacier-Deep-OR", "Glacier-Deep-VA"
 func (client *PharosClient) IntellectualObjectList(params url.Values) *PharosResponse {
 	// Set up the response object
 	resp := NewPharosResponse(PharosIntellectualObject)
@@ -363,7 +364,8 @@ func (client *PharosClient) GenericFileGet(identifier string, includeRelations b
 // * include_relations=true - Include the file's PremisEvents and Checksums
 //   in the response.
 // * with_ingest_state=true - Include ingest state data in the response.
-// * storage_option - "Standard", "Glacier-OH", "Glacier-OR", "Glacier-VA"
+// * storage_option - "Standard", "Glacier-OH", "Glacier-OR", "Glacier-VA",
+//                    "Glacier-Deep-OH", "Glacier-Deep-OR", "Glacier-Deep-VA"
 func (client *PharosClient) GenericFileList(params url.Values) *PharosResponse {
 	// Set up the response object
 	resp := NewPharosResponse(PharosGenericFile)

@@ -91,7 +91,8 @@ type GenericFile struct {
 	// State will be "A" for active files, "D" for deleted files.
 	State string `json:"state,omitempty"`
 
-	// Storage option: Standard, Glacier-OH, Glacier-OR, Glacier-VA.
+	// Storage option: Standard, Glacier-OH, Glacier-OR, Glacier-VA,
+	// "Glacier-Deep-OH", "Glacier-Deep-OR", "Glacier-Deep-VA".
 	StorageOption string `json:"storage_option"`
 
 	// ----------------------------------------------------

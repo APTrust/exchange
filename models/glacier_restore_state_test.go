@@ -2,6 +2,7 @@ package models_test
 
 import (
 	"fmt"
+	"github.com/APTrust/exchange/constants"
 	"github.com/APTrust/exchange/models"
 	"github.com/APTrust/exchange/util"
 	"github.com/APTrust/exchange/util/testutil"
@@ -194,4 +195,33 @@ func TestGetFileIdentifiers(t *testing.T) {
 	state.IntellectualObject = testutil.MakeIntellectualObject(20, 0, 0, 0)
 	gfIdentifiers = state.GetFileIdentifiers()
 	assert.Equal(t, 20, len(gfIdentifiers))
+}
+
+func TestGetStorageOption(t *testing.T) {
+	state := getGlacierRestoreState()
+	require.NotNil(t, state)
+
+	option, err := state.GetStorageOption()
+	assert.Empty(t, option)
+	assert.NotEmpty(t, err)
+	assert.Equal(t, "State has neither IntellectualObject nor GenericFile", err.Error())
+
+	// Should be able to get storage option from either object or file,
+	// whichever is preset.
+
+	state.GenericFile = &models.GenericFile{
+		StorageOption: constants.StorageStandard,
+	}
+	option, err = state.GetStorageOption()
+	assert.Nil(t, err)
+	assert.Equal(t, constants.StorageStandard, option)
+
+	state.GenericFile = nil
+	state.IntellectualObject = &models.IntellectualObject{
+		StorageOption: constants.StorageGlacierDeepVA,
+	}
+	option, err = state.GetStorageOption()
+	assert.Nil(t, err)
+	assert.Equal(t, constants.StorageGlacierDeepVA, option)
+
 }

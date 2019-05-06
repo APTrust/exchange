@@ -32,7 +32,11 @@
 	"GlacierBucketVA": "aptrust.preservation.glacier.va",
 	"GlacierBucketOH": "aptrust.preservation.glacier.oh",
 	"GlacierBucketOR": "aptrust.preservation.glacier.or",
-	"RestoreToTestBuckets": false,
+	"GlacierDeepBucketVA": "aptrust.preservation.glacier-deep.va",
+	"GlacierDeepBucketOH": "aptrust.preservation.glacier-deep.oh",
+	"GlacierDeepBucketOR": "aptrust.preservation.glacier-deep.or",
+
+    "RestoreToTestBuckets": false,
 	"MaxDaysSinceFixityCheck": 90,
 
 	"FetchWorker": {
@@ -118,7 +122,7 @@
 		"Workers": 4,
 		"NsqTopic": "apt_glacier_restore_topic",
 		"NsqChannel": "apt_glacier_restore_channel",
-		"MaxAttempts": 3,
+		"MaxAttempts": 8,
 		"MaxInFlight": 20,
 		"HeartbeatInterval": "10s",
 		"ReadTimeout": "60s",
