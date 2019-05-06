@@ -23,7 +23,7 @@ type PharosClient struct {
 	apiUser    string
 	apiKey     string
 	httpClient *http.Client
-	transport  *http.Transport
+	transport  *http2.Transport
 }
 
 // NewPharosClient creates a new pharos client. Param hostUrl should
