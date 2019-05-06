@@ -39,7 +39,7 @@ func NewPharosClient(hostUrl, apiVersion, apiUser, apiKey string) (*PharosClient
 	}
 	transport := &http.Transport{
 		MaxIdleConnsPerHost: 8,
-		DisableKeepAlives:   true, // A.D. 2019-05-06: to work with HTTP/2
+		DisableKeepAlives:   false,
 	}
 	httpClient := &http.Client{Jar: cookieJar, Transport: transport}
 	return &PharosClient{
@@ -1139,13 +1139,7 @@ func (client *PharosClient) NewJsonRequest(method, absoluteUrl string, requestDa
 	req.Header.Add("Accept", "application/json")
 	req.Header.Add("X-Pharos-API-User", client.apiUser)
 	req.Header.Add("X-Pharos-API-Key", client.apiKey)
-
-	// A.D 2019-05-06
-	// Temporarily removed to work with HTTP/2 proxy.
-	// HTTP/2 does not support Connection headers.
-	// We can uncomment if we ever revert to HTTP/1.1.
-	//
-	// req.Header.Add("Connection", "Keep-Alive")
+	req.Header.Add("Connection", "Keep-Alive")
 
 	// Unfix the URL that golang net/url "fixes" for us.
 	// URLs that contain %2F (encoded slashes) MUST preserve
