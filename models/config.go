@@ -483,6 +483,15 @@ func (config *Config) StorageRegionAndBucketFor(storageOption string) (region st
 	} else if storageOption == constants.StorageGlacierOR {
 		region = config.GlacierRegionOR
 		bucket = config.GlacierBucketOR
+	} else if storageOption == constants.StorageGlacierDeepVA {
+		region = config.GlacierRegionVA
+		bucket = config.GlacierDeepBucketVA
+	} else if storageOption == constants.StorageGlacierDeepOH {
+		region = config.GlacierRegionOH
+		bucket = config.GlacierDeepBucketOH
+	} else if storageOption == constants.StorageGlacierDeepOR {
+		region = config.GlacierRegionOR
+		bucket = config.GlacierDeepBucketOR
 	} else {
 		err = fmt.Errorf("Unknown Storage Option: %s", storageOption)
 	}

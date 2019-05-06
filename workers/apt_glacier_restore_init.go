@@ -549,25 +549,7 @@ func (restorer *APTGlacierRestoreInit) GetRequestDetails(gf *models.GenericFile)
 		return nil, fmt.Errorf("File %s: %v. URI is %s", gf.Identifier, err, gf.URI)
 	}
 	details["fileUUID"] = fileUUID
-	if gf.StorageOption == constants.StorageGlacierOH {
-		details["region"] = restorer.Context.Config.GlacierRegionOH
-		details["bucket"] = restorer.Context.Config.GlacierBucketOH
-	} else if gf.StorageOption == constants.StorageGlacierOR {
-		details["region"] = restorer.Context.Config.GlacierRegionOR
-		details["bucket"] = restorer.Context.Config.GlacierBucketOR
-	} else if gf.StorageOption == constants.StorageGlacierVA {
-		details["region"] = restorer.Context.Config.GlacierRegionVA
-		details["bucket"] = restorer.Context.Config.GlacierBucketVA
-	} else if gf.StorageOption == constants.StorageGlacierDeepOH {
-		details["region"] = restorer.Context.Config.GlacierRegionOH
-		details["bucket"] = restorer.Context.Config.GlacierDeepBucketOH
-	} else if gf.StorageOption == constants.StorageGlacierDeepOR {
-		details["region"] = restorer.Context.Config.GlacierRegionOR
-		details["bucket"] = restorer.Context.Config.GlacierDeepBucketOR
-	} else if gf.StorageOption == constants.StorageGlacierDeepVA {
-		details["region"] = restorer.Context.Config.GlacierRegionVA
-		details["bucket"] = restorer.Context.Config.GlacierDeepBucketVA
-	} else if gf.StorageOption == constants.StorageStandard {
+	if gf.StorageOption == constants.StorageStandard {
 		// Items in standard starage are in S3 Virginia and Glacier Oregon,
 		// but the Glacier Oregon bucket is aptrust.preservation.oregon.
 		// Normally, we only restore standard items from S3, but this is
@@ -575,6 +557,11 @@ func (restorer *APTGlacierRestoreInit) GetRequestDetails(gf *models.GenericFile)
 		details["region"] = restorer.Context.Config.APTrustGlacierRegion
 		details["bucket"] = restorer.Context.Config.ReplicationBucket
 	} else {
+		details["region"], details["bucket"], err =
+			restorer.Context.Config.StorageRegionAndBucketFor(gf.StorageOption)
+	}
+
+	if err != nil {
 		return nil, fmt.Errorf("Cannot restore file %s because StorageOption is %s", gf.Identifier, gf.StorageOption)
 	}
 	return details, nil

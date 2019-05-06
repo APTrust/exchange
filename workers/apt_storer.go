@@ -779,31 +779,17 @@ func (storer *APTStorer) initUploader(storageSummary *models.StorageSummary, sen
 	gf := storageSummary.GenericFile
 	var region string
 	var bucket string
+	var err error
 	if sendWhere == "s3" {
 		region = storer.Context.Config.APTrustS3Region
 		bucket = storer.Context.Config.PreservationBucket
 	} else if sendWhere == "glacier" {
 		region = storer.Context.Config.APTrustGlacierRegion
 		bucket = storer.Context.Config.ReplicationBucket
-	} else if sendWhere == constants.StorageGlacierVA {
-		region = storer.Context.Config.GlacierRegionVA
-		bucket = storer.Context.Config.GlacierBucketVA
-	} else if sendWhere == constants.StorageGlacierOH {
-		region = storer.Context.Config.GlacierRegionOH
-		bucket = storer.Context.Config.GlacierBucketOH
-	} else if sendWhere == constants.StorageGlacierOR {
-		region = storer.Context.Config.GlacierRegionOR
-		bucket = storer.Context.Config.GlacierBucketOR
-	} else if sendWhere == constants.StorageGlacierDeepVA {
-		region = storer.Context.Config.GlacierRegionVA
-		bucket = storer.Context.Config.GlacierDeepBucketVA
-	} else if sendWhere == constants.StorageGlacierDeepOH {
-		region = storer.Context.Config.GlacierRegionOH
-		bucket = storer.Context.Config.GlacierDeepBucketOH
-	} else if sendWhere == constants.StorageGlacierDeepOR {
-		region = storer.Context.Config.GlacierRegionOR
-		bucket = storer.Context.Config.GlacierDeepBucketOR
 	} else {
+		region, bucket, err = storer.Context.Config.StorageRegionAndBucketFor(sendWhere)
+	}
+	if err != nil {
 		storageSummary.StoreResult.AddError("Cannot save %s to %s because "+
 			"storer doesn't know where %s is", gf.Identifier, sendWhere, sendWhere)
 		storageSummary.StoreResult.ErrorIsFatal = true
