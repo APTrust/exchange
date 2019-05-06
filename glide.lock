@@ -1,12 +1,12 @@
-hash: 7c26de46773a1c8de8348f72e92f0be489364af1d2f0c853451037dc2c7634c7
-updated: 2019-05-06T10:49:17.97225-04:00
+hash: e2b60e35c45dd804b52f6a9cbf205bbae844e125014401f737dc9cf2afcfe140
+updated: 2017-05-03T15:03:50.297939453-04:00
 imports:
 - name: github.com/APTrust/bagins
   version: 5bc94534149810750faf248f6ac948b48cbb2fc5
   subpackages:
   - bagutil
 - name: github.com/aws/aws-sdk-go
-  version: 86dc5d0ebe9f30ac9e939da21c240a98519343f2
+  version: 0dbc446aca87aebb6e0a24509b59bafc0e3ec0ae
   subpackages:
   - aws
   - aws/awserr
@@ -17,24 +17,14 @@ imports:
   - aws/credentials
   - aws/credentials/ec2rolecreds
   - aws/credentials/endpointcreds
-  - aws/credentials/processcreds
   - aws/credentials/stscreds
-  - aws/csm
   - aws/defaults
   - aws/ec2metadata
   - aws/endpoints
   - aws/request
   - aws/session
   - aws/signer/v4
-  - internal/ini
-  - internal/s3err
-  - internal/sdkio
-  - internal/sdkrand
-  - internal/sdkuri
-  - internal/shareddefaults
   - private/protocol
-  - private/protocol/eventstream
-  - private/protocol/eventstream/eventstreamapi
   - private/protocol/query
   - private/protocol/query/queryutil
   - private/protocol/rest
@@ -55,20 +45,20 @@ imports:
   subpackages:
   - quantile
 - name: github.com/boltdb/bolt
-  version: 2f1ce7a837dcb8da3ec595b1dac9d0632f0f99e8
+  version: 583e8937c61f1af6513608ccc75c97b6abdf4ff9
 - name: github.com/crowdmob/goamz
   version: 3a06871fe9fc0281ca90f3a7d97258d042ed64c0
   subpackages:
   - aws
   - s3
-- name: github.com/golang/snappy
-  version: 2a8bb927dd31d8daada140a5d09578521ce5c36a
+- name: github.com/go-ini/ini
+  version: 6e4869b434bd001f6983749881c7ead3545887d8
 - name: github.com/icrowley/fake
   version: 84bff6d01560fb0b5a396ba29534e93fd00d09c6
 - name: github.com/jmespath/go-jmespath
   version: bd40a432e4c76585ef6b72d3fd96fb9b6dc7b68d
 - name: github.com/jtolds/gls
-  version: b4936e06046bbecbb94cae9c18127ebe510a2cb9
+  version: 8ddce2a84170772b95dd5d576c48d517b22cac63
 - name: github.com/julienschmidt/httprouter
   version: 6aacfd5ab513e34f7e64ea9627ab9670371b34e7
 - name: github.com/kr/pretty
@@ -78,7 +68,7 @@ imports:
   subpackages:
   - snappy-go
 - name: github.com/nsqio/go-nsq
-  version: eee57a3ac4174c55924125bb15eeeda8cffb6e6f
+  version: d71fb89c9e0263aaed89645b0b168e11ccf597b1
 - name: github.com/nsqio/nsq
   version: c53f30f8ea0cbe3bf95116cc0d6f603f5a387620
   subpackages:
@@ -100,17 +90,13 @@ imports:
 - name: github.com/rakyll/magicmime
   version: 2b8b8f91948c4307f40a8f86ac6f3b26e27b7389
 - name: github.com/satori/go.uuid
-  version: f58768cc1a7a7e77a3bd49e98cdd21419399b6a3
+  version: 879c5887cd475cd7864858769793b2ceb0d44feb
 - name: github.com/smartystreets/assertions
-  version: f487f9de1cd36ebab28235b9373028812fb47cbd
+  version: e9a2f6771d97c709b2f7609fdf89ebde8b64c926
 - name: github.com/smartystreets/goconvey
-  version: 9e8dc3f972df6c8fcc0375ef492c24d0bb204857
+  version: d4c757aa9afd1e2fc1832aaab209b5794eb336e1
   subpackages:
   - convey
-- name: golang.org/x/net
-  version: f4e77d36d62c17c2336347bb2670ddbd02d092b7
-  subpackages:
-  - http2
 - name: golang.org/x/sys
   version: 9ccfe848b9db8435a24c424abbc07a921adf1df5
   subpackages:
@@ -127,7 +113,7 @@ testImports:
   subpackages:
   - difflib
 - name: github.com/stretchr/testify
-  version: ffdc059bfe9ce6a4e144ba849dbedead332c6053
+  version: 69483b4bd14f5845b5a1e55bca19e954e827f1d0
   subpackages:
   - assert
   - require
