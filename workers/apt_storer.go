@@ -790,6 +790,7 @@ func (storer *APTStorer) initUploader(storageSummary *models.StorageSummary, sen
 		region, bucket, err = storer.Context.Config.StorageRegionAndBucketFor(sendWhere)
 	}
 	if err != nil {
+		storageSummary.StoreResult.AddError(err.Error())
 		storageSummary.StoreResult.AddError("Cannot save %s to %s because "+
 			"storer doesn't know where %s is", gf.Identifier, sendWhere, sendWhere)
 		storageSummary.StoreResult.ErrorIsFatal = true
