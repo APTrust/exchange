@@ -20,6 +20,6 @@
                   "AllowedValues": ["Consortia", "Institution", "Restricted"]},
         "Description": {"FilePath": "aptrust-info.txt", "Presence": "optional", "EmptyOK": true },
         "Storage-Option": {"FilePath": "aptrust-info.txt", "Presence": "optional", "EmptyOK": true,
-                           "AllowedValues": ["Standard", "Glacier-OH", "Glacier-OR", "Glacier-VA"]}
+                           "AllowedValues": ["Standard", "Glacier-OH", "Glacier-OR", "Glacier-VA", "Glacier-Deep-OH", "Glacier-Deep-OR", "Glacier-Deep-VA"]}
     }
 }
