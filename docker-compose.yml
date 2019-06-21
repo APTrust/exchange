@@ -1,40 +1,52 @@
-# Initial docker-compose file to run Exchange services in containers
-# Phase1: Run NSQ in containers
-# Phase2: Define Exchange services in this file.
 version: '3'
 services:
-  nsqlookupd:
-    image: nsqio/nsq
-    command: /nsqlookupd
-    ports:
-      - "4161:4161"
-      - "4160:4160"
-    volumes:
-      - ${nsq_data_path}:/data
-    restart: always
-  nsqd:
-    image: nsqio/nsq
-    command: /nsqd --lookupd-tcp-address=${nsq_lookupd_tcp_address} --data-path=/data --broadcast-address=${nsq_broadcast_address} --msg-timeout=${nsq_msg_timeout} --max-msg-timeout=${nsq_max_msg_timeout} --max-msg-size=${nsq_max_msg_size} -mem-queue-size=${nsq_mem_queue_size} -max-req-timeout=${nsq_max_req_timeout}
-    depends_on:
-      - nsqlookupd
-    ports:
-      - "4150:4150"
-      - "4151:4151"
-    volumes:
-      - ${nsq_data_path}:/data
-    networks:
-      default:
-        aliases:
-          - nsqd
-          - ${nsq_broadcast_address}
-    restart: always
-  nsqadmin:
-    image: nsqio/nsq
-    command: /nsqadmin --lookupd-http-address=${nsq_lookupd_http_address}
-    depends_on:
-      - nsqlookupd
-    ports:
-      - "4171:4171"
-    restart: always
-networks:
-  default:
+   exchange_apt_fetch:
+      restart: always
+      image: registry.gitlab.com/aptrust/container-registry/exchange_apt_volume_service:${DOCKER_TAG_NAME:-latest}
+      volumes:
+         - ${DOCKER_DATA_PATH:./docker}:/go/bin/data
+         - ${DOCKER_DATA_PATH:./docker}/exchange_apt_fetch:/go/bin/config
+      env_file:
+         - ".env"
+   exchange_apt_file_delete:
+      restart: always
+      image: registry.gitlab.com/aptrust/container-registry/exchange_apt_file_delete:${DOCKER_TAG_NAME:-latest}
+      volumes:
+         - ${DOCKER_DATA_PATH:/docker}:/go/bin/data
+         - ${DOCKER_DATA_PATH:/docker}/exchange_apt_file_delete:/go/bin/config
+      env_file:
+         - ".env"
+   nsqlookupd:
+      image: nsqio/nsq
+      hostname: nsqlookupd
+      command: /nsqlookupd
+      volumes:
+         - /srv/docker/nsqlookupd:/data
+      ports:
+        - "4160:4160"
+        - "4161:4161"
+   nsq:
+      image: nsqio/nsq
+      hostname: nsq
+      command: /nsqd --broadcast-address nsq --lookupd-tcp-address=nsqlookupd:4160 --msg-timeout "60m0s" --max-msg-timeout "180m0s" --max-msg-size "31457280"
+      volumes:
+         - /srv/docker/nsqd:/data
+      depends_on:
+         - nsqlookupd
+      links:
+         - nsqlookupd:nsqlookupd
+      ports:
+         - "4150:4150"
+         - "4151:4151"
+      nsqadmin:
+         image: nsqio/nsq
+         hostname: nsqadmin
+         command: /nsqadmin --lookupd-http-address=nsqlookupd:4161
+         volumes:
+            - /srv/docker/nsqadmin:/data
+         depends_on:
+            - nsqlookupd
+         links:
+            - nsqlookupd:nsqlookupd
+         ports:
+            - "4171:4171"
