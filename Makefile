@@ -1,23 +1,13 @@
 #!/bin/bash
-# Docker_start.sh
-# Script to provision a development environment
-# with docker-ce and start pharos in a container as per docker-compose.yml
 
-# 1. ID OS - Linux or OSX
-# 2. If OSX, install homebrew
-# 3. Install Docker-CE on osx (brew cask install docker/linux: apt-get install docker)
-# 4. Run make build to build the latest version of Pharos
-# 5. docker-compose up -f docker-compose-dev.yml
-# 6. Connect to pharos.docker.localhost in your browser.
+REGISTRY="registry.gitlab.com/aptrust"
+REPOSITORY="container-registry"
+NAME="exchange"
+VERSION="latest"
+TAG="$(name):$(version)"
+REVISION:="$(shell git rev-parse --short=2 HEAD)"
+APP_LIST:=$(wildcard apps/apt_*)
 
-# -  make restart: docker-compose up -d -f docker-compose-dev.yml
-#
-registry="registry.gitlab.com/aptrust"
-repository="container-registry"
-name="exchange"
-version="latest"
-tag="$(name):$(version)"
-REVISION="$(shell git rev-parse --short=2 HEAD)"
 #
 # HELP
 # This will output the help for each task
@@ -29,12 +19,19 @@ help: ## This help.
 
 .DEFAULT_GOAL := help
 
+lsdirs: ## Show the apps that will be built
+	@for folder in $(APP_LIST:apps/%=%); do \
+		echo $$folder; \
+	done
+
 revision: ## Show me the git hash
 	echo "${REVISION}"
 
 build: ## Build the Exchange containers
-#	docker build -t aptrust/$(tag) -t $(tag) -t $(name):$(revision) -t $(registry)/$(repository)/$(tag) .
-	echo "Needs loop support for multiple apps"
+	@for folder in $(APP_LIST:apps/%=%); do \
+		docker build --build-arg EX_SERVICE=$$folder -t aptrust/$(NAME)_$$folder -t $(NAME)_$$folder:$(REVISION) -t $(REGISTRY)/$(REPOSITORY)/$(NAME)_$$folder -f Dockerfile-build .; \
+	done
+#	echo "Needs loop support for multiple apps"
 
 up: ## Start Exchange+NSQ containers
 	sudo docker-compose -p exchange up -d
