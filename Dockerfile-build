@@ -1,0 +1,64 @@
+ARG EX_SERVICE=${EX_SERVICE}
+FROM golang:1.12.6-alpine3.9 as builder
+# This image provides binaries for Exchange microservices.
+# A CI/CD service will distribute and build/deploy each microservice. TBD
+# .
+
+RUN apk update && \
+    apk add --no-cache libmagic file-dev g++ make build-base \
+    imagemagick-dev bash
+
+ENV APP_PATH=/go/src/github.com/APTrust/exchange
+
+RUN mkdir -p $APP_PATH
+WORKDIR $APP_PATH
+
+COPY . .
+# TODO: Runs go get to get all dependencies as well. Should use glide since
+# deps are already stored in the repo.
+#RUN go get -v github.com/APTrust/exchange/...
+RUN go install -a github.com/APTrust/exchange/apps/...
+
+# TODO: Exclude go services that require cron. need a cron base image for those
+
+FROM alpine:latest
+
+ARG EX_SERVICE=${EX_SERVICE}
+ARG ENVIRONMENT=${ENVIRONMENT:-development}
+
+WORKDIR /go/bin
+ENV EX_SERVICE=${EX_SERVICE}
+ENV ENVIRONMENT=${ENVIRONMENT:-development}
+
+VOLUME ["/go/bin/data"]
+VOLUME ["/go/bin/config"]
+# Note: Using main as app name because CMD doesn't support env expansion and
+# Docker images are tagged with app names already.
+COPY --from=builder /go/bin/${EX_SERVICE} /go/bin/main
+#COPY --from=builder /go/src/github.com/APTrust/exchange/config/${ENVIRONMENT}.json config/config.json
+COPY --from=builder /go/src/github.com/APTrust/exchange/config/config.json config/config.json
+COPY --from=builder /go/src/github.com/APTrust/exchange/config/aptrust*.json config/
+COPY --from=builder /go/src/github.com/APTrust/exchange/config/dpn*.json config/
+
+# TODO: These libraries are needed for the exchange services if they were build
+# statically linked. Need more testing. Current workaround is to install
+# packages like below.
+#    /usr/lib/x86_64-linux-gnu/libmagic.so.1 \
+#    /lib/x86_64-linux-gnu/libpthread.so.0 \
+#    /lib/x86_64-linux-gnu/libc.so.6 \
+#    /lib/x86_64-linux-gnu/libz.so.1 \
+#    /lib64/ld-linux-x86-64.so.2 /go/bin/
+
+RUN apk update && \
+    apk add --no-cache imagemagick-dev libmagic bash
+
+ENV EXCHANGE_HOME ${EXCHANGE_HOME:-/go/bin}
+ENV GOPATH ${GOPATH:-/go}
+ENV ENVIRONMENT ${ENVIRONMENT:-development}
+ENV AWS_ACCESS_KEY_ID ${AWS_ACCESS_KEY_ID:-}
+ENV AWS_SECRET_ACCESS_KEY_ID ${AWS_SECRET_ACCESS_KEY_ID:-}
+ENV PHAROS_API_USER ${PHAROS_API_USER:-system@aptrust.org}
+ENV PHAROS_API_KEY ${PHAROS_API_KEY:-123}
+
+
+CMD ["/go/bin/main", "-config=/go/bin/config/config.json"]
