@@ -34,7 +34,6 @@ VOLUME ["/go/bin/config"]
 # Docker images are tagged with app names already.
 COPY --from=builder /go/bin/${EX_SERVICE} /go/bin/main
 COPY --from=builder /go/src/github.com/APTrust/exchange/config/${ENVIRONMENT}.json config/config.json
-#COPY --from=builder /go/src/github.com/APTrust/exchange/config/config.json config/config.json
 COPY --from=builder /go/src/github.com/APTrust/exchange/config/aptrust*.json config/
 
 # TODO: These libraries are needed for the exchange services if they were build
