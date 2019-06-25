@@ -1,19 +1,111 @@
-version: '3'
+version: '3.7'
 services:
-   exchange_apt_fetch:
+   apt_fetch:
       restart: always
       image: registry.gitlab.com/aptrust/container-registry/exchange_apt_volume_service:${DOCKER_TAG_NAME:-latest}
       volumes:
-         - ${DOCKER_DATA_PATH:./docker}:/go/bin/data
-         - ${DOCKER_DATA_PATH:./docker}/exchange_apt_fetch:/go/bin/config
+         - type: bind
+           source: ${DOCKER_DATA_PATH:-./docker}
+           target: /go/bin/data
+         - type: bind
+           source: ${DOCKER_DATA_PATH:-./docker}/config
+           target: /go/bin/config
       env_file:
          - ".env"
-   exchange_apt_file_delete:
+   apt_file_delete:
       restart: always
       image: registry.gitlab.com/aptrust/container-registry/exchange_apt_file_delete:${DOCKER_TAG_NAME:-latest}
       volumes:
-         - ${DOCKER_DATA_PATH:/docker}:/go/bin/data
-         - ${DOCKER_DATA_PATH:/docker}/exchange_apt_file_delete:/go/bin/config
+         - type: bind
+           source: "${DOCKER_DATA_PATH:-./docker}"
+           target: /go/bin/data
+         - type: bind
+           source: "${DOCKER_DATA_PATH:-./docker}/config"
+           target: /go/bin/config
+      env_file:
+         - ".env"
+   apt_file_restore:
+      restart: always
+      image: registry.gitlab.com/aptrust/container-registry/exchange_apt_file_restore:${DOCKER_TAG_NAME:-latest}
+      volumes:
+         - type: bind
+           source: "${DOCKER_DATA_PATH:-./docker}"
+           target: /go/bin/data
+         - type: bind
+           source: "${DOCKER_DATA_PATH:-./docker}/config"
+           target: /go/bin/config
+      env_file:
+         - ".env"
+   apt_fixity_check:
+      restart: always
+      image: registry.gitlab.com/aptrust/container-registry/exchange_apt_fixity_check:${DOCKER_TAG_NAME:-latest}
+      volumes:
+         - type: bind
+           source: "${DOCKER_DATA_PATH:-./docker}"
+           target: /go/bin/data
+         - type: bind
+           source: "${DOCKER_DATA_PATH:-./docker}/config"
+           target: /go/bin/config
+      env_file:
+         - ".env"
+   apt_glacier_restore_init:
+      restart: always
+      image: registry.gitlab.com/aptrust/container-registry/exchange_apt_glacier_restore_init:${DOCKER_TAG_NAME:-latest}
+      volumes:
+         - type: bind
+           source: "${DOCKER_DATA_PATH:-./docker}"
+           target: /go/bin/data
+         - type: bind
+           source: "${DOCKER_DATA_PATH:-./docker}/config"
+           target: /go/bin/config
+      env_file:
+         - ".env"
+   apt_record:
+      restart: always
+      image: registry.gitlab.com/aptrust/container-registry/exchange_apt_record:${DOCKER_TAG_NAME:-latest}
+      volumes:
+         - type: bind
+           source: "${DOCKER_DATA_PATH:-./docker}"
+           target: /go/bin/data
+         - type: bind
+           source: "${DOCKER_DATA_PATH:-./docker}/config"
+           target: /go/bin/config
+      env_file:
+         - ".env"
+   apt_restore:
+      restart: always
+      image: registry.gitlab.com/aptrust/container-registry/exchange_apt_restore:${DOCKER_TAG_NAME:-latest}
+      volumes:
+         - type: bind
+           source: "${DOCKER_DATA_PATH:-./docker}"
+           target: /go/bin/data
+         - type: bind
+           source: "${DOCKER_DATA_PATH:-./docker}/config"
+           target: /go/bin/config
+      env_file:
+         - ".env"
+   apt_store:
+      restart: always
+      image: registry.gitlab.com/aptrust/container-registry/exchange_apt_store:${DOCKER_TAG_NAME:-latest}
+      volumes:
+         - type: bind
+           source: "${DOCKER_DATA_PATH:-./docker}"
+           target: /go/bin/data
+         - type: bind
+           source: "${DOCKER_DATA_PATH:-./docker}/config"
+           target: /go/bin/config
+      env_file:
+         - ".env"
+   apt_volume_service:
+      restart: always
+      image: registry.gitlab.com/aptrust/container-registry/exchange_apt_volume_service:${DOCKER_TAG_NAME:-latest}
+      volumes:
+         - type: bind
+           source: "${DOCKER_DATA_PATH:-./docker}"
+           target: /go/bin/data
+         - type: bind
+           source: "${DOCKER_DATA_PATH:-./docker}/config"
+           target: /go/bin/config
       env_file:
          - ".env"
    nsqlookupd:
@@ -23,8 +115,8 @@ services:
       volumes:
          - /srv/docker/nsqlookupd:/data
       ports:
-        - "4160:4160"
-        - "4161:4161"
+         - "4160:4160"
+         - "4161:4161"
    nsq:
       image: nsqio/nsq
       hostname: nsq
@@ -38,15 +130,15 @@ services:
       ports:
          - "4150:4150"
          - "4151:4151"
-      nsqadmin:
-         image: nsqio/nsq
-         hostname: nsqadmin
-         command: /nsqadmin --lookupd-http-address=nsqlookupd:4161
-         volumes:
-            - /srv/docker/nsqadmin:/data
-         depends_on:
-            - nsqlookupd
-         links:
-            - nsqlookupd:nsqlookupd
-         ports:
-            - "4171:4171"
+   nsqadmin:
+      image: nsqio/nsq
+      hostname: nsqadmin
+      command: /nsqadmin --lookupd-http-address=nsqlookupd:4161
+      volumes:
+         - /srv/docker/nsqadmin:/data
+      depends_on:
+         - nsqlookupd
+      links:
+         - nsqlookupd:nsqlookupd
+      ports:
+         - "4171:4171"
