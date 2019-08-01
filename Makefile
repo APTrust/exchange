@@ -7,6 +7,7 @@ VERSION="latest"
 TAG="$(name):$(version)"
 REVISION:="$(shell git rev-parse --short=2 HEAD)"
 APP_LIST:=$(wildcard apps/apt_*)
+APPS_LIST:=$(APP_LIST:apps/%=%)
 
 #
 # HELP
@@ -20,17 +21,18 @@ help: ## This help.
 .DEFAULT_GOAL := help
 
 lsdirs: ## Show the apps that will be built
-	@for folder in $(APP_LIST:apps/%=%); do \
-		echo $$folder; \
+	@for app in $(APP_LIST:apps/%=%); do \
+		echo $$app; \
 	done
+	echo $(APPS_LIST)
 
 revision: ## Show me the git hash
 	echo "${REVISION}"
 
 build: ## Build the Exchange containers
-	@for folder in $(APP_LIST:apps/%=%); do \
-		echo $$folder; \
-		docker build --build-arg EX_SERVICE=$$folder -t aptrust/$(NAME)_$$folder -t $(NAME)_$$folder:$(REVISION) -t $(REGISTRY)/$(REPOSITORY)/$(NAME)_$$folder -f Dockerfile-build .; \
+	@for app in $(APP_LIST:apps/%=%); do \
+		echo $$app; \
+		docker build --build-arg EX_SERVICE=$$app -t aptrust/$(NAME)_$$app -t $(NAME)_$$app:$(REVISION) -t $(REGISTRY)/$(REPOSITORY)/$(NAME)_$$app -f Dockerfile-build .; \
 	done
 
 up: ## Start Exchange+NSQ containers
