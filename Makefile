@@ -45,13 +45,17 @@ destroy: ## Stop and remove all Exchange+NSQ containers, networks, images, and v
 	sudo docker-compose down
 
 run: ## Run Exchange services in foreground
-	sudo docker-compose -p exchange up
+	sudo docker-compose up
 
 
 publish:
 #	docker tag aptrust/ registry.gitlab.com/aptrust/container-registry/pharos && \
 #	docker push registry.gitlab.com/aptrust/container-registry/pharos
-	"Need loop support for each app"
+	docker login $(REGISTRY)
+	@for app in $(APPS_LIST); do \
+		@echo "Pushing $$app;" \
+		docker push $(REGISTRY)/$(REPOSITORY)/$(NAME)_$$app\
+	done
 
 # Docker release - build, tag and push the container
 release: build publish ## Make a release by building and publishing the `{version}` as `latest` tagged containers to Gitlab
