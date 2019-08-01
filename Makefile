@@ -36,13 +36,13 @@ build: ## Build the Exchange containers
 	done
 
 up: ## Start Exchange+NSQ containers
-	sudo docker-compose -p exchange up -d
+	sudo docker-compose up -d
 
 stop: ## Stop Exchange+NSQ containers
-	sudo docker-compose -p exchange stop
+	sudo docker-compose stop
 
 destroy: ## Stop and remove all Exchange+NSQ containers, networks, images, and volumes
-	sudo docker-compose -p exchange down
+	sudo docker-compose down
 
 run: ## Run Exchange services in foreground
 	sudo docker-compose -p exchange up
