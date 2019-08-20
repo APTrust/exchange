@@ -9,9 +9,9 @@ require 'fileutils'
 # cause some problems.
 # See https://github.com/golang/go/wiki/GcToolchainTricks
 REPO_URL = "https://github.com/APTrust/exchange"
-WIKI_URL = "https://wiki.aptrust.org/Partner_Tools"
+WIKI_URL = "https://aptrust.github.io/userguide/partner_tools/"
 LICENSE = "Apache-2.0"
-EMAIL = "support@aptrust.org"
+EMAIL = "help@aptrust.org"
 
 @apps = ['apt_check_ingest',
         'apt_delete',
@@ -31,13 +31,13 @@ def run()
   git_hash = `git rev-parse --short HEAD`.chomp
   build_date = Time.now.utc.strftime("%FT%TZ")
   ldflags = get_ld_flags(options['version'], build_date, git_hash)
-  tags = "-tags='partners #{options['platform']}'"
+  tags = "-tags 'partners #{options['platform']}'"
   build_dir = ensure_build_dir(options['exchange_root'])
 
   # Build each app, with substitution vars
   @apps.each do |app_name|
     source_dir = File.join(options['exchange_root'], 'partner_apps', app_name)
-    cmd = "go build #{tags} #{ldflags} -o #{build_dir}/#{app_name} #{app_name}.go"
+    cmd = "go build -a #{tags} #{ldflags} -o #{build_dir}/#{app_name} #{app_name}.go"
     puts "cd #{source_dir}"
     puts cmd
     pid = Process.spawn(cmd, chdir: source_dir)
