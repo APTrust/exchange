@@ -31,8 +31,8 @@ VOLUME ["/go/bin/config"]
 # Note: Using main as app name because CMD doesn't support env expansion and
 # Docker images are tagged with app names already.
 COPY --from=builder /go/bin/${EX_SERVICE} /go/bin/main
-COPY --from=builder /go/src/github.com/APTrust/exchange/config/${ENVIRONMENT}.json config/config.json
-COPY --from=builder /go/src/github.com/APTrust/exchange/config/aptrust_bag_validation_config.json config/aptrust_bag_validation_config.json
+COPY --from=builder /go/src/github.com/APTrust/exchange/config/${ENVIRONMENT}.json ${WORKDIR}/config/config.json
+COPY --from=builder /go/src/github.com/APTrust/exchange/config/aptrust_bag_validation_config.json ${WORKDIR}/config/aptrust_bag_validation_config.json
 
 # TODO: These libraries are needed for the exchange services if they were build
 # statically linked. Need more testing. Current workaround is to install
