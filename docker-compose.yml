@@ -119,10 +119,9 @@ services:
       ports:
          - "4160:4160"
          - "4161:4161"
-   nsq:
+   nsqd:
       image: nsqio/nsq
-      hostname: nsq
-      command: /nsqd --broadcast-address nsq --lookupd-tcp-address=nsqlookupd:4160 --msg-timeout "60m0s" --max-msg-timeout "180m0s" --max-msg-size "31457280"
+      command: /nsqd --lookupd-tcp-address=${nsq_lookupd_tcp_address} --data-path=/data --broadcast-address=${nsq_broadcast_address} --msg-timeout=${nsq_msg_timeout} --max-msg-timeout=${nsq_max_msg_timeout} --max-msg-size=${nsq_max_msg_size} -mem-queue-size=${nsq_mem_queue_size} -max-req-timeout=${nsq_max_req_timeout} -max-heartbeat-interval=${nsq_max_heartbeat_interval}
       volumes:
          - type: bind
            source: "${DOCKER_DATA_PATH:-./docker}/nsq"
@@ -142,8 +141,7 @@ services:
          - "4151:4151"
    nsqadmin:
       image: nsqio/nsq
-      hostname: nsqadmin
-      command: /nsqadmin --lookupd-http-address=nsqlookupd:4161
+      command: /nsqadmin --lookupd-http-address=${nsq_lookupd_http_address}
       volumes:
          - type: bind
            source: "${DOCKER_DATA_PATH:-./docker/nsq}/nsq"
