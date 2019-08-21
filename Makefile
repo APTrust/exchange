@@ -37,17 +37,16 @@ build: ## Build the Exchange containers
 	done
 
 up: ## Start Exchange+NSQ containers
-	sudo docker-compose up -d
+	DOCKER_TAG_NAME=$(REVISION) docker-compose up
 
 stop: ## Stop Exchange+NSQ containers
-	sudo docker-compose stop
+	docker-compose stop
 
 down: ## Stop and remove all Exchange+NSQ containers, networks, images, and volumes
-	sudo docker-compose down -v
+	docker-compose down -v
 
 run: ## Run Exchange services in foreground
-	sudo docker-compose up
-
+	docker-compose up
 
 publish:
 #	docker tag aptrust/ registry.gitlab.com/aptrust/container-registry/pharos && \
