@@ -1,20 +1,20 @@
 #!/bin/bash
 
-REGISTRY="registry.gitlab.com/aptrust"
-REPOSITORY="container-registry"
-NAME="exchange"
-REVISION:="$(shell git rev-parse --short=7 HEAD)"
+REGISTRY=registry.gitlab.com/aptrust
+REPOSITORY=container-registry
+NAME=exchange
+REVISION:=$(shell git rev-parse --short=7 HEAD)
 BRANCH = $(subst /,_,$(shell git rev-parse --abbrev-ref HEAD))
 PUSHBRANCH = $(subst /,_,$(TRAVIS_BRANCH))
 APP_LIST:=$(wildcard apps/apt_*)
 APPS_LIST:=$(APP_LIST:apps/%=%)
-TAG="$(name):$(REVISION)"
+TAG=$(name):$(REVISION)
 
 #
 # HELP
 # This will output the help for each task
 # thanks to https://marmelab.com/blog/2016/02/29/auto-documented-makefile.html
-.PHONY: help build publish
+.PHONY: help build publish release push clean
 
 help: ## This help.
 	@awk 'BEGIN {FS = ":.*?## "} /^[a-zA-Z_-]+:.*?## / {printf "\033[36m%-30s\033[0m %s\n", $$1, $$2}' $(MAKEFILE_LIST)
