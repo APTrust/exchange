@@ -3,11 +3,12 @@
 REGISTRY="registry.gitlab.com/aptrust"
 REPOSITORY="container-registry"
 NAME="exchange"
-VERSION="latest"
-TAG="$(name):$(version)"
-REVISION:="$(shell git rev-parse --short=2 HEAD)"
+REVISION:="$(shell git rev-parse --short=7 HEAD)"
+BRANCH = $(subst /,_,$(shell git rev-parse --abbrev-ref HEAD))
+PUSHBRANCH = $(subst /,_,$(TRAVIS_BRANCH))
 APP_LIST:=$(wildcard apps/apt_*)
 APPS_LIST:=$(APP_LIST:apps/%=%)
+TAG="$(name):$(REVISION)"
 
 #
 # HELP
