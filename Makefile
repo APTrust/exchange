@@ -58,6 +58,14 @@ publish:
 		docker push $(REGISTRY)/$(REPOSITORY)/$(NAME)_$$app\
 	done
 
+publish-ci:
+	@echo $(DOCKER_PWD) | docker login -u $(DOCKER_USER) --password-stdin $(REGISTRY)
+	@for app in $(APPS_LIST); do \
+		@echo "Pushing $$app;" \
+		docker push $(REGISTRY)/$(REPOSITORY)/$(NAME)_$$app\
+	done
+
+
 # Docker release - build, tag and push the container
 release: build publish ## Make a release by building and publishing the `{version}` as `latest` tagged containers to Gitlab
 
