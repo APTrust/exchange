@@ -5,10 +5,10 @@ services:
       image: registry.gitlab.com/aptrust/container-registry/exchange_apt_volume_service:${DOCKER_TAG_NAME:-latest}
       volumes:
          - type: bind
-           source: ${DOCKER_DATA_PATH:-./docker}
+           source: "${DOCKER_DATA_PATH:-./docker}"
            target: /go/bin/data
          - type: bind
-           source: ${DOCKER_DATA_PATH:-./docker}/config
+           source: "${DOCKER_DATA_PATH:-./docker}/config"
            target: /go/bin/config
       env_file:
          - ".env"
@@ -113,7 +113,9 @@ services:
       hostname: nsqlookupd
       command: /nsqlookupd
       volumes:
-         - /srv/docker/nsqlookupd:/data
+        - type: bind
+          source: "${DOCKER_DATA_PATH:-./docker}/nsq"
+          target: /data
       ports:
          - "4160:4160"
          - "4161:4161"
@@ -122,7 +124,15 @@ services:
       hostname: nsq
       command: /nsqd --broadcast-address nsq --lookupd-tcp-address=nsqlookupd:4160 --msg-timeout "60m0s" --max-msg-timeout "180m0s" --max-msg-size "31457280"
       volumes:
-         - /srv/docker/nsqd:/data
+         - type: bind
+           source: "${DOCKER_DATA_PATH:-./docker}/nsq"
+           target: /data
+      networks:
+         default:
+            aliases:
+               - nsqd
+               - "${nsq_broadcast_address}"
+      restart: always
       depends_on:
          - nsqlookupd
       links:
@@ -135,10 +145,14 @@ services:
       hostname: nsqadmin
       command: /nsqadmin --lookupd-http-address=nsqlookupd:4161
       volumes:
-         - /srv/docker/nsqadmin:/data
+         - type: bind
+           source: "${DOCKER_DATA_PATH:-./docker/nsq}/nsq"
+           target: /data
       depends_on:
          - nsqlookupd
       links:
          - nsqlookupd:nsqlookupd
       ports:
          - "4171:4171"
+networks:
+   default:
