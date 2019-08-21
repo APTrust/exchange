@@ -49,27 +49,27 @@ run: ## Run Exchange services in foreground
 	docker-compose up
 
 publish:
-#	docker tag aptrust/ registry.gitlab.com/aptrust/container-registry/pharos && \
-#	docker push registry.gitlab.com/aptrust/container-registry/pharos
 	docker login $(REGISTRY)
-	@for app in $(APPS_LIST); do \
-		@echo "Pushing $$app;" \
-		docker push $(REGISTRY)/$(REPOSITORY)/$(NAME)_$$app\
+	@for app in $(APP_LIST:apps/%=%); \
+	do \
+		echo "Publishing $$app:$(REVISION)-$(BRANCH)"; \
+		docker push $(REGISTRY)/$(REPOSITORY)/$(NAME)_$$app:$(REVISION)-$(BRANCH);\
 	done
 
 publish-ci:
 	@echo $(DOCKER_PWD) | docker login -u $(DOCKER_USER) --password-stdin $(REGISTRY)
-	@for app in $(APPS_LIST); do \
-		@echo "Pushing $$app;" \
-		docker push $(REGISTRY)/$(REPOSITORY)/$(NAME)_$$app\
+	@for app in $(APP_LIST:apps/%=%); \
+	do \
+	echo "Publishing $$app:$(REVISION)-$(BRANCH)"; \
+		docker push $(REGISTRY)/$(REPOSITORY)/$(NAME)_$$app:$(REVISION)-$(BRANCH);\
 	done
-
 
 # Docker release - build, tag and push the container
 release: build publish ## Make a release by building and publishing the `{version}` as `latest` tagged containers to Gitlab
 
 push: ## Push the Docker image up to the registry
 #	docker push  $(registry)/$(repository)/$(tag)
-	"TBD"
+	@echo "TBD"
 
 clean: ## Clean the generated/compiles files
+	@echo "TBD"
