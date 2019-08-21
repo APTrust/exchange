@@ -60,8 +60,8 @@ publish-ci:
 	@echo $(DOCKER_PWD) | docker login -u $(DOCKER_USER) --password-stdin $(REGISTRY)
 	@for app in $(APP_LIST:apps/%=%); \
 	do \
-	echo "Publishing $$app:$(REVISION)-$(BRANCH)"; \
-		docker push $(REGISTRY)/$(REPOSITORY)/$(NAME)_$$app:$(REVISION)-$(BRANCH);\
+	echo "Publishing $$app:$(REVISION)-$(PUSHBRANCH)"; \
+		docker push $(REGISTRY)/$(REPOSITORY)/$(NAME)_$$app:$(REVISION)-$(PUSHBRANCH);\
 	done
 
 # Docker release - build, tag and push the container
