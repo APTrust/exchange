@@ -42,8 +42,8 @@ up: ## Start Exchange+NSQ containers
 stop: ## Stop Exchange+NSQ containers
 	sudo docker-compose stop
 
-destroy: ## Stop and remove all Exchange+NSQ containers, networks, images, and volumes
-	sudo docker-compose down
+down: ## Stop and remove all Exchange+NSQ containers, networks, images, and volumes
+	sudo docker-compose down -v
 
 run: ## Run Exchange services in foreground
 	sudo docker-compose up
