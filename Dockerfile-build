@@ -19,8 +19,6 @@ COPY . .
 #RUN go get -v github.com/APTrust/exchange/...
 RUN go install -a github.com/APTrust/exchange/apps/...
 
-# TODO: Exclude go services that require cron. need a cron base image for those
-
 FROM alpine:latest
 
 ARG EX_SERVICE=${EX_SERVICE}
@@ -34,7 +32,7 @@ VOLUME ["/go/bin/config"]
 # Docker images are tagged with app names already.
 COPY --from=builder /go/bin/${EX_SERVICE} /go/bin/main
 COPY --from=builder /go/src/github.com/APTrust/exchange/config/${ENVIRONMENT}.json config/config.json
-COPY --from=builder /go/src/github.com/APTrust/exchange/config/aptrust*.json config/
+COPY --from=builder /go/src/github.com/APTrust/exchange/config/aptrust_bag_validation_config.json config/aptrust_bag_validation_config.json
 
 # TODO: These libraries are needed for the exchange services if they were build
 # statically linked. Need more testing. Current workaround is to install
