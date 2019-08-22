@@ -1,0 +1,22 @@
+ARG EX_SERVICE=${EX_SERVICE}
+FROM golang:1.12.6-alpine3.9 as builder
+# This image provides binaries for Exchange microservices.
+# A CI/CD service will distribute and build/deploy each microservice. TBD
+# .
+
+RUN apk update && \
+    apk add --no-cache libmagic file-dev g++ make build-base \
+    imagemagick-dev bash
+
+ENV APP_PATH=/go/src/github.com/APTrust/exchange
+
+ENV ENV="/etc/profile"
+
+RUN mkdir -p $APP_PATH
+WORKDIR $APP_PATH
+
+COPY . .
+RUN go install -a github.com/APTrust/exchange/apps/...
+
+CMD go test $(go list ./... | grep -v vendor/)
+
