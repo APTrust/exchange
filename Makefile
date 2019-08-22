@@ -25,7 +25,6 @@ lsdirs: ## Show the apps that will be built
 	@for app in $(APP_LIST:apps/%=%); do \
 		echo $$app; \
 	done
-	echo $(APPS_LIST)
 
 revision: ## Show me the git hash
 	echo "${REVISION}"
@@ -46,7 +45,16 @@ down: ## Stop and remove all Exchange+NSQ containers, networks, images, and volu
 	docker-compose down -v
 
 run: ## Run Exchange services in foreground
-	docker-compose up
+	docker run aptrust/$(NAME)_${ARGS}
+
+runcmd: ## Run a one time command. Takes exchange service name as argument.
+	docker run aptrust/$(NAME)_${ARGS} $(filter-out $@, $(MAKECMDGOALS))
+
+unittest: ## Run unit tests in non Docker setup
+	go test $(glide novendor) github.com/APTrust/exchange/...
+
+test-ci: ## Run unit tests in CI
+	docker run exchange-ci-test
 
 publish:
 	docker login $(REGISTRY)
@@ -65,7 +73,7 @@ publish-ci:
 	done
 
 # Docker release - build, tag and push the container
-release: build publish ## Make a release by building and publishing the `{version}` as `latest` tagged containers to Gitlab
+release: build publish ## Make a release by building and publishing tagged containers to Gitlab
 
 push: ## Push the Docker image up to the registry
 #	docker push  $(registry)/$(repository)/$(tag)
