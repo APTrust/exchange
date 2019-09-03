@@ -115,6 +115,19 @@ type IntellectualObject struct {
 	// Restoration spot tests.
 	FileSize int64 `json:"file_size,omitempty"`
 
+	// BagItProfileIdentifier should come from the BagIt-Profile-Identifier
+	// tag in the bag-info.txt file. If absent from the tag file, the
+	// system should be able to infer it based on the bag's structure and
+	// fill it in as either an APTrust bag or a BTR bag.
+	BagItProfileIdentifier string `json:"bagit_profile_identifier,omitempty"`
+
+	// SourceOrganization comes from the Source-Organization tag of the
+	// bag-info.txt file. This is for compliance with the Beyond the
+	// Repository spec. For bags deposited by APTrust members, the
+	// Institution field should be considered final and correct, even
+	// if it differs from this field.
+	SourceOrganization string `json:"source_organization,omitempty"`
+
 	// IngestS3Bucket is the bucket to which the depositor uploaded
 	// this bag. We fetch it from there to a local staging area for
 	// processing.

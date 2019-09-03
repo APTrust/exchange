@@ -2,6 +2,7 @@ package validation_test
 
 import (
 	"github.com/APTrust/exchange/constants"
+	"github.com/APTrust/exchange/models"
 	"github.com/APTrust/exchange/testhelper"
 	"github.com/APTrust/exchange/util"
 	"github.com/APTrust/exchange/util/fileutil"
@@ -707,4 +708,48 @@ func TestNewValidator_IllegalFetchTxt(t *testing.T) {
 	assert.True(t, summary.HasErrors())
 	assert.True(t, util.StringListContains(summary.Errors, "Bag contains a fetch.txt file, but the profile does not allow it."))
 
+}
+
+func TestNewValidator_SetIntelObjTagValue(t *testing.T) {
+	obj := models.NewIntellectualObject()
+	validator := validation.Validator{}
+	internalSenderDescription := models.NewTag("bag-info.txt", "Internal-Sender-Description", "Description from bag-info.txt")
+	internalSenderIdentifier := models.NewTag("bag-info.txt", "Internal-Sender-Identifier", "1234-5678")
+	bagGroupIdentifier := models.NewTag("bag-info.txt", "Bag-Group-Identifier", "Group-1234")
+	sourceOrganization := models.NewTag("bag-info.txt", "Source-Organization", "Moe's Tavern")
+	bagItProfileIdentifier := models.NewTag("bag-info.txt", "BagIt-Profile-Identifier", "https://example.com/bagit-profile-v1.0.json")
+
+	title := models.NewTag("aptrust-info.txt", "Title", "Bag Title")
+	access := models.NewTag("aptrust-info.txt", "Access", "Consortia")
+	description := models.NewTag("aptrust-info.txt", "Description", "Bag of goodies.")
+
+	validator.SetIntelObjTagValue(obj, internalSenderDescription)
+	validator.SetIntelObjTagValue(obj, internalSenderIdentifier)
+	validator.SetIntelObjTagValue(obj, bagGroupIdentifier)
+	validator.SetIntelObjTagValue(obj, sourceOrganization)
+	validator.SetIntelObjTagValue(obj, bagItProfileIdentifier)
+	validator.SetIntelObjTagValue(obj, title)
+	validator.SetIntelObjTagValue(obj, access)
+
+	// Make sure all these have been set, and note that
+	// Internal-Sender-Description applies only when no other
+	// description has been specified.
+	assert.Equal(t, internalSenderDescription.Value, obj.Description)
+	assert.Equal(t, internalSenderIdentifier.Value, obj.AltIdentifier)
+	assert.Equal(t, bagGroupIdentifier.Value, obj.BagGroupIdentifier)
+	assert.Equal(t, sourceOrganization.Value, obj.SourceOrganization)
+	assert.Equal(t, bagItProfileIdentifier.Value, obj.BagItProfileIdentifier)
+	assert.Equal(t, title.Value, obj.Title)
+	assert.Equal(t, access.Value, obj.Access)
+
+	// Description from aptrust-info.txt/Description should override the
+	// description fille in by Internal-Sender-Description above...
+	validator.SetIntelObjTagValue(obj, description)
+	assert.Equal(t, description.Value, obj.Description)
+
+	// But if we encounter Internal-Sender-Description after a description
+	// has been set, Internal-Sender-Description should NOT overwrite it.
+	// Test that prior description from aptrust-info.txt/Description remains.
+	validator.SetIntelObjTagValue(obj, internalSenderDescription)
+	assert.Equal(t, description.Value, obj.Description)
 }

@@ -517,13 +517,13 @@ func (validator *Validator) parseTags(reader io.Reader, relFilePath string) {
 					obj.IngestTags = append(obj.IngestTags, tag)
 				}
 				tag = models.NewTag(relFilePath, data[1], strings.TrimSpace(data[2]))
-				validator.setIntelObjTagValue(obj, tag)
+				validator.SetIntelObjTagValue(obj, tag)
 				continue
 			}
 			value := strings.TrimSpace(data[2])
 			if tag != nil {
 				tag.Value = strings.Join([]string{tag.Value, value}, " ")
-				validator.setIntelObjTagValue(obj, tag)
+				validator.SetIntelObjTagValue(obj, tag)
 			}
 		} else {
 			validator.summary.AddError("Unable to parse tag data from line: '%s'", line)
@@ -549,7 +549,10 @@ func (validator *Validator) parseTags(reader io.Reader, relFilePath string) {
 // the institution's identifier (domain name), not it's actual
 // name. "Source-Organization" usually has something like
 // "University of Virginia". We want "virginia.edu".
-func (validator *Validator) setIntelObjTagValue(obj *models.IntellectualObject, tag *models.Tag) {
+//
+// This method should be considered private. It's public so we
+// can write unit tests for it.
+func (validator *Validator) SetIntelObjTagValue(obj *models.IntellectualObject, tag *models.Tag) {
 	if tag.SourceFile == "aptrust-info.txt" {
 		label := strings.ToLower(tag.Label)
 		switch label {
@@ -557,16 +560,24 @@ func (validator *Validator) setIntelObjTagValue(obj *models.IntellectualObject, 
 			obj.Title = tag.Value
 		case "access":
 			obj.Access = tag.Value
+		case "description":
+			obj.Description = tag.Value
 		}
 	} else if tag.SourceFile == "bag-info.txt" {
 		label := strings.ToLower(tag.Label)
 		switch label {
 		case "internal-sender-description":
-			obj.Description = tag.Value
+			if obj.Description == "" {
+				obj.Description = tag.Value
+			}
 		case "internal-sender-identifier":
 			obj.AltIdentifier = tag.Value
 		case "bag-group-identifier":
 			obj.BagGroupIdentifier = tag.Value
+		case "source-organization":
+			obj.SourceOrganization = tag.Value
+		case "bagit-profile-identifier":
+			obj.BagItProfileIdentifier = tag.Value
 		}
 	}
 }
