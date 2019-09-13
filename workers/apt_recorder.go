@@ -397,7 +397,23 @@ func (recorder *APTRecorder) deleteBagFromReceivingBucket(ingestState *models.In
 	ingestState.IngestManifest.CleanupResult.Start()
 	ingestState.IngestManifest.CleanupResult.Attempted = true
 	ingestState.IngestManifest.CleanupResult.AttemptNumber += 1
+
 	// Remove the bag from the receiving bucket, if ingest succeeded
+	if !recorder.bucketVersionMatchesCurrentVersion(ingestState) {
+		recorder.Context.MessageLog.Info(
+			"Skipping deletion of %s in WorkItem %d "+
+				"because the etag of the tar file in "+
+				"the receiving bucket does not match the etag of the bag "+
+				"just ingested. (Hint: depositor uploaded a new version "+
+				"during ingest and we'll need to ingest that next.)",
+			ingestState.IngestManifest.S3Key, ingestState.WorkItem.Id)
+		// Set deletion timestamp, so we know this method was called.
+		if obj != nil {
+			db.Save(obj.Identifier, obj)
+		}
+		ingestState.IngestManifest.CleanupResult.Finish()
+		return
+	}
 	if recorder.Context.Config.DeleteOnSuccess == false {
 		// We don't actually delete files if config is dev, test, or integration.
 		recorder.Context.MessageLog.Info("Skipping deletion step because config.DeleteOnSuccess == false")
@@ -459,6 +475,53 @@ func (recorder *APTRecorder) saveGenericFilesInBoltDB(ingestState *models.Ingest
 				gf.Identifier, err.Error())
 		}
 	}
+}
+
+// bucketVersionMatchesCurrentVersion returns true if the e-tag of a
+// bag (tar file) in the S3 receiving bucket matches the e-tag of the
+// bag we're currently working on. When the tags match, we can safely
+// delete the tar file from the receiving bucket.
+//
+// The problematic case we're trying to avoid is when a depositor has
+// uploaded a new version of an existing bag WHILE we're still ingesting
+// an older version. In that case, the proper thing to do is to finish
+// ingesting the old version and then ingest the new one. We cannot ingest
+// the new one if this code deletes it from the receiving bucket.
+//
+// If the version in the receiving bucket does not match the version we
+// just ingested, let's not delete it from the receiving bucket, because
+// we will probably start ingesting it soon.
+//
+// Part of https://trello.com/c/GLURkoKW
+func (recorder *APTRecorder) bucketVersionMatchesCurrentVersion(ingestState *models.IngestState) bool {
+	eTagMatches := false
+	s3ObjectList := network.NewS3ObjectList(
+		os.Getenv("AWS_ACCESS_KEY_ID"),
+		os.Getenv("AWS_SECRET_ACCESS_KEY"),
+		constants.AWSVirginia,
+		ingestState.IngestManifest.S3Bucket,
+		int64(100),
+	)
+	s3ObjectList.GetList(ingestState.IngestManifest.S3Key)
+
+	if s3ObjectList.ErrorMessage != "" {
+		recorder.Context.MessageLog.Warning(
+			"Error checking receiving bucket %s for key %s: %s",
+			ingestState.IngestManifest.S3Bucket,
+			ingestState.IngestManifest.S3Key,
+			s3ObjectList.ErrorMessage)
+	}
+	// There can really only be one object with this key,
+	// but we loop in case someone uploaded an object whose
+	// name starts with this key.
+	for _, s3Object := range s3ObjectList.Response.Contents {
+		if *s3Object.Key == ingestState.IngestManifest.S3Key &&
+			strings.Replace(*s3Object.ETag, "\"", "", -1) == ingestState.WorkItem.ETag {
+			eTagMatches = true
+			break
+		}
+	}
+	return eTagMatches
 }
 
 // --------- Messages --------------
