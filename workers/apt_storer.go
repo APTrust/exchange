@@ -825,17 +825,21 @@ func (storer *APTStorer) getReadCloser(storageSummary *models.StorageSummary) (*
 	tfi, err := fileutil.NewTarFileIterator(storageSummary.TarFilePath)
 	if err != nil {
 		msg := fmt.Sprintf("Can't get TarFileIterator for %s: %v", tarFilePath, err)
+		storer.Context.MessageLog.Error(msg)
 		storageSummary.StoreResult.AddError(msg)
 		return nil, nil
 	}
 	origPathWithBagName, err := gf.OriginalPathWithBagName()
 	if err != nil {
-		storageSummary.StoreResult.AddError(err.Error())
+		msg := fmt.Sprintf("Can't get original path for %s: %s", gf.Identifier, err.Error())
+		storer.Context.MessageLog.Error(msg)
+		storageSummary.StoreResult.AddError(msg)
 		return nil, nil
 	}
 	readCloser, err := tfi.Find(origPathWithBagName)
 	if err != nil {
 		msg := fmt.Sprintf("Can't get reader for %s: %v", gf.Identifier, err)
+		storer.Context.MessageLog.Error(msg)
 		storageSummary.StoreResult.AddError(msg)
 		if readCloser != nil {
 			readCloser.Close()
