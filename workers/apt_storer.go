@@ -149,7 +149,7 @@ func (storer *APTStorer) store() {
 		existingStorageOption, err := storer.setStorageOption(db, objIdentifier)
 		if err != nil {
 			msg := fmt.Sprintf("While trying to get original storage option, "+
-				"error looking up IntellectualObject in Pharos: %v", err)
+				"error looking up IntellectualObject in Pharos or BoltDB: %v", err)
 			ingestState.IngestManifest.StoreResult.AddError(msg)
 			ingestState.IngestManifest.StoreResult.Finish()
 			storer.CleanupChannel <- ingestState
@@ -503,6 +503,9 @@ func (storer *APTStorer) setStorageOption(db *storage.BoltDB, objIdentifier stri
 	obj, err := db.GetIntellectualObject(objIdentifier)
 	if err != nil {
 		return "", fmt.Errorf("Can't get IntellectualObject from BoltDB: %v", err)
+	}
+	if obj == nil {
+		return "", fmt.Errorf("BoltDB returned nothing for object identifier: %s", objIdentifier)
 	}
 
 	// Force the StorageOption of the item we're ingesting to match the
