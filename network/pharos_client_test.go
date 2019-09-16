@@ -140,6 +140,23 @@ func TestIntellectualObjectGet(t *testing.T) {
 		response.Request.URL.Opaque)
 }
 
+func TestIntellectualObjectGet_WithProblematicIdentifier(t *testing.T) {
+	testServer := httptest.NewServer(http.HandlerFunc(intellectualObjectGetHandler))
+	defer testServer.Close()
+
+	client, err := network.NewPharosClient(testServer.URL, "v2", "user", "key")
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	response := client.IntellectualObjectGet("vcu.edu/Margaret's Test Suite", false, false)
+
+	// Check the request URL and method
+	assert.Equal(t, "GET", response.Request.Method)
+	assert.Equal(t, "/api/v2/objects/vcu.edu%2FMargaret%27s%20Test%20Suite", response.Request.URL.Opaque)
+}
+
 func TestIntellectualObjectList(t *testing.T) {
 	testServer := httptest.NewServer(http.HandlerFunc(intellectualObjectListHandler))
 	defer testServer.Close()

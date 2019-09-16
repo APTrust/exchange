@@ -113,7 +113,7 @@ func (client *PharosClient) IntellectualObjectGet(identifier string, includeFile
 	resp.objects = make([]*models.IntellectualObject, 1)
 
 	// Build the url and the request object
-	relativeUrl := fmt.Sprintf("/api/%s/objects/%s", client.apiVersion, url.QueryEscape(identifier))
+	relativeUrl := fmt.Sprintf("/api/%s/objects/%s", client.apiVersion, escapeFileIdentifier(identifier))
 	if includeFiles && includeEvents {
 		relativeUrl += "?include_all_relations=true"
 	} else if includeFiles {
@@ -189,7 +189,7 @@ func (client *PharosClient) IntellectualObjectSave(obj *models.IntellectualObjec
 	httpMethod := "POST"
 	if obj.Id > 0 {
 		// PUT URL looks like /api/v2/objects/college.edu%2Fobject_name
-		relativeUrl = fmt.Sprintf("/api/%s/objects/%s", client.apiVersion, url.QueryEscape(obj.Identifier))
+		relativeUrl = fmt.Sprintf("/api/%s/objects/%s", client.apiVersion, escapeFileIdentifier(obj.Identifier))
 		httpMethod = "PUT"
 	}
 	absoluteUrl := client.BuildUrl(relativeUrl)
@@ -252,7 +252,7 @@ func (client *PharosClient) IntellectualObjectRequestRestore(identifier string) 
 	resp.workItems = make([]*models.WorkItem, 1)
 
 	// Build the url and the request object
-	relativeUrl := fmt.Sprintf("/api/%s/objects/%s/restore", client.apiVersion, url.QueryEscape(identifier))
+	relativeUrl := fmt.Sprintf("/api/%s/objects/%s/restore", client.apiVersion, escapeFileIdentifier(identifier))
 	absoluteUrl := client.BuildUrl(relativeUrl)
 
 	// Run the request.
@@ -281,7 +281,7 @@ func (client *PharosClient) IntellectualObjectRequestDelete(identifier string) *
 	resp.objects = make([]*models.IntellectualObject, 0)
 
 	// Build the url and the request object
-	relativeUrl := fmt.Sprintf("/api/%s/objects/%s/delete", client.apiVersion, url.QueryEscape(identifier))
+	relativeUrl := fmt.Sprintf("/api/%s/objects/%s/delete", client.apiVersion, escapeFileIdentifier(identifier))
 	absoluteUrl := client.BuildUrl(relativeUrl)
 
 	// Run the request.
@@ -306,7 +306,7 @@ func (client *PharosClient) IntellectualObjectFinishDelete(identifier string) *P
 
 	// Build the url and the request object
 	relativeUrl := fmt.Sprintf("/api/%s/objects/%s/finish_delete", client.apiVersion,
-		url.QueryEscape(identifier))
+		escapeFileIdentifier(identifier))
 	absoluteUrl := client.BuildUrl(relativeUrl)
 
 	// Run the request
