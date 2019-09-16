@@ -82,6 +82,15 @@ func TestAddError(t *testing.T) {
 	assert.Equal(t, "Second error is number 2", s.Errors[1])
 }
 
+func TestAddError_Limit(t *testing.T) {
+	s := models.NewWorkSummary()
+	for i := 0; i < 40; i++ {
+		s.AddError("Err %d", i)
+	}
+	assert.Equal(t, len(s.Errors), 30)
+	assert.Equal(t, s.Errors[len(s.Errors)-1], "Too many errors")
+}
+
 func TestHasErrors(t *testing.T) {
 	s := models.NewWorkSummary()
 	assert.False(t, s.HasErrors())

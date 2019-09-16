@@ -98,9 +98,20 @@ func (summary *WorkSummary) Succeeded() bool {
 	return succeeded
 }
 
+// A.D. 2019-09-16: Cap total errors at 30.
+// In rare cases, ingest server can encounter thousands of read
+// errors. If WorkSummary captures them all, the data becomes
+// too large to post to Pharos.
 func (summary *WorkSummary) AddError(format string, a ...interface{}) {
+	if len(summary.Errors) > 29 {
+		return
+	}
 	summary.getMutex().Lock()
-	summary.Errors = append(summary.Errors, fmt.Sprintf(format, a...))
+	if len(summary.Errors) == 29 {
+		summary.Errors = append(summary.Errors, "Too many errors")
+	} else {
+		summary.Errors = append(summary.Errors, fmt.Sprintf(format, a...))
+	}
 	summary.getMutex().Unlock()
 }
 
