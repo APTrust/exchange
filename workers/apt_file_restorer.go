@@ -73,7 +73,6 @@ func (restorer *APTFileRestorer) restore() {
 		if restorer.alreadyRestored(restoreState) {
 			restorationBucket := util.RestorationBucketFor(restoreState.IntellectualObject.Institution,
 				restorer.Context.Config.RestoreToTestBuckets)
-			restoreState.RestoredToURL = fmt.Sprintf("%s%s/%s", constants.S3UriPrefix, restorationBucket, restoreState.GenericFile.Identifier)
 			restorer.Context.MessageLog.Info("File %s has already been restored to %s",
 				restoreState.GenericFile.Identifier, restorationBucket)
 		} else {
@@ -146,6 +145,12 @@ func (restorer *APTFileRestorer) alreadyRestored(restoreState *models.FileRestor
 		sizeInS3 := int64(-1)
 		if client.Response.ContentLength != nil {
 			sizeInS3 = *client.Response.ContentLength
+		}
+		if sizeInS3 == restoreState.GenericFile.Size {
+			restoreState.RestoredToURL = fmt.Sprintf("%s%s/%s", constants.S3UriPrefix, restorationBucket, restoreState.GenericFile.Identifier)
+			if client.Response.LastModified != nil {
+				restoreState.CopiedToRestorationAt = *client.Response.LastModified
+			}
 		}
 		return restoreState.GenericFile.Size == sizeInS3
 	}
