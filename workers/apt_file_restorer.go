@@ -73,6 +73,7 @@ func (restorer *APTFileRestorer) restore() {
 		if restorer.alreadyRestored(restoreState) {
 			restorationBucket := util.RestorationBucketFor(restoreState.IntellectualObject.Institution,
 				restorer.Context.Config.RestoreToTestBuckets)
+			restoreState.RestoredToURL = fmt.Sprintf("%s%s/%s", constants.S3UriPrefix, restorationBucket, restoreState.GenericFile.Identifier)
 			restorer.Context.MessageLog.Info("File %s has already been restored to %s",
 				restoreState.GenericFile.Identifier, restorationBucket)
 		} else {
@@ -237,8 +238,8 @@ func (restorer *APTFileRestorer) finishWithSuccess(restoreState *models.FileRest
 	restoreState.WorkItem.Date = time.Now().UTC()
 	restoreState.WorkItem.Note = fmt.Sprintf(
 		"File restored to %s at %s by request of %s",
-		restoreState.CopiedToRestorationAt.Format(time.RFC3339),
 		restoreState.RestoredToURL,
+		restoreState.CopiedToRestorationAt.Format(time.RFC3339),
 		restoreState.WorkItem.User)
 	restoreState.WorkItem.Node = ""
 	restoreState.WorkItem.Pid = 0
