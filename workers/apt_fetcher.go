@@ -11,6 +11,7 @@ import (
 	"github.com/APTrust/exchange/util/storage"
 	"github.com/APTrust/exchange/validation"
 	"github.com/nsqio/go-nsq"
+	"net/url"
 	"os"
 	"strings"
 	"time"
@@ -72,6 +73,20 @@ func (fetcher *APTFetcher) HandleMessage(message *nsq.Message) error {
 	if ingestState.WorkItem.IsInProgress() {
 		log.Info(ingestState.WorkItem.MsgSkippingInProgress())
 		message.Finish()
+		return nil
+	}
+
+	// If we're still ingesting an older version of this bag,
+	// requeue this request with a delay of several hours.
+	// See https://trello.com/c/GLURkoKW
+	if fetcher.StillIngestingOlderVersion(ingestState) {
+		err = MarkWorkItemRequeued(ingestState, fetcher.Context)
+		if err != nil {
+			fetcher.Context.MessageLog.Error(
+				"Error telling Pharos this item is being requeued: %v",
+				err.Error())
+		}
+		message.Requeue(8 * time.Hour)
 		return nil
 	}
 
@@ -464,4 +479,40 @@ func (fetcher *APTFetcher) initObjectInDB(ingestState *models.IngestState, obj *
 	}
 	fetcher.Context.MessageLog.Info("Saved %s to valdb", obj.Identifier)
 	return nil
+}
+
+// StillIngestingOlderVersion returns true if another version of this bag is
+// being ingested by this or another worker.
+// See https://trello.com/c/GLURkoKW.
+func (fetcher *APTFetcher) StillIngestingOlderVersion(state *models.IngestState) bool {
+	params := url.Values{}
+	params.Add("item_action", constants.ActionIngest)
+	params.Add("name", state.WorkItem.Name)
+
+	hasIngestInProgress := false
+	resp := fetcher.Context.PharosClient.WorkItemList(params)
+	if resp.Error != nil {
+		fetcher.Context.MessageLog.Warning(
+			"While checking for other pending ingests for %s (Work Item %d), "+
+				"got error: %v",
+			state.WorkItem.Name, state.WorkItem.Id, resp.Error)
+	}
+	items := resp.WorkItems()
+	if len(items) > 0 {
+		for _, item := range items {
+			if item.Id == state.WorkItem.Id {
+				continue
+			}
+			if item.Status == constants.StatusStarted || item.Status == constants.StatusPending {
+				fetcher.Context.MessageLog.Info(
+					"Will not start ingest on WorkItem for %d (%s) because "+
+						"WorkItem %d is still ingesting the object in "+
+						"another process.",
+					state.WorkItem.Id, state.WorkItem.Name, item.Id)
+				hasIngestInProgress = true
+				break
+			}
+		}
+	}
+	return hasIngestInProgress
 }

@@ -149,7 +149,7 @@ func (storer *APTStorer) store() {
 		existingStorageOption, err := storer.setStorageOption(db, objIdentifier)
 		if err != nil {
 			msg := fmt.Sprintf("While trying to get original storage option, "+
-				"error looking up IntellectualObject in Pharos: %v", err)
+				"error looking up IntellectualObject in Pharos or BoltDB: %v", err)
 			ingestState.IngestManifest.StoreResult.AddError(msg)
 			ingestState.IngestManifest.StoreResult.Finish()
 			storer.CleanupChannel <- ingestState
@@ -504,6 +504,9 @@ func (storer *APTStorer) setStorageOption(db *storage.BoltDB, objIdentifier stri
 	if err != nil {
 		return "", fmt.Errorf("Can't get IntellectualObject from BoltDB: %v", err)
 	}
+	if obj == nil {
+		return "", fmt.Errorf("BoltDB returned nothing for object identifier: %s", objIdentifier)
+	}
 
 	// Force the StorageOption of the item we're ingesting to match the
 	// existing (non-deleted) object in Pharos.
@@ -825,17 +828,21 @@ func (storer *APTStorer) getReadCloser(storageSummary *models.StorageSummary) (*
 	tfi, err := fileutil.NewTarFileIterator(storageSummary.TarFilePath)
 	if err != nil {
 		msg := fmt.Sprintf("Can't get TarFileIterator for %s: %v", tarFilePath, err)
+		storer.Context.MessageLog.Error(msg)
 		storageSummary.StoreResult.AddError(msg)
 		return nil, nil
 	}
 	origPathWithBagName, err := gf.OriginalPathWithBagName()
 	if err != nil {
-		storageSummary.StoreResult.AddError(err.Error())
+		msg := fmt.Sprintf("Can't get original path for %s: %s", gf.Identifier, err.Error())
+		storer.Context.MessageLog.Error(msg)
+		storageSummary.StoreResult.AddError(msg)
 		return nil, nil
 	}
 	readCloser, err := tfi.Find(origPathWithBagName)
 	if err != nil {
 		msg := fmt.Sprintf("Can't get reader for %s: %v", gf.Identifier, err)
+		storer.Context.MessageLog.Error(msg)
 		storageSummary.StoreResult.AddError(msg)
 		if readCloser != nil {
 			readCloser.Close()
