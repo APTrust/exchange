@@ -29,7 +29,8 @@ lsdirs: ## Show the apps that will be built
 	done
 
 revision: ## Show me the git hash
-	echo "${REVISION}"
+	@echo "Revision: ${REVISION}"
+	@echo "Branch: ${BRANCH}"
 
 build: ## Build the Exchange containers
 	@for app in $(APP_LIST:apps/%=%); do \
@@ -38,7 +39,7 @@ build: ## Build the Exchange containers
 	done
 
 up: ## Start Exchange+NSQ containers
-	DOCKER_TAG_NAME=$(REVISION) docker-compose up
+	docker-compose up
 
 stop: ## Stop Exchange+NSQ containers
 	docker-compose stop
@@ -46,11 +47,15 @@ stop: ## Stop Exchange+NSQ containers
 down: ## Stop and remove all Exchange+NSQ containers, networks, images, and volumes
 	docker-compose down -v
 
-run: ## Run Exchange services in foreground
-	docker run aptrust/$(NAME)_${ARGS}
+run: ## Run Exchange service in foreground
+	docker run aptrust/$(NAME)_$(filter-out $@, $(MAKECMDGOALS))
 
 runcmd: ## Run a one time command. Takes exchange service name as argument.
-	docker run aptrust/$(NAME)_${ARGS} $(filter-out $@, $(MAKECMDGOALS))
+	@echo "Need to pass in exchange service and cmd. e.g. make runcmd apt_record bash"
+	docker run -it aptrust/$(NAME)_$(filter-out $@, $(MAKECMDGOALS))
+
+%:
+	@:
 
 unittest: ## Run unit tests in non Docker setup
 	go test $(glide novendor) github.com/APTrust/exchange/...
