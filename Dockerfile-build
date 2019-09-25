@@ -46,13 +46,4 @@ COPY --from=builder /go/src/github.com/APTrust/exchange/config/aptrust_bag_valid
 RUN apk update && \
     apk add --no-cache imagemagick-dev libmagic bash
 
-ENV EXCHANGE_HOME ${EXCHANGE_HOME:-/go/bin}
-ENV GOPATH ${GOPATH:-/go}
-ENV ENVIRONMENT ${ENVIRONMENT:-development}
-ENV AWS_ACCESS_KEY_ID ${AWS_ACCESS_KEY_ID:-}
-ENV AWS_SECRET_ACCESS_KEY_ID ${AWS_SECRET_ACCESS_KEY_ID:-}
-ENV PHAROS_API_USER ${PHAROS_API_USER:-system@aptrust.org}
-ENV PHAROS_API_KEY ${PHAROS_API_KEY:-123}
-
-
 CMD ["/go/bin/main", "-config=/go/bin/config/config.json"]
