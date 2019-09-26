@@ -451,7 +451,7 @@ func TestGenericFileSave(t *testing.T) {
 	origModTime := obj.UpdatedAt
 	response = client.GenericFileSave(obj)
 
-	expectedUrl := fmt.Sprintf("/api/v2/files/%s", url.QueryEscape(obj.Identifier))
+	expectedUrl := fmt.Sprintf("/api/v2/files/%s", strings.Replace(url.QueryEscape(obj.Identifier), "+", "%20", -1))
 	assert.Equal(t, "PUT", response.Request.Method)
 	assert.Equal(t, expectedUrl, response.Request.URL.Opaque)
 
