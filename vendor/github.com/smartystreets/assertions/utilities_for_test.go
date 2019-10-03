@@ -2,21 +2,39 @@ package assertions
 
 import (
 	"fmt"
-	"path"
-	"runtime"
 	"strings"
 	"testing"
+
+	"github.com/smartystreets/assertions/internal/unit"
 )
 
-func pass(t *testing.T, result string) {
-	if result != success {
-		_, file, line, _ := runtime.Caller(1)
-		base := path.Base(file)
-		t.Errorf("Expectation should have passed but failed (see %s: line %d): '%s'", base, line, result)
-	}
+/**************************************************************************/
+
+func TestAssertionsFixture(t *testing.T) {
+	unit.Run(new(AssertionsFixture), t)
 }
 
-func fail(t *testing.T, actual string, expected string) {
+type AssertionsFixture struct {
+	*unit.Fixture
+}
+
+func (this *AssertionsFixture) Setup() {
+	serializer = this
+}
+
+func (self *AssertionsFixture) serialize(expected, actual interface{}, message string) string {
+	return fmt.Sprintf("%v|%v|%s", expected, actual, message)
+}
+
+func (self *AssertionsFixture) serializeDetailed(expected, actual interface{}, message string) string {
+	return fmt.Sprintf("%v|%v|%s", expected, actual, message)
+}
+
+func (this *AssertionsFixture) pass(result string) {
+	this.Assert(result == success, result)
+}
+
+func (this *AssertionsFixture) fail(actual string, expected string) {
 	actual = format(actual)
 	expected = format(expected)
 
@@ -24,10 +42,7 @@ func fail(t *testing.T, actual string, expected string) {
 		if actual == "" {
 			actual = "(empty)"
 		}
-		_, file, line, _ := runtime.Caller(1)
-		base := path.Base(file)
-		t.Errorf("Expectation should have failed but passed (see %s: line %d). \nExpected: %s\nActual:   %s\n",
-			base, line, expected, actual)
+		this.Errorf("Expected: %s\nActual:   %s\n", expected, actual)
 	}
 }
 func format(message string) string {
@@ -35,8 +50,13 @@ func format(message string) string {
 	for strings.Contains(message, "  ") {
 		message = strings.Replace(message, "  ", " ", -1)
 	}
+	message = strings.Replace(message, "\x1b[32m", "", -1)
+	message = strings.Replace(message, "\x1b[31m", "", -1)
+	message = strings.Replace(message, "\x1b[0m", "", -1)
 	return message
 }
+
+/**************************************************************************/
 
 type Thing1 struct {
 	a string
@@ -45,31 +65,25 @@ type Thing2 struct {
 	a string
 }
 
-type Thinger interface {
+type ThingInterface interface {
 	Hi()
 }
 
-type Thing struct{}
+type ThingImplementation struct{}
 
-func (self *Thing) Hi() {}
+func (self *ThingImplementation) Hi() {}
 
 type IntAlias int
 type StringAlias string
 type StringSliceAlias []string
 type StringStringMapAlias map[string]string
 
-/******** FakeSerialzier ********/
+/**************************************************************************/
 
-type fakeSerializer struct{}
-
-func (self *fakeSerializer) serialize(expected, actual interface{}, message string) string {
-	return fmt.Sprintf("%v|%v|%s", expected, actual, message)
+type ThingWithEqualMethod struct {
+	a string
 }
 
-func (self *fakeSerializer) serializeDetailed(expected, actual interface{}, message string) string {
-	return fmt.Sprintf("%v|%v|%s", expected, actual, message)
-}
-
-func newFakeSerializer() *fakeSerializer {
-	return new(fakeSerializer)
+func (this ThingWithEqualMethod) Equal(that ThingWithEqualMethod) bool {
+	return this.a == that.a
 }

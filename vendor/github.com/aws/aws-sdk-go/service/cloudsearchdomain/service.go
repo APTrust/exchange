@@ -11,18 +11,12 @@ import (
 	"github.com/aws/aws-sdk-go/private/protocol/restjson"
 )
 
-// You use the AmazonCloudSearch2013 API to upload documents to a search domain
-// and search those documents.
+// CloudSearchDomain provides the API operation methods for making requests to
+// Amazon CloudSearch Domain. See this package's package overview docs
+// for details on the service.
 //
-// The endpoints for submitting UploadDocuments, Search, and Suggest requests
-// are domain-specific. To get the endpoints for your domain, use the Amazon
-// CloudSearch configuration service DescribeDomains action. The domain endpoints
-// are also displayed on the domain dashboard in the Amazon CloudSearch console.
-// You submit suggest requests to the search endpoint.
-//
-// For more information, see the Amazon CloudSearch Developer Guide (http://docs.aws.amazon.com/cloudsearch/latest/developerguide).
-// The service client's operations are safe to be used concurrently.
-// It is not safe to mutate any of the client's properties though.
+// CloudSearchDomain methods are safe to use concurrently. It is not safe to
+// modify mutate any of the struct's properties though.
 type CloudSearchDomain struct {
 	*client.Client
 }
@@ -35,8 +29,9 @@ var initRequest func(*request.Request)
 
 // Service information constants
 const (
-	ServiceName = "cloudsearchdomain" // Service endpoint prefix API calls made to.
-	EndpointsID = ServiceName         // Service ID for Regions and Endpoints metadata.
+	ServiceName = "cloudsearchdomain"  // Name of service.
+	EndpointsID = ServiceName          // ID to lookup a service endpoint with.
+	ServiceID   = "CloudSearch Domain" // ServiceID is a unique identifer of a specific service.
 )
 
 // New creates a new instance of the CloudSearchDomain client with a session.
@@ -56,24 +51,24 @@ func New(p client.ConfigProvider, cfgs ...*aws.Config) *CloudSearchDomain {
 	} else {
 		c = p.ClientConfig(EndpointsID, cfgs...)
 	}
+	if c.SigningNameDerived || len(c.SigningName) == 0 {
+		c.SigningName = "cloudsearch"
+	}
 	return newClient(*c.Config, c.Handlers, c.Endpoint, c.SigningRegion, c.SigningName)
 }
 
 // newClient creates, initializes and returns a new service client instance.
 func newClient(cfg aws.Config, handlers request.Handlers, endpoint, signingRegion, signingName string) *CloudSearchDomain {
-	if len(signingName) == 0 {
-		signingName = "cloudsearch"
-	}
 	svc := &CloudSearchDomain{
 		Client: client.New(
 			cfg,
 			metadata.ClientInfo{
 				ServiceName:   ServiceName,
+				ServiceID:     ServiceID,
 				SigningName:   signingName,
 				SigningRegion: signingRegion,
 				Endpoint:      endpoint,
 				APIVersion:    "2013-01-01",
-				JSONVersion:   "1.1",
 			},
 			handlers,
 		),

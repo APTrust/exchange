@@ -11,10 +11,12 @@ import (
 	"github.com/aws/aws-sdk-go/private/protocol/jsonrpc"
 )
 
-// All public APIs for AWS Cost and Usage Report service
-// The service client's operations are safe to be used concurrently.
-// It is not safe to mutate any of the client's properties though.
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/cur-2017-01-06
+// CostandUsageReportService provides the API operation methods for making requests to
+// AWS Cost and Usage Report Service. See this package's package overview docs
+// for details on the service.
+//
+// CostandUsageReportService methods are safe to use concurrently. It is not safe to
+// modify mutate any of the struct's properties though.
 type CostandUsageReportService struct {
 	*client.Client
 }
@@ -27,8 +29,9 @@ var initRequest func(*request.Request)
 
 // Service information constants
 const (
-	ServiceName = "cur"       // Service endpoint prefix API calls made to.
-	EndpointsID = ServiceName // Service ID for Regions and Endpoints metadata.
+	ServiceName = "cur"                           // Name of service.
+	EndpointsID = ServiceName                     // ID to lookup a service endpoint with.
+	ServiceID   = "Cost and Usage Report Service" // ServiceID is a unique identifer of a specific service.
 )
 
 // New creates a new instance of the CostandUsageReportService client with a session.
@@ -43,19 +46,20 @@ const (
 //     svc := costandusagereportservice.New(mySession, aws.NewConfig().WithRegion("us-west-2"))
 func New(p client.ConfigProvider, cfgs ...*aws.Config) *CostandUsageReportService {
 	c := p.ClientConfig(EndpointsID, cfgs...)
+	if c.SigningNameDerived || len(c.SigningName) == 0 {
+		c.SigningName = "cur"
+	}
 	return newClient(*c.Config, c.Handlers, c.Endpoint, c.SigningRegion, c.SigningName)
 }
 
 // newClient creates, initializes and returns a new service client instance.
 func newClient(cfg aws.Config, handlers request.Handlers, endpoint, signingRegion, signingName string) *CostandUsageReportService {
-	if len(signingName) == 0 {
-		signingName = "cur"
-	}
 	svc := &CostandUsageReportService{
 		Client: client.New(
 			cfg,
 			metadata.ClientInfo{
 				ServiceName:   ServiceName,
+				ServiceID:     ServiceID,
 				SigningName:   signingName,
 				SigningRegion: signingRegion,
 				Endpoint:      endpoint,

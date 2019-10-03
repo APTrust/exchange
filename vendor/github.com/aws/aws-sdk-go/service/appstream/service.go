@@ -11,10 +11,12 @@ import (
 	"github.com/aws/aws-sdk-go/private/protocol/jsonrpc"
 )
 
-// API documentation for Amazon AppStream 2.0.
-// The service client's operations are safe to be used concurrently.
-// It is not safe to mutate any of the client's properties though.
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/appstream-2016-12-01
+// AppStream provides the API operation methods for making requests to
+// Amazon AppStream. See this package's package overview docs
+// for details on the service.
+//
+// AppStream methods are safe to use concurrently. It is not safe to
+// modify mutate any of the struct's properties though.
 type AppStream struct {
 	*client.Client
 }
@@ -27,8 +29,9 @@ var initRequest func(*request.Request)
 
 // Service information constants
 const (
-	ServiceName = "appstream2" // Service endpoint prefix API calls made to.
-	EndpointsID = ServiceName  // Service ID for Regions and Endpoints metadata.
+	ServiceName = "appstream2" // Name of service.
+	EndpointsID = ServiceName  // ID to lookup a service endpoint with.
+	ServiceID   = "AppStream"  // ServiceID is a unique identifer of a specific service.
 )
 
 // New creates a new instance of the AppStream client with a session.
@@ -43,19 +46,20 @@ const (
 //     svc := appstream.New(mySession, aws.NewConfig().WithRegion("us-west-2"))
 func New(p client.ConfigProvider, cfgs ...*aws.Config) *AppStream {
 	c := p.ClientConfig(EndpointsID, cfgs...)
+	if c.SigningNameDerived || len(c.SigningName) == 0 {
+		c.SigningName = "appstream"
+	}
 	return newClient(*c.Config, c.Handlers, c.Endpoint, c.SigningRegion, c.SigningName)
 }
 
 // newClient creates, initializes and returns a new service client instance.
 func newClient(cfg aws.Config, handlers request.Handlers, endpoint, signingRegion, signingName string) *AppStream {
-	if len(signingName) == 0 {
-		signingName = "appstream"
-	}
 	svc := &AppStream{
 		Client: client.New(
 			cfg,
 			metadata.ClientInfo{
 				ServiceName:   ServiceName,
+				ServiceID:     ServiceID,
 				SigningName:   signingName,
 				SigningRegion: signingRegion,
 				Endpoint:      endpoint,

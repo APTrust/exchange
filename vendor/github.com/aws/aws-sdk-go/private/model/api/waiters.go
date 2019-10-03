@@ -47,8 +47,8 @@ func (a *API) WaitersGoCode() string {
 	var buf bytes.Buffer
 	fmt.Fprintf(&buf, "import (\n%q\n\n%q\n%q\n)",
 		"time",
-		"github.com/aws/aws-sdk-go/aws",
-		"github.com/aws/aws-sdk-go/aws/request",
+		SDKImportRoot+"/aws",
+		SDKImportRoot+"/aws/request",
 	)
 
 	for _, w := range a.Waiters {
@@ -65,23 +65,23 @@ type waiterDefinitions struct {
 
 // AttachWaiters reads a file of waiter definitions, and adds those to the API.
 // Will panic if an error occurs.
-func (a *API) AttachWaiters(filename string) {
+func (a *API) AttachWaiters(filename string) error {
 	p := waiterDefinitions{API: a}
 
 	f, err := os.Open(filename)
 	defer f.Close()
 	if err != nil {
-		panic(err)
+		return err
 	}
 	err = json.NewDecoder(f).Decode(&p)
 	if err != nil {
-		panic(err)
+		return err
 	}
 
-	p.setup()
+	return p.setup()
 }
 
-func (p *waiterDefinitions) setup() {
+func (p *waiterDefinitions) setup() error {
 	p.API.Waiters = []Waiter{}
 	i, keys := 0, make([]string, len(p.Waiters))
 	for k := range p.Waiters {
@@ -97,10 +97,13 @@ func (p *waiterDefinitions) setup() {
 		e.OperationName = p.ExportableName(e.OperationName)
 		e.Operation = p.API.Operations[e.OperationName]
 		if e.Operation == nil {
-			panic("unknown operation " + e.OperationName + " for waiter " + n)
+			return fmt.Errorf("unknown operation %s for waiter %s",
+				e.OperationName, n)
 		}
 		p.API.Waiters = append(p.API.Waiters, e)
 	}
+
+	return nil
 }
 
 var waiterTmpls = template.Must(template.New("waiterTmpls").Funcs(
@@ -113,7 +116,7 @@ var waiterTmpls = template.Must(template.New("waiterTmpls").Funcs(
 {{ define "waiter"}}
 // WaitUntil{{ .Name }} uses the {{ .Operation.API.NiceName }} API operation
 // {{ .OperationName }} to wait for a condition to be met before returning.
-// If the condition is not meet within the max attempt window an error will
+// If the condition is not met within the max attempt window, an error will
 // be returned.
 func (c *{{ .Operation.API.StructName }}) WaitUntil{{ .Name }}(input {{ .Operation.InputRef.GoType }}) error {
 	return c.WaitUntil{{ .Name }}WithContext(aws.BackgroundContext(), input)

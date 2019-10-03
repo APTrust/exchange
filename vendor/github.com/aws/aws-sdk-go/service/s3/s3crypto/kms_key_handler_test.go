@@ -1,14 +1,14 @@
 package s3crypto
 
 import (
+	"bytes"
 	"encoding/base64"
 	"encoding/hex"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"reflect"
 	"testing"
-
-	"github.com/stretchr/testify/assert"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/awstesting/unit"
@@ -18,7 +18,9 @@ import (
 func TestBuildKMSEncryptHandler(t *testing.T) {
 	svc := kms.New(unit.Session)
 	handler := NewKMSKeyGenerator(svc, "testid")
-	assert.NotNil(t, handler)
+	if handler == nil {
+		t.Error("expected non-nil handler")
+	}
 }
 
 func TestBuildKMSEncryptHandlerWithMatDesc(t *testing.T) {
@@ -26,20 +28,26 @@ func TestBuildKMSEncryptHandlerWithMatDesc(t *testing.T) {
 	handler := NewKMSKeyGeneratorWithMatDesc(svc, "testid", MaterialDescription{
 		"Testing": aws.String("123"),
 	})
-	assert.NotNil(t, handler)
+	if handler == nil {
+		t.Error("expected non-nil handler")
+	}
 
 	kmsHandler := handler.(*kmsKeyHandler)
 	expected := MaterialDescription{
 		"kms_cmk_id": aws.String("testid"),
 		"Testing":    aws.String("123"),
 	}
-	assert.Equal(t, expected, kmsHandler.CipherData.MaterialDescription)
+
+	if !reflect.DeepEqual(expected, kmsHandler.CipherData.MaterialDescription) {
+		t.Errorf("expected %v, but received %v", expected, kmsHandler.CipherData.MaterialDescription)
+	}
 }
 
 func TestKMSGenerateCipherData(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintln(w, `{"CiphertextBlob":"AQEDAHhqBCCY1MSimw8gOGcUma79cn4ANvTtQyv9iuBdbcEF1QAAAH4wfAYJKoZIhvcNAQcGoG8wbQIBADBoBgkqhkiG9w0BBwEwHgYJYIZIAWUDBAEuMBEEDJ6IcN5E4wVbk38MNAIBEIA7oF1E3lS7FY9DkoxPc/UmJsEwHzL82zMqoLwXIvi8LQHr8If4Lv6zKqY8u0+JRgSVoqCvZDx3p8Cn6nM=","KeyId":"arn:aws:kms:us-west-2:042062605278:key/c80a5cdb-8d09-4f9f-89ee-df01b2e3870a","Plaintext":"6tmyz9JLBE2yIuU7iXpArqpDVle172WSmxjcO6GNT7E="}`)
 	}))
+	defer ts.Close()
 
 	sess := unit.Session.Copy(&aws.Config{
 		MaxRetries:       aws.Int(0),
@@ -56,11 +64,15 @@ func TestKMSGenerateCipherData(t *testing.T) {
 	ivSize := 16
 
 	cd, err := handler.GenerateCipherData(keySize, ivSize)
-	assert.NoError(t, err)
-	assert.Equal(t, keySize, len(cd.Key))
-	assert.Equal(t, ivSize, len(cd.IV))
-	assert.NotEmpty(t, cd.Key)
-	assert.NotEmpty(t, cd.IV)
+	if err != nil {
+		t.Errorf("expected no error, but received %v", err)
+	}
+	if keySize != len(cd.Key) {
+		t.Errorf("expected %d, but received %d", keySize, len(cd.Key))
+	}
+	if ivSize != len(cd.IV) {
+		t.Errorf("expected %d, but received %d", ivSize, len(cd.IV))
+	}
 }
 
 func TestKMSDecrypt(t *testing.T) {
@@ -69,6 +81,7 @@ func TestKMSDecrypt(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintln(w, fmt.Sprintf("%s%s%s", `{"KeyId":"test-key-id","Plaintext":"`, keyB64, `"}`))
 	}))
+	defer ts.Close()
 
 	sess := unit.Session.Copy(&aws.Config{
 		MaxRetries:       aws.Int(0),
@@ -78,11 +91,18 @@ func TestKMSDecrypt(t *testing.T) {
 		Region:           aws.String("us-west-2"),
 	})
 	handler, err := (kmsKeyHandler{kms: kms.New(sess)}).decryptHandler(Envelope{MatDesc: `{"kms_cmk_id":"test"}`})
-	assert.NoError(t, err)
+	if err != nil {
+		t.Errorf("expected no error, but received %v", err)
+	}
 
 	plaintextKey, err := handler.DecryptKey([]byte{1, 2, 3, 4})
-	assert.NoError(t, err)
-	assert.Equal(t, key, plaintextKey)
+	if err != nil {
+		t.Errorf("expected no error, but received %v", err)
+	}
+
+	if !bytes.Equal(key, plaintextKey) {
+		t.Errorf("expected %v, but received %v", key, plaintextKey)
+	}
 }
 
 func TestKMSDecryptBadJSON(t *testing.T) {
@@ -91,6 +111,7 @@ func TestKMSDecryptBadJSON(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintln(w, fmt.Sprintf("%s%s%s", `{"KeyId":"test-key-id","Plaintext":"`, keyB64, `"}`))
 	}))
+	defer ts.Close()
 
 	sess := unit.Session.Copy(&aws.Config{
 		MaxRetries:       aws.Int(0),
@@ -101,5 +122,7 @@ func TestKMSDecryptBadJSON(t *testing.T) {
 	})
 
 	_, err := (kmsKeyHandler{kms: kms.New(sess)}).decryptHandler(Envelope{MatDesc: `{"kms_cmk_id":"test"`})
-	assert.Error(t, err)
+	if err == nil {
+		t.Errorf("expected error, but received none")
+	}
 }

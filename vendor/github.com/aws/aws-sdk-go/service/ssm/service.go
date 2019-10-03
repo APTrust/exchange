@@ -11,22 +11,12 @@ import (
 	"github.com/aws/aws-sdk-go/private/protocol/jsonrpc"
 )
 
-// Amazon EC2 Systems Manager is a collection of capabilities that helps you
-// automate management tasks such as collecting system inventory, applying operating
-// system (OS) patches, automating the creation of Amazon Machine Images (AMIs),
-// and configuring operating systems (OSs) and applications at scale. Systems
-// Manager lets you remotely and securely manage the configuration of your managed
-// instances. A managed instance is any Amazon EC2 instance or on-premises machine
-// in your hybrid environment that has been configured for Systems Manager.
+// SSM provides the API operation methods for making requests to
+// Amazon Simple Systems Manager (SSM). See this package's package overview docs
+// for details on the service.
 //
-// This reference is intended to be used with the Amazon EC2 Systems Manager
-// User Guide (http://docs.aws.amazon.com/systems-manager/latest/userguide/).
-//
-// To get started, verify prerequisites and configure managed instances. For
-// more information, see Systems Manager Prerequisites (http://docs.aws.amazon.com/systems-manager/latest/userguide/systems-manager-prereqs.html).
-// The service client's operations are safe to be used concurrently.
-// It is not safe to mutate any of the client's properties though.
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/ssm-2014-11-06
+// SSM methods are safe to use concurrently. It is not safe to
+// modify mutate any of the struct's properties though.
 type SSM struct {
 	*client.Client
 }
@@ -39,8 +29,9 @@ var initRequest func(*request.Request)
 
 // Service information constants
 const (
-	ServiceName = "ssm"       // Service endpoint prefix API calls made to.
-	EndpointsID = ServiceName // Service ID for Regions and Endpoints metadata.
+	ServiceName = "ssm"       // Name of service.
+	EndpointsID = ServiceName // ID to lookup a service endpoint with.
+	ServiceID   = "SSM"       // ServiceID is a unique identifer of a specific service.
 )
 
 // New creates a new instance of the SSM client with a session.
@@ -65,6 +56,7 @@ func newClient(cfg aws.Config, handlers request.Handlers, endpoint, signingRegio
 			cfg,
 			metadata.ClientInfo{
 				ServiceName:   ServiceName,
+				ServiceID:     ServiceID,
 				SigningName:   signingName,
 				SigningRegion: signingRegion,
 				Endpoint:      endpoint,
