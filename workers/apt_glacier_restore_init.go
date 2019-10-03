@@ -241,8 +241,8 @@ func (restorer *APTGlacierRestoreInit) GetS3HeadClient(storageOption string) (*n
 	if restorer.S3Url != "" {
 		restorer.Context.MessageLog.Warning("Setting S3 URL to %s. This should happen only in testing!",
 			restorer.S3Url)
-		client.SetSessionEndpoint(restorer.S3Url)
-		client.BucketName = ""
+		client.SetSessionEndpoint(strings.Replace(restorer.S3Url, "127.", "", 1))
+		client.BucketName = "127"
 	}
 	return client, nil
 }
@@ -599,8 +599,8 @@ func (restorer *APTGlacierRestoreInit) InitializeRetrieval(state *models.Glacier
 	if restorer.S3Url != "" {
 		restorer.Context.MessageLog.Warning("Setting S3 URL to %s. This should happen only in testing!",
 			restorer.S3Url)
-		restoreClient.TestURL = restorer.S3Url
-		restoreClient.BucketName = ""
+		restoreClient.TestURL = strings.Replace(restorer.S3Url, "127.", "", 1)
+		restoreClient.BucketName = "127"
 	}
 	now := time.Now().UTC()
 	estimatedDeletionFromS3 := now.AddDate(0, 0, DAYS_TO_KEEP_IN_S3)
