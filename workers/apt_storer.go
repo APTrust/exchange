@@ -26,6 +26,13 @@ import (
 const MAX_UPLOAD_ATTEMPTS = 15
 const FIFTY_MEGABYTES = int64(52428800)
 const FIFTY_GIGABYTES = int64(50000000000)
+const TWO_HUNDRED_GIGABYTES = int64(200000000000)
+
+const HIGH_FILE_COUNT = 5000
+const RESOURCE_REQUEUE_TIMEOUT = 1000 * 60 * 60 // one hour
+
+const LARGE_BAG_IN_PROGRESS = "LargeBagInProgress"
+const HIGH_FILE_BAG_IN_PROGRESS = "HighFileBagInProgress"
 
 // Stores GenericFiles in long-term storage (S3 and Glacier).
 type APTStorer struct {
@@ -33,11 +40,13 @@ type APTStorer struct {
 	StorageChannel chan *models.IngestState
 	CleanupChannel chan *models.IngestState
 	RecordChannel  chan *models.IngestState
+	SyncMap        *models.SynchronizedMap
 }
 
 func NewAPTStorer(_context *context.Context) *APTStorer {
 	storer := &APTStorer{
 		Context: _context,
+		SyncMap: models.NewSynchronizedMap(),
 	}
 
 	// Set up buffered channels
@@ -156,6 +165,24 @@ func (storer *APTStorer) store() {
 			continue
 		}
 
+		// Don't try to process too many high resource items at once.
+		// Bags > 200 GB can take a lot of memory store because S3 client
+		// has to read chunks into memory before sending them. Chunks can
+		// be up to 500 MB each for very large (5 TB) files.
+		//
+		// Bags with > 5000 files can take a long time to store because
+		// we have to keep scanning the tar file and pulling them out,
+		// one by one. There's also a lot of HTTPS overhead when writing
+		// lots of small files to S3/Glacier.
+		continueProcessing, requeueMessage := storer.checkForHighResourceBag(db, objIdentifier)
+		if !continueProcessing {
+			storer.Context.MessageLog.Info("[High Resource Bag] Requeueing %s: %s", objIdentifier, requeueMessage)
+			ingestState.IngestManifest.StoreResult.AddError(requeueMessage)
+			ingestState.IngestManifest.StoreResult.Finish()
+			storer.CleanupChannel <- ingestState
+			continue
+		}
+
 		for {
 			// Get a batch of files to save...
 			storageSummaries, hasMoreFiles, err := storer.getStorageSummaryBatch(db, objIdentifier, start, limit)
@@ -253,6 +280,11 @@ func (storer *APTStorer) record() {
 		// and to the JSON log.
 		ingestState.IngestManifest.StoreResult.Finish()
 
+		objIdentifier, _ := ingestState.IngestManifest.ObjectIdentifier()
+		if objIdentifier != "" {
+			storer.clearHighResourceBag(objIdentifier)
+		}
+
 		// See if we have fatal errors, or too many recurring transient errors
 		attemptNumber := ingestState.IngestManifest.StoreResult.AttemptNumber
 		maxAttempts := storer.Context.Config.StoreWorker.MaxAttempts
@@ -264,8 +296,13 @@ func (storer *APTStorer) record() {
 			ingestState.FinishNSQ()
 			MarkWorkItemFailed(ingestState, storer.Context)
 		} else if ingestState.IngestManifest.HasErrors() {
+			timeout := 30000 // thirty seconds
+			if strings.Contains(ingestState.IngestManifest.StoreResult.Errors[0], "[High Resource Bag]") {
+				storer.Context.MessageLog.Info("Setting long timeout for high resource bag %s", objIdentifier)
+				timeout = RESOURCE_REQUEUE_TIMEOUT
+			}
 			storer.logRequeued(ingestState)
-			ingestState.RequeueNSQ(1000)
+			ingestState.RequeueNSQ(timeout)
 			MarkWorkItemRequeued(ingestState, storer.Context)
 		} else {
 			storer.logFinishedStoring(ingestState)
@@ -909,6 +946,51 @@ func (storer *APTStorer) getS3FileDetail(region, bucket, fileUUID string) *s3.Ob
 		return s3Client.Response.Contents[0]
 	}
 	return nil
+}
+
+func (storer *APTStorer) checkForHighResourceBag(db *storage.BoltDB, objIdentifier string) (bool, string) {
+	obj, err := db.GetIntellectualObject(objIdentifier)
+	if err != nil {
+		return false, "Cannot get object from BoltDB."
+	}
+	fileCount := db.FileCount()
+	continueProcessing := true
+	message := ""
+	if obj.IngestSize > TWO_HUNDRED_GIGABYTES {
+		largeBagInProgress := storer.SyncMap.Get(LARGE_BAG_IN_PROGRESS)
+		if largeBagInProgress != "" {
+			continueProcessing = false
+			message = fmt.Sprintf("This bag is large (%d bytes) and large bag %s is currently in progress", obj.IngestSize, largeBagInProgress)
+		} else {
+			storer.Context.MessageLog.Info("Setting bag %s as large bag (%d bytes).", objIdentifier, obj.IngestSize)
+			storer.SyncMap.Add(LARGE_BAG_IN_PROGRESS, objIdentifier)
+		}
+	} else if fileCount > HIGH_FILE_COUNT {
+		highFileBagInProgress := storer.SyncMap.Get(HIGH_FILE_BAG_IN_PROGRESS)
+		if highFileBagInProgress != "" {
+			continueProcessing = false
+			message = fmt.Sprintf("This bag has %d files and another high file-count bag is currently in progress", fileCount)
+			storer.Context.MessageLog.Info("Defering %s with %d files because high file-count bag %s is currently in progress", objIdentifier, fileCount, highFileBagInProgress)
+		} else {
+			storer.Context.MessageLog.Info("Setting bag %s as high file-count bag (%d files).", objIdentifier, fileCount)
+			storer.SyncMap.Add(HIGH_FILE_BAG_IN_PROGRESS, objIdentifier)
+		}
+	}
+
+	return continueProcessing, message
+}
+
+func (storer *APTStorer) clearHighResourceBag(objIdentifier string) {
+	highFileBagInProgress := storer.SyncMap.Get(HIGH_FILE_BAG_IN_PROGRESS)
+	if objIdentifier == highFileBagInProgress {
+		storer.SyncMap.Add(HIGH_FILE_BAG_IN_PROGRESS, "")
+		storer.Context.MessageLog.Info("Cleared HIGH_FILE_BAG_IN_PROGRESS %s", objIdentifier)
+	}
+	largeBagInProgress := storer.SyncMap.Get(LARGE_BAG_IN_PROGRESS)
+	if objIdentifier == largeBagInProgress {
+		storer.SyncMap.Add(LARGE_BAG_IN_PROGRESS, "")
+		storer.Context.MessageLog.Info("Cleared LARGE_BAG_IN_PROGRESS %s", objIdentifier)
+	}
 }
 
 // ----------- Messages ----------------
