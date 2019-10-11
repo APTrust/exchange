@@ -11,11 +11,12 @@ import (
 	"github.com/aws/aws-sdk-go/private/protocol/jsonrpc"
 )
 
-// This reference provides detailed information about the Amazon WorkSpaces
-// operations.
-// The service client's operations are safe to be used concurrently.
-// It is not safe to mutate any of the client's properties though.
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/workspaces-2015-04-08
+// WorkSpaces provides the API operation methods for making requests to
+// Amazon WorkSpaces. See this package's package overview docs
+// for details on the service.
+//
+// WorkSpaces methods are safe to use concurrently. It is not safe to
+// modify mutate any of the struct's properties though.
 type WorkSpaces struct {
 	*client.Client
 }
@@ -28,8 +29,9 @@ var initRequest func(*request.Request)
 
 // Service information constants
 const (
-	ServiceName = "workspaces" // Service endpoint prefix API calls made to.
-	EndpointsID = ServiceName  // Service ID for Regions and Endpoints metadata.
+	ServiceName = "workspaces" // Name of service.
+	EndpointsID = ServiceName  // ID to lookup a service endpoint with.
+	ServiceID   = "WorkSpaces" // ServiceID is a unique identifer of a specific service.
 )
 
 // New creates a new instance of the WorkSpaces client with a session.
@@ -54,6 +56,7 @@ func newClient(cfg aws.Config, handlers request.Handlers, endpoint, signingRegio
 			cfg,
 			metadata.ClientInfo{
 				ServiceName:   ServiceName,
+				ServiceID:     ServiceID,
 				SigningName:   signingName,
 				SigningRegion: signingRegion,
 				Endpoint:      endpoint,

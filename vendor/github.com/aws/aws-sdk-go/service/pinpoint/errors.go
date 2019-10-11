@@ -7,36 +7,36 @@ const (
 	// ErrCodeBadRequestException for service response error code
 	// "BadRequestException".
 	//
-	// 400 response
+	// Provides information about an API request or response.
 	ErrCodeBadRequestException = "BadRequestException"
 
 	// ErrCodeForbiddenException for service response error code
 	// "ForbiddenException".
 	//
-	// 403 response
+	// Provides information about an API request or response.
 	ErrCodeForbiddenException = "ForbiddenException"
 
 	// ErrCodeInternalServerErrorException for service response error code
 	// "InternalServerErrorException".
 	//
-	// 500 response
+	// Provides information about an API request or response.
 	ErrCodeInternalServerErrorException = "InternalServerErrorException"
 
 	// ErrCodeMethodNotAllowedException for service response error code
 	// "MethodNotAllowedException".
 	//
-	// 405 response
+	// Provides information about an API request or response.
 	ErrCodeMethodNotAllowedException = "MethodNotAllowedException"
 
 	// ErrCodeNotFoundException for service response error code
 	// "NotFoundException".
 	//
-	// 404 response
+	// Provides information about an API request or response.
 	ErrCodeNotFoundException = "NotFoundException"
 
 	// ErrCodeTooManyRequestsException for service response error code
 	// "TooManyRequestsException".
 	//
-	// 429 response
+	// Provides information about an API request or response.
 	ErrCodeTooManyRequestsException = "TooManyRequestsException"
 )

@@ -21,7 +21,7 @@ import (
 //
 // The best way to use this interface is so the SDK's service client's calls
 // can be stubbed out for unit testing your code with the SDK without needing
-// to inject custom request handlers into the the SDK's request pipeline.
+// to inject custom request handlers into the SDK's request pipeline.
 //
 //    // myFunc uses an SDK service client to make a request to
 //    // Amazon Simple Notification Service.
@@ -148,6 +148,10 @@ type SNSAPI interface {
 	ListSubscriptionsByTopicPages(*sns.ListSubscriptionsByTopicInput, func(*sns.ListSubscriptionsByTopicOutput, bool) bool) error
 	ListSubscriptionsByTopicPagesWithContext(aws.Context, *sns.ListSubscriptionsByTopicInput, func(*sns.ListSubscriptionsByTopicOutput, bool) bool, ...request.Option) error
 
+	ListTagsForResource(*sns.ListTagsForResourceInput) (*sns.ListTagsForResourceOutput, error)
+	ListTagsForResourceWithContext(aws.Context, *sns.ListTagsForResourceInput, ...request.Option) (*sns.ListTagsForResourceOutput, error)
+	ListTagsForResourceRequest(*sns.ListTagsForResourceInput) (*request.Request, *sns.ListTagsForResourceOutput)
+
 	ListTopics(*sns.ListTopicsInput) (*sns.ListTopicsOutput, error)
 	ListTopicsWithContext(aws.Context, *sns.ListTopicsInput, ...request.Option) (*sns.ListTopicsOutput, error)
 	ListTopicsRequest(*sns.ListTopicsInput) (*request.Request, *sns.ListTopicsOutput)
@@ -191,9 +195,17 @@ type SNSAPI interface {
 	SubscribeWithContext(aws.Context, *sns.SubscribeInput, ...request.Option) (*sns.SubscribeOutput, error)
 	SubscribeRequest(*sns.SubscribeInput) (*request.Request, *sns.SubscribeOutput)
 
+	TagResource(*sns.TagResourceInput) (*sns.TagResourceOutput, error)
+	TagResourceWithContext(aws.Context, *sns.TagResourceInput, ...request.Option) (*sns.TagResourceOutput, error)
+	TagResourceRequest(*sns.TagResourceInput) (*request.Request, *sns.TagResourceOutput)
+
 	Unsubscribe(*sns.UnsubscribeInput) (*sns.UnsubscribeOutput, error)
 	UnsubscribeWithContext(aws.Context, *sns.UnsubscribeInput, ...request.Option) (*sns.UnsubscribeOutput, error)
 	UnsubscribeRequest(*sns.UnsubscribeInput) (*request.Request, *sns.UnsubscribeOutput)
+
+	UntagResource(*sns.UntagResourceInput) (*sns.UntagResourceOutput, error)
+	UntagResourceWithContext(aws.Context, *sns.UntagResourceInput, ...request.Option) (*sns.UntagResourceOutput, error)
+	UntagResourceRequest(*sns.UntagResourceInput) (*request.Request, *sns.UntagResourceOutput)
 }
 
 var _ SNSAPI = (*sns.SNS)(nil)

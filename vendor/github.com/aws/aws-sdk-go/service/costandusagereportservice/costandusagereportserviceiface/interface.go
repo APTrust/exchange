@@ -21,7 +21,7 @@ import (
 //
 // The best way to use this interface is so the SDK's service client's calls
 // can be stubbed out for unit testing your code with the SDK without needing
-// to inject custom request handlers into the the SDK's request pipeline.
+// to inject custom request handlers into the SDK's request pipeline.
 //
 //    // myFunc uses an SDK service client to make a request to
 //    // AWS Cost and Usage Report Service.
@@ -70,6 +70,10 @@ type CostandUsageReportServiceAPI interface {
 
 	DescribeReportDefinitionsPages(*costandusagereportservice.DescribeReportDefinitionsInput, func(*costandusagereportservice.DescribeReportDefinitionsOutput, bool) bool) error
 	DescribeReportDefinitionsPagesWithContext(aws.Context, *costandusagereportservice.DescribeReportDefinitionsInput, func(*costandusagereportservice.DescribeReportDefinitionsOutput, bool) bool, ...request.Option) error
+
+	ModifyReportDefinition(*costandusagereportservice.ModifyReportDefinitionInput) (*costandusagereportservice.ModifyReportDefinitionOutput, error)
+	ModifyReportDefinitionWithContext(aws.Context, *costandusagereportservice.ModifyReportDefinitionInput, ...request.Option) (*costandusagereportservice.ModifyReportDefinitionOutput, error)
+	ModifyReportDefinitionRequest(*costandusagereportservice.ModifyReportDefinitionInput) (*request.Request, *costandusagereportservice.ModifyReportDefinitionOutput)
 
 	PutReportDefinition(*costandusagereportservice.PutReportDefinitionInput) (*costandusagereportservice.PutReportDefinitionOutput, error)
 	PutReportDefinitionWithContext(aws.Context, *costandusagereportservice.PutReportDefinitionInput, ...request.Option) (*costandusagereportservice.PutReportDefinitionOutput, error)

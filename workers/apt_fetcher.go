@@ -503,6 +503,11 @@ func (fetcher *APTFetcher) StillIngestingOlderVersion(state *models.IngestState)
 			if item.Id == state.WorkItem.Id {
 				continue
 			}
+			if item.Status == constants.StatusPending && item.Stage == constants.StageReceive {
+				// Special case. Item is awaiting fetch, but fetch has
+				// not yet started, so this item is not in progress.
+				continue
+			}
 			if item.Status == constants.StatusStarted || item.Status == constants.StatusPending {
 				fetcher.Context.MessageLog.Info(
 					"Will not start ingest on WorkItem for %d (%s) because "+

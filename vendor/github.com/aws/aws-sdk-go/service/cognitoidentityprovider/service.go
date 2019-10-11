@@ -11,17 +11,12 @@ import (
 	"github.com/aws/aws-sdk-go/private/protocol/jsonrpc"
 )
 
-// Using the Amazon Cognito Your User Pools API, you can create a user pool
-// to manage directories and users. You can authenticate a user to obtain tokens
-// related to user identity and access policies.
+// CognitoIdentityProvider provides the API operation methods for making requests to
+// Amazon Cognito Identity Provider. See this package's package overview docs
+// for details on the service.
 //
-// This API reference provides information about user pools in Amazon Cognito
-// Your User Pools.
-//
-// For more information, see the Amazon Cognito Documentation.
-// The service client's operations are safe to be used concurrently.
-// It is not safe to mutate any of the client's properties though.
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/cognito-idp-2016-04-18
+// CognitoIdentityProvider methods are safe to use concurrently. It is not safe to
+// modify mutate any of the struct's properties though.
 type CognitoIdentityProvider struct {
 	*client.Client
 }
@@ -34,8 +29,9 @@ var initRequest func(*request.Request)
 
 // Service information constants
 const (
-	ServiceName = "cognito-idp" // Service endpoint prefix API calls made to.
-	EndpointsID = ServiceName   // Service ID for Regions and Endpoints metadata.
+	ServiceName = "cognito-idp"               // Name of service.
+	EndpointsID = ServiceName                 // ID to lookup a service endpoint with.
+	ServiceID   = "Cognito Identity Provider" // ServiceID is a unique identifer of a specific service.
 )
 
 // New creates a new instance of the CognitoIdentityProvider client with a session.
@@ -60,6 +56,7 @@ func newClient(cfg aws.Config, handlers request.Handlers, endpoint, signingRegio
 			cfg,
 			metadata.ClientInfo{
 				ServiceName:   ServiceName,
+				ServiceID:     ServiceID,
 				SigningName:   signingName,
 				SigningRegion: signingRegion,
 				Endpoint:      endpoint,

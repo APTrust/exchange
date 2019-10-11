@@ -7,8 +7,21 @@ const (
 	// ErrCodeConcurrentModificationException for service response error code
 	// "ConcurrentModificationException".
 	//
-	// An API error occurred, please try again.
+	// An API error occurred. Wait a few minutes and try again.
 	ErrCodeConcurrentModificationException = "ConcurrentModificationException"
+
+	// ErrCodeIncompatibleImageException for service response error code
+	// "IncompatibleImageException".
+	//
+	// The image does not support storage connectors.
+	ErrCodeIncompatibleImageException = "IncompatibleImageException"
+
+	// ErrCodeInvalidAccountStatusException for service response error code
+	// "InvalidAccountStatusException".
+	//
+	// The resource cannot be created because your AWS account is suspended. For
+	// assistance, contact AWS Support.
+	ErrCodeInvalidAccountStatusException = "InvalidAccountStatusException"
 
 	// ErrCodeInvalidParameterCombinationException for service response error code
 	// "InvalidParameterCombinationException".

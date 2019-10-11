@@ -402,7 +402,7 @@ func (client *PharosClient) GenericFileSave(obj *models.GenericFile) *PharosResp
 	httpMethod := "POST"
 	if obj.Id > 0 {
 		// PUT URL looks like /api/v2/files/college.edu%2Fobject_name%2Ffile.xml
-		relativeUrl = fmt.Sprintf("%s%s", relativeUrl, url.QueryEscape(obj.Identifier))
+		relativeUrl = fmt.Sprintf("%s%s", relativeUrl, escapeFileIdentifier(obj.Identifier))
 		httpMethod = "PUT"
 	}
 	absoluteUrl := client.BuildUrl(relativeUrl)

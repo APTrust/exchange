@@ -11,16 +11,12 @@ import (
 	"github.com/aws/aws-sdk-go/private/protocol/restjson"
 )
 
-// AWS IoT provides secure, bi-directional communication between Internet-connected
-// things (such as sensors, actuators, embedded devices, or smart appliances)
-// and the AWS cloud. You can discover your custom IoT-Data endpoint to communicate
-// with, configure rules for data processing and integration with other services,
-// organize resources associated with each thing (Thing Registry), configure
-// logging, and create and manage policies and credentials to authenticate things.
+// IoT provides the API operation methods for making requests to
+// AWS IoT. See this package's package overview docs
+// for details on the service.
 //
-// For more information about how AWS IoT works, see the Developer Guide (http://docs.aws.amazon.com/iot/latest/developerguide/aws-iot-how-it-works.html).
-// The service client's operations are safe to be used concurrently.
-// It is not safe to mutate any of the client's properties though.
+// IoT methods are safe to use concurrently. It is not safe to
+// modify mutate any of the struct's properties though.
 type IoT struct {
 	*client.Client
 }
@@ -33,8 +29,9 @@ var initRequest func(*request.Request)
 
 // Service information constants
 const (
-	ServiceName = "iot"       // Service endpoint prefix API calls made to.
-	EndpointsID = ServiceName // Service ID for Regions and Endpoints metadata.
+	ServiceName = "iot"       // Name of service.
+	EndpointsID = ServiceName // ID to lookup a service endpoint with.
+	ServiceID   = "IoT"       // ServiceID is a unique identifer of a specific service.
 )
 
 // New creates a new instance of the IoT client with a session.
@@ -49,19 +46,20 @@ const (
 //     svc := iot.New(mySession, aws.NewConfig().WithRegion("us-west-2"))
 func New(p client.ConfigProvider, cfgs ...*aws.Config) *IoT {
 	c := p.ClientConfig(EndpointsID, cfgs...)
+	if c.SigningNameDerived || len(c.SigningName) == 0 {
+		c.SigningName = "execute-api"
+	}
 	return newClient(*c.Config, c.Handlers, c.Endpoint, c.SigningRegion, c.SigningName)
 }
 
 // newClient creates, initializes and returns a new service client instance.
 func newClient(cfg aws.Config, handlers request.Handlers, endpoint, signingRegion, signingName string) *IoT {
-	if len(signingName) == 0 {
-		signingName = "execute-api"
-	}
 	svc := &IoT{
 		Client: client.New(
 			cfg,
 			metadata.ClientInfo{
 				ServiceName:   ServiceName,
+				ServiceID:     ServiceID,
 				SigningName:   signingName,
 				SigningRegion: signingRegion,
 				Endpoint:      endpoint,

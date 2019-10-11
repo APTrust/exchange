@@ -11,30 +11,12 @@ import (
 	"github.com/aws/aws-sdk-go/private/protocol/jsonrpc"
 )
 
-// This reference provides descriptions of the low-level AWS Marketplace Metering
-// Service API.
+// MarketplaceMetering provides the API operation methods for making requests to
+// AWSMarketplace Metering. See this package's package overview docs
+// for details on the service.
 //
-// AWS Marketplace sellers can use this API to submit usage data for custom
-// usage dimensions.
-//
-// Submitting Metering Records
-//
-//    * MeterUsage- Submits the metering record for a Marketplace product. MeterUsage
-//    is called from an EC2 instance.
-//
-//    * BatchMeterUsage- Submits the metering record for a set of customers.
-//    BatchMeterUsage is called from a software-as-a-service (SaaS) application.
-//
-// Accepting New Customers
-//
-//    * ResolveCustomer- Called by a SaaS application during the registration
-//    process. When a buyer visits your website during the registration process,
-//    the buyer submits a Registration Token through the browser. The Registration
-//    Token is resolved through this API to obtain a CustomerIdentifier and
-//    Product Code.
-// The service client's operations are safe to be used concurrently.
-// It is not safe to mutate any of the client's properties though.
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/meteringmarketplace-2016-01-14
+// MarketplaceMetering methods are safe to use concurrently. It is not safe to
+// modify mutate any of the struct's properties though.
 type MarketplaceMetering struct {
 	*client.Client
 }
@@ -47,8 +29,9 @@ var initRequest func(*request.Request)
 
 // Service information constants
 const (
-	ServiceName = "metering.marketplace" // Service endpoint prefix API calls made to.
-	EndpointsID = ServiceName            // Service ID for Regions and Endpoints metadata.
+	ServiceName = "metering.marketplace" // Name of service.
+	EndpointsID = ServiceName            // ID to lookup a service endpoint with.
+	ServiceID   = "Marketplace Metering" // ServiceID is a unique identifer of a specific service.
 )
 
 // New creates a new instance of the MarketplaceMetering client with a session.
@@ -63,19 +46,20 @@ const (
 //     svc := marketplacemetering.New(mySession, aws.NewConfig().WithRegion("us-west-2"))
 func New(p client.ConfigProvider, cfgs ...*aws.Config) *MarketplaceMetering {
 	c := p.ClientConfig(EndpointsID, cfgs...)
+	if c.SigningNameDerived || len(c.SigningName) == 0 {
+		c.SigningName = "aws-marketplace"
+	}
 	return newClient(*c.Config, c.Handlers, c.Endpoint, c.SigningRegion, c.SigningName)
 }
 
 // newClient creates, initializes and returns a new service client instance.
 func newClient(cfg aws.Config, handlers request.Handlers, endpoint, signingRegion, signingName string) *MarketplaceMetering {
-	if len(signingName) == 0 {
-		signingName = "aws-marketplace"
-	}
 	svc := &MarketplaceMetering{
 		Client: client.New(
 			cfg,
 			metadata.ClientInfo{
 				ServiceName:   ServiceName,
+				ServiceID:     ServiceID,
 				SigningName:   signingName,
 				SigningRegion: signingRegion,
 				Endpoint:      endpoint,

@@ -1,4 +1,4 @@
-[![Build Status](https://img.shields.io/travis/antonholmquist/jason.svg?style=flat)](https://travis-ci.org/antonholmquist/jason) [![Godoc](http://img.shields.io/badge/godoc-reference-blue.svg?style=flat)](https://godoc.org/github.com/icrowley/fake) [![license](http://img.shields.io/badge/license-MIT-red.svg?style=flat)](https://raw.githubusercontent.com/icrowley/fake/master/LICENSE)
+[![Build Status](https://img.shields.io/travis/icrowley/fake.svg?style=flat)](https://travis-ci.org/icrowley/fake) [![Godoc](http://img.shields.io/badge/godoc-reference-blue.svg?style=flat)](https://godoc.org/github.com/icrowley/fake) [![license](http://img.shields.io/badge/license-MIT-red.svg?style=flat)](https://raw.githubusercontent.com/icrowley/fake/master/LICENSE)
 
 Fake
 ====
@@ -45,7 +45,7 @@ go test
 
 ```go
 name := fake.FirstName()
-fullname = := fake.FullName()
+fullname := fake.FullName()
 product := fake.Product()
 ```
 
@@ -82,3 +82,9 @@ password := fake.Paragraph()
 Dmitry Afanasyev,
 http://twitter.com/i_crowley
 dimarzio1986@gmail.com
+
+
+### Maintainers
+
+Dmitry Moskowski
+https://github.com/corpix

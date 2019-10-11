@@ -228,7 +228,8 @@ func (reader *APTBucketReader) processS3Object(s3Object *s3.Object, bucketName s
 		}
 		return
 	}
-	if workItem == nil {
+	// A.D. added 2019-09-23: Requeue ingest if prior WorkItem was cancelled.
+	if workItem == nil || workItem.Status == constants.StatusCancelled {
 		workItem = reader.createWorkItem(bucketName, s3Object)
 		if workItem == nil {
 			// Error logged and statted at source.

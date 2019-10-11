@@ -11,15 +11,12 @@ import (
 	"github.com/aws/aws-sdk-go/private/protocol/restjson"
 )
 
-// AWS IoT-Data enables secure, bi-directional communication between Internet-connected
-// things (such as sensors, actuators, embedded devices, or smart appliances)
-// and the AWS cloud. It implements a broker for applications and things to
-// publish messages over HTTP (Publish) and retrieve, update, and delete thing
-// shadows. A thing shadow is a persistent representation of your things and
-// their state in the AWS cloud.
-// The service client's operations are safe to be used concurrently.
-// It is not safe to mutate any of the client's properties though.
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/iot-data-2015-05-28
+// IoTDataPlane provides the API operation methods for making requests to
+// AWS IoT Data Plane. See this package's package overview docs
+// for details on the service.
+//
+// IoTDataPlane methods are safe to use concurrently. It is not safe to
+// modify mutate any of the struct's properties though.
 type IoTDataPlane struct {
 	*client.Client
 }
@@ -32,8 +29,9 @@ var initRequest func(*request.Request)
 
 // Service information constants
 const (
-	ServiceName = "data.iot"  // Service endpoint prefix API calls made to.
-	EndpointsID = ServiceName // Service ID for Regions and Endpoints metadata.
+	ServiceName = "data.iot"       // Name of service.
+	EndpointsID = ServiceName      // ID to lookup a service endpoint with.
+	ServiceID   = "IoT Data Plane" // ServiceID is a unique identifer of a specific service.
 )
 
 // New creates a new instance of the IoTDataPlane client with a session.
@@ -53,19 +51,20 @@ func New(p client.ConfigProvider, cfgs ...*aws.Config) *IoTDataPlane {
 	} else {
 		c = p.ClientConfig(EndpointsID, cfgs...)
 	}
+	if c.SigningNameDerived || len(c.SigningName) == 0 {
+		c.SigningName = "iotdata"
+	}
 	return newClient(*c.Config, c.Handlers, c.Endpoint, c.SigningRegion, c.SigningName)
 }
 
 // newClient creates, initializes and returns a new service client instance.
 func newClient(cfg aws.Config, handlers request.Handlers, endpoint, signingRegion, signingName string) *IoTDataPlane {
-	if len(signingName) == 0 {
-		signingName = "iotdata"
-	}
 	svc := &IoTDataPlane{
 		Client: client.New(
 			cfg,
 			metadata.ClientInfo{
 				ServiceName:   ServiceName,
+				ServiceID:     ServiceID,
 				SigningName:   signingName,
 				SigningRegion: signingRegion,
 				Endpoint:      endpoint,

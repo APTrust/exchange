@@ -21,7 +21,7 @@ import (
 //
 // The best way to use this interface is so the SDK's service client's calls
 // can be stubbed out for unit testing your code with the SDK without needing
-// to inject custom request handlers into the the SDK's request pipeline.
+// to inject custom request handlers into the SDK's request pipeline.
 //
 //    // myFunc uses an SDK service client to make a request to
 //    // Amazon Elastic MapReduce.
@@ -104,6 +104,10 @@ type EMRAPI interface {
 	DescribeStepWithContext(aws.Context, *emr.DescribeStepInput, ...request.Option) (*emr.DescribeStepOutput, error)
 	DescribeStepRequest(*emr.DescribeStepInput) (*request.Request, *emr.DescribeStepOutput)
 
+	GetBlockPublicAccessConfiguration(*emr.GetBlockPublicAccessConfigurationInput) (*emr.GetBlockPublicAccessConfigurationOutput, error)
+	GetBlockPublicAccessConfigurationWithContext(aws.Context, *emr.GetBlockPublicAccessConfigurationInput, ...request.Option) (*emr.GetBlockPublicAccessConfigurationOutput, error)
+	GetBlockPublicAccessConfigurationRequest(*emr.GetBlockPublicAccessConfigurationInput) (*request.Request, *emr.GetBlockPublicAccessConfigurationOutput)
+
 	ListBootstrapActions(*emr.ListBootstrapActionsInput) (*emr.ListBootstrapActionsOutput, error)
 	ListBootstrapActionsWithContext(aws.Context, *emr.ListBootstrapActionsInput, ...request.Option) (*emr.ListBootstrapActionsOutput, error)
 	ListBootstrapActionsRequest(*emr.ListBootstrapActionsInput) (*request.Request, *emr.ListBootstrapActionsOutput)
@@ -143,6 +147,9 @@ type EMRAPI interface {
 	ListSecurityConfigurationsWithContext(aws.Context, *emr.ListSecurityConfigurationsInput, ...request.Option) (*emr.ListSecurityConfigurationsOutput, error)
 	ListSecurityConfigurationsRequest(*emr.ListSecurityConfigurationsInput) (*request.Request, *emr.ListSecurityConfigurationsOutput)
 
+	ListSecurityConfigurationsPages(*emr.ListSecurityConfigurationsInput, func(*emr.ListSecurityConfigurationsOutput, bool) bool) error
+	ListSecurityConfigurationsPagesWithContext(aws.Context, *emr.ListSecurityConfigurationsInput, func(*emr.ListSecurityConfigurationsOutput, bool) bool, ...request.Option) error
+
 	ListSteps(*emr.ListStepsInput) (*emr.ListStepsOutput, error)
 	ListStepsWithContext(aws.Context, *emr.ListStepsInput, ...request.Option) (*emr.ListStepsOutput, error)
 	ListStepsRequest(*emr.ListStepsInput) (*request.Request, *emr.ListStepsOutput)
@@ -161,6 +168,10 @@ type EMRAPI interface {
 	PutAutoScalingPolicy(*emr.PutAutoScalingPolicyInput) (*emr.PutAutoScalingPolicyOutput, error)
 	PutAutoScalingPolicyWithContext(aws.Context, *emr.PutAutoScalingPolicyInput, ...request.Option) (*emr.PutAutoScalingPolicyOutput, error)
 	PutAutoScalingPolicyRequest(*emr.PutAutoScalingPolicyInput) (*request.Request, *emr.PutAutoScalingPolicyOutput)
+
+	PutBlockPublicAccessConfiguration(*emr.PutBlockPublicAccessConfigurationInput) (*emr.PutBlockPublicAccessConfigurationOutput, error)
+	PutBlockPublicAccessConfigurationWithContext(aws.Context, *emr.PutBlockPublicAccessConfigurationInput, ...request.Option) (*emr.PutBlockPublicAccessConfigurationOutput, error)
+	PutBlockPublicAccessConfigurationRequest(*emr.PutBlockPublicAccessConfigurationInput) (*request.Request, *emr.PutBlockPublicAccessConfigurationOutput)
 
 	RemoveAutoScalingPolicy(*emr.RemoveAutoScalingPolicyInput) (*emr.RemoveAutoScalingPolicyOutput, error)
 	RemoveAutoScalingPolicyWithContext(aws.Context, *emr.RemoveAutoScalingPolicyInput, ...request.Option) (*emr.RemoveAutoScalingPolicyOutput, error)

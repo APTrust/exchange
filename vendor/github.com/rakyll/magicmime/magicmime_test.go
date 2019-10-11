@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// +build linux darwin
+// +build linux darwin freebsd
 
 package magicmime
 
@@ -48,7 +48,7 @@ func TestTextFile(t *testing.T) {
 
 // Tests a gzipped tar file.
 func TestGzippedTarFile(t *testing.T) {
-	testFile(t, "./testdata/sample.tar.gz", "application/x-gzip")
+	testFile(t, "./testdata/sample.tar.gz", "application/gzip")
 }
 
 // Tests a zip file.

@@ -11,40 +11,12 @@ import (
 	"github.com/aws/aws-sdk-go/private/protocol/restjson"
 )
 
-// The WorkDocs API is designed for the following use cases:
+// WorkDocs provides the API operation methods for making requests to
+// Amazon WorkDocs. See this package's package overview docs
+// for details on the service.
 //
-//    * File Migration: File migration applications are supported for users
-//    who want to migrate their files from an on-premise or off-premise file
-//    system or service. Users can insert files into a user directory structure,
-//    as well as allow for basic metadata changes, such as modifications to
-//    the permissions of files.
-//
-//    * Security: Support security applications are supported for users who
-//    have additional security needs, such as anti-virus or data loss prevention.
-//    The APIs, in conjunction with Amazon CloudTrail, allow these applications
-//    to detect when changes occur in Amazon WorkDocs, so the application can
-//    take the necessary actions and replace the target file. The application
-//    can also choose to email the user if the target file violates the policy.
-//
-//    * eDiscovery/Analytics: General administrative applications are supported,
-//    such as eDiscovery and analytics. These applications can choose to mimic
-//    and/or record the actions in an Amazon WorkDocs site, in conjunction with
-//    Amazon CloudTrails, to replicate data for eDiscovery, backup, or analytical
-//    applications.
-//
-// All Amazon WorkDocs APIs are Amazon authenticated, certificate-signed APIs.
-// They not only require the use of the AWS SDK, but also allow for the exclusive
-// use of IAM users and roles to help facilitate access, trust, and permission
-// policies. By creating a role and allowing an IAM user to access the Amazon
-// WorkDocs site, the IAM user gains full administrative visibility into the
-// entire Amazon WorkDocs site (or as set in the IAM policy). This includes,
-// but is not limited to, the ability to modify file permissions and upload
-// any file to any user. This allows developers to perform the three use cases
-// above, as well as give users the ability to grant access on a selective basis
-// using the IAM model.
-// The service client's operations are safe to be used concurrently.
-// It is not safe to mutate any of the client's properties though.
-// Please also see https://docs.aws.amazon.com/goto/WebAPI/workdocs-2016-05-01
+// WorkDocs methods are safe to use concurrently. It is not safe to
+// modify mutate any of the struct's properties though.
 type WorkDocs struct {
 	*client.Client
 }
@@ -57,8 +29,9 @@ var initRequest func(*request.Request)
 
 // Service information constants
 const (
-	ServiceName = "workdocs"  // Service endpoint prefix API calls made to.
-	EndpointsID = ServiceName // Service ID for Regions and Endpoints metadata.
+	ServiceName = "workdocs"  // Name of service.
+	EndpointsID = ServiceName // ID to lookup a service endpoint with.
+	ServiceID   = "WorkDocs"  // ServiceID is a unique identifer of a specific service.
 )
 
 // New creates a new instance of the WorkDocs client with a session.
@@ -83,11 +56,11 @@ func newClient(cfg aws.Config, handlers request.Handlers, endpoint, signingRegio
 			cfg,
 			metadata.ClientInfo{
 				ServiceName:   ServiceName,
+				ServiceID:     ServiceID,
 				SigningName:   signingName,
 				SigningRegion: signingRegion,
 				Endpoint:      endpoint,
 				APIVersion:    "2016-05-01",
-				JSONVersion:   "1.1",
 			},
 			handlers,
 		),

@@ -477,7 +477,7 @@ func (restorer *APTRestorer) buildState(message *nsq.Message) (*models.RestoreSt
 	response := restorer.Context.PharosClient.IntellectualObjectGet(
 		restoreState.WorkItem.ObjectIdentifier, true, false)
 	if response.Error != nil {
-		return nil, err
+		return nil, fmt.Errorf("Error retrieving IntellectualObject %s from Pharos: %v", restoreState.WorkItem.ObjectIdentifier, response.Error)
 	}
 	restoreState.IntellectualObject = response.IntellectualObject()
 	restorer.Context.MessageLog.Info("Got IntellectualObject %s",

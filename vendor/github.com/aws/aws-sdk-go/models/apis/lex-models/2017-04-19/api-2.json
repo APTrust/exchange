@@ -6,6 +6,7 @@
     "jsonVersion":"1.1",
     "protocol":"rest-json",
     "serviceFullName":"Amazon Lex Model Building Service",
+    "serviceId":"Lex Model Building Service",
     "signatureVersion":"v4",
     "signingName":"lex",
     "uid":"lex-models-2017-04-19"
@@ -115,6 +116,23 @@
         {"shape":"BadRequestException"}
       ]
     },
+    "DeleteBotVersion":{
+      "name":"DeleteBotVersion",
+      "http":{
+        "method":"DELETE",
+        "requestUri":"/bots/{name}/versions/{version}",
+        "responseCode":204
+      },
+      "input":{"shape":"DeleteBotVersionRequest"},
+      "errors":[
+        {"shape":"NotFoundException"},
+        {"shape":"ConflictException"},
+        {"shape":"LimitExceededException"},
+        {"shape":"InternalFailureException"},
+        {"shape":"BadRequestException"},
+        {"shape":"ResourceInUseException"}
+      ]
+    },
     "DeleteIntent":{
       "name":"DeleteIntent",
       "http":{
@@ -132,6 +150,23 @@
         {"shape":"ResourceInUseException"}
       ]
     },
+    "DeleteIntentVersion":{
+      "name":"DeleteIntentVersion",
+      "http":{
+        "method":"DELETE",
+        "requestUri":"/intents/{name}/versions/{version}",
+        "responseCode":204
+      },
+      "input":{"shape":"DeleteIntentVersionRequest"},
+      "errors":[
+        {"shape":"NotFoundException"},
+        {"shape":"ConflictException"},
+        {"shape":"LimitExceededException"},
+        {"shape":"InternalFailureException"},
+        {"shape":"BadRequestException"},
+        {"shape":"ResourceInUseException"}
+      ]
+    },
     "DeleteSlotType":{
       "name":"DeleteSlotType",
       "http":{
@@ -140,6 +175,23 @@
         "responseCode":204
       },
       "input":{"shape":"DeleteSlotTypeRequest"},
+      "errors":[
+        {"shape":"NotFoundException"},
+        {"shape":"ConflictException"},
+        {"shape":"LimitExceededException"},
+        {"shape":"InternalFailureException"},
+        {"shape":"BadRequestException"},
+        {"shape":"ResourceInUseException"}
+      ]
+    },
+    "DeleteSlotTypeVersion":{
+      "name":"DeleteSlotTypeVersion",
+      "http":{
+        "method":"DELETE",
+        "requestUri":"/slottypes/{name}/version/{version}",
+        "responseCode":204
+      },
+      "input":{"shape":"DeleteSlotTypeVersionRequest"},
       "errors":[
         {"shape":"NotFoundException"},
         {"shape":"ConflictException"},
@@ -315,6 +367,38 @@
       "input":{"shape":"GetBuiltinSlotTypesRequest"},
       "output":{"shape":"GetBuiltinSlotTypesResponse"},
       "errors":[
+        {"shape":"LimitExceededException"},
+        {"shape":"InternalFailureException"},
+        {"shape":"BadRequestException"}
+      ]
+    },
+    "GetExport":{
+      "name":"GetExport",
+      "http":{
+        "method":"GET",
+        "requestUri":"/exports/",
+        "responseCode":200
+      },
+      "input":{"shape":"GetExportRequest"},
+      "output":{"shape":"GetExportResponse"},
+      "errors":[
+        {"shape":"NotFoundException"},
+        {"shape":"LimitExceededException"},
+        {"shape":"InternalFailureException"},
+        {"shape":"BadRequestException"}
+      ]
+    },
+    "GetImport":{
+      "name":"GetImport",
+      "http":{
+        "method":"GET",
+        "requestUri":"/imports/{importId}",
+        "responseCode":200
+      },
+      "input":{"shape":"GetImportRequest"},
+      "output":{"shape":"GetImportResponse"},
+      "errors":[
+        {"shape":"NotFoundException"},
         {"shape":"LimitExceededException"},
         {"shape":"InternalFailureException"},
         {"shape":"BadRequestException"}
@@ -498,6 +582,21 @@
         {"shape":"BadRequestException"},
         {"shape":"PreconditionFailedException"}
       ]
+    },
+    "StartImport":{
+      "name":"StartImport",
+      "http":{
+        "method":"POST",
+        "requestUri":"/imports/",
+        "responseCode":201
+      },
+      "input":{"shape":"StartImportRequest"},
+      "output":{"shape":"StartImportResponse"},
+      "errors":[
+        {"shape":"LimitExceededException"},
+        {"shape":"InternalFailureException"},
+        {"shape":"BadRequestException"}
+      ]
     }
   },
   "shapes":{
@@ -505,13 +604,13 @@
       "type":"string",
       "max":100,
       "min":1,
-      "pattern":"^[a-zA-Z]+((_[a-zA-Z]+)*|([a-zA-Z]+_)*|_)"
+      "pattern":"^([A-Za-z]_?)+$"
     },
     "AliasNameOrListAll":{
       "type":"string",
       "max":100,
       "min":1,
-      "pattern":"^(-|^[a-zA-Z]+((_[a-zA-Z]+)*|([a-zA-Z]+_)*))$"
+      "pattern":"^(-|^([A-Za-z]_?)+$)$"
     },
     "BadRequestException":{
       "type":"structure",
@@ -521,6 +620,7 @@
       "error":{"httpStatusCode":400},
       "exception":true
     },
+    "Blob":{"type":"blob"},
     "Boolean":{"type":"boolean"},
     "BotAliasMetadata":{
       "type":"structure",
@@ -547,7 +647,9 @@
         "botName":{"shape":"BotName"},
         "createdDate":{"shape":"Timestamp"},
         "type":{"shape":"ChannelType"},
-        "botConfiguration":{"shape":"ChannelConfigurationMap"}
+        "botConfiguration":{"shape":"ChannelConfigurationMap"},
+        "status":{"shape":"ChannelStatus"},
+        "failureReason":{"shape":"String"}
       }
     },
     "BotChannelAssociationList":{
@@ -558,7 +660,7 @@
       "type":"string",
       "max":100,
       "min":1,
-      "pattern":"^[a-zA-Z]+((_[a-zA-Z]+)*|([a-zA-Z]+_)*|_)"
+      "pattern":"^([A-Za-z]_?)+$"
     },
     "BotMetadata":{
       "type":"structure",
@@ -579,7 +681,7 @@
       "type":"string",
       "max":50,
       "min":2,
-      "pattern":"^[a-zA-Z]+((_[a-zA-Z]+)*|([a-zA-Z]+_)*|_)"
+      "pattern":"^([A-Za-z]_?)+$"
     },
     "BotVersions":{
       "type":"list",
@@ -626,14 +728,24 @@
       "key":{"shape":"String"},
       "value":{"shape":"String"},
       "max":10,
-      "min":1
+      "min":1,
+      "sensitive":true
+    },
+    "ChannelStatus":{
+      "type":"string",
+      "enum":[
+        "IN_PROGRESS",
+        "CREATED",
+        "FAILED"
+      ]
     },
     "ChannelType":{
       "type":"string",
       "enum":[
         "Facebook",
         "Slack",
-        "Twilio-Sms"
+        "Twilio-Sms",
+        "Kik"
       ]
     },
     "CodeHook":{
@@ -664,7 +776,8 @@
       "type":"string",
       "enum":[
         "PlainText",
-        "SSML"
+        "SSML",
+        "CustomPayload"
       ]
     },
     "Count":{"type":"integer"},
@@ -753,14 +866,15 @@
         "lastUpdatedDate":{"shape":"Timestamp"},
         "createdDate":{"shape":"Timestamp"},
         "version":{"shape":"Version"},
-        "checksum":{"shape":"String"}
+        "checksum":{"shape":"String"},
+        "valueSelectionStrategy":{"shape":"SlotValueSelectionStrategy"}
       }
     },
     "CustomOrBuiltinSlotTypeName":{
       "type":"string",
       "max":100,
       "min":1,
-      "pattern":"^([a-zA-Z]|AMAZON.)+((_[a-zA-Z]+)*|([a-zA-Z]+_)*|_)"
+      "pattern":"^((AMAZON\\.)_?|[A-Za-z]_?)+"
     },
     "DeleteBotAliasRequest":{
       "type":"structure",
@@ -814,8 +928,26 @@
           "shape":"BotName",
           "location":"uri",
           "locationName":"name"
+        }
+      }
+    },
+    "DeleteBotVersionRequest":{
+      "type":"structure",
+      "required":[
+        "name",
+        "version"
+      ],
+      "members":{
+        "name":{
+          "shape":"BotName",
+          "location":"uri",
+          "locationName":"name"
         },
-        "version":{"shape":"Version"}
+        "version":{
+          "shape":"NumericalVersion",
+          "location":"uri",
+          "locationName":"version"
+        }
       }
     },
     "DeleteIntentRequest":{
@@ -826,8 +958,26 @@
           "shape":"IntentName",
           "location":"uri",
           "locationName":"name"
+        }
+      }
+    },
+    "DeleteIntentVersionRequest":{
+      "type":"structure",
+      "required":[
+        "name",
+        "version"
+      ],
+      "members":{
+        "name":{
+          "shape":"IntentName",
+          "location":"uri",
+          "locationName":"name"
         },
-        "version":{"shape":"Version"}
+        "version":{
+          "shape":"NumericalVersion",
+          "location":"uri",
+          "locationName":"version"
+        }
       }
     },
     "DeleteSlotTypeRequest":{
@@ -838,8 +988,26 @@
           "shape":"SlotTypeName",
           "location":"uri",
           "locationName":"name"
+        }
+      }
+    },
+    "DeleteSlotTypeVersionRequest":{
+      "type":"structure",
+      "required":[
+        "name",
+        "version"
+      ],
+      "members":{
+        "name":{
+          "shape":"SlotTypeName",
+          "location":"uri",
+          "locationName":"name"
         },
-        "version":{"shape":"Version"}
+        "version":{
+          "shape":"NumericalVersion",
+          "location":"uri",
+          "locationName":"version"
+        }
       }
     },
     "DeleteUtterancesRequest":{
@@ -870,7 +1038,8 @@
       "type":"structure",
       "required":["value"],
       "members":{
-        "value":{"shape":"Value"}
+        "value":{"shape":"Value"},
+        "synonyms":{"shape":"SynonymList"}
       }
     },
     "EnumerationValues":{
@@ -878,6 +1047,21 @@
       "member":{"shape":"EnumerationValue"},
       "max":10000,
       "min":1
+    },
+    "ExportStatus":{
+      "type":"string",
+      "enum":[
+        "IN_PROGRESS",
+        "READY",
+        "FAILED"
+      ]
+    },
+    "ExportType":{
+      "type":"string",
+      "enum":[
+        "ALEXA_SKILLS_KIT",
+        "LEX"
+      ]
     },
     "FollowUpPrompt":{
       "type":"structure",
@@ -1003,7 +1187,9 @@
         "botName":{"shape":"BotName"},
         "createdDate":{"shape":"Timestamp"},
         "type":{"shape":"ChannelType"},
-        "botConfiguration":{"shape":"ChannelConfigurationMap"}
+        "botConfiguration":{"shape":"ChannelConfigurationMap"},
+        "status":{"shape":"ChannelStatus"},
+        "failureReason":{"shape":"String"}
       }
     },
     "GetBotChannelAssociationsRequest":{
@@ -1224,6 +1410,72 @@
         "nextToken":{"shape":"NextToken"}
       }
     },
+    "GetExportRequest":{
+      "type":"structure",
+      "required":[
+        "name",
+        "version",
+        "resourceType",
+        "exportType"
+      ],
+      "members":{
+        "name":{
+          "shape":"Name",
+          "location":"querystring",
+          "locationName":"name"
+        },
+        "version":{
+          "shape":"NumericalVersion",
+          "location":"querystring",
+          "locationName":"version"
+        },
+        "resourceType":{
+          "shape":"ResourceType",
+          "location":"querystring",
+          "locationName":"resourceType"
+        },
+        "exportType":{
+          "shape":"ExportType",
+          "location":"querystring",
+          "locationName":"exportType"
+        }
+      }
+    },
+    "GetExportResponse":{
+      "type":"structure",
+      "members":{
+        "name":{"shape":"Name"},
+        "version":{"shape":"NumericalVersion"},
+        "resourceType":{"shape":"ResourceType"},
+        "exportType":{"shape":"ExportType"},
+        "exportStatus":{"shape":"ExportStatus"},
+        "failureReason":{"shape":"String"},
+        "url":{"shape":"String"}
+      }
+    },
+    "GetImportRequest":{
+      "type":"structure",
+      "required":["importId"],
+      "members":{
+        "importId":{
+          "shape":"String",
+          "location":"uri",
+          "locationName":"importId"
+        }
+      }
+    },
+    "GetImportResponse":{
+      "type":"structure",
+      "members":{
+        "name":{"shape":"Name"},
+        "resourceType":{"shape":"ResourceType"},
+        "mergeStrategy":{"shape":"MergeStrategy"},
+        "importId":{"shape":"String"},
+        "importStatus":{"shape":"ImportStatus"},
+        "failureReason":{"shape":"StringList"},
+        "createdDate":{"shape":"Timestamp"}
+      }
+    },
     "GetIntentRequest":{
       "type":"structure",
       "required":[
@@ -1346,7 +1598,8 @@
         "lastUpdatedDate":{"shape":"Timestamp"},
         "createdDate":{"shape":"Timestamp"},
         "version":{"shape":"Version"},
-        "checksum":{"shape":"String"}
+        "checksum":{"shape":"String"},
+        "valueSelectionStrategy":{"shape":"SlotValueSelectionStrategy"}
       }
     },
     "GetSlotTypeVersionsRequest":{
@@ -1436,6 +1689,20 @@
         "utterances":{"shape":"ListsOfUtterances"}
       }
     },
+    "GroupNumber":{
+      "type":"integer",
+      "box":true,
+      "max":5,
+      "min":1
+    },
+    "ImportStatus":{
+      "type":"string",
+      "enum":[
+        "IN_PROGRESS",
+        "COMPLETE",
+        "FAILED"
+      ]
+    },
     "Intent":{
       "type":"structure",
       "required":[
@@ -1449,9 +1716,7 @@
     },
     "IntentList":{
       "type":"list",
-      "member":{"shape":"Intent"},
-      "max":100,
-      "min":1
+      "member":{"shape":"Intent"}
     },
     "IntentMetadata":{
       "type":"structure",
@@ -1471,7 +1736,7 @@
       "type":"string",
       "max":100,
       "min":1,
-      "pattern":"^[a-zA-Z]+((_[a-zA-Z]+)*|([a-zA-Z]+_)*|_)"
+      "pattern":"^([A-Za-z]_?)+$"
     },
     "IntentUtteranceList":{
       "type":"list",
@@ -1517,7 +1782,11 @@
     },
     "Locale":{
       "type":"string",
-      "enum":["en-US"]
+      "enum":[
+        "en-US",
+        "en-GB",
+        "de-DE"
+      ]
     },
     "LocaleList":{
       "type":"list",
@@ -1529,6 +1798,13 @@
       "max":50,
       "min":1
     },
+    "MergeStrategy":{
+      "type":"string",
+      "enum":[
+        "OVERWRITE_LATEST",
+        "FAIL_ON_CONFLICT"
+      ]
+    },
     "Message":{
       "type":"structure",
       "required":[
@@ -1537,13 +1813,14 @@
       ],
       "members":{
         "contentType":{"shape":"ContentType"},
-        "content":{"shape":"ContentString"}
+        "content":{"shape":"ContentString"},
+        "groupNumber":{"shape":"GroupNumber"}
       }
     },
     "MessageList":{
       "type":"list",
       "member":{"shape":"Message"},
-      "max":5,
+      "max":15,
       "min":1
     },
     "MessageVersion":{
@@ -1553,9 +1830,9 @@
     },
     "Name":{
       "type":"string",
-      "max":64,
+      "max":100,
       "min":1,
-      "pattern":"[a-zA-Z]+"
+      "pattern":"[a-zA-Z_]+"
     },
     "NextToken":{"type":"string"},
     "NotFoundException":{
@@ -1565,6 +1842,12 @@
       },
       "error":{"httpStatusCode":404},
       "exception":true
+    },
+    "NumericalVersion":{
+      "type":"string",
+      "max":64,
+      "min":1,
+      "pattern":"[0-9]+"
     },
     "PreconditionFailedException":{
       "type":"structure",
@@ -1660,7 +1943,8 @@
         "checksum":{"shape":"String"},
         "processBehavior":{"shape":"ProcessBehavior"},
         "locale":{"shape":"Locale"},
-        "childDirected":{"shape":"Boolean"}
+        "childDirected":{"shape":"Boolean"},
+        "createVersion":{"shape":"Boolean"}
       }
     },
     "PutBotResponse":{
@@ -1680,7 +1964,8 @@
         "checksum":{"shape":"String"},
         "version":{"shape":"Version"},
         "locale":{"shape":"Locale"},
-        "childDirected":{"shape":"Boolean"}
+        "childDirected":{"shape":"Boolean"},
+        "createVersion":{"shape":"Boolean"}
       }
     },
     "PutIntentRequest":{
@@ -1702,7 +1987,8 @@
         "dialogCodeHook":{"shape":"CodeHook"},
         "fulfillmentActivity":{"shape":"FulfillmentActivity"},
         "parentIntentSignature":{"shape":"BuiltinIntentSignature"},
-        "checksum":{"shape":"String"}
+        "checksum":{"shape":"String"},
+        "createVersion":{"shape":"Boolean"}
       }
     },
     "PutIntentResponse":{
@@ -1722,7 +2008,8 @@
         "lastUpdatedDate":{"shape":"Timestamp"},
         "createdDate":{"shape":"Timestamp"},
         "version":{"shape":"Version"},
-        "checksum":{"shape":"String"}
+        "checksum":{"shape":"String"},
+        "createVersion":{"shape":"Boolean"}
       }
     },
     "PutSlotTypeRequest":{
@@ -1736,7 +2023,9 @@
         },
         "description":{"shape":"Description"},
         "enumerationValues":{"shape":"EnumerationValues"},
-        "checksum":{"shape":"String"}
+        "checksum":{"shape":"String"},
+        "valueSelectionStrategy":{"shape":"SlotValueSelectionStrategy"},
+        "createVersion":{"shape":"Boolean"}
       }
     },
     "PutSlotTypeResponse":{
@@ -1748,7 +2037,9 @@
         "lastUpdatedDate":{"shape":"Timestamp"},
         "createdDate":{"shape":"Timestamp"},
         "version":{"shape":"Version"},
-        "checksum":{"shape":"String"}
+        "checksum":{"shape":"String"},
+        "valueSelectionStrategy":{"shape":"SlotValueSelectionStrategy"},
+        "createVersion":{"shape":"Boolean"}
       }
     },
     "ReferenceType":{
@@ -1775,6 +2066,14 @@
         "name":{"shape":"Name"},
         "version":{"shape":"Version"}
       }
+    },
+    "ResourceType":{
+      "type":"string",
+      "enum":[
+        "BOT",
+        "INTENT",
+        "SLOT_TYPE"
+      ]
     },
     "ResponseCard":{
       "type":"string",
@@ -1821,7 +2120,7 @@
       "type":"string",
       "max":100,
       "min":1,
-      "pattern":"^[a-zA-Z]+(((_|.)[a-zA-Z]+)*|([a-zA-Z]+(_|.))*|(_|.))"
+      "pattern":"^([A-Za-z](-|_|.)?)+$"
     },
     "SlotTypeMetadata":{
       "type":"structure",
@@ -1841,13 +2140,44 @@
       "type":"string",
       "max":100,
       "min":1,
-      "pattern":"^[a-zA-Z]+((_[a-zA-Z]+)*|([a-zA-Z]+_)*|_)"
+      "pattern":"^([A-Za-z]_?)+$"
     },
     "SlotUtteranceList":{
       "type":"list",
       "member":{"shape":"Utterance"},
       "max":10,
       "min":0
+    },
+    "SlotValueSelectionStrategy":{
+      "type":"string",
+      "enum":[
+        "ORIGINAL_VALUE",
+        "TOP_RESOLUTION"
+      ]
+    },
+    "StartImportRequest":{
+      "type":"structure",
+      "required":[
+        "payload",
+        "resourceType",
+        "mergeStrategy"
+      ],
+      "members":{
+        "payload":{"shape":"Blob"},
+        "resourceType":{"shape":"ResourceType"},
+        "mergeStrategy":{"shape":"MergeStrategy"}
+      }
+    },
+    "StartImportResponse":{
+      "type":"structure",
+      "members":{
+        "name":{"shape":"Name"},
+        "resourceType":{"shape":"ResourceType"},
+        "mergeStrategy":{"shape":"MergeStrategy"},
+        "importId":{"shape":"String"},
+        "importStatus":{"shape":"ImportStatus"},
+        "createdDate":{"shape":"Timestamp"}
+      }
     },
     "Statement":{
       "type":"structure",
@@ -1862,6 +2192,7 @@
       "enum":[
         "BUILDING",
         "READY",
+        "READY_BASIC_TESTING",
         "FAILED",
         "NOT_BUILT"
       ]
@@ -1874,6 +2205,14 @@
       ]
     },
     "String":{"type":"string"},
+    "StringList":{
+      "type":"list",
+      "member":{"shape":"String"}
+    },
+    "SynonymList":{
+      "type":"list",
+      "member":{"shape":"Value"}
+    },
     "Timestamp":{"type":"timestamp"},
     "UserId":{
       "type":"string",

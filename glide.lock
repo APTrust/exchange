@@ -1,12 +1,12 @@
 hash: e2b60e35c45dd804b52f6a9cbf205bbae844e125014401f737dc9cf2afcfe140
-updated: 2017-05-03T15:03:50.297939453-04:00
+updated: 2019-10-03T13:43:57.318445-04:00
 imports:
 - name: github.com/APTrust/bagins
   version: 5bc94534149810750faf248f6ac948b48cbb2fc5
   subpackages:
   - bagutil
 - name: github.com/aws/aws-sdk-go
-  version: 0dbc446aca87aebb6e0a24509b59bafc0e3ec0ae
+  version: 572908275ed4e38fef7ccb7d507f2faacaa7ab36
   subpackages:
   - aws
   - aws/awserr
@@ -17,14 +17,26 @@ imports:
   - aws/credentials
   - aws/credentials/ec2rolecreds
   - aws/credentials/endpointcreds
+  - aws/credentials/processcreds
   - aws/credentials/stscreds
+  - aws/csm
   - aws/defaults
   - aws/ec2metadata
   - aws/endpoints
   - aws/request
   - aws/session
   - aws/signer/v4
+  - internal/ini
+  - internal/s3err
+  - internal/sdkio
+  - internal/sdkmath
+  - internal/sdkrand
+  - internal/sdkuri
+  - internal/shareddefaults
   - private/protocol
+  - private/protocol/eventstream
+  - private/protocol/eventstream/eventstreamapi
+  - private/protocol/json/jsonutil
   - private/protocol/query
   - private/protocol/query/queryutil
   - private/protocol/rest
@@ -34,6 +46,7 @@ imports:
   - service/s3/s3iface
   - service/s3/s3manager
   - service/sts
+  - service/sts/stsiface
 - name: github.com/bitly/go-simplejson
   version: aabad6e819789e569bd6aabf444c935aa9ba1e44
 - name: github.com/blang/semver
@@ -45,30 +58,32 @@ imports:
   subpackages:
   - quantile
 - name: github.com/boltdb/bolt
-  version: 583e8937c61f1af6513608ccc75c97b6abdf4ff9
+  version: 2f1ce7a837dcb8da3ec595b1dac9d0632f0f99e8
+- name: github.com/corpix/uarand
+  version: 6fd8ff1ca6b2b41116c4bb7571662b9762ae62d6
 - name: github.com/crowdmob/goamz
   version: 3a06871fe9fc0281ca90f3a7d97258d042ed64c0
   subpackages:
   - aws
   - s3
-- name: github.com/go-ini/ini
-  version: 6e4869b434bd001f6983749881c7ead3545887d8
+- name: github.com/golang/snappy
+  version: ff6b7dc882cf4cfba7ee0b9f7dcc1ac096c554aa
 - name: github.com/icrowley/fake
-  version: 84bff6d01560fb0b5a396ba29534e93fd00d09c6
+  version: 4178557ae428460c3780a381c824a1f3aceb6325
 - name: github.com/jmespath/go-jmespath
-  version: bd40a432e4c76585ef6b72d3fd96fb9b6dc7b68d
+  version: c2b33e8439af944379acbdd9c3a5fe0bc44bd8a5
 - name: github.com/jtolds/gls
-  version: 8ddce2a84170772b95dd5d576c48d517b22cac63
+  version: b4936e06046bbecbb94cae9c18127ebe510a2cb9
 - name: github.com/julienschmidt/httprouter
   version: 6aacfd5ab513e34f7e64ea9627ab9670371b34e7
 - name: github.com/kr/pretty
-  version: cfb55aafdaf3ec08f0db22699ab822c50091b1c4
+  version: 71e7e49937503c662b9b636fd6b2c14b1aa818a5
 - name: github.com/mreiferson/go-snappystream
   version: 028eae7ab5c4c9e2d1cb4c4ca1e53259bbe7e504
   subpackages:
   - snappy-go
 - name: github.com/nsqio/go-nsq
-  version: d71fb89c9e0263aaed89645b0b168e11ccf597b1
+  version: eee57a3ac4174c55924125bb15eeeda8cffb6e6f
 - name: github.com/nsqio/nsq
   version: c53f30f8ea0cbe3bf95116cc0d6f603f5a387620
   subpackages:
@@ -88,32 +103,34 @@ imports:
 - name: github.com/op/go-logging
   version: b2cb9fa56473e98db8caba80237377e83fe44db5
 - name: github.com/rakyll/magicmime
-  version: 2b8b8f91948c4307f40a8f86ac6f3b26e27b7389
+  version: 8698a7074799189633f3be29613cc24c4511a771
 - name: github.com/satori/go.uuid
-  version: 879c5887cd475cd7864858769793b2ceb0d44feb
+  version: f58768cc1a7a7e77a3bd49e98cdd21419399b6a3
 - name: github.com/smartystreets/assertions
-  version: e9a2f6771d97c709b2f7609fdf89ebde8b64c926
+  version: f487f9de1cd36ebab28235b9373028812fb47cbd
 - name: github.com/smartystreets/goconvey
-  version: d4c757aa9afd1e2fc1832aaab209b5794eb336e1
+  version: 9e8dc3f972df6c8fcc0375ef492c24d0bb204857
   subpackages:
   - convey
 - name: golang.org/x/sys
-  version: 9ccfe848b9db8435a24c424abbc07a921adf1df5
+  version: b397fe3ad8ed895c98fa54584f61835a88e65ff5
   subpackages:
   - unix
 - name: gopkg.in/check.v1
-  version: 4f90aeace3a26ad7021961c297b22c42160c7b25
+  version: 41f04d3bba152ddec2103e299fed053415705330
 testImports:
 - name: github.com/davecgh/go-spew
-  version: 6d212800a42e8ab5c146b8ace3490ee17e5225f9
+  version: d8f796af33cc11cb798c1aaeb27a4ebc5099927d
   subpackages:
   - spew
 - name: github.com/pmezard/go-difflib
-  version: d8ed2627bdf02c080bf22230dbb337003b7aba2d
+  version: 5d4384ee4fb2527b0a1256a821ebfc92f91efefc
   subpackages:
   - difflib
 - name: github.com/stretchr/testify
-  version: 69483b4bd14f5845b5a1e55bca19e954e827f1d0
+  version: 221dbe5ed46703ee255b1da0dec05086f5035f62
   subpackages:
   - assert
   - require
+- name: gopkg.in/yaml.v2
+  version: f221b8435cfb71e54062f6c6e99e9ade30b124d5

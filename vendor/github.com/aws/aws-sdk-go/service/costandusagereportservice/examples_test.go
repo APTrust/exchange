@@ -3,94 +3,134 @@
 package costandusagereportservice_test
 
 import (
-	"bytes"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/costandusagereportservice"
 )
 
 var _ time.Duration
-var _ bytes.Buffer
+var _ strings.Reader
+var _ aws.Config
 
-func ExampleCostandUsageReportService_DeleteReportDefinition() {
-	sess := session.Must(session.NewSession())
-
-	svc := costandusagereportservice.New(sess)
-
-	params := &costandusagereportservice.DeleteReportDefinitionInput{
-		ReportName: aws.String("ReportName"),
-	}
-	resp, err := svc.DeleteReportDefinition(params)
-
+func parseTime(layout, value string) *time.Time {
+	t, err := time.Parse(layout, value)
 	if err != nil {
-		// Print the error, cast err to awserr.Error to get the Code and
-		// Message from an error.
-		fmt.Println(err.Error())
+		panic(err)
+	}
+	return &t
+}
+
+// To delete the AWS Cost and Usage report named ExampleReport.
+//
+// The following example deletes the AWS Cost and Usage report named ExampleReport.
+func ExampleCostandUsageReportService_DeleteReportDefinition_shared00() {
+	svc := costandusagereportservice.New(session.New())
+	input := &costandusagereportservice.DeleteReportDefinitionInput{
+		ReportName: aws.String("ExampleReport"),
+	}
+
+	result, err := svc.DeleteReportDefinition(input)
+	if err != nil {
+		if aerr, ok := err.(awserr.Error); ok {
+			switch aerr.Code() {
+			case costandusagereportservice.ErrCodeInternalErrorException:
+				fmt.Println(costandusagereportservice.ErrCodeInternalErrorException, aerr.Error())
+			case costandusagereportservice.ErrCodeValidationException:
+				fmt.Println(costandusagereportservice.ErrCodeValidationException, aerr.Error())
+			default:
+				fmt.Println(aerr.Error())
+			}
+		} else {
+			// Print the error, cast err to awserr.Error to get the Code and
+			// Message from an error.
+			fmt.Println(err.Error())
+		}
 		return
 	}
 
-	// Pretty-print the response data.
-	fmt.Println(resp)
+	fmt.Println(result)
 }
 
-func ExampleCostandUsageReportService_DescribeReportDefinitions() {
-	sess := session.Must(session.NewSession())
-
-	svc := costandusagereportservice.New(sess)
-
-	params := &costandusagereportservice.DescribeReportDefinitionsInput{
-		MaxResults: aws.Int64(1),
-		NextToken:  aws.String("GenericString"),
+// To list the AWS Cost and Usage reports for the account.
+//
+// The following example lists the AWS Cost and Usage reports for the account.
+func ExampleCostandUsageReportService_DescribeReportDefinitions_shared00() {
+	svc := costandusagereportservice.New(session.New())
+	input := &costandusagereportservice.DescribeReportDefinitionsInput{
+		MaxResults: aws.Int64(5),
 	}
-	resp, err := svc.DescribeReportDefinitions(params)
 
+	result, err := svc.DescribeReportDefinitions(input)
 	if err != nil {
-		// Print the error, cast err to awserr.Error to get the Code and
-		// Message from an error.
-		fmt.Println(err.Error())
+		if aerr, ok := err.(awserr.Error); ok {
+			switch aerr.Code() {
+			case costandusagereportservice.ErrCodeInternalErrorException:
+				fmt.Println(costandusagereportservice.ErrCodeInternalErrorException, aerr.Error())
+			default:
+				fmt.Println(aerr.Error())
+			}
+		} else {
+			// Print the error, cast err to awserr.Error to get the Code and
+			// Message from an error.
+			fmt.Println(err.Error())
+		}
 		return
 	}
 
-	// Pretty-print the response data.
-	fmt.Println(resp)
+	fmt.Println(result)
 }
 
-func ExampleCostandUsageReportService_PutReportDefinition() {
-	sess := session.Must(session.NewSession())
-
-	svc := costandusagereportservice.New(sess)
-
-	params := &costandusagereportservice.PutReportDefinitionInput{
-		ReportDefinition: &costandusagereportservice.ReportDefinition{ // Required
-			AdditionalSchemaElements: []*string{ // Required
-				aws.String("SchemaElement"), // Required
-				// More values...
-			},
-			Compression: aws.String("CompressionFormat"), // Required
-			Format:      aws.String("ReportFormat"),      // Required
-			ReportName:  aws.String("ReportName"),        // Required
-			S3Bucket:    aws.String("S3Bucket"),          // Required
-			S3Prefix:    aws.String("S3Prefix"),          // Required
-			S3Region:    aws.String("AWSRegion"),         // Required
-			TimeUnit:    aws.String("TimeUnit"),          // Required
+// To create a report named ExampleReport.
+//
+// The following example creates a AWS Cost and Usage report named ExampleReport.
+func ExampleCostandUsageReportService_PutReportDefinition_shared00() {
+	svc := costandusagereportservice.New(session.New())
+	input := &costandusagereportservice.PutReportDefinitionInput{
+		ReportDefinition: &costandusagereportservice.ReportDefinition{
 			AdditionalArtifacts: []*string{
-				aws.String("AdditionalArtifact"), // Required
-				// More values...
+				aws.String("REDSHIFT"),
+				aws.String("QUICKSIGHT"),
 			},
+			AdditionalSchemaElements: []*string{
+				aws.String("RESOURCES"),
+			},
+			Compression: aws.String("ZIP"),
+			Format:      aws.String("textORcsv"),
+			ReportName:  aws.String("ExampleReport"),
+			S3Bucket:    aws.String("example-s3-bucket"),
+			S3Prefix:    aws.String("exampleprefix"),
+			S3Region:    aws.String("us-east-1"),
+			TimeUnit:    aws.String("DAILY"),
 		},
 	}
-	resp, err := svc.PutReportDefinition(params)
 
+	result, err := svc.PutReportDefinition(input)
 	if err != nil {
-		// Print the error, cast err to awserr.Error to get the Code and
-		// Message from an error.
-		fmt.Println(err.Error())
+		if aerr, ok := err.(awserr.Error); ok {
+			switch aerr.Code() {
+			case costandusagereportservice.ErrCodeDuplicateReportNameException:
+				fmt.Println(costandusagereportservice.ErrCodeDuplicateReportNameException, aerr.Error())
+			case costandusagereportservice.ErrCodeReportLimitReachedException:
+				fmt.Println(costandusagereportservice.ErrCodeReportLimitReachedException, aerr.Error())
+			case costandusagereportservice.ErrCodeInternalErrorException:
+				fmt.Println(costandusagereportservice.ErrCodeInternalErrorException, aerr.Error())
+			case costandusagereportservice.ErrCodeValidationException:
+				fmt.Println(costandusagereportservice.ErrCodeValidationException, aerr.Error())
+			default:
+				fmt.Println(aerr.Error())
+			}
+		} else {
+			// Print the error, cast err to awserr.Error to get the Code and
+			// Message from an error.
+			fmt.Println(err.Error())
+		}
 		return
 	}
 
-	// Pretty-print the response data.
-	fmt.Println(resp)
+	fmt.Println(result)
 }
