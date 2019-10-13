@@ -34,6 +34,9 @@ const RESOURCE_REQUEUE_TIMEOUT = 1000 * 60 * 60 // one hour
 const LARGE_BAG_IN_PROGRESS = "LargeBagInProgress"
 const HIGH_FILE_BAG_IN_PROGRESS = "HighFileBagInProgress"
 
+// Special to deal with huge Fedora and DSpace dumps.
+const SMALL_FILE_SIZE = int64(300000)
+
 // Stores GenericFiles in long-term storage (S3 and Glacier).
 type APTStorer struct {
 	Context        *context.Context
@@ -174,13 +177,20 @@ func (storer *APTStorer) store() {
 		// we have to keep scanning the tar file and pulling them out,
 		// one by one. There's also a lot of HTTPS overhead when writing
 		// lots of small files to S3/Glacier.
-		continueProcessing, requeueMessage := storer.checkForHighResourceBag(db, objIdentifier)
+		continueProcessing, hasManySmallFiles, requeueMessage := storer.checkForHighResourceBag(db, objIdentifier)
 		if !continueProcessing {
 			storer.Context.MessageLog.Info("[High Resource Bag] Requeueing %s: %s", objIdentifier, requeueMessage)
 			ingestState.IngestManifest.StoreResult.AddError(requeueMessage)
 			ingestState.IngestManifest.StoreResult.Finish()
 			storer.CleanupChannel <- ingestState
 			continue
+		}
+
+		// For large Fedora/DSpace dumps were we get 200k tiny files
+		// in a bag.
+		if hasManySmallFiles {
+			limit = limit * 20
+			storer.Context.MessageLog.Info("Bag %s has many small files. Increasing batch size to %d", objIdentifier, limit)
 		}
 
 		for {
@@ -948,13 +958,14 @@ func (storer *APTStorer) getS3FileDetail(region, bucket, fileUUID string) *s3.Ob
 	return nil
 }
 
-func (storer *APTStorer) checkForHighResourceBag(db *storage.BoltDB, objIdentifier string) (bool, string) {
+func (storer *APTStorer) checkForHighResourceBag(db *storage.BoltDB, objIdentifier string) (bool, bool, string) {
 	obj, err := db.GetIntellectualObject(objIdentifier)
 	if err != nil {
-		return false, "Cannot get object from BoltDB."
+		return false, false, "Cannot get object from BoltDB."
 	}
 	fileCount := db.FileCount()
 	continueProcessing := true
+	hasManySmallFiles := false
 	message := ""
 	if obj.IngestSize > TWO_HUNDRED_GIGABYTES {
 		largeBagInProgress := storer.SyncMap.Get(LARGE_BAG_IN_PROGRESS)
@@ -966,6 +977,12 @@ func (storer *APTStorer) checkForHighResourceBag(db *storage.BoltDB, objIdentifi
 			storer.SyncMap.Add(LARGE_BAG_IN_PROGRESS, objIdentifier)
 		}
 	} else if fileCount > HIGH_FILE_COUNT {
+		averageFileSize := obj.IngestSize / int64(fileCount)
+
+		// Set this flag so we can pick an appropriate batch size
+		// when storing.
+		hasManySmallFiles = averageFileSize < SMALL_FILE_SIZE
+
 		highFileBagInProgress := storer.SyncMap.Get(HIGH_FILE_BAG_IN_PROGRESS)
 		if highFileBagInProgress != "" {
 			continueProcessing = false
@@ -977,7 +994,7 @@ func (storer *APTStorer) checkForHighResourceBag(db *storage.BoltDB, objIdentifi
 		}
 	}
 
-	return continueProcessing, message
+	return continueProcessing, hasManySmallFiles, message
 }
 
 func (storer *APTStorer) clearHighResourceBag(objIdentifier string) {
