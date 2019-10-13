@@ -120,6 +120,20 @@ func (storer *APTStorer) store() {
 
 		start := 0
 		limit := storer.Context.Config.StoreWorker.NetworkConnections
+
+		// Do this before trying to open the DB, because opening creates
+		// a valdb file if it doesn't already exist. This leaves empty
+		// valdb files in the data directory.
+		if !fileutil.FileExists(ingestState.IngestManifest.DBPath) {
+			msg := fmt.Sprintf("BoltDB file %s is missing.", ingestState.IngestManifest.DBPath)
+			ingestState.IngestManifest.StoreResult.AddError(msg)
+			ingestState.IngestManifest.StoreResult.ErrorIsFatal = true
+			ingestState.IngestManifest.StoreResult.Finish()
+			storer.CleanupChannel <- ingestState
+			continue
+
+		}
+
 		db, err := storage.NewBoltDB(ingestState.IngestManifest.DBPath)
 		if err != nil {
 			ingestState.IngestManifest.StoreResult.AddError(
