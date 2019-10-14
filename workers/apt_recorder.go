@@ -220,14 +220,21 @@ func (recorder *APTRecorder) saveFiles(ingestState *models.IngestState, obj *mod
 			recorder.buildGenericFileChecksums(gf, ingestState)
 			recorder.buildGenericFileEvents(gf, ingestState)
 
+			// Prior to 2019-10-14, files with non-zero ids where
+			// IngestPreviousVersionExists was false were incorrectly
+			// being put into newFiles. Non-zero Id with no previous
+			// version can occur when apt_record tries to record a
+			// partially-recorded ingest.
 			if gf.IngestPreviousVersionExists {
-				if gf.Id > 0 {
-					existingFiles = append(existingFiles, gf)
-				} else {
+				if gf.Id == 0 {
 					recorder.logMissingId(ingestState, gf)
 				}
-			} else if gf.Id == 0 {
+			}
+
+			if gf.Id == 0 {
 				newFiles = append(newFiles, gf)
+			} else {
+				existingFiles = append(existingFiles, gf)
 			}
 		}
 
@@ -276,9 +283,16 @@ func (recorder *APTRecorder) saveIntellectualObject(ingestState *models.IngestSt
 			"Pharos returned nil IntellectualObject after save.")
 		return
 	}
+	// For obj saved in BoltDB
 	obj.Id = savedObject.Id
 	obj.CreatedAt = savedObject.CreatedAt
 	obj.UpdatedAt = savedObject.UpdatedAt
+
+	// For logging, since we log from ingestState below
+	ingestState.IngestManifest.Object.Id = savedObject.Id
+	ingestState.IngestManifest.Object.CreatedAt = savedObject.CreatedAt
+	ingestState.IngestManifest.Object.UpdatedAt = savedObject.UpdatedAt
+
 	recorder.savePremisEventsForObject(ingestState, obj)
 }
 
