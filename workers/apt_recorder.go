@@ -336,12 +336,15 @@ func (recorder *APTRecorder) updateGenericFiles(ingestState *models.IngestState,
 		return
 	}
 	for _, gf := range files {
-		resp := recorder.Context.PharosClient.GenericFileSave(gf)
+		clonedGenericFile := CloneWithoutSavedChildren(gf)
+		resp := recorder.Context.PharosClient.GenericFileSave(clonedGenericFile)
 		if resp.Error != nil {
 			ingestState.IngestManifest.RecordResult.AddError(
 				"Error updating '%s': %v", gf.Identifier, resp.Error)
 			continue
 		}
+		// Pick up updated timestamps in response from Pharos.
+		gf = resp.GenericFile()
 		// Shouldn't need to call this. Should already have Id?
 		gf.PropagateIdsToChildren()
 	}
@@ -522,6 +525,34 @@ func (recorder *APTRecorder) bucketVersionMatchesCurrentVersion(ingestState *mod
 		}
 	}
 	return eTagMatches
+}
+
+// CloneWithoutSavedChildren returns a clone of the GenericFile,
+// minus any Checksums and PremisEvents that have already been
+// saved to Pharos. Items saved to Pharos have a non-zero numeric
+// id. PremisEvents and Checksums are read-only once created.
+// They cannot be updated, and if we try, Pharos will return an error.
+// This function is part of the fix to https://trello.com/c/jQvPXa10,
+// "Handle re-recording of partially failed ingest data"
+func CloneWithoutSavedChildren(gf *models.GenericFile) *models.GenericFile {
+	clone := gf.Clone()
+	unsavedEvents := make([]*models.PremisEvent, 0)
+	for _, event := range clone.PremisEvents {
+		if event.Id == 0 {
+			unsavedEvents = append(unsavedEvents, event)
+		}
+	}
+	unsavedChecksums := make([]*models.Checksum, 0)
+	for _, cs := range clone.Checksums {
+		if cs.Id == 0 {
+			unsavedChecksums = append(unsavedChecksums, cs)
+		}
+	}
+
+	clone.PremisEvents = unsavedEvents
+	clone.Checksums = unsavedChecksums
+
+	return clone
 }
 
 // --------- Messages --------------
