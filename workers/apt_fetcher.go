@@ -492,6 +492,9 @@ func (fetcher *APTFetcher) buildObject(downloader *network.S3Download, ingestSta
 	// dash near the end, followed by the number of parts in the
 	// multipart upload. We can't use that kind of ETag to verify
 	// the md5 checksum that we calculated.
+	//
+	// This code seems logically incorrect and should be reviewed
+	// for removal.
 	obj.IngestMd5Verifiable = strings.Contains(downloader.Md5Digest, "-")
 	if obj.IngestMd5Verifiable {
 		obj.IngestMd5Verified = obj.IngestRemoteMd5 == obj.IngestLocalMd5
