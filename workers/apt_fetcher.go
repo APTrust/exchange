@@ -69,6 +69,14 @@ func (fetcher *APTFetcher) HandleMessage(message *nsq.Message) error {
 		return err
 	}
 
+	// If etag doesn't match, there's a newer version in the receiving
+	// bucket, and we should cancel this WorkItem.
+	fetcher.assertETagMatch(ingestState)
+	if ingestState.WorkItem.Status == constants.StatusCancelled {
+		fetcher.CleanupChannel <- ingestState
+		return nil
+	}
+
 	// Skip this if it's already being worked on.
 	if ingestState.WorkItem.IsInProgress() {
 		log.Info(ingestState.WorkItem.MsgSkippingInProgress())
@@ -267,7 +275,13 @@ func (fetcher *APTFetcher) cleanup() {
 		tarFile := ingestState.IngestManifest.BagPath
 		hasErrors := (ingestState.IngestManifest.FetchResult.HasErrors() ||
 			ingestState.IngestManifest.ValidateResult.HasErrors())
-		if hasErrors && fileutil.FileExists(tarFile) {
+
+		// Delete the tar file and the valdb file if we can't ingest this.
+		// Do not delete if WorkItem was cancelled because that means
+		// a newer version of this bag got into the receiving bucket,
+		// and another worker may be ingesting it now. If we delete the
+		// bag, the other worker won't be able to complete its tasks.
+		if hasErrors && fileutil.FileExists(tarFile) && ingestState.WorkItem.Status != constants.StatusCancelled {
 			// Most likely bad md5 digest, but perhaps also a partial download.
 			fetcher.Context.MessageLog.Info("Deleting %s due to download error: %s",
 				tarFile, ingestState.IngestManifest.AllErrorsAsString())
@@ -294,7 +308,10 @@ func (fetcher *APTFetcher) record() {
 		itsTimeToGiveUp := (ingestState.IngestManifest.HasFatalErrors() ||
 			(ingestState.IngestManifest.HasErrors() && attemptNumber >= maxAttempts))
 
-		if itsTimeToGiveUp {
+		if ingestState.WorkItem.Status == constants.StatusCancelled {
+			ingestState.FinishNSQ()
+			MarkWorkItemCancelled(ingestState, fetcher.Context)
+		} else if itsTimeToGiveUp {
 			ingestState.FinishNSQ()
 			MarkWorkItemFailed(ingestState, fetcher.Context)
 		} else if ingestState.IngestManifest.HasErrors() {
@@ -347,6 +364,33 @@ func (fetcher *APTFetcher) canSkipFetchAndValidate(ingestState *models.IngestSta
 		ingestState.IngestManifest.ValidateResult.Finished() &&
 		!ingestState.IngestManifest.HasFatalErrors() &&
 		fileutil.FileExists(ingestState.IngestManifest.BagPath))
+}
+
+// assertEtagMatch checks to see if the etag on the WorkItem matches
+// the etag of the item in the receiving bucket. We get mismatches when
+// a depositor uploads a new bag before we've finished ingesting the
+// old one. This happens during long ingest backlogs.
+func (fetcher *APTFetcher) assertETagMatch(ingestState *models.IngestState) {
+	s3Client := network.NewS3Head(
+		os.Getenv("AWS_ACCESS_KEY_ID"),
+		os.Getenv("AWS_SECRET_ACCESS_KEY"),
+		constants.AWSVirginia,
+		ingestState.WorkItem.Bucket)
+	s3Client.Head(ingestState.WorkItem.Name)
+
+	if s3Client.Response != nil && s3Client.Response.ETag != nil {
+		etag := strings.Replace(util.PointerToString(s3Client.Response.ETag), "\"", "", -1)
+		if etag != ingestState.WorkItem.ETag {
+			msg := fmt.Sprintf("Ingest services cancelled this ingest because WorkItem etag is %s and etag of item in receiving bucket is %s. There should be a separate WorkItem to ingest the newer version that's currently in the bucket.", ingestState.WorkItem.ETag, etag)
+			ingestState.IngestManifest.FetchResult.AddError(msg)
+			ingestState.IngestManifest.FetchResult.ErrorIsFatal = true
+			ingestState.WorkItem.Note = msg
+			ingestState.WorkItem.Status = constants.StatusCancelled
+		}
+	} else {
+		fetcher.Context.MessageLog.Warning("Head request for %s/%s returned nothing",
+			ingestState.WorkItem.Bucket, ingestState.WorkItem.Name)
+	}
 }
 
 // Download the file, and update the IngestManifest while we're at it.
