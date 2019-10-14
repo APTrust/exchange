@@ -390,3 +390,26 @@ func TestIsUrlAssignment(t *testing.T) {
 	event.Detail = "Assigned new storage URL blah blah blah THE INTERWEBZ!"
 	assert.False(t, event.IsUrlAssignment())
 }
+
+func TestPremisEventClone(t *testing.T) {
+	event := models.NewEventObjectCreation()
+	event.Id = 9999
+
+	clone := event.Clone()
+	assert.Equal(t, clone.Id, event.Id)
+	assert.Equal(t, clone.Identifier, event.Identifier)
+	assert.Equal(t, clone.EventType, event.EventType)
+	assert.Equal(t, clone.DateTime, event.DateTime)
+	assert.Equal(t, clone.Detail, event.Detail)
+	assert.Equal(t, clone.Outcome, event.Outcome)
+	assert.Equal(t, clone.OutcomeDetail, event.OutcomeDetail)
+	assert.Equal(t, clone.Object, event.Object)
+	assert.Equal(t, clone.Agent, event.Agent)
+	assert.Equal(t, clone.OutcomeInformation, event.OutcomeInformation)
+	assert.Equal(t, clone.IntellectualObjectId, event.IntellectualObjectId)
+	assert.Equal(t, clone.IntellectualObjectIdentifier, event.IntellectualObjectIdentifier)
+	assert.Equal(t, clone.GenericFileId, event.GenericFileId)
+	assert.Equal(t, clone.GenericFileIdentifier, event.GenericFileIdentifier)
+	assert.Equal(t, clone.CreatedAt, event.CreatedAt)
+	assert.Equal(t, clone.UpdatedAt, event.UpdatedAt)
+}

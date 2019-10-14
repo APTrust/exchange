@@ -34,3 +34,15 @@ func TestChecksumSerializeForPharos(t *testing.T) {
 	expected := `{"checksum":{"generic_file_id":0,"algorithm":"md5","datetime":"2014-04-25T18:05:51Z","digest":"8d7b0e3a24fc899b1d92a73537401805"}}`
 	assert.Equal(t, expected, string(jsonData))
 }
+
+func TestChecksumClone(t *testing.T) {
+	checksum := testutil.MakeChecksum()
+	clone := checksum.Clone()
+	assert.Equal(t, clone.Id, checksum.Id)
+	assert.Equal(t, clone.GenericFileId, checksum.GenericFileId)
+	assert.Equal(t, clone.Algorithm, checksum.Algorithm)
+	assert.Equal(t, clone.DateTime, checksum.DateTime)
+	assert.Equal(t, clone.Digest, checksum.Digest)
+	assert.Equal(t, clone.CreatedAt, checksum.CreatedAt)
+	assert.Equal(t, clone.UpdatedAt, checksum.UpdatedAt)
+}

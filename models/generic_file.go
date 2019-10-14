@@ -231,6 +231,64 @@ func NewGenericFile() *GenericFile {
 	}
 }
 
+func (gf *GenericFile) Clone() *GenericFile {
+	newFile := NewGenericFile()
+	newFile.Id = gf.Id
+	newFile.Identifier = gf.Identifier
+	newFile.IntellectualObjectId = gf.IntellectualObjectId
+	newFile.IntellectualObjectIdentifier = gf.IntellectualObjectIdentifier
+	newFile.FileFormat = gf.FileFormat
+	newFile.URI = gf.URI
+	newFile.Size = gf.Size
+	newFile.FileCreated = gf.FileCreated
+	newFile.FileModified = gf.FileModified
+	newFile.CreatedAt = gf.CreatedAt
+	newFile.UpdatedAt = gf.UpdatedAt
+	newFile.LastFixityCheck = gf.LastFixityCheck
+	newFile.State = gf.State
+	newFile.StorageOption = gf.StorageOption
+	newFile.IngestFileType = gf.IngestFileType
+	newFile.IngestLocalPath = gf.IngestLocalPath
+	newFile.IngestManifestMd5 = gf.IngestManifestMd5
+	newFile.IngestMd5 = gf.IngestMd5
+	newFile.IngestMd5GeneratedAt = gf.IngestMd5GeneratedAt
+	newFile.IngestMd5VerifiedAt = gf.IngestMd5VerifiedAt
+	newFile.IngestManifestSha256 = gf.IngestManifestSha256
+	newFile.IngestSha256 = gf.IngestSha256
+	newFile.IngestSha256GeneratedAt = gf.IngestSha256GeneratedAt
+	newFile.IngestSha256VerifiedAt = gf.IngestSha256VerifiedAt
+	newFile.IngestUUID = gf.IngestUUID
+	newFile.IngestUUIDGeneratedAt = gf.IngestUUIDGeneratedAt
+	newFile.IngestStorageURL = gf.IngestStorageURL
+	newFile.IngestStoredAt = gf.IngestStoredAt
+	newFile.IngestReplicationURL = gf.IngestReplicationURL
+	newFile.IngestReplicatedAt = gf.IngestReplicatedAt
+	newFile.IngestPreviousVersionExists = gf.IngestPreviousVersionExists
+	newFile.IngestNeedsSave = gf.IngestNeedsSave
+	newFile.IngestErrorMessage = gf.IngestErrorMessage
+	newFile.IngestFileUid = gf.IngestFileUid
+	newFile.IngestFileGid = gf.IngestFileGid
+	newFile.IngestFileUname = gf.IngestFileUname
+	newFile.IngestFileGname = gf.IngestFileGname
+	newFile.IngestFileMode = gf.IngestFileMode
+	newFile.FetchLocalPath = gf.FetchLocalPath
+	newFile.FetchMd5Value = gf.FetchMd5Value
+	newFile.FetchSha256Value = gf.FetchSha256Value
+	newFile.FetchErrorMessage = gf.FetchErrorMessage
+
+	newFile.PremisEvents = make([]*PremisEvent, len(gf.PremisEvents))
+	for i, event := range gf.PremisEvents {
+		newFile.PremisEvents[i] = event.Clone()
+	}
+
+	newFile.Checksums = make([]*Checksum, len(gf.Checksums))
+	for i, checksum := range gf.Checksums {
+		newFile.Checksums[i] = checksum.Clone()
+	}
+
+	return newFile
+}
+
 // Serializes a version of GenericFile that Fluctus will accept as post/put input.
 // Note that we don't serialize the id or any of our internal housekeeping info.
 func (gf *GenericFile) SerializeForPharos() ([]byte, error) {
