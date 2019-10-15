@@ -228,8 +228,8 @@ func (reader *APTBucketReader) processS3Object(s3Object *s3.Object, bucketName s
 		}
 		return
 	}
-	// A.D. added 2019-09-23: Requeue ingest if prior WorkItem was cancelled.
-	if workItem == nil || workItem.Status == constants.StatusCancelled {
+
+	if workItem == nil {
 		workItem = reader.createWorkItem(bucketName, s3Object)
 		if workItem == nil {
 			// Error logged and statted at source.
@@ -257,10 +257,11 @@ func (reader *APTBucketReader) findWorkItem(key, etag string) (*models.WorkItem,
 	reader.Context.MessageLog.Debug("Looking up hash key '%s' in Pharos", hashKey)
 	params := url.Values{}
 	params.Add("page", "1")
-	params.Add("per_page", "1")
+	params.Add("per_page", "10")
 	params.Add("item_action", constants.ActionIngest)
 	params.Add("name", key)
 	params.Add("etag", etag)
+	params.Add("sort", "date")
 	//params.Add("bag_date", lastModified.Format(time.RFC3339))
 	resp := reader.Context.PharosClient.WorkItemList(params)
 	if resp.Error != nil {
@@ -277,7 +278,17 @@ func (reader *APTBucketReader) findWorkItem(key, etag string) (*models.WorkItem,
 		err := reader.processPharosError(resp)
 		return nil, err
 	}
-	workItem := resp.WorkItem()
+
+	// Find any items with this name and etag that where
+	// action is Ingest and status is Pending or Started.
+	workItems := resp.WorkItems()
+	var workItem *models.WorkItem
+	for _, item := range workItems {
+		if item.Status == constants.StatusPending || item.Status == constants.StatusStarted {
+			workItem = item
+			break
+		}
+	}
 	if workItem != nil {
 		reader.Context.MessageLog.Debug("Found WorkItem for hash key '%s' in Pharos", hashKey)
 		if reader.stats != nil {
