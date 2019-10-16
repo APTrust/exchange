@@ -470,6 +470,7 @@ func (config *Config) createDirectories() error {
 	return nil
 }
 
+// TODO: Remove in favor of methods below that return maps.
 func (config *Config) StorageRegionAndBucketFor(storageOption string) (region string, bucket string, err error) {
 	if storageOption == constants.StorageStandard {
 		region = config.APTrustS3Region
@@ -496,6 +497,36 @@ func (config *Config) StorageRegionAndBucketFor(storageOption string) (region st
 		err = fmt.Errorf("Unknown Storage Option: %s", storageOption)
 	}
 	return region, bucket, err
+}
+
+func (config *Config) ActiveAWSStorageRegions() map[string]string {
+	return map[string]string{
+		constants.StorageStandard:      config.APTrustS3Region,
+		constants.StorageGlacierVA:     config.GlacierRegionVA,
+		constants.StorageGlacierOH:     config.GlacierRegionOH,
+		constants.StorageGlacierOR:     config.GlacierRegionOR,
+		constants.StorageGlacierDeepVA: config.GlacierRegionVA,
+		constants.StorageGlacierDeepOH: config.GlacierRegionOH,
+		constants.StorageGlacierDeepOR: config.GlacierRegionOR,
+	}
+}
+
+func (config *Config) AWSS3Buckets() map[string]string {
+	return map[string]string{
+		constants.StorageStandard: config.PreservationBucket,
+	}
+}
+
+func (config *Config) AWSGlacierBuckets() map[string]string {
+	return map[string]string{
+		constants.StorageStandard:      config.ReplicationBucket,
+		constants.StorageGlacierVA:     config.GlacierBucketVA,
+		constants.StorageGlacierOH:     config.GlacierBucketOH,
+		constants.StorageGlacierOR:     config.GlacierBucketOR,
+		constants.StorageGlacierDeepVA: config.GlacierDeepBucketVA,
+		constants.StorageGlacierDeepOH: config.GlacierDeepBucketOH,
+		constants.StorageGlacierDeepOR: config.GlacierDeepBucketOR,
+	}
 }
 
 // TestsAreRunning returns true if we're running unit or integration

@@ -204,3 +204,46 @@ func TestGetAWSSecretAccessKey(t *testing.T) {
 		assert.Equal(t, "TestSecretKey", config.GetAWSSecretAccessKey())
 	}
 }
+
+func TestActiveAWSStorageRegions(t *testing.T) {
+	configFile := filepath.Join("config", "test.json")
+	config, err := models.LoadConfigFile(configFile)
+	require.Nil(t, err)
+
+	regions := config.ActiveAWSStorageRegions()
+
+	assert.Equal(t, 7, len(regions))
+	assert.Equal(t, "us-east-1", regions[constants.StorageStandard])
+	assert.Equal(t, "us-east-1", regions[constants.StorageGlacierVA])
+	assert.Equal(t, "us-east-2", regions[constants.StorageGlacierOH])
+	assert.Equal(t, "us-west-2", regions[constants.StorageGlacierOR])
+	assert.Equal(t, "us-east-1", regions[constants.StorageGlacierDeepVA])
+	assert.Equal(t, "us-east-2", regions[constants.StorageGlacierDeepOH])
+	assert.Equal(t, "us-west-2", regions[constants.StorageGlacierDeepOR])
+}
+
+func TestAWSS3Buckets(t *testing.T) {
+	configFile := filepath.Join("config", "test.json")
+	config, err := models.LoadConfigFile(configFile)
+	require.Nil(t, err)
+
+	buckets := config.AWSS3Buckets()
+	assert.Equal(t, 1, len(buckets))
+	assert.Equal(t, "aptrust.test.preservation", buckets[constants.StorageStandard])
+}
+
+func TestAWSGlacierBuckets(t *testing.T) {
+	configFile := filepath.Join("config", "test.json")
+	config, err := models.LoadConfigFile(configFile)
+	require.Nil(t, err)
+
+	buckets := config.AWSGlacierBuckets()
+	assert.Equal(t, 7, len(buckets))
+	assert.Equal(t, "aptrust.test.preservation.oregon", buckets[constants.StorageStandard])
+	assert.Equal(t, "aptrust.test.preservation.glacier.va", buckets[constants.StorageGlacierVA])
+	assert.Equal(t, "aptrust.test.preservation.glacier.oh", buckets[constants.StorageGlacierOH])
+	assert.Equal(t, "aptrust.test.preservation.glacier.or", buckets[constants.StorageGlacierOR])
+	assert.Equal(t, "aptrust.test.preservation.glacier-deep.va", buckets[constants.StorageGlacierDeepVA])
+	assert.Equal(t, "aptrust.test.preservation.glacier-deep.oh", buckets[constants.StorageGlacierDeepOH])
+	assert.Equal(t, "aptrust.test.preservation.glacier-deep.or", buckets[constants.StorageGlacierDeepOR])
+}
