@@ -3,7 +3,7 @@
 require_relative 'context'
 
 # The Build class provides methods for building Go source files
-# for APTrust and DPN integration tests.
+# for APTrust integration tests.
 class Build
 
   def initialize(context)
@@ -37,7 +37,6 @@ if __FILE__ == $0
   # context.rb expects the following ENV vars to be set for
   # integration testing, but if we're just doing a
   # command-line build, we don't need them.
-  ENV['DPN_SERVER_ROOT'] ||= '/dev/null'
   ENV['PHAROS_ROOT'] ||= '/dev/null'
   go_bin_dir = ARGV[0]
   if !go_bin_dir

@@ -57,10 +57,6 @@ def run()
   src = File.join(options['exchange_root'], 'config', 'aptrust_bag_validation_config.json')
   dest = File.join(options['exchange_root'], 'partner_apps', 'bin', 'aptrust_bag_validation_config.json')
   FileUtils.copy(src, dest)
-
-  src = File.join(options['exchange_root'], 'config', 'dpn_bag_validation_config.json')
-  dest = File.join(options['exchange_root'], 'partner_apps', 'bin', 'dpn_bag_validation_config.json')
-  FileUtils.copy(src, dest)
 end
 
 def get_ld_flags(version, build_date, git_hash)
