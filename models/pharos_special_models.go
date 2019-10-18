@@ -138,38 +138,6 @@ func NewChecksumForPharos(cs *Checksum) *ChecksumForPharos {
 	}
 }
 
-type DPNWorkItemForPharos struct {
-	RemoteNode     string     `json:"remote_node"`
-	Task           string     `json:"task"`
-	Identifier     string     `json:"identifier"`
-	QueuedAt       *time.Time `json:"queued_at"`
-	CompletedAt    *time.Time `json:"completed_at"`
-	ProcessingNode *string    `json:"processing_node"`
-	Pid            int        `json:"pid"`
-	Note           *string    `json:"note"`
-	State          *string    `json:"state"`
-	Retry          bool       `json:"retry"`
-	Stage          string     `json:"stage"`
-	Status         string     `json:"status"`
-}
-
-func NewDPNWorkItemForPharos(item *DPNWorkItem) *DPNWorkItemForPharos {
-	return &DPNWorkItemForPharos{
-		RemoteNode:     item.RemoteNode,
-		Task:           item.Task,
-		Identifier:     item.Identifier,
-		QueuedAt:       item.QueuedAt,
-		CompletedAt:    item.CompletedAt,
-		ProcessingNode: item.ProcessingNode,
-		Pid:            item.Pid,
-		Note:           item.Note,
-		State:          item.State,
-		Retry:          item.Retry,
-		Stage:          item.Stage,
-		Status:         item.Status,
-	}
-}
-
 type WorkItemStateForPharos struct {
 	Id         int    `json:"id"`
 	WorkItemId int    `json:"work_item_id"`

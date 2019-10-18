@@ -190,31 +190,6 @@ func TestChecksums(t *testing.T) {
 	assert.NotEmpty(t, resp.Checksums())
 }
 
-func TestDPNWorkItem(t *testing.T) {
-	testServer := httptest.NewServer(http.HandlerFunc(dpnWorkItemGetHandler))
-	defer testServer.Close()
-	client, err := network.NewPharosClient(testServer.URL, "v1", "user", "key")
-	if err != nil {
-		t.Error(err)
-		return
-	}
-	resp := client.DPNWorkItemGet(999)
-	assert.Nil(t, resp.Error)
-	assert.NotNil(t, resp.DPNWorkItem())
-}
-
-func TestDPNWorkItems(t *testing.T) {
-	testServer := httptest.NewServer(http.HandlerFunc(dpnWorkItemListHandler))
-	defer testServer.Close()
-	client, err := network.NewPharosClient(testServer.URL, "v1", "user", "key")
-	if err != nil {
-		t.Error(err)
-		return
-	}
-	resp := client.DPNWorkItemList(nil)
-	assert.NotEmpty(t, resp.DPNWorkItems())
-}
-
 func TestPremisEvent(t *testing.T) {
 	testServer := httptest.NewServer(http.HandlerFunc(premisEventGetHandler))
 	defer testServer.Close()

@@ -12,7 +12,7 @@ import (
 
 // APTAuditList lists the contents of S3 and Glacier buckets,
 // for auditing and other purposes. When the bucket is one of
-// the APTrust or DPN long-term preservation buckets, this
+// the APTrust long-term preservation buckets, this
 // prints extended metadata information for each item it finds.
 // For other buckets, it prints standard metadata, such as the
 // key name, etag, and size. This prints results to STDOUT, which
@@ -38,7 +38,6 @@ type APTAuditList struct {
 const (
 	ITEMS_PER_REQUEST = 100
 	STORED_FILE       = 1
-	DPN_STORED_FILE   = 2
 )
 
 // NewAuditList returns a new APTAuditList object.
@@ -78,9 +77,6 @@ func NewAPTAuditList(context *context.Context, region, bucket, keyPrefix, format
 		delimiter = '\t'
 	}
 	recordType := STORED_FILE
-	if bucket == context.Config.DPN.DPNPreservationBucket {
-		recordType = DPN_STORED_FILE
-	}
 	return &APTAuditList{
 		context:      context,
 		region:       region,
@@ -181,20 +177,11 @@ func (list *APTAuditList) fetchOne(client *network.S3Head, key string) {
 	}
 	strRecord := ""
 	var err error
-	if list.recordType == DPN_STORED_FILE {
-		record := client.DPNStoredFile()
-		if list.format == "json" {
-			strRecord, err = record.ToJson()
-		} else {
-			strRecord, err = record.ToCSV(list.csvDelimiter)
-		}
+	record := client.StoredFile()
+	if list.format == "json" {
+		strRecord, err = record.ToJson()
 	} else {
-		record := client.StoredFile()
-		if list.format == "json" {
-			strRecord, err = record.ToJson()
-		} else {
-			strRecord, err = record.ToCSV(list.csvDelimiter)
-		}
+		strRecord, err = record.ToCSV(list.csvDelimiter)
 	}
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "[Key", key, "]", err.Error())

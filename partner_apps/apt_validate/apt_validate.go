@@ -124,9 +124,8 @@ during the ingest proces. Timestamps and UUIDs change each time you run
 the validator.
 
 --config is required and should be the path to a bag validation
-config file that describes the validation rules. Examples can be found at
+config file that describes the validation rules. An example can be found at
 https://github.com/APTrust/exchange/blob/master/config/aptrust_bag_validation_config.json
-or https://github.com/APTrust/exchange/blob/master/config/dpn_bag_validation_config.json,
 but the config file must exist on the local drive.
 
 --help prints this help message and exits.

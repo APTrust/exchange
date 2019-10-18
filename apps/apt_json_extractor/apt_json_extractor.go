@@ -59,12 +59,6 @@ e.g. virginia.edu/bag_o_goodies
 apt_fetch.json, apt_store.json, apt_record.json -> S3 bucket and key
 e.g. aptrust.receiving.virginia.edu/bag_o_goodies.tar
 
-dpn_ingest.json -> bag name, with .tar extension, without institution prefix
-e.g. bag_o_goodies.tar
-
-dpn_replicate.json -> ReplicationId, which is a uuid
-e.g. 45498989-3465-416d-9b49-767f1db22cd6
-
 `
 	fmt.Println(message)
 }

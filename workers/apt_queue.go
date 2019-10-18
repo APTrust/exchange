@@ -186,8 +186,6 @@ func (aptQueue *APTQueue) getNSQTopic(workItem *models.WorkItem) string {
 		topic = config.GlacierRestoreWorker.NsqTopic
 	} else if workItem.Action == constants.ActionDelete {
 		topic = config.FileDeleteWorker.NsqTopic
-	} else if workItem.Action == constants.ActionDPN {
-		topic = config.DPN.DPNPackageWorker.NsqTopic
 	}
 	return topic
 }

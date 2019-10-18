@@ -1,8 +1,8 @@
 package models_test
 
 import (
-	"github.com/APTrust/exchange/dpn/util/testutil"
 	"github.com/APTrust/exchange/models"
+	"github.com/APTrust/exchange/util/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"testing"

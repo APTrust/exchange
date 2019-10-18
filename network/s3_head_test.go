@@ -32,10 +32,6 @@ func TestHead(t *testing.T) {
 	storedFile := client.StoredFile()
 	assert.NotNil(t, storedFile)
 	assert.Equal(t, trimmedETag, storedFile.ETag)
-
-	dpnStoredFile := client.StoredFile()
-	assert.NotNil(t, dpnStoredFile)
-
 }
 
 func testGetRestoreInfo(t *testing.T, client *network.S3Head) {
