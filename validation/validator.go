@@ -15,7 +15,6 @@ import (
 	"io"
 	"os"
 	"path"
-	"path/filepath"
 	"regexp"
 	"runtime"
 	"strings"
@@ -742,18 +741,6 @@ func (validator *Validator) checkRequiredTag(tagName string, tags []*models.Tag,
 		}
 		if !tagHasValue {
 			validator.summary.AddError("Value for tag '%s' is missing.", tagName)
-		}
-	}
-	// Special for PT #153490043
-	if tagName == "DPN-Object-ID" {
-		fileName := filepath.Base(validator.PathToBag)
-		bagName := TAR_SUFFIX.ReplaceAllString(fileName, "")
-		for _, tag := range tags {
-			if tag.Value != bagName {
-				validator.summary.AddError("Value for tag 'DPN-Object-ID' tag "+
-					"does not match the name of the bag's tar file ('%s' vs. '%s')"+
-					tag.Value, fileName)
-			}
 		}
 	}
 }

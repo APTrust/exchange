@@ -2,16 +2,14 @@ require_relative 'build'
 require_relative 'service'
 
 # --------------------------------------------------------------------------
-# IntegrationTest runs integration tests for APTrust and DPN code,
+# IntegrationTest runs integration tests for APTrust code,
 # as well as the APTrust Go services unit test suite. Integration
-# tests run against a local Pharos server and a local DPN cluster,
-# both of which are emptied and then re-seeded with essential fixture
+# tests run against a local Pharos server,
+# which is emptied and then re-seeded with essential fixture
 # data before each test run.
 #
 # Most integration tests depend on the outcome of prior integration tests.
-# For example, it's impossible to run the test that marks APTrust
-# bags for DPN unless prior tests have actually loaded those bags into
-# Pharos. Integration tests that require other tests to run first will
+# Integration tests that require other tests to run first will
 # run those test automatically. The general chain of events here, which
 # mirrors the chaing of events in production, looks like this for APTrust
 # Ingest:
@@ -36,13 +34,7 @@ require_relative 'service'
 #    GenericFile records, and PREMIS event records).
 #
 # After Ingest, we can do any of the following:
-#
-# * Mark bags for DPN by creating a WorkItem for the bag with action='DPN'.
-#   In integration tests, the test app apt_send_to_dpn marks a number of
-#   ingested test bags to go to DPN. The dpn_queue cron job will create
-#   NSQ entries for each of these items. (In demo and production, it's a
-#   cron job. Here, it's a method.)
-#
+##
 # * Mark bags to be restored by creating a WorkItem for the bag where
 #   action='Restore'.
 #
@@ -50,61 +42,12 @@ require_relative 'service'
 #   a WorkItem where action='Delete'. Note that one delete WorkItem will be
 #   created for the bag, and one for EACH GenericFile in the bag.
 #
-# For DPN Ingest, the process goes as follows. Note that, like the apt
-# processes, the dpn processes always update an item's WorkItem and
-# WorkItemState records in Pharos before moving on to the next item.
-#
-# 1. The cron job dpn_queue finds WorkItems in Pharos describing which
-#    bags should be pushed to DPN. It pushes the id of each of these
-#    WorkItems into NSQ's dpn_ingest topic.
-# 2. dpn_package pulls items from the dpn_ingest channel, fetches all
-#    of the files that make up the bag, and packs them all into a DPN
-#    bag. A DPN bag is slightly different from an APTrust bag, containing
-#    DPN-specific manifests, tag files, and tag manifests. The packager
-#    then pushes the WorkItem id into the dpn_ingest_store topic in NSQ.
-# 3. dpn_ingest_store pulls the WorkItem id from NSQ's dpn_store channel
-#    and copies the entire tarred bag as a single file into our DPN preservation
-#    storage area in Glacier/Virginia. dpn_ingest_store then pushes the
-#    WorkItem id into the dpn_record topic.
-# 4. dpn_record reads from the dpn_record channel. It creates a new DPN
-#    bag record in the local DPN REST service, and it creates replication
-#    requests in the local DPN REST service for two other nodes to
-#    replicate the new bag. It creates symlinks to the copy of the bag
-#    in our staging area, so the other nodes can copy via rsync. This
-#    means a copy of the bag will sit in our staging area (local EBS
-#    or EFS volume) until two other nodes have replicated it.
-# 5. dpn_cleanup runs as a cron job, deleting all DPN bags from our
-#    staging area that have been replicated twice. The deletion removes
-#    the tar file iteself (which can be hundreds of GB in size) as well
-#    as the symlinks to that bag in /home/dpn.tdr, /home/dpn.sdr, etc.
-#
-# For DPN replication, the process goes like this:
-#
-# 1. The cron job dpn_sync copies new bag records and replication requests
-#    from remote nodes into our local DPN REST service.
-# 2. The cron job dpn_queue queries our local DPN REST service and creates a
-#    DPNWorkItem in Pharos for each new replication request where the to_node
-#    is APTrust. These are requests where other nodes want to copy bags to
-#    our node. dpn_queue then puts the id of each of these new DPNWorkItems
-#    into NSQ's dpn_copy topic.
-# 3. dpn_copy reads from the dpn_copy channel and copies bags via rsync from
-#    the remote nodes. It calculates the checksum of the tag manifest of each
-#    bag, and sends that checksum back to the originating node. If the
-#    originating says the checksum is good, dpn_copy will perform a full
-#    validation on the bag (which can take hours). If the bag is valid,
-#    dpn_copy pushes its DPNWorkItem id into the dpn_replication_store queue.
-# 4. dpn_replication_store stores the bag in Glacier/VA, as described above, and then
-#    pushes the DPNWorkItem into the dpn_record topic of NSQ.
-# 5. dpn_record tell the remote node that the bag was stored. Note that our
-#    own node will not know that the bag has been stored until next time
-#    dpn_sync pulls data from the remote node.
-#
 # These integration tests [will soon] perform all of these operations
 # against locally-running services. The only outside services these integration
 # tests touch are S3 and Glacier. Integration test bags are in the S3 bucket
 # aptrust.integration.test, and if those are ever deleted, they can
 # be restored from testdata/s3_bags/TestBags.zip. These tests store ingested
-# and replicated bags in the APTrust and DPN preservation test buckets, which
+# and replicated bags in the APTrust preservation test buckets, which
 # should be emptied periodically.
 #
 # --------------------------------------------------------------------------
@@ -227,7 +170,7 @@ class IntegrationTest
   end
 
   # apt_queue copies WorkItems into NSQ. For example, any oustanding
-  # requests to delete files, restore files, send files to DPN, etc.,
+  # requests to delete files, restore files, etc.,
   # that have no queued_at timestamp will be put into the appropriate
   # NSQ topic.
   def apt_queue(more_tests_follow)
@@ -353,267 +296,7 @@ class IntegrationTest
 	end
   end
 
-  # Sync DPN bag records from the DPN server to Pharos.
-  def dpn_pharos_sync(more_tests_follow)
-	run_suite(more_tests_follow) do
-	  # Build
-	  @build.build(@context.apps['dpn_pharos_sync'])
-
-	  # Start services
-	  @service.pharos_reset_db
-	  @service.pharos_load_fixtures
-	  @service.pharos_start
-	  @service.dpn_cluster_start  # sleeps to wait for all nodes to come up
-	  @service.app_start(@context.apps['dpn_pharos_sync'])
-
-	  # Post test
-	  @results['dpn_pharos_sync_test'] = run('dpn_pharos_sync_post_test.go')
-	end
-  end
-
-
-
-  # dpn_rest_client tests the DPN REST client against a
-  # locally-running DPN cluster. Returns true if all tests passed,
-  # false otherwise.
-  def dpn_rest_client(more_tests_follow)
-	run_suite(more_tests_follow) do
-	  @service.dpn_cluster_start
-	  @results['dpn_rest_client_test'] = run_dpn_rest_client_test
-	end
-  end
-
-  # dpn_sync tests the dpn_sync app against a locally-running
-  # DPN cluster. dpn_sync runs as a cron job in our staging and
-  # production environments, and exits on its own when it's done.
-  # The DPN sync post test checks to ensure that all remote records
-  # were synched as expected to the local node. Returns true/false
-  # to indicate whether all tests passed.
-  def dpn_sync(more_tests_follow)
-	run_suite(more_tests_follow) do
-	  # Build
-	  @build.build(@context.apps['dpn_sync'])
-
-	  # Run prerequisites
-	  if !apt_ingest(true)
-		puts "Skipping dpn_sync test because of prior failures."
-		return false
-	  end
-
-	  # Start services
-	  @service.dpn_cluster_start  # sleeps to wait for all nodes to come up
-	  @service.app_start(@context.apps['dpn_sync'])
-
-	  # Post test
-	  @results['dpn_sync_test'] = run('dpn_sync_post_test.go')
-	end
-  end
-
-  # dpn_queue tests the dpn_queue application, which is responsible
-  # for finding and queueing 1) replication requests recently synched
-  # to our local DPN node that APTrust is responsible for fulfilling
-  # (i.e. APTrust is the to_node in those requests), and 2) WorkItems
-  # in Pharos that request an APTrust bag be pushed to DPN. Those are
-  # DPN ingests performed by APTrust. This test just checks to see that
-  # dpn_queue actually finds and queues all the right items.
-  #
-  # This runs apt_fetch, apt_store, and apt_record before dpn_queue,
-  # because we need to ingest the APTrust bags that we're going to
-  # mark for DPN.
-  def dpn_queue(more_tests_follow)
-	run_suite(more_tests_follow) do
-	  # Build
-	  @build.build(@context.apps['dpn_queue'])
-
-	  # Run prerequisites.
-	  dpn_sync_ok = dpn_sync(true)
-	  if !dpn_sync_ok
-		puts "Skipping dpn_queue test because of prior failures."
-		return false
-	  end
-
-	  # Push some APTrust bags to DPN. We want to make sure
-	  # that dpn_queue picks these up.
-	  @results['apt_push_to_dpn'] = run('apt_push_to_dpn_test.go')
-	  if @results['apt_push_to_dpn'] == false
-		puts "Skipping dpn_queue test because apt_push_to_dpn failed."
-		return false
-	  end
-
-	  # Start services
-	  @service.app_start(@context.apps['dpn_queue'])
-
-	  # Run the post test
-	  @results['dpn_queue_test'] = run('dpn_queue_post_test.go')
-	end
-  end
-
-  # dpn_copy is the first step of the DPN replication process.
-  # This copies tarred bags from remote nodes into our staging
-  # area. This is run as part of the dpn_replicate suite.
-  def dpn_copy(more_tests_follow)
-	run_suite(more_tests_follow) do
-	  # Build
-	  @build.build(@context.apps['dpn_copy'])
-
-	  # Run prerequisites
-	  queue_ok = dpn_queue(true)
-	  if !queue_ok
-		puts "Skipping dpn_copy test because of prior failures."
-		return false
-	  end
-
-	  # Start service
-	  @service.app_start(@context.apps['dpn_copy'])
-	  sleep 30
-
-	  # Run the post test
-	  @results['dpn_copy_test'] = run('dpn_copy_post_test.go')
-	end
-  end
-
-  # dpn_validate is the second step of the replication process. We
-  # validate bags copied from remote nodes before we put them into
-  # long-term storage. This is run as part of the dpn_replicate suite.
-  def dpn_validate(more_tests_follow)
-	run_suite(more_tests_follow) do
-	  # Build
-	  @build.build(@context.apps['dpn_validate'])
-
-	  # Run prerequisites
-	  copy_ok = dpn_copy(true)
-	  if !copy_ok
-		puts "Skipping dpn_validate test because of prior failures."
-		return false
-	  end
-
-	  # Start service
-	  @service.app_start(@context.apps['dpn_validate'])
-	  sleep 20
-
-	  # Ensure expected post conditions
-	  @results['dpn_validate_test'] = run('dpn_validate_post_test.go')
-	end
-  end
-
-  # dpn_replication_store is the last step of the DPN replication process.
-  # It stores DPN bags in S3 and tells the remote ingest node that the bag
-  # has been stored. This runs as part of the dpn_replicate suite.
-  def dpn_replication_store(more_tests_follow)
-	run_suite(more_tests_follow) do
-	  # Build
-	  @build.build(@context.apps['dpn_replication_store'])
-
-	  # Run prerequisites
-	  validate_ok = dpn_validate(true)
-	  if !validate_ok
-		puts "Skipping dpn_replication_store test because of prior failures."
-		return false
-	  end
-
-	  # Start service
-	  @service.app_start(@context.apps['dpn_replication_store'])
-	  sleep 30
-
-	  # Ensure expected post conditions
-	  @results['dpn_replication_store_test'] = run('dpn_replication_store_post_test.go')
-	end
-  end
-
-  # This runs the entire DPN replication suite, and is available
-  # from the command line.
-  def dpn_replicate(more_tests_follow)
-	return dpn_replication_store(more_tests_follow)
-  end
-
-  # dpn_package is the first step of the DPN ingest process, packaging
-  # an APTrust bag for ingest into DPN. This runs as part of the
-  # dpn_ingest suite.
-  def dpn_package(more_tests_follow)
-	run_suite(more_tests_follow) do
-	  # Build
-	  @build.build(@context.apps['dpn_package'])
-
-	  # Run prerequisites
-	  queue_ok = dpn_queue(true)
-	  if !queue_ok
-		puts "Skipping dpn_package test because of prior failures."
-		return false
-	  end
-
-	  # Start service
-	  @service.app_start(@context.apps['dpn_package'])
-	  sleep 50
-
-	  # Run the post test
-	  @results['dpn_package_test'] = run('dpn_package_post_test.go')
-	end
-  end
-
-  # dpn_ingest_store copies locally ingested DPN bags to long-term
-  # storage in AWS Glacier. This is the second step of DPN ingest,
-  # after dpn_package. This runs as part of the dpn_ingest suite.
-  def dpn_ingest_store(more_tests_follow)
-	run_suite(more_tests_follow) do
-	  # Build
-	  @build.build(@context.apps['dpn_ingest_store'])
-
-	  # Run prerequisites
-	  package_ok = dpn_package(true)
-	  if !package_ok
-		puts "Skipping dpn_ingest_store test because of prior failures."
-		return false
-	  end
-
-	  # Start service
-	  @service.app_start(@context.apps['dpn_ingest_store'])
-	  sleep 50
-
-	  # Run the post test
-	  @results['dpn_ingest_store_test'] = run('dpn_ingest_store_post_test.go')
-	end
-  end
-
-  # dpn_ingest_record is the last step of the DPN ingest process. It
-  # records info about the newly ingested bag in Pharos and the local
-  # DPN REST server. This runs as part of the dpn_ingest suite.
-  def dpn_ingest_record(more_tests_follow)
-	run_suite(more_tests_follow) do
-	  # Build
-	  @build.build(@context.apps['dpn_ingest_record'])
-	  @build.build(@context.apps['dpn_cleanup'])
-
-	  # Run prerequisites
-	  package_ok = dpn_ingest_store(true)
-	  if !package_ok
-		puts "Skipping dpn_ingest_record test because of prior failures."
-		return false
-	  end
-
-	  # Start service
-	  @service.app_start(@context.apps['dpn_ingest_record'])
-	  sleep 30
-
-	  # Run cleanup. No need to sleep. This exits when it's done.
-	  # This won't actually delete any files, because the remote
-	  # nodes don't replicate our files in this test suite.
-	  # However, you should see in logs/dpn_cleanup.log that it
-	  # checked each file in the staging area and decided not to
-	  # delete it.
-	  @service.app_start(@context.apps['dpn_cleanup'])
-
-	  # Run the post test
-	  @results['dpn_ingest_record_test'] = run('dpn_ingest_record_post_test.go')
-	end
-  end
-
-  # This is available from the command line and runs the entire
-  # dpn_ingest suite.
-  def dpn_ingest(more_tests_follow)
-	return dpn_ingest_record(more_tests_follow)
-  end
-
-  # Runs all the APTrust and DPN unit tests. Does not run any tests that
+  # Runs all the APTrust unit tests. Does not run any tests that
   # rely on external services. Returns true/false to indicate whether all
   # tests passed.
   def units(more_tests_follow)
@@ -674,30 +357,14 @@ class IntegrationTest
     return found
   end
 
-  # run_all_unit_tests runs all of the APTrust and DPN unit tests.
+  # run_all_unit_tests runs all of the APTrust unit tests.
   # These tests do not require any outside services to run, and
   # they omit a handful of tests that do require outside services.
   #
-  # A.D. 2019-02-18: Stop running the DPN unit tests. They take
-  # longer than all other unit tests, and we're not running DPN
-  # code anymore. To reactivate, remove "| grep -v /dpn/" from
-  # the command below.
   def run_all_unit_tests
 	env = @context.env_hash
-	cmd = "go test $(go list ./... | grep -v /vendor/ | grep -v /dpn/)"
+	cmd = "go test ./..."
 	pid = Process.spawn(env, cmd, chdir: @context.exchange_root)
-	Process.wait pid
-	return $?.exitstatus == 0
-  end
-
-  # dpn_rest_client test runs our Go DPN REST client against a locally-running
-  # DPN cluster. The DPN REST client is in exchange/dpn/network.
-  # Returns true if tests passed.
-  def run_dpn_rest_client_test
-	env = @context.env_hash
-	cmd = "go test dpn_rest_client_test.go"
-	dir = "#{@context.exchange_root}/dpn/network"
-	pid = Process.spawn(env, cmd, chdir: dir)
 	Process.wait pid
 	return $?.exitstatus == 0
   end

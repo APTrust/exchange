@@ -2,17 +2,14 @@ require 'fileutils'
 require_relative 'context'
 
 # The Serice class provides a means to start and stop services
-# for APTrust and DPN integration tests. It also provides access
+# for APTrust integration tests. It also provides access
 # to rake tasks that load fixtures and perform other fuctions
 # required for integration testing.
 #
-# Note: Currently, for this to work, `rbenv local` must be 2.3.0
-# in the exchange root dir, the pharos root dir and the dpn root dir.
 class Service
 
   def initialize(context)
 	@context = context
-	@dpn_cluster_pid = 0
 	@nsq_pid = 0
 	@pharos_pid = 0
 	@pids = {}
@@ -37,8 +34,6 @@ class Service
 		cmd += " -stats=#{@context.log_dir}/bucket_reader_stats.json"
 	  elsif app.name == 'apt_queue'
 		cmd += " -stats=#{@context.log_dir}/apt_queue_stats.json"
-	  elsif app.name == 'dpn_queue'
-		cmd += " -hours=240000"
 	  elsif app.name == 'apt_queue_fixity'
 		# queue only 12 files, and choose them from bags we know
 		# we stored in prior integration tests and did not delete
@@ -94,63 +89,6 @@ class Service
 	  Process.kill('TERM', pid)
 	rescue
 	  puts "#{app.name} wasn't even running."
-	end
-  end
-
-  # Wipe out DPN data and re-load the schema.
-  def dpn_cluster_init
-	if @dpn_cluster_pid == 0
-	  env = @context.env_hash
-	  puts "Setting up DPN cluster"
-	  cmd = "bundle exec ./script/reset_cluster.rb"
-	  log_file = "#{@context.log_dir}/dpn_cluster_setup.log"
-	  pid = Process.spawn(env,
-						  cmd,
-						  chdir: @context.dpn_server_root,
-						  out: [log_file, 'w'],
-						  err: [log_file, 'w'])
-	  Process.wait pid
-	end
-  end
-
-  def dpn_cluster_start
-	if @dpn_cluster_pid == 0
-
-	  # NOTE: Run dpn_cluster_init to wipe out lingering DPN
-      # data from prior integration test runs.
-	  dpn_cluster_init
-
-	  puts "Deleting old DPN cluster log files"
-	  FileUtils.rm Dir.glob("#{@context.dpn_server_root}/impersonate*")
-	  env = @context.env_hash
-	  # The -f flag tells Rails to load the test data fixtures
-	  # before it starts the cluster.
-	  cmd = "bundle exec ./script/run_cluster.rb -f"
-	  log_file = "#{@context.log_dir}/dpn_cluster.log"
-	  @dpn_cluster_pid = Process.spawn(env,
-								  cmd,
-								  chdir: @context.dpn_server_root,
-								  out: [log_file, 'w'],
-								  err: [log_file, 'w'])
-	  Process.detach @dpn_cluster_pid
-	  puts "Started DPN cluster with command '#{cmd}' and pid #{@dpn_cluster_pid}"
-	  puts "Waiting 30 seconds for all nodes to come online"
-	  sleep 30
-	end
-  end
-
-  def dpn_cluster_stop
-	if @dpn_cluster_pid != 0
-	  begin
-        if RUBY_PLATFORM =~ /linux/
-          linux_kill_process_tree(@dpn_cluster_pid) rescue nil
-        end
-		Process.kill('TERM', @dpn_cluster_pid)
-		puts "[#{Time.now.strftime('%T.%L')}] Stopped DPN cluster (pid #{@dpn_cluster_pid})"
-	  rescue
-		# DPN cluster wasn't running.
-	  end
-	  @dpn_cluster_pid = 0
 	end
   end
 
@@ -230,15 +168,14 @@ class Service
 
   # Stops all services
   def stop_everything
-	stop_apt_and_dpn_services
-	dpn_cluster_stop
+	stop_apt_services
 	pharos_stop
 	nsq_stop
   end
 
-  # Stops all apt_* and dpn_* services, but leaves external services
-  # like NSQ, DPN REST and Pharos running.
-  def stop_apt_and_dpn_services()
+  # Stops all apt_* services, but leaves external services
+  # like NSQ and Pharos running.
+  def stop_apt_services()
 	@pids.each do |app_name, pid|
 	  begin
 		if !pid.nil? && pid > 0

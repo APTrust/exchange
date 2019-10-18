@@ -1,7 +1,6 @@
 package network
 
 import (
-	dpn_models "github.com/APTrust/exchange/dpn/models"
 	"github.com/APTrust/exchange/models"
 	"github.com/APTrust/exchange/util"
 	"github.com/aws/aws-sdk-go/aws"
@@ -90,9 +89,9 @@ func (client *S3Head) Head(key string) {
 		return
 	}
 	// Note that we may also someday set VersionId on HeadObjectInput
-	// to retrieve specific versions of a file, depending on how DPN
-	// and APTrust choose to implement versioning. As of late 2016,
-	// we do not use the versioning features provided by S3 and Glacier.
+	// to retrieve specific versions of a file, if we choose to use
+	// versioning. As of late 2016, we do not use the versioning
+	// features provided by S3 and Glacier.
 	params := &s3.HeadObjectInput{
 		Bucket: aws.String(client.BucketName),
 		Key:    aws.String(key),
@@ -177,31 +176,6 @@ func (client *S3Head) StoredFile() *models.StoredFile {
 		PathInBag:    client.GetHeaderMetadata("Bagpath"),
 		Md5:          client.GetHeaderMetadata("Md5"),
 		Sha256:       client.GetHeaderMetadata("Sha256"),
-		LastSeenAt:   now,
-		CreatedAt:    now,
-		UpdatedAt:    now,
-	}
-	return storedFile
-}
-
-func (client *S3Head) DPNStoredFile() *dpn_models.DPNStoredFile {
-	resp := client.Response
-	if resp == nil || client.input == nil {
-		return nil
-	}
-	now := time.Now().UTC()
-	storedFile := &dpn_models.DPNStoredFile{
-		Key:          util.PointerToString(client.input.Key),
-		ETag:         strings.Replace(*resp.ETag, "\"", "", -1),
-		LastModified: *resp.LastModified,
-		Size:         *resp.ContentLength,
-		Bucket:       util.PointerToString(client.input.Bucket),
-		ContentType:  util.PointerToString(resp.ContentType),
-		Member:       client.GetHeaderMetadata("Member"),
-		FromNode:     client.GetHeaderMetadata("From_node"),
-		TransferId:   client.GetHeaderMetadata("Transfer_id"),
-		LocalId:      client.GetHeaderMetadata("Local_id"),
-		Version:      client.GetHeaderMetadata("Version"),
 		LastSeenAt:   now,
 		CreatedAt:    now,
 		UpdatedAt:    now,

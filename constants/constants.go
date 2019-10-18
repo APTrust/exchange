@@ -106,7 +106,6 @@ const (
 	ActionGlacierRestore = "Glacier Restore"
 	ActionRestore        = "Restore"
 	ActionDelete         = "Delete"
-	ActionDPN            = "DPN"
 )
 
 var ActionTypes []string = []string{
@@ -153,23 +152,6 @@ var GlacierDeepOptions []string = []string{
 	StorageGlacierDeepVA,
 	StorageGlacierDeepOH,
 	StorageGlacierDeepOR,
-}
-
-// DPN task types
-const (
-	DPNTaskSync        = "sync"
-	DPNTaskIngest      = "ingest"
-	DPNTaskReplication = "replication"
-	DPNTaskRestore     = "restore"
-	DPNTaskFixity      = "fixity"
-)
-
-var DPNTaskTypes []string = []string{
-	DPNTaskSync,
-	DPNTaskIngest,
-	DPNTaskReplication,
-	DPNTaskRestore,
-	DPNTaskFixity,
 }
 
 const (

@@ -17,67 +17,22 @@ Exchange is a rewrite of APTrust's original bagman code, which is functionally c
 
 The first of these goals is the most important. The code must be clear and maintainable for the long term.
 
+__[Update: Oct. 16, 2019] 1700 commits after the last full-scale cleanup, the code is no longer clear or maintainable. Parts of it are downright offensive. It's needs a rewrite.__
+
 The existing bagman code will continue to run until this code is complete.
 
 ## Dependency Mangement
 
-Go dependencies are managed using [glide](https://github.com/Masterminds/glide) and are stored in this source repo in the vendor directory. This ensures consistent and reproducable builds.
+Exchange uses [Go modules](https://blog.golang.org/migrating-to-go-modules). Go will automatically fetch and install modules when you run `go test` or `go build`.
 
-Glide reads glide.yml which entails all needed dependencies with their respective versions
-`glide update` regenerates the dependency versions using scanning and rules, and `glide install` will install the versions listed in the glide.lock file, skipping scanning, unless the glide.lock file is not found in which case it will perform an update.
+You need Go 1.11 or later. Go 1.13 or later is preferred. If you're running a version before 1.13, you'll need to set the environment variable `GO111MODULE=on`.
 
-If you are using Go 1.5 ensure the environment variable GO15VENDOREXPERIMENT is set, for example by running export GO15VENDOREXPERIMENT=1. In Go 1.6 it is enabled by default and in Go 1.7 it is always enabled without the ability to turn it off.
-
-### Usage
-
-For first time usage install glide as follows.
-
-The easiest way to install the latest release on Mac or Linux is with the following script:
-
-```
-curl https://glide.sh/get | sh
-```
-
-On Mac OS X you can also install the latest release via [Homebrew](https://github.com/Homebrew/homebrew):
-
-```
-$ brew install glide
-```
-
-On Ubuntu Precise(12.04), Trusty (14.04), Wily (15.10) or Xenial (16.04) you can install from our PPA:
-
-```
-sudo add-apt-repository ppa:masterminds/glide && sudo apt-get update
-sudo apt-get install glide
-```
-
-```
-$ glide create                            # Start a new workspace
-$ open glide.yaml                         # and edit away!
-$ glide get github.com/Masterminds/cookoo # Get a package and add to glide.yaml
-$ glide install                           # Install packages and dependencies
-# work, work, work
-$ go build                                # Go tools work normally
-$ glide up                                # Update to newest versions of the package
-```
-
-#### glide get [package name]
-
-You can download one or more packages to your `vendor` directory and have it added to your
-`glide.yaml` file with `glide get`.
-
-```
-$ glide get github.com/Masterminds/cookoo
-```
+To add or update a module, add/update the go.mod file, then run `go mod tidy` to add the module's dependencies.
 
 ## Unit Testing
 
 ```
-go test $(glide novendor) github.com/APTrust/exchange/...
-```
-or
-```
-go test $(go list ./... | grep -v /vendor/)
+go test ./...
 ```
 or, if you have ruby installed
 ```
@@ -111,7 +66,7 @@ prior run of integration tests before they completed. Check your system using to
 Task Manager, or Mac's Activity Monitor for stray ruby processes. Kill those processes
 and then try re-running the tests.
 
-## Setting up Postgres
+## Setting up Postgres (required only for integration tests)
 
 If you're on a Mac, get the Postgres app from https://postgresapp.com/.
 

@@ -19,11 +19,6 @@ func getSimpleDirConfig() *models.Config {
 		LogDirectory:         "~/tmp/log",
 		RestoreDirectory:     "~/tmp/restore",
 		ReplicationDirectory: "~/tmp/replication",
-		DPN: models.DPNConfig{
-			LogDirectory:            "~/tmp/dpn_logs",
-			RemoteNodeHomeDirectory: "~/tmp/dpn_home",
-			StagingDirectory:        "~/tmp/dpn_staging",
-		},
 	}
 }
 
@@ -52,8 +47,6 @@ func TestLoad(t *testing.T) {
 	assert.Equal(t, 18, len(config.ReceivingBuckets))
 	assert.Equal(t, configFile, config.ActiveConfig)
 	assert.Equal(t, 24, config.BucketReaderCacheHours)
-	assert.Equal(t, "api-v2", config.DPN.DPNAPIVersion)
-	assert.Equal(t, "us-east-1", config.DPN.DPNGlacierRegion)
 }
 
 func TestEnsurePharosConfig(t *testing.T) {
@@ -82,31 +75,6 @@ func TestEnsurePharosConfig(t *testing.T) {
 	os.Setenv("PHAROS_API_KEY", apiKey)
 }
 
-func TestEnsureDPNConfig(t *testing.T) {
-	configFile := filepath.Join("config", "test.json")
-	config, err := models.LoadConfigFile(configFile)
-	require.Nil(t, err)
-
-	assert.NotEmpty(t, config.DPN.DefaultMetadata.BagItVersion)
-	assert.NotEmpty(t, config.DPN.DefaultMetadata.BagItEncoding)
-	assert.NotEmpty(t, config.DPN.DefaultMetadata.IngestNodeName)
-	assert.NotEmpty(t, config.DPN.DefaultMetadata.IngestNodeAddress)
-	assert.NotEmpty(t, config.DPN.DefaultMetadata.IngestNodeContactName)
-	assert.NotEmpty(t, config.DPN.DefaultMetadata.IngestNodeContactEmail)
-
-	assert.NotEmpty(t, config.DPN.RestClient.LocalServiceURL)
-	assert.NotEmpty(t, config.DPN.RestClient.LocalAPIRoot)
-	assert.NotEmpty(t, config.DPN.RestClient.LocalAuthToken)
-
-	assert.EqualValues(t, 3, config.DPN.DPNValidationWorker.MaxAttempts)
-	assert.EqualValues(t, 3, config.DPN.DPNCopyWorker.MaxAttempts)
-	assert.EqualValues(t, 4, config.DPN.DPNGlacierRestoreWorker.Workers)
-
-	assert.Equal(t, "chron_token", config.DPN.RemoteNodeAdminTokensForTesting["chron"])
-	assert.Equal(t, "aptrust_token", config.DPN.RemoteNodeTokens["chron"])
-	assert.Equal(t, "http://localhost:3002", config.DPN.RemoteNodeURLs["chron"])
-}
-
 func TestExpandFilePaths(t *testing.T) {
 	config := getSimpleDirConfig()
 	config.ExpandFilePaths()
@@ -115,13 +83,6 @@ func TestExpandFilePaths(t *testing.T) {
 	assert.True(t, strings.HasPrefix(config.RestoreDirectory, "/"))
 	assert.True(t, strings.HasPrefix(config.ReplicationDirectory, "/"))
 	assert.True(t, strings.HasPrefix(config.BagValidationConfigFile, "/"))
-	assert.True(t, strings.HasPrefix(config.DPN.LogDirectory, "/"))
-	assert.True(t, strings.HasPrefix(config.DPN.RemoteNodeHomeDirectory, "/"))
-	assert.True(t, strings.HasPrefix(config.DPN.StagingDirectory, "/"))
-	assert.True(t, strings.HasPrefix(config.DPN.BagValidationConfigFile, "/"))
-	assert.True(t, len(config.DPN.LogDirectory) >= 9)
-	assert.True(t, len(config.DPN.RemoteNodeHomeDirectory) >= 9)
-	assert.True(t, len(config.DPN.StagingDirectory) >= 9)
 	assert.True(t, len(config.TarDirectory) >= 9)
 	assert.True(t, len(config.LogDirectory) >= 9)
 	assert.True(t, len(config.RestoreDirectory) >= 9)
@@ -140,8 +101,6 @@ func TestEnsureLogDir(t *testing.T) {
 	assert.True(t, fileutil.FileExists(config.LogDirectory))
 	assert.True(t, fileutil.FileExists(config.RestoreDirectory))
 	assert.True(t, fileutil.FileExists(config.ReplicationDirectory))
-	assert.True(t, fileutil.FileExists(config.DPN.LogDirectory))
-	assert.True(t, fileutil.FileExists(config.DPN.StagingDirectory))
 }
 
 func TestStorageRegionAndBucketFor(t *testing.T) {
@@ -203,4 +162,47 @@ func TestGetAWSSecretAccessKey(t *testing.T) {
 	} else {
 		assert.Equal(t, "TestSecretKey", config.GetAWSSecretAccessKey())
 	}
+}
+
+func TestActiveAWSStorageRegions(t *testing.T) {
+	configFile := filepath.Join("config", "test.json")
+	config, err := models.LoadConfigFile(configFile)
+	require.Nil(t, err)
+
+	regions := config.ActiveAWSStorageRegions()
+
+	assert.Equal(t, 7, len(regions))
+	assert.Equal(t, "us-east-1", regions[constants.StorageStandard])
+	assert.Equal(t, "us-east-1", regions[constants.StorageGlacierVA])
+	assert.Equal(t, "us-east-2", regions[constants.StorageGlacierOH])
+	assert.Equal(t, "us-west-2", regions[constants.StorageGlacierOR])
+	assert.Equal(t, "us-east-1", regions[constants.StorageGlacierDeepVA])
+	assert.Equal(t, "us-east-2", regions[constants.StorageGlacierDeepOH])
+	assert.Equal(t, "us-west-2", regions[constants.StorageGlacierDeepOR])
+}
+
+func TestAWSS3Buckets(t *testing.T) {
+	configFile := filepath.Join("config", "test.json")
+	config, err := models.LoadConfigFile(configFile)
+	require.Nil(t, err)
+
+	buckets := config.AWSS3Buckets()
+	assert.Equal(t, 1, len(buckets))
+	assert.Equal(t, "aptrust.test.preservation", buckets[constants.StorageStandard])
+}
+
+func TestAWSGlacierBuckets(t *testing.T) {
+	configFile := filepath.Join("config", "test.json")
+	config, err := models.LoadConfigFile(configFile)
+	require.Nil(t, err)
+
+	buckets := config.AWSGlacierBuckets()
+	assert.Equal(t, 7, len(buckets))
+	assert.Equal(t, "aptrust.test.preservation.oregon", buckets[constants.StorageStandard])
+	assert.Equal(t, "aptrust.test.preservation.glacier.va", buckets[constants.StorageGlacierVA])
+	assert.Equal(t, "aptrust.test.preservation.glacier.oh", buckets[constants.StorageGlacierOH])
+	assert.Equal(t, "aptrust.test.preservation.glacier.or", buckets[constants.StorageGlacierOR])
+	assert.Equal(t, "aptrust.test.preservation.glacier-deep.va", buckets[constants.StorageGlacierDeepVA])
+	assert.Equal(t, "aptrust.test.preservation.glacier-deep.oh", buckets[constants.StorageGlacierDeepOH])
+	assert.Equal(t, "aptrust.test.preservation.glacier-deep.or", buckets[constants.StorageGlacierDeepOR])
 }

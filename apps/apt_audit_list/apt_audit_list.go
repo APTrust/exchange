@@ -97,8 +97,6 @@ Param -region (*) is the AWS region containing the S3 or Glacier bucket.
        "us-east-1" is Virginia (All buckets other than APTrust Glacier)
        "us-west-2" is Oregon (APTrust Glacier only)
 Param -bucket (*) is the name of the bucket.
-       "aptrust.dpn.preservation"     - DPN production bucket (us-east-1)
-       "aptrust.dpn.test"             - DPN test bucket (us-east-1)
        "aptrust.preservation.oregon"  - APTrust Glacier bucket (us-west-2)
        "aptrust.preservation.storage" - APTrust production S3 bucket (us-east-1)
        "aptrust.test.preservation"    - APTrust test bucket (us-east-1)
@@ -130,13 +128,6 @@ and use JSON as the output format:
 apt_audit_list -config=config/production.json -region="us-west-2" \
                -bucket="aptrust.preservation.oregon" -prefix="a00" \
                -limit=100 -format=json
-
-List the first 100 items in the DPN preservation bucket, using 10
-concurrent connections:
-
-apt_audit_list -config=config/production.json -region="us-east-1" \
-               -bucket="aptrust.dpn.preservaton" -limit=100 \
-               -concurrency=10
 
 `
 	fmt.Println(message)

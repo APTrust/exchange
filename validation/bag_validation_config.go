@@ -69,7 +69,7 @@ type BagValidationConfig struct {
 	// FileSpecs is a map of FileSpec structures, describing
 	// rules for specific files. The key is the relative path
 	// to the file within the bag.
-	// E.g. bag-info.txt or dpn_tags/dpn-info.txt.
+	// E.g. bag-info.txt or custom_tags/custom-info.txt.
 	FileSpecs map[string]FileSpec
 	// TagSpecs is a map of TagSpec objects. The key is the
 	// tag name (e.g. Source-Organization or Internal-Sender-Description)

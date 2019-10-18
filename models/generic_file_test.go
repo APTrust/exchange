@@ -556,3 +556,83 @@ func TestGenericFileMergeAttributes(t *testing.T) {
 	}
 
 }
+
+func TestGenericFileClone(t *testing.T) {
+	gf := testutil.MakeGenericFile(3, 3, "test.edu/file1.txt")
+	clone := gf.Clone()
+	assert.Equal(t, clone.Id, gf.Id)
+	assert.Equal(t, clone.Identifier, gf.Identifier)
+	assert.Equal(t, clone.IntellectualObjectId, gf.IntellectualObjectId)
+	assert.Equal(t, clone.IntellectualObjectIdentifier, gf.IntellectualObjectIdentifier)
+	assert.Equal(t, clone.FileFormat, gf.FileFormat)
+	assert.Equal(t, clone.URI, gf.URI)
+	assert.Equal(t, clone.Size, gf.Size)
+	assert.Equal(t, clone.FileCreated, gf.FileCreated)
+	assert.Equal(t, clone.FileModified, gf.FileModified)
+	assert.Equal(t, clone.CreatedAt, gf.CreatedAt)
+	assert.Equal(t, clone.UpdatedAt, gf.UpdatedAt)
+	assert.Equal(t, clone.LastFixityCheck, gf.LastFixityCheck)
+	assert.Equal(t, clone.State, gf.State)
+	assert.Equal(t, clone.StorageOption, gf.StorageOption)
+	assert.Equal(t, clone.IngestFileType, gf.IngestFileType)
+	assert.Equal(t, clone.IngestLocalPath, gf.IngestLocalPath)
+	assert.Equal(t, clone.IngestManifestMd5, gf.IngestManifestMd5)
+	assert.Equal(t, clone.IngestMd5GeneratedAt, gf.IngestMd5GeneratedAt)
+	assert.Equal(t, clone.IngestMd5VerifiedAt, gf.IngestMd5VerifiedAt)
+	assert.Equal(t, clone.IngestManifestSha256, gf.IngestManifestSha256)
+	assert.Equal(t, clone.IngestSha256, gf.IngestSha256)
+	assert.Equal(t, clone.IngestSha256GeneratedAt, gf.IngestSha256GeneratedAt)
+	assert.Equal(t, clone.IngestSha256VerifiedAt, gf.IngestSha256VerifiedAt)
+	assert.Equal(t, clone.IngestUUID, gf.IngestUUID)
+	assert.Equal(t, clone.IngestUUIDGeneratedAt, gf.IngestUUIDGeneratedAt)
+	assert.Equal(t, clone.IngestStorageURL, gf.IngestStorageURL)
+	assert.Equal(t, clone.IngestStoredAt, gf.IngestStoredAt)
+	assert.Equal(t, clone.IngestReplicationURL, gf.IngestReplicationURL)
+	assert.Equal(t, clone.IngestReplicatedAt, gf.IngestReplicatedAt)
+	assert.Equal(t, clone.IngestPreviousVersionExists, gf.IngestPreviousVersionExists)
+	assert.Equal(t, clone.IngestNeedsSave, gf.IngestNeedsSave)
+	assert.Equal(t, clone.IngestErrorMessage, gf.IngestErrorMessage)
+	assert.Equal(t, clone.IngestFileUid, gf.IngestFileUid)
+	assert.Equal(t, clone.IngestFileGid, gf.IngestFileGid)
+	assert.Equal(t, clone.IngestFileUname, gf.IngestFileUname)
+	assert.Equal(t, clone.IngestFileGname, gf.IngestFileGname)
+	assert.Equal(t, clone.IngestFileMode, gf.IngestFileMode)
+	assert.Equal(t, clone.FetchLocalPath, gf.FetchLocalPath)
+	assert.Equal(t, clone.FetchMd5Value, gf.FetchMd5Value)
+	assert.Equal(t, clone.FetchSha256Value, gf.FetchSha256Value)
+	assert.Equal(t, clone.FetchErrorMessage, gf.FetchErrorMessage)
+
+	assert.Equal(t, len(clone.PremisEvents), len(gf.PremisEvents))
+	assert.Equal(t, len(clone.Checksums), len(gf.Checksums))
+
+	for i, origEvent := range gf.PremisEvents {
+		clonedEvent := clone.PremisEvents[i]
+		assert.Equal(t, clonedEvent.Id, origEvent.Id)
+		assert.Equal(t, clonedEvent.Identifier, origEvent.Identifier)
+		assert.Equal(t, clonedEvent.EventType, origEvent.EventType)
+		assert.Equal(t, clonedEvent.DateTime, origEvent.DateTime)
+		assert.Equal(t, clonedEvent.Detail, origEvent.Detail)
+		assert.Equal(t, clonedEvent.Outcome, origEvent.Outcome)
+		assert.Equal(t, clonedEvent.OutcomeDetail, origEvent.OutcomeDetail)
+		assert.Equal(t, clonedEvent.Object, origEvent.Object)
+		assert.Equal(t, clonedEvent.Agent, origEvent.Agent)
+		assert.Equal(t, clonedEvent.OutcomeInformation, origEvent.OutcomeInformation)
+		assert.Equal(t, clonedEvent.IntellectualObjectId, origEvent.IntellectualObjectId)
+		assert.Equal(t, clonedEvent.IntellectualObjectIdentifier, origEvent.IntellectualObjectIdentifier)
+		assert.Equal(t, clonedEvent.GenericFileId, origEvent.GenericFileId)
+		assert.Equal(t, clonedEvent.GenericFileIdentifier, origEvent.GenericFileIdentifier)
+		assert.Equal(t, clonedEvent.CreatedAt, origEvent.CreatedAt)
+		assert.Equal(t, clonedEvent.UpdatedAt, origEvent.UpdatedAt)
+	}
+
+	for i, origChecksum := range gf.Checksums {
+		clonedChecksum := clone.Checksums[i]
+		assert.Equal(t, clonedChecksum.Id, origChecksum.Id)
+		assert.Equal(t, clonedChecksum.GenericFileId, origChecksum.GenericFileId)
+		assert.Equal(t, clonedChecksum.Algorithm, origChecksum.Algorithm)
+		assert.Equal(t, clonedChecksum.DateTime, origChecksum.DateTime)
+		assert.Equal(t, clonedChecksum.Digest, origChecksum.Digest)
+		assert.Equal(t, clonedChecksum.CreatedAt, origChecksum.CreatedAt)
+		assert.Equal(t, clonedChecksum.UpdatedAt, origChecksum.UpdatedAt)
+	}
+}

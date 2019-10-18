@@ -48,3 +48,18 @@ func TestNewContext(t *testing.T) {
 		os.Remove(_context.PathToJsonLog())
 	}
 }
+
+func TestGetS3Client(t *testing.T) {
+	configFile := filepath.Join("config", "test.json")
+	appConfig, err := models.LoadConfigFile(configFile)
+	require.Nil(t, err)
+	appConfig.LogToStderr = false
+	_context := context.NewContext(appConfig)
+
+	client, err := _context.GetS3Client(
+		"example.com",
+		"SAMPLE_ACCESS_KEY_ID",
+		"SAMPLE_SECRET_ACCESS_KEY")
+	assert.Nil(t, err)
+	assert.NotNil(t, client)
+}

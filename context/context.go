@@ -5,6 +5,7 @@ import (
 	"github.com/APTrust/exchange/models"
 	"github.com/APTrust/exchange/network"
 	"github.com/APTrust/exchange/util/logger"
+	"github.com/minio/minio-go"
 	"github.com/op/go-logging"
 	stdlog "log"
 	"os"
@@ -106,4 +107,11 @@ func (context *Context) PathToJsonLog() string {
 func (context *Context) LogStats() {
 	context.MessageLog.Info("**STATS** Succeeded: %d, Failed: %d",
 		context.Succeeded(), context.Failed())
+}
+
+// GetS3Client returns a Minio client. For url param, do not include
+// protocol. E.g. Use "example.com" not "https://example.com".
+// The Minio client will use https by default.
+func (context *Context) GetS3Client(url, accessKeyId, secretAccessKey string) (*minio.Client, error) {
+	return minio.New(url, accessKeyId, secretAccessKey, true)
 }
