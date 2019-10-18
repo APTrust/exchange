@@ -40,8 +40,8 @@ type WorkItem struct {
 	ObjectIdentifier string `json:"object_identifier"`
 	// GenericFileIdentifier is the identifier of the GenericFile to
 	// which this WorkItem pertains. This will be empty for WorkItems
-	// that only make sense at the object level, such as Ingest
-	// and Send-to-DPN. If GenericFileIdentifier is non-empty, it
+	// that only make sense at the object level such as Ingest.
+	// If GenericFileIdentifier is non-empty, it
 	// means the work for this WorkItem is to be performed on the
 	// GenericFile and not the object. For example, file deletion
 	// and fixity checking are performed on GenericFiles, not
@@ -80,7 +80,7 @@ type WorkItem struct {
 	WorkItemStateId *int `json:"work_item_state_id"`
 	// User is the email address of the user who requested this WorkItem.
 	// For Ingest, this will always be the system user. For restoration,
-	// deletion and send-to-DPN requests, it will be the email address of
+	// deletion requests, it will be the email address of
 	// the user who clicked the button or submitted the API request to
 	// start the process.
 	User string `json:"user"`
@@ -166,21 +166,21 @@ func (item *WorkItem) SerializeForPharos() ([]byte, error) {
 		"institution_id":          item.InstitutionId,
 		"object_identifier":       item.ObjectIdentifier,
 		"generic_file_identifier": item.GenericFileIdentifier,
-		"date":               item.Date,
-		"note":               item.Note,
-		"action":             item.Action,
-		"stage":              item.Stage,
-		"stage_started_at":   item.StageStartedAt,
-		"status":             item.Status,
-		"outcome":            item.Outcome,
-		"retry":              item.Retry,
-		"node":               item.Node,
-		"pid":                item.Pid,
-		"needs_admin_review": item.NeedsAdminReview,
-		"queued_at":          item.QueuedAt,
-		"user":               item.User,
-		"inst_approver":      item.InstitutionalApprover,
-		"aptrust_approver":   item.APTrustApprover,
+		"date":                    item.Date,
+		"note":                    item.Note,
+		"action":                  item.Action,
+		"stage":                   item.Stage,
+		"stage_started_at":        item.StageStartedAt,
+		"status":                  item.Status,
+		"outcome":                 item.Outcome,
+		"retry":                   item.Retry,
+		"node":                    item.Node,
+		"pid":                     item.Pid,
+		"needs_admin_review":      item.NeedsAdminReview,
+		"queued_at":               item.QueuedAt,
+		"user":                    item.User,
+		"inst_approver":           item.InstitutionalApprover,
+		"aptrust_approver":        item.APTrustApprover,
 	})
 }
 

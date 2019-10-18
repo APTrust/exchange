@@ -101,8 +101,6 @@ type Config struct {
 	BagItEncoding string
 
 	// Location of the config file for bag validation.
-	// Config will differ for APTrust and DPN. This is
-	// for the APTrust config file.
 	BagValidationConfigFile string
 
 	// The bucket reader checks for new items in the receiving
@@ -283,10 +281,10 @@ type Config struct {
 	// UseVolumeService describes whether to use volume_service or
 	// to try to reserve disk space before downloading and processing
 	// bags. You'll want to use this service on systems with a fixed
-	// amount of disk space, so that APTrust and DPN services don't
+	// amount of disk space, so that APTrust services don't
 	// try to download bags that won't fit in the remaining disk space.
-	// When this is on, and the volume_service is running, APTrust and
-	// DPN services will simply reque items that require more disk space
+	// When this is on, and the volume_service is running, APTrust
+	// services will simply reque items that require more disk space
 	// than is currently available. UseVolumeService should be false
 	// (off) when using Amazon's EFS volumes because querying EFS volumes
 	// for available space often returns an error, and that causes items
@@ -519,23 +517,3 @@ func (config *Config) GetAWSSecretAccessKey() string {
 	}
 	return secretKey
 }
-
-// // DefaultMetadata includes mostly static information about bags
-// // that APTrust packages for DPN.
-// type DefaultMetadata struct {
-// 	Comment                string
-// 	BagItVersion           string
-// 	BagItEncoding          string
-// 	IngestNodeName         string
-// 	IngestNodeAddress      string
-// 	IngestNodeContactName  string
-// 	IngestNodeContactEmail string
-// }
-
-// // Config options for our DPN REST client.
-// type RestClientConfig struct {
-// 	Comment         string
-// 	LocalServiceURL string
-// 	LocalAPIRoot    string
-// 	LocalAuthToken  string
-// }
