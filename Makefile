@@ -58,7 +58,7 @@ runcmd: ## Run a one time command. Takes exchange service name as argument.
 	@:
 
 unittest: ## Run unit tests in non Docker setup
-	go test $(glide novendor) github.com/APTrust/exchange/...
+	go test ./...
 
 test-ci: ## Run unit tests in CI
 	docker run exchange-ci-test
