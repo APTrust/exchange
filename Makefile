@@ -80,7 +80,11 @@ publish-ci:
 	done
 
 # Docker release - build, tag and push the container
-release: build publish ## Make a release by building and publishing tagged containers to Gitlab
+release: build publish ## Create a release by building and publishing tagged containers to Gitlab
+
+# Docker release - build, tag and push the container
+release-ci: build publish-ci ## Create a release by building and publishing tagged containers to Gitlab
+
 
 push: ## Push the Docker image up to the registry
 #	docker push  $(registry)/$(repository)/$(tag)
