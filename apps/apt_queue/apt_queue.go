@@ -68,7 +68,7 @@ Param -topic is optional. If specified, this will queue only those items
 bound for that topic. If unspecified, this will queue all items that need
 to be queued. Queue names are specified in the config files and include
 apt_fetch_topic, apt_store_topic, apt_record_topic, apt_restore_topic,
-apt_file_delete_topic, apt_fixity_topic, and dpn_package_topic.
+apt_file_delete_topic, and apt_fixity_topic.
 
 Param -stats tells us where to dump the stats file. This is mainly for testing
 and diagnostics. Do not use -stats in production, because it will use a lot of

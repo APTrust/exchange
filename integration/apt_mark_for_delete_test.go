@@ -23,21 +23,32 @@ func TestMarkForDelete(t *testing.T) {
 	config, err := models.LoadConfigFile(configFile)
 	require.Nil(t, err)
 	_context := context.NewContext(config)
-	s3Key := testutil.INTEGRATION_GOOD_BAGS[9]
-	identifier := strings.Replace(s3Key, "aptrust.integration.test", "test.edu", 1)
-	identifier = strings.Replace(identifier, ".tar", "", 1)
 
 	instResp := _context.PharosClient.InstitutionGet("test.edu")
 	require.Nil(t, instResp.Error)
 	institution := instResp.Institution()
 	require.NotNil(t, institution)
 
+	// Mark one object in standard storage for deletion
+	s3Key := testutil.INTEGRATION_GOOD_BAGS[9]
+	identifier := strings.Replace(s3Key, "aptrust.integration.test", "test.edu", 1)
+	identifier = strings.Replace(identifier, ".tar", "", 1)
+	markObjectForDeletion(t, _context, identifier, institution.Id)
+
+	// Mark one object in Glacier-only storage for deletion
+	s3Key = testutil.INTEGRATION_GLACIER_BAGS[0]
+	identifier = strings.Replace(s3Key, "aptrust.integration.test", "test.edu", 1)
+	identifier = strings.Replace(identifier, ".tar", "", 1)
+	markObjectForDeletion(t, _context, identifier, institution.Id)
+}
+
+func markObjectForDeletion(t *testing.T, _context *context.Context, identifier string, institutionId int) {
 	// Get the object with all its files (true) but no events (false)
 	objResp := _context.PharosClient.IntellectualObjectGet(identifier, true, false)
 	require.Nil(t, objResp.Error)
 	obj := objResp.IntellectualObject()
 	for _, gf := range obj.GenericFiles {
-		item := makeDeletionWorkItem(obj.Identifier, gf.Identifier, institution.Id)
+		item := makeDeletionWorkItem(obj.Identifier, gf.Identifier, institutionId)
 		itemResp := _context.PharosClient.WorkItemSave(item)
 		require.Nil(t, itemResp.Error)
 	}
@@ -49,13 +60,13 @@ func makeDeletionWorkItem(objIdentifier, gfIdentifier string, instId int) *model
 	return &models.WorkItem{
 		ObjectIdentifier:      objIdentifier,
 		GenericFileIdentifier: gfIdentifier,
-		Name:          "Homer Simpson",
-		Bucket:        "fake-bucket",
-		ETag:          "fake-etag",
-		Size:          9999,
-		BagDate:       time.Now().UTC(),
-		InstitutionId: instId,
-		User:          "user@example.com",
+		Name:                  "Homer Simpson",
+		Bucket:                "fake-bucket",
+		ETag:                  "fake-etag",
+		Size:                  9999,
+		BagDate:               time.Now().UTC(),
+		InstitutionId:         instId,
+		User:                  "user@example.com",
 		InstitutionalApprover: &instApprover,
 		APTrustApprover:       &aptrustApprover,
 		Action:                constants.ActionDelete,

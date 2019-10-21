@@ -27,8 +27,7 @@ type S3ObjectDelete struct {
 // secretAccessKey - The AWS secret access key.
 // region - is the S3 region you want to connect to. Regions are listed at
 //          http://docs.aws.amazon.com/general/latest/gr/rande.html#s3_region,
-//          and are configured in config settings APTrustS3Region,
-//          APTrustGlacierRegion, and DPNGlacierRegion.
+//          and are in config settings.
 // bucket - is the name of the bucket that contains the keys you want to delete.
 // keys   - is a list of keys you want to delete from that bucket.
 func NewS3ObjectDelete(accessKeyId, secretAccessKey, region, bucket string, keys []string) *S3ObjectDelete {

@@ -1,4 +1,4 @@
-# App describes an APTrust or DPN app or service used in integration testing.
+# App describes an APTrust app or service used in integration testing.
 class App
 
   attr_reader :name, :run_as

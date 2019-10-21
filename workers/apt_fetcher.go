@@ -11,6 +11,7 @@ import (
 	"github.com/APTrust/exchange/util/storage"
 	"github.com/APTrust/exchange/validation"
 	"github.com/nsqio/go-nsq"
+	"net/url"
 	"os"
 	"strings"
 	"time"
@@ -68,10 +69,32 @@ func (fetcher *APTFetcher) HandleMessage(message *nsq.Message) error {
 		return err
 	}
 
+	// If etag doesn't match, there's a newer version in the receiving
+	// bucket, and we should cancel this WorkItem.
+	fetcher.assertETagMatch(ingestState)
+	if ingestState.WorkItem.Status == constants.StatusCancelled {
+		fetcher.CleanupChannel <- ingestState
+		return nil
+	}
+
 	// Skip this if it's already being worked on.
 	if ingestState.WorkItem.IsInProgress() {
 		log.Info(ingestState.WorkItem.MsgSkippingInProgress())
 		message.Finish()
+		return nil
+	}
+
+	// If we're still ingesting an older version of this bag,
+	// requeue this request with a delay of several hours.
+	// See https://trello.com/c/GLURkoKW
+	if fetcher.StillIngestingOlderVersion(ingestState) {
+		err = MarkWorkItemRequeued(ingestState, fetcher.Context)
+		if err != nil {
+			fetcher.Context.MessageLog.Error(
+				"Error telling Pharos this item is being requeued: %v",
+				err.Error())
+		}
+		message.Requeue(8 * time.Hour)
 		return nil
 	}
 
@@ -252,7 +275,13 @@ func (fetcher *APTFetcher) cleanup() {
 		tarFile := ingestState.IngestManifest.BagPath
 		hasErrors := (ingestState.IngestManifest.FetchResult.HasErrors() ||
 			ingestState.IngestManifest.ValidateResult.HasErrors())
-		if hasErrors && fileutil.FileExists(tarFile) {
+
+		// Delete the tar file and the valdb file if we can't ingest this.
+		// Do not delete if WorkItem was cancelled because that means
+		// a newer version of this bag got into the receiving bucket,
+		// and another worker may be ingesting it now. If we delete the
+		// bag, the other worker won't be able to complete its tasks.
+		if hasErrors && fileutil.FileExists(tarFile) && ingestState.WorkItem.Status != constants.StatusCancelled {
 			// Most likely bad md5 digest, but perhaps also a partial download.
 			fetcher.Context.MessageLog.Info("Deleting %s due to download error: %s",
 				tarFile, ingestState.IngestManifest.AllErrorsAsString())
@@ -279,7 +308,10 @@ func (fetcher *APTFetcher) record() {
 		itsTimeToGiveUp := (ingestState.IngestManifest.HasFatalErrors() ||
 			(ingestState.IngestManifest.HasErrors() && attemptNumber >= maxAttempts))
 
-		if itsTimeToGiveUp {
+		if ingestState.WorkItem.Status == constants.StatusCancelled {
+			ingestState.FinishNSQ()
+			MarkWorkItemCancelled(ingestState, fetcher.Context)
+		} else if itsTimeToGiveUp {
 			ingestState.FinishNSQ()
 			MarkWorkItemFailed(ingestState, fetcher.Context)
 		} else if ingestState.IngestManifest.HasErrors() {
@@ -332,6 +364,33 @@ func (fetcher *APTFetcher) canSkipFetchAndValidate(ingestState *models.IngestSta
 		ingestState.IngestManifest.ValidateResult.Finished() &&
 		!ingestState.IngestManifest.HasFatalErrors() &&
 		fileutil.FileExists(ingestState.IngestManifest.BagPath))
+}
+
+// assertEtagMatch checks to see if the etag on the WorkItem matches
+// the etag of the item in the receiving bucket. We get mismatches when
+// a depositor uploads a new bag before we've finished ingesting the
+// old one. This happens during long ingest backlogs.
+func (fetcher *APTFetcher) assertETagMatch(ingestState *models.IngestState) {
+	s3Client := network.NewS3Head(
+		os.Getenv("AWS_ACCESS_KEY_ID"),
+		os.Getenv("AWS_SECRET_ACCESS_KEY"),
+		constants.AWSVirginia,
+		ingestState.WorkItem.Bucket)
+	s3Client.Head(ingestState.WorkItem.Name)
+
+	if s3Client.Response != nil && s3Client.Response.ETag != nil {
+		etag := strings.Replace(util.PointerToString(s3Client.Response.ETag), "\"", "", -1)
+		if etag != ingestState.WorkItem.ETag {
+			msg := fmt.Sprintf("Ingest services cancelled this ingest because WorkItem etag is %s and etag of item in receiving bucket is %s. There should be a separate WorkItem to ingest the newer version that's currently in the bucket.", ingestState.WorkItem.ETag, etag)
+			ingestState.IngestManifest.FetchResult.AddError(msg)
+			ingestState.IngestManifest.FetchResult.ErrorIsFatal = true
+			ingestState.WorkItem.Note = msg
+			ingestState.WorkItem.Status = constants.StatusCancelled
+		}
+	} else {
+		fetcher.Context.MessageLog.Warning("Head request for %s/%s returned nothing",
+			ingestState.WorkItem.Bucket, ingestState.WorkItem.Name)
+	}
 }
 
 // Download the file, and update the IngestManifest while we're at it.
@@ -433,6 +492,9 @@ func (fetcher *APTFetcher) buildObject(downloader *network.S3Download, ingestSta
 	// dash near the end, followed by the number of parts in the
 	// multipart upload. We can't use that kind of ETag to verify
 	// the md5 checksum that we calculated.
+	//
+	// This code seems logically incorrect and should be reviewed
+	// for removal.
 	obj.IngestMd5Verifiable = strings.Contains(downloader.Md5Digest, "-")
 	if obj.IngestMd5Verifiable {
 		obj.IngestMd5Verified = obj.IngestRemoteMd5 == obj.IngestLocalMd5
@@ -464,4 +526,45 @@ func (fetcher *APTFetcher) initObjectInDB(ingestState *models.IngestState, obj *
 	}
 	fetcher.Context.MessageLog.Info("Saved %s to valdb", obj.Identifier)
 	return nil
+}
+
+// StillIngestingOlderVersion returns true if another version of this bag is
+// being ingested by this or another worker.
+// See https://trello.com/c/GLURkoKW.
+func (fetcher *APTFetcher) StillIngestingOlderVersion(state *models.IngestState) bool {
+	params := url.Values{}
+	params.Add("item_action", constants.ActionIngest)
+	params.Add("name", state.WorkItem.Name)
+
+	hasIngestInProgress := false
+	resp := fetcher.Context.PharosClient.WorkItemList(params)
+	if resp.Error != nil {
+		fetcher.Context.MessageLog.Warning(
+			"While checking for other pending ingests for %s (Work Item %d), "+
+				"got error: %v",
+			state.WorkItem.Name, state.WorkItem.Id, resp.Error)
+	}
+	items := resp.WorkItems()
+	if len(items) > 0 {
+		for _, item := range items {
+			if item.Id == state.WorkItem.Id {
+				continue
+			}
+			if item.Status == constants.StatusPending && item.Stage == constants.StageReceive {
+				// Special case. Item is awaiting fetch, but fetch has
+				// not yet started, so this item is not in progress.
+				continue
+			}
+			if item.Status == constants.StatusStarted || item.Status == constants.StatusPending {
+				fetcher.Context.MessageLog.Info(
+					"Will not start ingest on WorkItem for %d (%s) because "+
+						"WorkItem %d is still ingesting the object in "+
+						"another process.",
+					state.WorkItem.Id, state.WorkItem.Name, item.Id)
+				hasIngestInProgress = true
+				break
+			}
+		}
+	}
+	return hasIngestInProgress
 }

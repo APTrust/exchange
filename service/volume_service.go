@@ -16,7 +16,7 @@ import (
 )
 
 // VolumeService keeps track of the space available to workers
-// processing APTrust and DPN bags.
+// processing APTrust bags.
 type VolumeService struct {
 	port    int
 	volumes map[string]*models.Volume

@@ -109,18 +109,18 @@ services:
       env_file:
          - ".env"
    nsqlookupd:
-      image: nsqio/nsq
+      image: nsqio/nsq:v1.2.0
       hostname: nsqlookupd
       command: /nsqlookupd
       volumes:
-        - type: bind
-          source: "${DOCKER_DATA_PATH:-./docker}/nsq"
-          target: /data
+         - type: bind
+           source: "${DOCKER_DATA_PATH:-./docker}/nsq"
+           target: /data
       ports:
          - "4160:4160"
          - "4161:4161"
    nsqd:
-      image: nsqio/nsq
+      image: nsqio/nsq:v1.2.0
       command: /nsqd --lookupd-tcp-address=${nsq_lookupd_tcp_address} --data-path=/data --broadcast-address=${nsq_broadcast_address} --msg-timeout=${nsq_msg_timeout} --max-msg-timeout=${nsq_max_msg_timeout} --max-msg-size=${nsq_max_msg_size} -mem-queue-size=${nsq_mem_queue_size} -max-req-timeout=${nsq_max_req_timeout} -max-heartbeat-interval=${nsq_max_heartbeat_interval}
       volumes:
          - type: bind
@@ -140,17 +140,14 @@ services:
          - "4150:4150"
          - "4151:4151"
    nsqadmin:
-      image: nsqio/nsq
+      image: nsqio/nsq:v1.2.0
       command: /nsqadmin --lookupd-http-address=${nsq_lookupd_http_address}
-      volumes:
-         - type: bind
-           source: "${DOCKER_DATA_PATH:-./docker/nsq}/nsq"
-           target: /data
       depends_on:
          - nsqlookupd
       links:
          - nsqlookupd:nsqlookupd
       ports:
          - "4171:4171"
+      restart: always
 networks:
    default:

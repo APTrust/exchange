@@ -35,7 +35,14 @@ func TestDeleteResults(t *testing.T) {
 	config.ExpandFilePaths()
 	_context := context.NewContext(config)
 
-	s3Key := testutil.INTEGRATION_GOOD_BAGS[9]
+	// Test deletion of a bag in standard storage
+	testDeleteCompleted(t, _context, testutil.INTEGRATION_GOOD_BAGS[9])
+
+	// Test deletion of a bag in Glacier-only storage
+	testDeleteCompleted(t, _context, testutil.INTEGRATION_GLACIER_BAGS[0])
+}
+
+func testDeleteCompleted(t *testing.T, _context *context.Context, s3Key string) {
 	identifier := strings.Replace(s3Key, "aptrust.integration.test", "test.edu", 1)
 	identifier = strings.Replace(identifier, ".tar", "", 1)
 
@@ -93,4 +100,5 @@ func TestDeleteResults(t *testing.T) {
 		assert.Empty(t, glacierClient.Response.Contents)
 		glacierClient.Response.Contents = nil
 	}
+
 }

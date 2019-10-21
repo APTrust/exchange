@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"encoding/json"
 	"fmt"
-	dpn_models "github.com/APTrust/exchange/dpn/models"
 	apt_models "github.com/APTrust/exchange/models"
 	"io"
 	"os"
@@ -26,41 +25,6 @@ func FindIngestManifestInLog(pathToLogFile, bagName string) (manifest *apt_model
 		err = fmt.Errorf("Bag %s not found in %s", bagName, pathToLogFile)
 	} else {
 		manifest = &apt_models.IngestManifest{}
-		err = json.Unmarshal([]byte(jsonString), manifest)
-	}
-	return manifest, err
-}
-
-// FindDPNIngestManifestInLog returns the DPNIngestManifest for the
-// specified bag in the specified log file. Param bagName should
-// include the .tar extension. So "mybag.tar", not "mybag" or "test.edu/mybag".
-func FindDPNIngestManifestInLog(pathToLogFile, bagName string) (manifest *dpn_models.DPNIngestManifest, err error) {
-	file, err := os.Open(pathToLogFile)
-	if err != nil {
-		return nil, err
-	}
-	defer file.Close()
-	jsonString := findJsonString(file, bagName)
-	if len(jsonString) == 0 {
-		err = fmt.Errorf("Bag %s not found in %s", bagName, pathToLogFile)
-	} else {
-		manifest = &dpn_models.DPNIngestManifest{}
-		err = json.Unmarshal([]byte(jsonString), manifest)
-	}
-	return manifest, err
-}
-
-func FindReplicationManifestInLog(pathToLogFile, replicationId string) (manifest *dpn_models.ReplicationManifest, err error) {
-	file, err := os.Open(pathToLogFile)
-	if err != nil {
-		return nil, err
-	}
-	defer file.Close()
-	jsonString := findJsonString(file, replicationId)
-	if len(jsonString) == 0 {
-		err = fmt.Errorf("Replication %s not found in %s", replicationId, pathToLogFile)
-	} else {
-		manifest = &dpn_models.ReplicationManifest{}
 		err = json.Unmarshal([]byte(jsonString), manifest)
 	}
 	return manifest, err
@@ -121,11 +85,8 @@ func FindFileRestoreStateInLog(pathToLogFile, gfIdentifier string) (restoreState
 // apt_fetch.json, apt_store.json, apt_record.json -> S3 bucket and key
 // e.g. aptrust.receiving.virginia.edu/bag_o_goodies.tar
 //
-// dpn_ingest.json -> bag name, with .tar extension, without institution prefix
 // e.g. bag_o_goodies.tar
 //
-// dpn_replicate.json -> ReplicationId, which is a uuid
-// e.g. 45498989-3465-416d-9b49-767f1db22cd6
 func ExtractJson(pathToLogFile, identifier string) (string, error) {
 	file, err := os.Open(pathToLogFile)
 	if err != nil {

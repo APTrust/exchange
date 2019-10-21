@@ -1,7 +1,7 @@
 language: go
 sudo: required
 go:
-  - "1.12.5"
+  - "1.13.1"
   - tip
 services:
   - docker
@@ -10,12 +10,7 @@ addons:
     packages:
       - docker-ce
       - libmagic-dev
-install:
-  - go get -v github.com/Masterminds/glide
-  - cd $GOPATH/src/github.com/Masterminds/glide && go install && cd -
-  - glide install
-script:
-  make unittest
+script: go test ./...
 deploy:
   - provider: script
     script: make -w publish-ci

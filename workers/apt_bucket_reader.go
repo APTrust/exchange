@@ -228,7 +228,8 @@ func (reader *APTBucketReader) processS3Object(s3Object *s3.Object, bucketName s
 		}
 		return
 	}
-	if workItem == nil {
+	// A.D. added 2019-09-23: Requeue ingest if prior WorkItem was cancelled.
+	if workItem == nil || workItem.Status == constants.StatusCancelled {
 		workItem = reader.createWorkItem(bucketName, s3Object)
 		if workItem == nil {
 			// Error logged and statted at source.
@@ -237,7 +238,7 @@ func (reader *APTBucketReader) processS3Object(s3Object *s3.Object, bucketName s
 	}
 	// Queue the item in NSQ if necessary. This will go into the fetch
 	// queue for ingest, so be sure we don't accidentally pick up any
-	// unqueued items for delete, restore, or DPN.
+	// unqueued items for delete, or restore.
 	if (workItem.QueuedAt == nil || workItem.QueuedAt.IsZero()) &&
 		workItem.Action == constants.ActionIngest &&
 		workItem.Stage == constants.StageReceive {

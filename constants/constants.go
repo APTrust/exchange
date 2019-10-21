@@ -106,7 +106,6 @@ const (
 	ActionGlacierRestore = "Glacier Restore"
 	ActionRestore        = "Restore"
 	ActionDelete         = "Delete"
-	ActionDPN            = "DPN"
 )
 
 var ActionTypes []string = []string{
@@ -153,23 +152,6 @@ var GlacierDeepOptions []string = []string{
 	StorageGlacierDeepVA,
 	StorageGlacierDeepOH,
 	StorageGlacierDeepOR,
-}
-
-// DPN task types
-const (
-	DPNTaskSync        = "sync"
-	DPNTaskIngest      = "ingest"
-	DPNTaskReplication = "replication"
-	DPNTaskRestore     = "restore"
-	DPNTaskFixity      = "fixity"
-)
-
-var DPNTaskTypes []string = []string{
-	DPNTaskSync,
-	DPNTaskIngest,
-	DPNTaskReplication,
-	DPNTaskRestore,
-	DPNTaskFixity,
 }
 
 const (
@@ -297,3 +279,15 @@ var EventTypes []string = []string{
 // Event outcomes
 const OutcomeSuccess = "Success"
 const OutcomeFailure = "Failure"
+
+// Hack for new AWS SDK requiring a non-empty bucket name
+// for S3 operations. Tests in the network and workers packages
+// connect to a local mock service running on 127.0.0.1.
+// The new AWS SDK prepends the bucket name and a period to
+// the service endpoint address. To make tests work, we have to
+// remove "127." from the localhost IP address, then let the
+// AWS SDK client re-add it as bucket name "127".
+// We have a long-standing ticket to get rid of the awful AWS
+// SDK, and this is one more nail in its coffin.
+const AWS_TEST_HACK_IP_PREFIX = "127."
+const AWS_TEST_HACK_BUCKET_NAME = "127"

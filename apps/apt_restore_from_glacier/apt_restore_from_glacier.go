@@ -126,10 +126,8 @@ Usage: apt_restore_from_glacier -region=<aws region> \
 Starred (*) params are required.
 
 Param -region (*) is the AWS region containing the S3/Glacier bucket.
-	   "us-east-1" is Virginia (DPN Glacier)
 	   "us-west-2" is Oregon (APTrust Glacier only)
 Param -bucket (*) is the name of the bucket.
-	   "aptrust.dpn.preservation"     - DPN production bucket (us-east-1)
 	   "aptrust.preservation.oregon"  - APTrust Glacier bucket (us-west-2)
 Param -key (*) is the key to restore from Glacier back into S3
 Param -days is the number of days to leave the restored item in the S3 bucket.

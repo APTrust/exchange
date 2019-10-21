@@ -113,7 +113,7 @@ func (client *PharosClient) IntellectualObjectGet(identifier string, includeFile
 	resp.objects = make([]*models.IntellectualObject, 1)
 
 	// Build the url and the request object
-	relativeUrl := fmt.Sprintf("/api/%s/objects/%s", client.apiVersion, url.QueryEscape(identifier))
+	relativeUrl := fmt.Sprintf("/api/%s/objects/%s", client.apiVersion, escapeFileIdentifier(identifier))
 	if includeFiles && includeEvents {
 		relativeUrl += "?include_all_relations=true"
 	} else if includeFiles {
@@ -189,7 +189,7 @@ func (client *PharosClient) IntellectualObjectSave(obj *models.IntellectualObjec
 	httpMethod := "POST"
 	if obj.Id > 0 {
 		// PUT URL looks like /api/v2/objects/college.edu%2Fobject_name
-		relativeUrl = fmt.Sprintf("/api/%s/objects/%s", client.apiVersion, url.QueryEscape(obj.Identifier))
+		relativeUrl = fmt.Sprintf("/api/%s/objects/%s", client.apiVersion, escapeFileIdentifier(obj.Identifier))
 		httpMethod = "PUT"
 	}
 	absoluteUrl := client.BuildUrl(relativeUrl)
@@ -215,34 +215,6 @@ func (client *PharosClient) IntellectualObjectSave(obj *models.IntellectualObjec
 	return resp
 }
 
-// IntellectualObjectPushToDPN is used only in integration tests. It creates
-// a WorkItem in Pharos requesting that the IntellectualObject with the
-// specified identifier be ingested into DPN. Check the value of WorkItem()
-// (not IntellectualObject()) in the response.
-func (client *PharosClient) IntellectualObjectPushToDPN(identifier string) *PharosResponse {
-	// Set up the response object
-	resp := NewPharosResponse(PharosWorkItem)
-	resp.workItems = make([]*models.WorkItem, 1)
-
-	// Build the url and the request object
-	relativeUrl := fmt.Sprintf("/api/%s/objects/%s/dpn", client.apiVersion, url.QueryEscape(identifier))
-	absoluteUrl := client.BuildUrl(relativeUrl)
-
-	// Run the request
-	client.DoRequest(resp, "PUT", absoluteUrl, nil)
-	if resp.Error != nil {
-		return resp
-	}
-
-	// Note that we're getting a WorkItem back.
-	workItem := &models.WorkItem{}
-	resp.Error = json.Unmarshal(resp.data, workItem)
-	if resp.Error == nil {
-		resp.workItems[0] = workItem
-	}
-	return resp
-}
-
 // IntellectualObjectRequestRestore creates a restore request in Pharos for
 // the object with the specified identifier. This is used in integration
 // testing to create restore requests.
@@ -252,7 +224,7 @@ func (client *PharosClient) IntellectualObjectRequestRestore(identifier string) 
 	resp.workItems = make([]*models.WorkItem, 1)
 
 	// Build the url and the request object
-	relativeUrl := fmt.Sprintf("/api/%s/objects/%s/restore", client.apiVersion, url.QueryEscape(identifier))
+	relativeUrl := fmt.Sprintf("/api/%s/objects/%s/restore", client.apiVersion, escapeFileIdentifier(identifier))
 	absoluteUrl := client.BuildUrl(relativeUrl)
 
 	// Run the request.
@@ -281,7 +253,7 @@ func (client *PharosClient) IntellectualObjectRequestDelete(identifier string) *
 	resp.objects = make([]*models.IntellectualObject, 0)
 
 	// Build the url and the request object
-	relativeUrl := fmt.Sprintf("/api/%s/objects/%s/delete", client.apiVersion, url.QueryEscape(identifier))
+	relativeUrl := fmt.Sprintf("/api/%s/objects/%s/delete", client.apiVersion, escapeFileIdentifier(identifier))
 	absoluteUrl := client.BuildUrl(relativeUrl)
 
 	// Run the request.
@@ -306,7 +278,7 @@ func (client *PharosClient) IntellectualObjectFinishDelete(identifier string) *P
 
 	// Build the url and the request object
 	relativeUrl := fmt.Sprintf("/api/%s/objects/%s/finish_delete", client.apiVersion,
-		url.QueryEscape(identifier))
+		escapeFileIdentifier(identifier))
 	absoluteUrl := client.BuildUrl(relativeUrl)
 
 	// Run the request
@@ -402,7 +374,7 @@ func (client *PharosClient) GenericFileSave(obj *models.GenericFile) *PharosResp
 	httpMethod := "POST"
 	if obj.Id > 0 {
 		// PUT URL looks like /api/v2/files/college.edu%2Fobject_name%2Ffile.xml
-		relativeUrl = fmt.Sprintf("%s%s", relativeUrl, url.QueryEscape(obj.Identifier))
+		relativeUrl = fmt.Sprintf("%s%s", relativeUrl, escapeFileIdentifier(obj.Identifier))
 		httpMethod = "PUT"
 	}
 	absoluteUrl := client.BuildUrl(relativeUrl)
@@ -924,183 +896,6 @@ func (client *PharosClient) FinishRestorationSpotTest(workItemId int) *PharosRes
 	resp.Error = json.Unmarshal(resp.data, workItem)
 	if resp.Error == nil {
 		resp.workItems[0] = workItem
-	}
-	return resp
-}
-
-// DPNWorkItemList returns a list of DPNWorkItems that match the specified
-// criteria. Valid params include node, task, identifier, queued_before,
-// queued_after, completed_before and completed_after.
-func (client *PharosClient) DPNWorkItemList(params url.Values) *PharosResponse {
-	// Set up the response object
-	resp := NewPharosResponse(PharosDPNWorkItem)
-	resp.dpnWorkItems = make([]*models.DPNWorkItem, 0)
-
-	// Build the url and the request object
-	relativeUrl := fmt.Sprintf("/api/%s/dpn_items/?%s", client.apiVersion, encodeParams(params))
-	absoluteUrl := client.BuildUrl(relativeUrl)
-
-	// Run the request
-	client.DoRequest(resp, "GET", absoluteUrl, nil)
-	if resp.Error != nil {
-		return resp
-	}
-
-	// Parse the JSON from the response body.
-	// If there's an error, it will be recorded in resp.Error
-	resp.UnmarshalJsonList()
-	return resp
-}
-
-// DPNWorkItemSave saves a DPNWorkItem record to Pharos. If the WorkItems's
-// ID is zero, this performs a POST to create a new record. For non-zero
-// IDs, this performs a PUT to update the existing record. The response object
-// will include a new copy of the WorkItem if it was saved successfully.
-func (client *PharosClient) DPNWorkItemSave(obj *models.DPNWorkItem) *PharosResponse {
-	// Set up the response object
-	resp := NewPharosResponse(PharosDPNWorkItem)
-	resp.dpnWorkItems = make([]*models.DPNWorkItem, 1)
-
-	// URL and method
-	relativeUrl := fmt.Sprintf("/api/%s/dpn_items/", client.apiVersion)
-	httpMethod := "POST"
-	if obj.Id > 0 {
-		// URL should look like /api/v2/dpn_items/46956/
-		relativeUrl = fmt.Sprintf("%s%d/", relativeUrl, obj.Id)
-		httpMethod = "PUT"
-	}
-	absoluteUrl := client.BuildUrl(relativeUrl)
-
-	// Prepare the JSON data
-	postData, err := obj.SerializeForPharos()
-	if err != nil {
-		resp.Error = err
-	}
-
-	// Run the request
-	client.DoRequest(resp, httpMethod, absoluteUrl, bytes.NewBuffer(postData))
-	if resp.Error != nil {
-		return resp
-	}
-
-	// Parse the JSON from the response body
-	dpnWorkItem := &models.DPNWorkItem{}
-	resp.Error = json.Unmarshal(resp.data, dpnWorkItem)
-	if resp.Error == nil {
-		resp.dpnWorkItems[0] = dpnWorkItem
-	}
-	return resp
-}
-
-// DPNWorkItemGet returns the DPNWorkItem with the specified Id.
-func (client *PharosClient) DPNWorkItemGet(id int) *PharosResponse {
-	// Set up the response object
-	resp := NewPharosResponse(PharosDPNWorkItem)
-	resp.dpnWorkItems = make([]*models.DPNWorkItem, 1)
-
-	// Build the url and the request object
-	relativeUrl := fmt.Sprintf("/api/%s/dpn_items/%d/", client.apiVersion, id)
-	absoluteUrl := client.BuildUrl(relativeUrl)
-
-	// Run the request
-	client.DoRequest(resp, "GET", absoluteUrl, nil)
-	if resp.Error != nil {
-		return resp
-	}
-
-	// Parse the JSON from the response body
-	dpnWorkItem := &models.DPNWorkItem{}
-	resp.Error = json.Unmarshal(resp.data, dpnWorkItem)
-	if resp.Error == nil {
-		resp.dpnWorkItems[0] = dpnWorkItem
-	}
-	return resp
-}
-
-// DPNBagList returns a list of PharosDPNBags that match the specified
-// criteria. Valid params include institution_id, object_identifier, dpn_identifier,
-// node_1, node_2, node_3, created_before, created_after, updated_before, updated_after.
-// Sort by 'dpn_upated_at DESC' to get latest.
-func (client *PharosClient) DPNBagList(params url.Values) *PharosResponse {
-	// Set up the response object
-	resp := NewPharosResponse(PharosDPNBag)
-	resp.dpnBags = make([]*models.PharosDPNBag, 0)
-
-	// Build the url and the request object
-	relativeUrl := fmt.Sprintf("/api/%s/dpn_bags/?%s", client.apiVersion, encodeParams(params))
-	absoluteUrl := client.BuildUrl(relativeUrl)
-
-	// Run the request
-	client.DoRequest(resp, "GET", absoluteUrl, nil)
-	if resp.Error != nil {
-		return resp
-	}
-
-	// Parse the JSON from the response body.
-	// If there's an error, it will be recorded in resp.Error
-	resp.UnmarshalJsonList()
-	return resp
-}
-
-// DPNBagGet returns the PharosDPNBag with the specified Id.
-// Param id is Pharos' DPNBag.id, not the DPN UUID or the Pharos object_identifier.
-func (client *PharosClient) DPNBagGet(id int) *PharosResponse {
-	// Set up the response object
-	resp := NewPharosResponse(PharosDPNBag)
-	resp.dpnBags = make([]*models.PharosDPNBag, 1)
-
-	// Build the url and the request object
-	relativeUrl := fmt.Sprintf("/api/%s/dpn_bags/%d/", client.apiVersion, id)
-	absoluteUrl := client.BuildUrl(relativeUrl)
-
-	// Run the request
-	client.DoRequest(resp, "GET", absoluteUrl, nil)
-	if resp.Error != nil {
-		return resp
-	}
-
-	// Parse the JSON from the response body
-	dpnBag := &models.PharosDPNBag{}
-	resp.Error = json.Unmarshal(resp.data, dpnBag)
-	if resp.Error == nil {
-		resp.dpnBags[0] = dpnBag
-	}
-	return resp
-}
-
-// DPNBagSave saves a PharosDPNBag record to Pharos.
-func (client *PharosClient) DPNBagSave(obj *models.PharosDPNBag) *PharosResponse {
-	// Set up the response object
-	resp := NewPharosResponse(PharosDPNBag)
-	resp.dpnBags = make([]*models.PharosDPNBag, 1)
-
-	// URL and method
-	relativeUrl := fmt.Sprintf("/api/%s/dpn_bags/", client.apiVersion)
-	httpMethod := "POST"
-	if obj.Id > 0 {
-		// URL should look like /api/v2/dpn_bags/46956/
-		relativeUrl = fmt.Sprintf("%s%d/", relativeUrl, obj.Id)
-		httpMethod = "PUT"
-	}
-	absoluteUrl := client.BuildUrl(relativeUrl)
-
-	// Prepare the JSON data
-	postData, err := obj.SerializeForPharos()
-	if err != nil {
-		resp.Error = err
-	}
-
-	// Run the request
-	client.DoRequest(resp, httpMethod, absoluteUrl, bytes.NewBuffer(postData))
-	if resp.Error != nil {
-		return resp
-	}
-
-	// Parse the JSON from the response body
-	dpnBag := &models.PharosDPNBag{}
-	resp.Error = json.Unmarshal(resp.data, dpnBag)
-	if resp.Error == nil {
-		resp.dpnBags[0] = dpnBag
 	}
 	return resp
 }

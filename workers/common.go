@@ -283,6 +283,28 @@ func MarkWorkItemFailed(ingestState *models.IngestState, _context *context.Conte
 	return nil
 }
 
+// MarkWorkItemCancelled tells Pharos that the work item has been cancelled.
+func MarkWorkItemCancelled(ingestState *models.IngestState, _context *context.Context) error {
+	_context.MessageLog.Info("Telling Pharos processing cancelled for %s/%s",
+		ingestState.WorkItem.Bucket, ingestState.WorkItem.Name)
+	ingestState.WorkItem.Date = time.Now().UTC()
+	ingestState.WorkItem.Node = ""
+	ingestState.WorkItem.Pid = 0
+	ingestState.WorkItem.StageStartedAt = nil
+	ingestState.WorkItem.Retry = false
+	ingestState.WorkItem.NeedsAdminReview = false
+	ingestState.WorkItem.Status = constants.StatusCancelled
+	ingestState.WorkItem.Note = ingestState.IngestManifest.AllErrorsAsString()
+	resp := _context.PharosClient.WorkItemSave(ingestState.WorkItem)
+	if resp.Error != nil {
+		_context.MessageLog.Error("Could not mark WorkItem cancelled for %s/%s: %v",
+			ingestState.WorkItem.Bucket, ingestState.WorkItem.Name, resp.Error)
+		return resp.Error
+	}
+	ingestState.WorkItem = resp.WorkItem()
+	return nil
+}
+
 // MarkWorkItemRequeued tells Pharos that this item has been requeued
 // due to transient errors.
 func MarkWorkItemRequeued(ingestState *models.IngestState, _context *context.Context) error {

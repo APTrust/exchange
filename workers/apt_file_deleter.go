@@ -93,6 +93,9 @@ func (deleter *APTFileDeleter) HandleMessage(message *nsq.Message) error {
 	return nil
 }
 
+// Technical debt is piling up here since the addition of new storage options.
+// This needs to be rewritten as we add new storage providers.
+// A simple delete operation should not require this much ugly logic.
 func (deleter *APTFileDeleter) delete() {
 	for deleteState := range deleter.DeleteChannel {
 		deleteState.DeleteSummary.Attempted = true
@@ -103,26 +106,43 @@ func (deleter *APTFileDeleter) delete() {
 		if err != nil {
 			deleteState.DeleteSummary.AddError(err.Error())
 		} else {
-			// In some cases, we may have deleted the file on a
-			// previous run, then failed to record the deletion
-			// event.
-			if deleteState.DeletedFromPrimaryAt.IsZero() {
-				deleter.deleteFromStorage(deleteState, "s3")
+			storageOption := deleteState.GenericFile.StorageOption
+			// Standard storage requires two deletions from two separate buckets.
+			if storageOption == constants.StorageStandard {
+				deleter.deleteFromStandardStorage(deleteState, fileUUID)
 			} else {
-				deleter.Context.MessageLog.Info("File %s (%s) was previously "+
-					"deleted from primary storage",
-					deleteState.GenericFile.Identifier, fileUUID)
-			}
-			if deleteState.DeletedFromSecondaryAt.IsZero() {
-				deleter.deleteFromStorage(deleteState, "glacier")
-			} else {
-				deleter.Context.MessageLog.Info("File %s (%s) was previously "+
-					"deleted from secondary storage",
-					deleteState.GenericFile.Identifier, fileUUID)
+				if deleteState.DeletedFromPrimaryAt.IsZero() {
+					deleter.deleteFromStorage(deleteState, storageOption)
+				} else {
+					deleter.Context.MessageLog.Info("File %s (%s) was previously "+
+						"deleted from %s storage",
+						deleteState.GenericFile.Identifier, fileUUID, storageOption)
+				}
 			}
 		}
 		deleteState.DeleteSummary.Finish()
 		deleter.PostProcessChannel <- deleteState
+	}
+}
+
+// Delete from Standard storage, which includes an S3 copy and a Glacier copy.
+func (deleter *APTFileDeleter) deleteFromStandardStorage(deleteState *models.DeleteState, fileUUID string) {
+	// In some cases, we may have deleted the file on a
+	// previous run, then failed to record the deletion
+	// event.
+	if deleteState.DeletedFromPrimaryAt.IsZero() {
+		deleter.deleteFromStorage(deleteState, "s3")
+	} else {
+		deleter.Context.MessageLog.Info("File %s (%s) was previously "+
+			"deleted from primary storage",
+			deleteState.GenericFile.Identifier, fileUUID)
+	}
+	if deleteState.DeletedFromSecondaryAt.IsZero() {
+		deleter.deleteFromStorage(deleteState, "glacier")
+	} else {
+		deleter.Context.MessageLog.Info("File %s (%s) was previously "+
+			"deleted from secondary storage",
+			deleteState.GenericFile.Identifier, fileUUID)
 	}
 }
 
@@ -168,9 +188,15 @@ func (deleter *APTFileDeleter) deleteFromStorage(deleteState *models.DeleteState
 		region = deleter.Context.Config.APTrustGlacierRegion
 		bucket = deleter.Context.Config.ReplicationBucket
 	} else {
+		region, bucket, err = deleter.Context.Config.StorageRegionAndBucketFor(fromWhere)
+	}
+	if region == "" || bucket == "" {
 		deleteState.DeleteSummary.AddError("Cannot delete %s from %s because "+
-			"deleter doesn't know where %s is",
+			"deleter doesn't know where %s is.",
 			deleteState.GenericFile.Identifier, fromWhere, fromWhere)
+		if err != nil {
+			deleteState.DeleteSummary.AddError(err.Error())
+		}
 		deleteState.DeleteSummary.ErrorIsFatal = true
 		return
 	}
@@ -189,6 +215,9 @@ func (deleter *APTFileDeleter) deleteFromStorage(deleteState *models.DeleteState
 			deleteState.DeletedFromPrimaryAt = time.Now().UTC()
 		} else if fromWhere == "glacier" {
 			deleteState.DeletedFromSecondaryAt = time.Now().UTC()
+		} else {
+			// Glacier-only
+			deleteState.DeletedFromPrimaryAt = time.Now().UTC()
 		}
 		deleter.Context.MessageLog.Info("Deleted %s (key %s) from %s",
 			deleteState.GenericFile.Identifier, key, fromWhere)
@@ -294,7 +323,10 @@ func (deleter *APTFileDeleter) recordFileDeletionEvent(deleteState *models.Delet
 	if deleteState.WorkItem.APTrustApprover != nil {
 		aptrustApprover = *deleteState.WorkItem.APTrustApprover
 	}
-	timestamp := deleteState.DeletedFromSecondaryAt
+	timestamp := deleteState.DeletedFromPrimaryAt
+	if !deleteState.DeletedFromSecondaryAt.IsZero() {
+		timestamp = deleteState.DeletedFromSecondaryAt
+	}
 	event := models.NewEventFileDeletion(fileUUID, requestedBy, instApprover, aptrustApprover, timestamp)
 	event.IntellectualObjectId = deleteState.GenericFile.IntellectualObjectId
 	event.IntellectualObjectIdentifier = deleteState.GenericFile.IntellectualObjectIdentifier

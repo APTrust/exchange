@@ -363,3 +363,25 @@ func (event *PremisEvent) IsUrlAssignment() bool {
 	return (event.EventType == constants.EventIdentifierAssignment &&
 		strings.HasPrefix(event.Detail, "Assigned new storage URL"))
 }
+
+// Clone returns an exact clone of the PremisEvent, including the Id.
+func (event *PremisEvent) Clone() *PremisEvent {
+	return &PremisEvent{
+		Id:                           event.Id,
+		Identifier:                   event.Identifier,
+		EventType:                    event.EventType,
+		DateTime:                     event.DateTime,
+		Detail:                       event.Detail,
+		Outcome:                      event.Outcome,
+		OutcomeDetail:                event.OutcomeDetail,
+		Object:                       event.Object,
+		Agent:                        event.Agent,
+		OutcomeInformation:           event.OutcomeInformation,
+		IntellectualObjectId:         event.IntellectualObjectId,
+		IntellectualObjectIdentifier: event.IntellectualObjectIdentifier,
+		GenericFileId:                event.GenericFileId,
+		GenericFileIdentifier:        event.GenericFileIdentifier,
+		CreatedAt:                    event.CreatedAt,
+		UpdatedAt:                    event.UpdatedAt,
+	}
+}

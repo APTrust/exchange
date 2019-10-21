@@ -220,14 +220,21 @@ func (recorder *APTRecorder) saveFiles(ingestState *models.IngestState, obj *mod
 			recorder.buildGenericFileChecksums(gf, ingestState)
 			recorder.buildGenericFileEvents(gf, ingestState)
 
+			// Prior to 2019-10-14, files with non-zero ids where
+			// IngestPreviousVersionExists was false were incorrectly
+			// being put into newFiles. Non-zero Id with no previous
+			// version can occur when apt_record tries to record a
+			// partially-recorded ingest.
 			if gf.IngestPreviousVersionExists {
-				if gf.Id > 0 {
-					existingFiles = append(existingFiles, gf)
-				} else {
+				if gf.Id == 0 {
 					recorder.logMissingId(ingestState, gf)
 				}
-			} else if gf.Id == 0 {
+			}
+
+			if gf.Id == 0 {
 				newFiles = append(newFiles, gf)
+			} else {
+				existingFiles = append(existingFiles, gf)
 			}
 		}
 
@@ -276,9 +283,16 @@ func (recorder *APTRecorder) saveIntellectualObject(ingestState *models.IngestSt
 			"Pharos returned nil IntellectualObject after save.")
 		return
 	}
+	// For obj saved in BoltDB
 	obj.Id = savedObject.Id
 	obj.CreatedAt = savedObject.CreatedAt
 	obj.UpdatedAt = savedObject.UpdatedAt
+
+	// For logging, since we log from ingestState below
+	ingestState.IngestManifest.Object.Id = savedObject.Id
+	ingestState.IngestManifest.Object.CreatedAt = savedObject.CreatedAt
+	ingestState.IngestManifest.Object.UpdatedAt = savedObject.UpdatedAt
+
 	recorder.savePremisEventsForObject(ingestState, obj)
 }
 
@@ -336,12 +350,15 @@ func (recorder *APTRecorder) updateGenericFiles(ingestState *models.IngestState,
 		return
 	}
 	for _, gf := range files {
-		resp := recorder.Context.PharosClient.GenericFileSave(gf)
+		clonedGenericFile := CloneWithoutSavedChildren(gf)
+		resp := recorder.Context.PharosClient.GenericFileSave(clonedGenericFile)
 		if resp.Error != nil {
 			ingestState.IngestManifest.RecordResult.AddError(
 				"Error updating '%s': %v", gf.Identifier, resp.Error)
 			continue
 		}
+		// Pick up updated timestamps in response from Pharos.
+		gf = resp.GenericFile()
 		// Shouldn't need to call this. Should already have Id?
 		gf.PropagateIdsToChildren()
 	}
@@ -397,7 +414,23 @@ func (recorder *APTRecorder) deleteBagFromReceivingBucket(ingestState *models.In
 	ingestState.IngestManifest.CleanupResult.Start()
 	ingestState.IngestManifest.CleanupResult.Attempted = true
 	ingestState.IngestManifest.CleanupResult.AttemptNumber += 1
+
 	// Remove the bag from the receiving bucket, if ingest succeeded
+	if !recorder.bucketVersionMatchesCurrentVersion(ingestState) {
+		recorder.Context.MessageLog.Info(
+			"Skipping deletion of %s in WorkItem %d "+
+				"because the etag of the tar file in "+
+				"the receiving bucket does not match the etag of the bag "+
+				"just ingested. (Hint: depositor uploaded a new version "+
+				"during ingest and we'll need to ingest that next.)",
+			ingestState.IngestManifest.S3Key, ingestState.WorkItem.Id)
+		// Set deletion timestamp, so we know this method was called.
+		if obj != nil {
+			db.Save(obj.Identifier, obj)
+		}
+		ingestState.IngestManifest.CleanupResult.Finish()
+		return
+	}
 	if recorder.Context.Config.DeleteOnSuccess == false {
 		// We don't actually delete files if config is dev, test, or integration.
 		recorder.Context.MessageLog.Info("Skipping deletion step because config.DeleteOnSuccess == false")
@@ -459,6 +492,81 @@ func (recorder *APTRecorder) saveGenericFilesInBoltDB(ingestState *models.Ingest
 				gf.Identifier, err.Error())
 		}
 	}
+}
+
+// bucketVersionMatchesCurrentVersion returns true if the e-tag of a
+// bag (tar file) in the S3 receiving bucket matches the e-tag of the
+// bag we're currently working on. When the tags match, we can safely
+// delete the tar file from the receiving bucket.
+//
+// The problematic case we're trying to avoid is when a depositor has
+// uploaded a new version of an existing bag WHILE we're still ingesting
+// an older version. In that case, the proper thing to do is to finish
+// ingesting the old version and then ingest the new one. We cannot ingest
+// the new one if this code deletes it from the receiving bucket.
+//
+// If the version in the receiving bucket does not match the version we
+// just ingested, let's not delete it from the receiving bucket, because
+// we will probably start ingesting it soon.
+//
+// Part of https://trello.com/c/GLURkoKW
+func (recorder *APTRecorder) bucketVersionMatchesCurrentVersion(ingestState *models.IngestState) bool {
+	eTagMatches := false
+	s3ObjectList := network.NewS3ObjectList(
+		os.Getenv("AWS_ACCESS_KEY_ID"),
+		os.Getenv("AWS_SECRET_ACCESS_KEY"),
+		constants.AWSVirginia,
+		ingestState.IngestManifest.S3Bucket,
+		int64(100),
+	)
+	s3ObjectList.GetList(ingestState.IngestManifest.S3Key)
+
+	if s3ObjectList.ErrorMessage != "" {
+		recorder.Context.MessageLog.Warning(
+			"Error checking receiving bucket %s for key %s: %s",
+			ingestState.IngestManifest.S3Bucket,
+			ingestState.IngestManifest.S3Key,
+			s3ObjectList.ErrorMessage)
+	}
+	// There can really only be one object with this key,
+	// but we loop in case someone uploaded an object whose
+	// name starts with this key.
+	for _, s3Object := range s3ObjectList.Response.Contents {
+		if *s3Object.Key == ingestState.IngestManifest.S3Key &&
+			strings.Replace(*s3Object.ETag, "\"", "", -1) == ingestState.WorkItem.ETag {
+			eTagMatches = true
+			break
+		}
+	}
+	return eTagMatches
+}
+
+// CloneWithoutSavedChildren returns a clone of the GenericFile,
+// minus any Checksums and PremisEvents that have already been
+// saved to Pharos. Items saved to Pharos have a non-zero numeric
+// id. PremisEvents and Checksums are read-only once created.
+// They cannot be updated, and if we try, Pharos will return an error.
+// This function is part of the fix to https://trello.com/c/jQvPXa10,
+// "Handle re-recording of partially failed ingest data"
+func CloneWithoutSavedChildren(gf *models.GenericFile) *models.GenericFile {
+	clone := gf.Clone()
+	unsavedEvents := make([]*models.PremisEvent, 0)
+	for _, event := range clone.PremisEvents {
+		if event.Id == 0 {
+			unsavedEvents = append(unsavedEvents, event)
+		}
+	}
+	unsavedChecksums := make([]*models.Checksum, 0)
+	for _, cs := range clone.Checksums {
+		if cs.Id == 0 {
+			unsavedChecksums = append(unsavedChecksums, cs)
+		}
+	}
+
+	clone.PremisEvents = unsavedEvents
+	clone.Checksums = unsavedChecksums
+
+	return clone
 }
 
 // --------- Messages --------------

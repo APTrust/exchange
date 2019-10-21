@@ -234,22 +234,22 @@ func MakeWorkItem() *models.WorkItem {
 		Id:                    rand.Intn(50000) + 1,
 		ObjectIdentifier:      RandomObjectIdentifier(),
 		GenericFileIdentifier: "",
-		Name:             fake.Word(),
-		Bucket:           "aptrust.receiving.virginia.edu",
-		ETag:             fake.Word(),
-		BagDate:          RandomDateTime(),
-		InstitutionId:    rand.Intn(50000) + 1,
-		User:             fake.EmailAddress(),
-		Date:             RandomDateTime(),
-		Note:             fake.Sentence(),
-		Action:           RandomAction(),
-		Stage:            RandomStage(),
-		Status:           RandomStatus(),
-		Outcome:          fake.Sentence(),
-		Retry:            true,
-		Node:             fake.Word(),
-		Pid:              rand.Intn(50000) + 1,
-		NeedsAdminReview: false,
+		Name:                  fake.Word(),
+		Bucket:                "aptrust.receiving.virginia.edu",
+		ETag:                  fake.Word(),
+		BagDate:               RandomDateTime(),
+		InstitutionId:         rand.Intn(50000) + 1,
+		User:                  fake.EmailAddress(),
+		Date:                  RandomDateTime(),
+		Note:                  fake.Sentence(),
+		Action:                RandomAction(),
+		Stage:                 RandomStage(),
+		Status:                RandomStatus(),
+		Outcome:               fake.Sentence(),
+		Retry:                 true,
+		Node:                  fake.Word(),
+		Pid:                   rand.Intn(50000) + 1,
+		NeedsAdminReview:      false,
 	}
 }
 
@@ -261,27 +261,6 @@ func MakeWorkItemState() *models.WorkItemState {
 		State:      `{"key1":"value1","key2":"value2"}`,
 		CreatedAt:  RandomDateTime(),
 		UpdatedAt:  time.Now().UTC(),
-	}
-}
-
-func MakeDPNWorkItem() *models.DPNWorkItem {
-	_uuid := uuid.NewV4()
-	queuedAt := RandomDateTime()
-	createdAt := RandomDateTime()
-	note := fake.Sentence()
-	return &models.DPNWorkItem{
-		Id:          rand.Intn(50000) + 1,
-		RemoteNode:  fake.Word(),
-		Task:        RandomFromList(constants.DPNTaskTypes),
-		Identifier:  _uuid.String(),
-		QueuedAt:    &queuedAt,
-		CompletedAt: nil,
-		Note:        &note,
-		Retry:       true,
-		Stage:       constants.StageRequested,
-		Status:      constants.StatusPending,
-		CreatedAt:   createdAt,
-		UpdatedAt:   createdAt,
 	}
 }
 
@@ -315,24 +294,6 @@ func MakeStoredFile() *models.StoredFile {
 		CreatedAt:    now,
 		UpdatedAt:    now,
 		DeletedAt:    now,
-	}
-}
-
-func MakePharosDPNBag() *models.PharosDPNBag {
-	nodes := []string{"aptrust", "chron", "hathi", "sdr", "tdr"}
-	return &models.PharosDPNBag{
-		Id:               rand.Intn(50000) + 1,
-		InstitutionId:    rand.Intn(20) + 1,
-		ObjectIdentifier: RandomObjectIdentifier(),
-		DPNIdentifier:    uuid.NewV4().String(),
-		DPNSize:          uint64(rand.Intn(50000000) + 1),
-		Node1:            RandomFromList(nodes),
-		Node2:            RandomFromList(nodes),
-		Node3:            RandomFromList(nodes),
-		DPNCreatedAt:     RandomDateTime(),
-		DPNUpdatedAt:     RandomDateTime(),
-		CreatedAt:        RandomDateTime(),
-		UpdatedAt:        RandomDateTime(),
 	}
 }
 

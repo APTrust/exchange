@@ -50,3 +50,16 @@ func (checksum *Checksum) SerializeForPharos() ([]byte, error) {
 	dataStruct["checksum"] = pharosObj
 	return json.Marshal(dataStruct)
 }
+
+// Clone returns an exact clone of this Checksum object, including the Id.
+func (checksum *Checksum) Clone() *Checksum {
+	return &Checksum{
+		Id:            checksum.Id,
+		GenericFileId: checksum.GenericFileId,
+		Algorithm:     checksum.Algorithm,
+		DateTime:      checksum.DateTime,
+		Digest:        checksum.Digest,
+		CreatedAt:     checksum.CreatedAt,
+		UpdatedAt:     checksum.UpdatedAt,
+	}
+}

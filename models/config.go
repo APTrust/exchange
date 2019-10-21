@@ -89,9 +89,6 @@ type Config struct {
 	// The name of the AWS region that hosts APTrust's S3 files.
 	APTrustS3Region string
 
-	// Config options specific to DPN services.
-	DPN DPNConfig
-
 	// Configuration options for apt_bag_delete
 	BagDeleteWorker WorkerConfig
 
@@ -104,8 +101,6 @@ type Config struct {
 	BagItEncoding string
 
 	// Location of the config file for bag validation.
-	// Config will differ for APTrust and DPN. This is
-	// for the APTrust config file.
 	BagValidationConfigFile string
 
 	// The bucket reader checks for new items in the receiving
@@ -286,10 +281,10 @@ type Config struct {
 	// UseVolumeService describes whether to use volume_service or
 	// to try to reserve disk space before downloading and processing
 	// bags. You'll want to use this service on systems with a fixed
-	// amount of disk space, so that APTrust and DPN services don't
+	// amount of disk space, so that APTrust services don't
 	// try to download bags that won't fit in the remaining disk space.
-	// When this is on, and the volume_service is running, APTrust and
-	// DPN services will simply reque items that require more disk space
+	// When this is on, and the volume_service is running, APTrust
+	// services will simply reque items that require more disk space
 	// than is currently available. UseVolumeService should be false
 	// (off) when using Amazon's EFS volumes because querying EFS volumes
 	// for available space often returns an error, and that causes items
@@ -383,22 +378,6 @@ func (config *Config) ExpandFilePaths() {
 	if err == nil {
 		config.ReplicationDirectory = expanded
 	}
-	expanded, err = fileutil.ExpandTilde(config.DPN.StagingDirectory)
-	if err == nil {
-		config.DPN.StagingDirectory = expanded
-	}
-	expanded, err = fileutil.ExpandTilde(config.DPN.DPNRestorationDirectory)
-	if err == nil {
-		config.DPN.DPNRestorationDirectory = expanded
-	}
-	expanded, err = fileutil.ExpandTilde(config.DPN.RemoteNodeHomeDirectory)
-	if err == nil {
-		config.DPN.RemoteNodeHomeDirectory = expanded
-	}
-	expanded, err = fileutil.ExpandTilde(config.DPN.LogDirectory)
-	if err == nil {
-		config.DPN.LogDirectory = expanded
-	}
 
 	// Convert bag validation config files from relative to absolute paths.
 	absPath, _ := filepath.Abs(config.BagValidationConfigFile)
@@ -406,13 +385,6 @@ func (config *Config) ExpandFilePaths() {
 		expanded, err = fileutil.RelativeToAbsPath(config.BagValidationConfigFile)
 		if err == nil {
 			config.BagValidationConfigFile = expanded
-		}
-	}
-	absPath, _ = filepath.Abs(config.DPN.BagValidationConfigFile)
-	if absPath != config.DPN.BagValidationConfigFile {
-		expanded, err = fileutil.RelativeToAbsPath(config.DPN.BagValidationConfigFile)
-		if err == nil {
-			config.DPN.BagValidationConfigFile = expanded
 		}
 	}
 }
@@ -454,22 +426,10 @@ func (config *Config) createDirectories() error {
 			return err
 		}
 	}
-	// TODO: Test these two
-	if config.DPN.LogDirectory != "" && !fileutil.FileExists(config.DPN.LogDirectory) {
-		err := os.MkdirAll(config.DPN.LogDirectory, 0755)
-		if err != nil {
-			return err
-		}
-	}
-	if config.DPN.StagingDirectory != "" && !fileutil.FileExists(config.DPN.StagingDirectory) {
-		err := os.MkdirAll(config.DPN.StagingDirectory, 0755)
-		if err != nil {
-			return err
-		}
-	}
 	return nil
 }
 
+// TODO: Remove in favor of methods below that return maps.
 func (config *Config) StorageRegionAndBucketFor(storageOption string) (region string, bucket string, err error) {
 	if storageOption == constants.StorageStandard {
 		region = config.APTrustS3Region
@@ -496,6 +456,36 @@ func (config *Config) StorageRegionAndBucketFor(storageOption string) (region st
 		err = fmt.Errorf("Unknown Storage Option: %s", storageOption)
 	}
 	return region, bucket, err
+}
+
+func (config *Config) ActiveAWSStorageRegions() map[string]string {
+	return map[string]string{
+		constants.StorageStandard:      config.APTrustS3Region,
+		constants.StorageGlacierVA:     config.GlacierRegionVA,
+		constants.StorageGlacierOH:     config.GlacierRegionOH,
+		constants.StorageGlacierOR:     config.GlacierRegionOR,
+		constants.StorageGlacierDeepVA: config.GlacierRegionVA,
+		constants.StorageGlacierDeepOH: config.GlacierRegionOH,
+		constants.StorageGlacierDeepOR: config.GlacierRegionOR,
+	}
+}
+
+func (config *Config) AWSS3Buckets() map[string]string {
+	return map[string]string{
+		constants.StorageStandard: config.PreservationBucket,
+	}
+}
+
+func (config *Config) AWSGlacierBuckets() map[string]string {
+	return map[string]string{
+		constants.StorageStandard:      config.ReplicationBucket,
+		constants.StorageGlacierVA:     config.GlacierBucketVA,
+		constants.StorageGlacierOH:     config.GlacierBucketOH,
+		constants.StorageGlacierOR:     config.GlacierBucketOR,
+		constants.StorageGlacierDeepVA: config.GlacierDeepBucketVA,
+		constants.StorageGlacierDeepOH: config.GlacierDeepBucketOH,
+		constants.StorageGlacierDeepOR: config.GlacierDeepBucketOR,
+	}
 }
 
 // TestsAreRunning returns true if we're running unit or integration
@@ -526,160 +516,4 @@ func (config *Config) GetAWSSecretAccessKey() string {
 		secretKey = "TestSecretKey"
 	}
 	return secretKey
-}
-
-// DefaultMetadata includes mostly static information about bags
-// that APTrust packages for DPN.
-type DefaultMetadata struct {
-	Comment                string
-	BagItVersion           string
-	BagItEncoding          string
-	IngestNodeName         string
-	IngestNodeAddress      string
-	IngestNodeContactName  string
-	IngestNodeContactEmail string
-}
-
-// Config options for our DPN REST client.
-type RestClientConfig struct {
-	Comment         string
-	LocalServiceURL string
-	LocalAPIRoot    string
-	LocalAuthToken  string
-}
-
-type DPNConfig struct {
-	// Should we accept self-signed and otherwise invalid SSL
-	// certificates? We need to do this in testing, but it
-	// should not be allowed in production. Bools in Go default
-	// to false, so if this is not set in config, we should be
-	// safe.
-	AcceptInvalidSSLCerts bool
-
-	// Location of the config file for bag validation.
-	// Config will differ for APTrust and DPN. This is
-	// for the DPN config file.
-	BagValidationConfigFile string
-
-	// Default metadata that goes into bags produced at our node.
-	DefaultMetadata DefaultMetadata
-
-	// DPNAPIVersion is the current version of the DPN REST API.
-	// This should be a string in the format api-v1, api-v2, etc.
-	DPNAPIVersion string
-
-	// The name of the AWS region that hosts DPN's Glacier files.
-	DPNGlacierRegion string
-
-	// DPNCopyWorker copies tarred bags from other nodes into our
-	// DPN staging area, so we can replication them. Currently,
-	// copying is done by rsync over ssh.
-	DPNCopyWorker WorkerConfig
-
-	// DPNFixityWorker processes requests to run fixity checks on
-	// bags that have been copied from Glacier through S3 into
-	// local storage.
-	DPNFixityWorker WorkerConfig
-
-	// DPNGlacierRestoreWorker processes requests to move files
-	// from Glacier storage to S3 storage.
-	DPNGlacierRestoreWorker WorkerConfig
-
-	// DPNIngestStoreWorker copies DPN bags ingested from APTrust
-	// to AWS Glacier.
-	DPNIngestStoreWorker WorkerConfig
-
-	// DPNPackageWorker packages APTrust IntellectualObjects into
-	// DPN bags, so they can be ingested into DPN.
-	DPNPackageWorker WorkerConfig
-
-	// The name of the long-term storage bucket for DPN.
-	// This is, in effect, a Glacier bucket. (S3 with a
-	// move-to-Glacier policy.)
-	DPNPreservationBucket string
-
-	// The name of the bucket into which we restore DPN items
-	// for retrieval and fixity checking. This is an S3 bucket.
-	DPNRestorationBucket string
-
-	// DPNIngestRecordWorker records DPN ingest events in Pharos
-	// and in the DPN REST server.
-	DPNIngestRecordWorker WorkerConfig
-
-	// DPNReplicationStoreWorker copies DPN bags replicated from
-	// other nodes to AWS Glacier.
-	DPNReplicationStoreWorker WorkerConfig
-
-	// DPNRestoreWorker processed RestoreTransfer requests.
-	DPNRestoreWorker WorkerConfig
-
-	// DPNS3DownloadWorker processes requests to move files
-	// from S3 to local storage. These files have previously
-	// been moved from Glacier to S3 by the DPNGlacierRestoreWorker.
-	// We do the downlad from S3 to local before checking fixity,
-	// which in DPN requires us to parse and validate the entire
-	// tarred bag, then calculate the sha256 checksum of the bag's
-	// tag manifest.
-	DPNS3DownloadWorker WorkerConfig
-
-	// DPNValidationWorker validates DPN bags that we are replicating
-	// from other nodes.
-	DPNValidationWorker WorkerConfig
-
-	// LocalNode is the namespace of the node this code is running on.
-	// E.g. "aptrust", "chron", "hathi", "tdr", "sdr"
-	LocalNode string
-
-	// Where should DPN service logs go?
-	LogDirectory string
-
-	// Log level (4 = debug)
-	LogLevel logging.Level
-
-	// Should we log to Stderr in addition to writing to
-	// the log file?
-	LogToStderr bool
-
-	// RemoteNodeHomeDirectory is the prefix to the home directory
-	// for remote DPN nodes that connect to our node via rsync/ssh.
-	// On demo and production, this should be "/home". The full home
-	// directory for a user like tdr  would be "/home/dpn.tdr".
-	// On a local dev or test machine,this can be any path the user
-	// has full read/write access to.
-	RemoteNodeHomeDirectory string
-
-	// Number of nodes we should replicate bags to.
-	ReplicateToNumNodes int
-
-	// Settings for connecting to our own REST service
-	RestClient RestClientConfig
-
-	// RemoteNodeAdminTokensForTesting are used in integration
-	// tests only, when we want to perform admin-only operations,
-	// such as creating bags and replication requests on a remote
-	// node in the test cluster.
-	RemoteNodeAdminTokensForTesting map[string]string
-
-	// API Tokens for connecting to remote nodes
-	RemoteNodeTokens map[string]string
-
-	// URLs for remote nodes. Set these only if you want to
-	// override the node URLs we get back from our local
-	// DPN REST server.
-	RemoteNodeURLs map[string]string
-
-	// The local directory for DPN staging. We store DPN bags
-	// here while they await transfer to the DPN preservation
-	// bucket and while they await replication to other nodes.
-	StagingDirectory string
-
-	// The local directory for bag restoration. We download bags
-	// into this directory for DPN fixity checking, which requires
-	// full parsing and validation of the entire bag.
-	DPNRestorationDirectory string
-
-	// When copying bags from remote nodes, should we use rsync
-	// over SSH (true) or just plain rsync (false)? For local
-	// integration testing, this should be false.
-	UseSSHWithRsync bool
 }
