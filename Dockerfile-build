@@ -6,7 +6,7 @@ FROM golang:1.13.3-alpine3.10 as builder
 
 RUN apk update && \
     apk add --no-cache libmagic file-dev g++ make build-base \
-    imagemagick-dev bash
+    imagemagick-dev bash git
 
 ENV APP_PATH=/go/src/github.com/APTrust/exchange
 
@@ -14,9 +14,8 @@ RUN mkdir -p $APP_PATH
 WORKDIR $APP_PATH
 
 COPY . .
-# TODO: Runs go get to get all dependencies as well. Should use glide since
-# deps are already stored in the repo.
-#RUN go get -v github.com/APTrust/exchange/...
+RUN go mod download
+#RUN go get -v ...
 RUN go install -a github.com/APTrust/exchange/apps/...
 
 FROM alpine:latest
