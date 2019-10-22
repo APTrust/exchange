@@ -64,7 +64,7 @@ func run(_context *context.Context, identifierLike string, maxFiles int) {
 		resp := _context.PharosClient.GenericFileList(params)
 		if resp.Error != nil {
 			fmt.Fprintln(os.Stderr,
-				"Error getting GenericFile list from Pharos: %s",
+				"Error getting GenericFile list from Pharos: ",
 				resp.Error)
 			fmt.Fprintln(os.Stderr, resp.Request.URL)
 		}
