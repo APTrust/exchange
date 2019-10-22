@@ -34,8 +34,8 @@ revision: ## Show me the git hash
 
 build: ## Build the Exchange containers
 ifdef TRAVIS
-		@echo CI environment detected.
-		BRANCH=$(PUSHBRANCH)
+		@echo TRAVIS CI environment detected.
+		BRANCH:=$(PUSHBRANCH)
 endif
 	@for app in $(APP_LIST:apps/%=%); do \
 		echo $$app; \
