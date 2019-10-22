@@ -32,7 +32,7 @@ To add or update a module, add/update the go.mod file, then run `go mod tidy` to
 ## Unit Testing
 
 ```
-go test ./...
+go test \`go list ./... | grep -v integration\`
 ```
 or, if you have ruby installed
 ```
