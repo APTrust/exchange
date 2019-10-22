@@ -14,7 +14,7 @@ jobs:
   include:
     - stage: test
       script: go test ./...
-    - stage: build_and_deploy
+    - stage: build_and_publish
       script: make -w release-ci
       #deploy:
       #  - provider: script
