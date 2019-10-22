@@ -34,12 +34,12 @@ revision: ## Show me the git hash
 
 build: ## Build the Exchange containers
 ifdef TRAVIS
-		@echo TRAVIS CI environment detected.
-		BRANCH:=$(PUSHBRANCH)
+	@echo "TRAVIS CI environment detected."
+override BRANCH=$(PUSHBRANCH)
 endif
 	@for app in $(APP_LIST:apps/%=%); do \
 		echo $$app; \
-		docker build --build-arg EX_SERVICE=$$app -t aptrust/$(NAME)_$$app -t $(NAME)_$$app:$(REVISION) -t $(REGISTRY)/$(REPOSITORY)/$(NAME)_$$app:$(REVISION)-$(BRANCH) -f Dockerfile-build .; \
+		echo docker build --build-arg EX_SERVICE=$$app -t aptrust/$(NAME)_$$app -t $(NAME)_$$app:$(REVISION) -t $(REGISTRY)/$(REPOSITORY)/$(NAME)_$$app:$(REVISION)-$(BRANCH) -f Dockerfile-build .; \
 	done
 
 up: ## Start Exchange+NSQ containers
