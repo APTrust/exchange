@@ -33,6 +33,10 @@ revision: ## Show me the git hash
 	@echo "Branch: ${BRANCH}"
 
 build: ## Build the Exchange containers
+ifdef TRAVIS
+		@echo CI environment detected.
+		BRANCH=$(PUSHBRANCH)
+endif
 	@for app in $(APP_LIST:apps/%=%); do \
 		echo $$app; \
 		docker build --build-arg EX_SERVICE=$$app -t aptrust/$(NAME)_$$app -t $(NAME)_$$app:$(REVISION) -t $(REGISTRY)/$(REPOSITORY)/$(NAME)_$$app:$(REVISION)-$(BRANCH) -f Dockerfile-build .; \
