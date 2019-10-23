@@ -712,3 +712,27 @@ func (gf *GenericFile) PropagateIdsToChildren() {
 		checksum.GenericFileId = gf.Id
 	}
 }
+
+// ----------------------------------------------------------------------
+// MINIO REFACTOR ...
+// ----------------------------------------------------------------------
+
+func (gf *GenericFile) GetS3Metadata() (metadata map[string]string, err error) {
+	var instIdentifier string
+	instIdentifier, err = gf.InstitutionIdentifier()
+	if err != nil {
+		return metadata, fmt.Errorf("Can't get institution identifier: %s", err.Error())
+	}
+	if gf.IngestMd5 == "" {
+		return metadata, fmt.Errorf("Ingest md5 is missing. (It's only present while file is in the ingest process.)")
+	}
+	if gf.IngestSha256 == "" {
+		return metadata, fmt.Errorf("Ingest sha256 is missing. (It's only present while file is in the ingest process.)")
+	}
+	metadata["institution"] = instIdentifier
+	metadata["bag"] = gf.IntellectualObjectIdentifier
+	metadata["bagpath"] = gf.OriginalPath()
+	metadata["md5"] = gf.IngestMd5
+	metadata["sha256"] = gf.IngestSha256
+	return metadata, err
+}

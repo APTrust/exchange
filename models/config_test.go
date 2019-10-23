@@ -135,6 +135,23 @@ func TestStorageRegionAndBucketFor(t *testing.T) {
 	assert.True(t, strings.Contains(err.Error(), "Unknown Storage Option"))
 }
 
+func TestReplicationRegionAndBucketFor(t *testing.T) {
+	configFile := filepath.Join("config", "test.json")
+	config, err := models.LoadConfigFile(configFile)
+	require.Nil(t, err)
+
+	region, bucket, err := config.ReplicationRegionAndBucketFor(constants.StorageStandard)
+	assert.Equal(t, config.APTrustS3Region, region)
+	assert.Equal(t, config.ReplicationBucket, bucket)
+	assert.Nil(t, err)
+
+	region, bucket, err = config.ReplicationRegionAndBucketFor("Spongebob")
+	assert.Equal(t, "", region)
+	assert.Equal(t, "", bucket)
+	require.NotNil(t, err)
+	assert.True(t, strings.Contains(err.Error(), "No replication bucket for Storage Option"))
+}
+
 func TestTestsAreRunning(t *testing.T) {
 	configFile := filepath.Join("config", "test.json")
 	config, err := models.LoadConfigFile(configFile)

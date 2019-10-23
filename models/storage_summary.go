@@ -2,6 +2,7 @@ package models
 
 import (
 	"fmt"
+	"github.com/APTrust/exchange/constants"
 )
 
 // StorageSummary is a lightweight object built from
@@ -26,6 +27,8 @@ type StorageSummary struct {
 	// GenericFile is the file to be saved in S3/Glacier. The storage
 	// goroutine will update this object directly.
 	GenericFile *GenericFile
+	// StorageOption describes where the GenericFile should be stored.
+	StorageOptions []StorageOption
 }
 
 // NewStorageSummary creates a new StorageSummary object.
@@ -41,10 +44,42 @@ func NewStorageSummary(gf *GenericFile, tarPath, untarredPath string) (*StorageS
 	if tarPath == "" {
 		return nil, fmt.Errorf("Param tarPath cannot be empty")
 	}
+	storageOptions, err := GetStorageOptions(gf)
+	if err != nil {
+		return nil, err
+	}
 	return &StorageSummary{
-		StoreResult:  NewWorkSummary(),
-		GenericFile:  gf,
-		TarFilePath:  tarPath,
-		UntarredPath: untarredPath,
+		StoreResult:    NewWorkSummary(),
+		GenericFile:    gf,
+		TarFilePath:    tarPath,
+		UntarredPath:   untarredPath,
+		StorageOptions: storageOptions,
 	}, nil
+}
+
+// ----------------------------------------------------------------------
+// MINIO REFACTOR ...
+// ----------------------------------------------------------------------
+
+// NEEDS TEST
+func GetStorageOptions(gf *GenericFile) (storageOpts []StorageOption, err error) {
+	if gf.StorageOption == constants.StorageStandard {
+		s3, err := GetStorageOption("Standard-S3")
+		if err != nil {
+			return nil, err
+		}
+		glacier, err := GetStorageOption("Standard-Glacier")
+		if err != nil {
+			return nil, err
+		}
+		storageOpts = append(storageOpts, s3)
+		storageOpts = append(storageOpts, glacier)
+	} else {
+		storageOpt, err := GetStorageOption(gf.StorageOption)
+		if err != nil {
+			return nil, err
+		}
+		storageOpts = append(storageOpts, storageOpt)
+	}
+	return storageOpts, err
 }

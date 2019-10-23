@@ -458,6 +458,16 @@ func (config *Config) StorageRegionAndBucketFor(storageOption string) (region st
 	return region, bucket, err
 }
 
+func (config *Config) ReplicationRegionAndBucketFor(storageOption string) (region string, bucket string, err error) {
+	if storageOption == constants.StorageStandard {
+		region = config.APTrustS3Region
+		bucket = config.ReplicationBucket
+	} else {
+		err = fmt.Errorf("No replication bucket for Storage Option: %s", storageOption)
+	}
+	return region, bucket, err
+}
+
 func (config *Config) ActiveAWSStorageRegions() map[string]string {
 	return map[string]string{
 		constants.StorageStandard:      config.APTrustS3Region,

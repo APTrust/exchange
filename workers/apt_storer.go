@@ -10,6 +10,7 @@ import (
 	"github.com/APTrust/exchange/util/fileutil"
 	"github.com/APTrust/exchange/util/storage"
 	"github.com/aws/aws-sdk-go/service/s3"
+	"github.com/minio/minio-go"
 	"github.com/nsqio/go-nsq"
 	"io"
 	"net/http"
@@ -44,12 +45,14 @@ type APTStorer struct {
 	CleanupChannel chan *models.IngestState
 	RecordChannel  chan *models.IngestState
 	SyncMap        *models.SynchronizedMap
+	ClientMap      map[string]*minio.Client
 }
 
 func NewAPTStorer(_context *context.Context) *APTStorer {
 	storer := &APTStorer{
-		Context: _context,
-		SyncMap: models.NewSynchronizedMap(),
+		Context:   _context,
+		SyncMap:   models.NewSynchronizedMap(),
+		ClientMap: make(map[string]*minio.Client),
 	}
 
 	// Set up buffered channels
@@ -1052,3 +1055,54 @@ func (storer *APTStorer) logFinishedStoring(ingestState *models.IngestState) {
 		ingestState.WorkItem.Id, ingestState.WorkItem.Bucket,
 		ingestState.WorkItem.Name)
 }
+
+// ----------------------------------------------------------------------
+// MINIO REFACTOR ...
+// ----------------------------------------------------------------------
+
+// NEEDS TEST
+func (storer *APTStorer) GetS3Client(storageOption models.StorageOption) (client *minio.Client, err error) {
+	var clientExists bool
+	client, clientExists = storer.ClientMap[storageOption.Endpoint]
+	if !clientExists {
+		client, err = minio.New(
+			storageOption.Endpoint,
+			os.Getenv(storageOption.EnvKeyIdName),
+			os.Getenv(storageOption.EnvSecretKeyName),
+			storageOption.UseSSL)
+		if err == nil {
+			storer.ClientMap[storageOption.Endpoint] = client
+		}
+	}
+	return client, err
+}
+
+// NEEDS TEST
+func (storer *APTStorer) GetUploadOptions(storageSummary *models.StorageSummary, storageOption models.StorageOption) (option minio.PutObjectOptions) {
+	metadata, err := storageSummary.GenericFile.GetS3Metadata()
+	if err != nil {
+		storer.ErrS3Metadata(storageSummary, err)
+	}
+	return minio.PutObjectOptions{
+		UserMetadata: metadata,
+		ContentType:  storageSummary.GenericFile.FileFormat,
+		StorageClass: storageOption.StorageClass,
+	}
+}
+
+// NEEDS TEST
+func (storer *APTStorer) ErrS3Metadata(storageSummary *models.StorageSummary, err error) {
+	storageSummary.StoreResult.AddError("Cannot get S3 metadata for %s: %s",
+		storageSummary.GenericFile.Identifier,
+		err.Error())
+	storageSummary.StoreResult.ErrorIsFatal = true
+}
+
+// NEEDS TEST
+// func (storer *APTStorer) ErrNoUploadTarget(storageSummary *models.StorageSummary, storageOptionName string) {
+// 	storageSummary.StoreResult.AddError("Cannot save %s because "+
+// 		"storer cannot find upload target for storage option '%s'",
+// 		storageSummary.GenericFile.Identifier,
+// 		storageSummary.GenericFile.StorageOption)
+// 	storageSummary.StoreResult.ErrorIsFatal = true
+// }
