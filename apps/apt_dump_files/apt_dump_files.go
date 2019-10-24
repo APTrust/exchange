@@ -39,7 +39,7 @@ func parseCommandLine() (configFile string, identifierLike string, maxFiles int)
 	maxFiles = 100
 	flag.StringVar(&configFile, "config", "", "Path to APTrust config file")
 	flag.StringVar(&identifierLike, "like", "", "Queue only files that have this string in identifier")
-	flag.IntVar(&maxFiles, "maxfiles", 100, "Maximum number of files to queue")
+	flag.IntVar(&maxFiles, "maxfiles", 100, "Maximum number of files to fetch")
 	flag.Parse()
 	if configFile == "" {
 		flag.PrintDefaults()
@@ -49,7 +49,7 @@ func parseCommandLine() (configFile string, identifierLike string, maxFiles int)
 }
 
 func run(_context *context.Context, identifierLike string, maxFiles int) {
-	perPage := util.Min(100, maxFiles)
+	perPage := util.Min(200, maxFiles)
 	params := url.Values{}
 	itemsAdded := 0
 	params.Set("include_relations", "true")
@@ -103,6 +103,7 @@ func writeCSV(gf *models.GenericFile) {
 		gf.FileModified.Format(time.RFC3339),
 		gf.CreatedAt.Format(time.RFC3339),
 		gf.UpdatedAt.Format(time.RFC3339),
+		gf.State,
 		md5Digest,
 		sha256Digest,
 	}
@@ -113,7 +114,7 @@ func writeCSVHeaders() {
 	headers := []string{
 		"id", "identifier", "intellectual_object_id", "intellectual_object_identifier",
 		"file_format", "uri", "size", "file_created", "file_modified", "created_at",
-		"updated_at", "md5", "sha256"}
+		"updated_at", "state", "md5", "sha256"}
 	writer.Write(headers)
 	writer.Flush()
 }
