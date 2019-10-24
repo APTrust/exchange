@@ -77,6 +77,7 @@ func (reader *APTBucketReader) cacheInstitutions() error {
 	if resp.Error != nil {
 		if reader.stats != nil {
 			reader.stats.AddError(resp.Error.Error())
+			reader.Context.MessageLog.Error(resp.Error.Error())
 		}
 		return resp.Error
 	}
