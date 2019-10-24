@@ -55,7 +55,7 @@ func run(_context *context.Context, identifierLike string, maxFiles int) {
 	params.Set("include_checksums", "true")
 	params.Set("institution_identifier", "aptrust.org")
 	params.Set("per_page", strconv.Itoa(perPage))
-	params.Set("sort", "created_at")
+	params.Set("sort", "date")
 	params.Set("page", "1")
 	if identifierLike != "" {
 		params.Set("identifier_like", identifierLike)
