@@ -52,10 +52,10 @@ func run(_context *context.Context, identifierLike string, maxFiles int) {
 	perPage := util.Min(200, maxFiles)
 	params := url.Values{}
 	itemsAdded := 0
-	params.Set("include_relations", "true")
+	params.Set("include_checksums", "true")
 	params.Set("institution_identifier", "aptrust.org")
 	params.Set("per_page", strconv.Itoa(perPage))
-	params.Set("sort", "created_at")
+	params.Set("sort", "date")
 	params.Set("page", "1")
 	if identifierLike != "" {
 		params.Set("identifier_like", identifierLike)
