@@ -118,8 +118,6 @@ func (storer *APTStorer) store() {
 	for ingestState := range storer.StorageChannel {
 
 		ingestState.IngestManifest.StoreResult.Start()
-		ingestState.IngestManifest.StoreResult.Attempted = true
-		ingestState.IngestManifest.StoreResult.AttemptNumber += 1
 
 		start := 0
 		limit := storer.Context.Config.StoreWorker.NetworkConnections

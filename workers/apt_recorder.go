@@ -88,8 +88,6 @@ func (recorder *APTRecorder) HandleMessage(message *nsq.Message) error {
 func (recorder *APTRecorder) record() {
 	for ingestState := range recorder.RecordChannel {
 		ingestState.IngestManifest.RecordResult.Start()
-		ingestState.IngestManifest.RecordResult.Attempted = true
-		ingestState.IngestManifest.RecordResult.AttemptNumber += 1
 		recorder.saveAllPharosData(ingestState)
 		recorder.CleanupChannel <- ingestState
 	}
@@ -412,8 +410,6 @@ func (recorder *APTRecorder) deleteBagFromReceivingBucket(ingestState *models.In
 	}
 
 	ingestState.IngestManifest.CleanupResult.Start()
-	ingestState.IngestManifest.CleanupResult.Attempted = true
-	ingestState.IngestManifest.CleanupResult.AttemptNumber += 1
 
 	// Remove the bag from the receiving bucket, if ingest succeeded
 	if !recorder.bucketVersionMatchesCurrentVersion(ingestState) {

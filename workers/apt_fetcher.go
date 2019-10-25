@@ -175,8 +175,6 @@ func (fetcher *APTFetcher) fetch() {
 		ingestState.TouchNSQ()
 
 		ingestState.IngestManifest.FetchResult.Start()
-		ingestState.IngestManifest.FetchResult.Attempted = true
-		ingestState.IngestManifest.FetchResult.AttemptNumber += 1
 
 		obj, err := fetcher.downloadFile(ingestState)
 

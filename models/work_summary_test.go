@@ -21,8 +21,12 @@ func TestNewResult(t *testing.T) {
 func TestResultStart(t *testing.T) {
 	s := models.NewWorkSummary()
 	assert.True(t, s.StartedAt.IsZero())
+	assert.EqualValues(t, 0, s.AttemptNumber)
+	assert.False(t, s.Attempted)
 	s.Start()
 	assert.False(t, s.StartedAt.IsZero())
+	assert.EqualValues(t, 1, s.AttemptNumber)
+	assert.True(t, s.Attempted)
 }
 
 func TestResultStarted(t *testing.T) {

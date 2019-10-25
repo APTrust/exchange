@@ -65,6 +65,8 @@ func NewWorkSummary() *WorkSummary {
 
 func (summary *WorkSummary) Start() {
 	summary.StartedAt = time.Now().UTC()
+	summary.Attempted = true
+	summary.AttemptNumber += 1
 }
 
 func (summary *WorkSummary) Started() bool {

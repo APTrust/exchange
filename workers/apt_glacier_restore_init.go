@@ -116,8 +116,6 @@ func (restorer *APTGlacierRestoreInit) GetGlacierRestoreState(message *nsq.Messa
 func (restorer *APTGlacierRestoreInit) RequestRestore() {
 	for state := range restorer.RequestChannel {
 		state.WorkSummary.ClearErrors()
-		state.WorkSummary.Attempted = true
-		state.WorkSummary.AttemptNumber += 1
 		state.WorkSummary.Start()
 
 		if state.WorkItem.GenericFileIdentifier != "" {

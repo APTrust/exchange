@@ -98,8 +98,6 @@ func (deleter *APTFileDeleter) HandleMessage(message *nsq.Message) error {
 // A simple delete operation should not require this much ugly logic.
 func (deleter *APTFileDeleter) delete() {
 	for deleteState := range deleter.DeleteChannel {
-		deleteState.DeleteSummary.Attempted = true
-		deleteState.DeleteSummary.AttemptNumber += 1
 		deleteState.DeleteSummary.Start()
 
 		fileUUID, err := deleteState.GenericFile.PreservationStorageFileName()

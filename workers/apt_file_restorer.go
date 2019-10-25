@@ -66,8 +66,6 @@ func (restorer *APTFileRestorer) HandleMessage(message *nsq.Message) error {
 
 func (restorer *APTFileRestorer) restore() {
 	for restoreState := range restorer.RestoreChannel {
-		restoreState.RestoreSummary.Attempted = true
-		restoreState.RestoreSummary.AttemptNumber += 1
 		restoreState.RestoreSummary.Start()
 
 		if restorer.alreadyRestored(restoreState) {

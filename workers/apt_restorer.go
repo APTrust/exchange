@@ -138,8 +138,6 @@ func (restorer *APTRestorer) HandleMessage(message *nsq.Message) error {
 func (restorer *APTRestorer) buildBag() {
 	for restoreState := range restorer.PackageChannel {
 		restoreState.TouchNSQ()
-		restoreState.PackageSummary.Attempted = true
-		restoreState.PackageSummary.AttemptNumber += 1
 		restoreState.PackageSummary.Start()
 
 		// Download all of the IntellectualObject's files to the
@@ -188,8 +186,6 @@ func (restorer *APTRestorer) buildBag() {
 func (restorer *APTRestorer) validateBag() {
 	for restoreState := range restorer.ValidateChannel {
 		restoreState.TouchNSQ()
-		restoreState.ValidateSummary.Attempted = true
-		restoreState.ValidateSummary.AttemptNumber += 1
 		restoreState.ValidateSummary.Start()
 		validator, err := validation.NewValidator(
 			restoreState.LocalTarFile,
@@ -233,8 +229,6 @@ func (restorer *APTRestorer) validateBag() {
 func (restorer *APTRestorer) copyToRestorationBucket() {
 	for restoreState := range restorer.CopyChannel {
 		restoreState.TouchNSQ()
-		restoreState.CopySummary.Attempted = true
-		restoreState.CopySummary.AttemptNumber += 1
 		restoreState.CopySummary.Start()
 		restorer.uploadBag(restoreState)
 		restoreState.CopySummary.Finish()
@@ -279,8 +273,6 @@ func (restorer *APTRestorer) finishWithError(restoreState *models.RestoreState) 
 	// 2) inability to fetch all of the bag's files, 3) inability to
 	// create a valid bag.
 	if restoreState.HasFatalErrors() || restoreState.CancelReason != "" {
-		restoreState.RecordSummary.Attempted = true
-		restoreState.RecordSummary.AttemptNumber += 1
 		restoreState.RecordSummary.Start()
 		restorer.deleteBagDir(restoreState)
 		mostRecentSummary.Retry = false
@@ -328,8 +320,6 @@ func (restorer *APTRestorer) finishWithError(restoreState *models.RestoreState) 
 }
 
 func (restorer *APTRestorer) finishWithSuccess(restoreState *models.RestoreState) {
-	restoreState.RecordSummary.Attempted = true
-	restoreState.RecordSummary.AttemptNumber += 1
 	restoreState.RecordSummary.Start()
 	message := fmt.Sprintf("Bag %s restored to %s",
 		restoreState.WorkItem.ObjectIdentifier,

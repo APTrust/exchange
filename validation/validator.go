@@ -146,8 +146,6 @@ func (validator *Validator) Validate() (*models.WorkSummary, error) {
 	defer db.Close()
 	validator.db = db
 	validator.summary.Start()
-	validator.summary.Attempted = true
-	validator.summary.AttemptNumber += 1
 	validator.readBag()
 	validator.verifyManifestPresent()
 	validator.verifyTopLevelFolder()
