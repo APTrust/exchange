@@ -18,6 +18,12 @@ type IngestState struct {
 	WorkItem       *WorkItem
 	WorkItemState  *WorkItemState
 	IngestManifest *IngestManifest
+
+	// RequeueDelay is the number of milliseconds NSQ should delay before
+	// sending this message to a worker. We use this in apt_storer.go
+	// when we have to requeue a high-resource bag (huge size or huge number
+	// of files) for a later time when the worker is less busy.
+	RequeueDelay int
 }
 
 // TouchNSQ tells NSQ we're still working on this item.

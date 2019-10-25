@@ -306,6 +306,10 @@ func (fetcher *APTFetcher) record() {
 		itsTimeToGiveUp := (ingestState.IngestManifest.HasFatalErrors() ||
 			(ingestState.IngestManifest.HasErrors() && attemptNumber >= maxAttempts))
 
+		if ingestState.IngestManifest.HasErrors() {
+			fetcher.Context.MessageLog.Error(ingestState.IngestManifest.AllErrorsAsString())
+		}
+
 		if ingestState.WorkItem.Status == constants.StatusCancelled {
 			ingestState.FinishNSQ()
 			MarkWorkItemCancelled(ingestState, fetcher.Context)
@@ -383,6 +387,7 @@ func (fetcher *APTFetcher) assertETagMatch(ingestState *models.IngestState) {
 			ingestState.IngestManifest.FetchResult.Fatal(msg)
 			ingestState.WorkItem.Note = msg
 			ingestState.WorkItem.Status = constants.StatusCancelled
+			ingestState.WorkItem.Retry = false
 		}
 	} else {
 		fetcher.Context.MessageLog.Warning("Head request for %s/%s returned nothing",

@@ -355,8 +355,8 @@ func (reader *APTBucketReader) addToNSQ(workItem *models.WorkItem) {
 		reader.Context.MessageLog.Error(msg)
 		return
 	}
-	reader.Context.MessageLog.Info("Added WorkItem id %d to NSQ (%s/%s)",
-		workItem.Id, workItem.Bucket, workItem.Name)
+	reader.Context.MessageLog.Info("Added WorkItem id %d to NSQ (%s/%s - %s)",
+		workItem.Id, workItem.Bucket, workItem.Name, workItem.ETag)
 	if reader.stats != nil {
 		reader.stats.AddWorkItem("WorkItemsQueued", workItem)
 	}
