@@ -102,6 +102,7 @@ func TestNewValidator(t *testing.T) {
 	assert.True(t, strings.HasSuffix(validator.PathToBag, "example.edu.tagsample_good.tar"))
 	assert.NotNil(t, validator.BagValidationConfig)
 	assert.True(t, validator.PreserveExtendedAttributes)
+	assert.Equal(t, 0, validator.FileCount())
 }
 
 func TestNewValidator_BadConfig(t *testing.T) {
@@ -179,6 +180,7 @@ func TestValidator_FromTarFile_BagValid(t *testing.T) {
 	assert.Nil(t, err)
 	assert.NotNil(t, summary)
 	assert.False(t, summary.HasErrors())
+	assert.Equal(t, 16, validator.FileCount())
 }
 
 // Read an invalid bag from a tar file.
@@ -199,6 +201,7 @@ func TestValidator_FromTarFile_BagInvalid(t *testing.T) {
 	assert.True(t, util.StringListContains(summary.Errors, err_6))
 	assert.True(t, util.StringListContains(summary.Errors, err_7))
 	assert.True(t, util.StringListContains(summary.Errors, err_8))
+	assert.Equal(t, 16, validator.FileCount())
 }
 
 // Read a valid bag from a directory
@@ -217,6 +220,7 @@ func TestValidator_FromDirectory_BagValid(t *testing.T) {
 	assert.Nil(t, err)
 	assert.NotNil(t, summary)
 	assert.False(t, summary.HasErrors())
+	assert.Equal(t, 16, validator.FileCount())
 }
 
 // Read an invalid bag from a directory, while tracking APTrust ingest data.
@@ -244,6 +248,7 @@ func TestValidator_FromDirectory_BagInvalid_NoMeta(t *testing.T) {
 	assert.True(t, util.StringListContains(summary.Errors, err_5))
 	assert.True(t, util.StringListContains(summary.Errors, err_6))
 	assert.True(t, util.StringListContains(summary.Errors, err_7))
+	assert.Equal(t, 16, validator.FileCount())
 }
 
 // Read an invalid bag from a directory, without tracking APTrust
@@ -272,6 +277,7 @@ func TestValidator_FromDirectory_BagInvalid(t *testing.T) {
 	assert.True(t, util.StringListContains(summary.Errors, err_5))
 	assert.True(t, util.StringListContains(summary.Errors, err_6))
 	assert.True(t, util.StringListContains(summary.Errors, err_7))
+	assert.Equal(t, 16, validator.FileCount())
 }
 
 // Read from a file that is not a directory or a valid tar file.
@@ -298,6 +304,7 @@ func TestValidator_BadFileFormat(t *testing.T) {
 	assert.True(t, util.StringListContains(summary.Errors, "Required file 'manifest-md5.txt' is missing."))
 	assert.True(t, util.StringListContains(summary.Errors, "Required tag 'Access' is missing."))
 	assert.True(t, util.StringListContains(summary.Errors, "Required tag 'Title' is missing."))
+	assert.Equal(t, 0, validator.FileCount())
 }
 
 // Make sure we catch all errors in an invalid bag.
@@ -318,6 +325,7 @@ func TestValidator_InvalidBag(t *testing.T) {
 	assert.True(t, util.StringListContains(summary.Errors, err_5))
 	assert.True(t, util.StringListContains(summary.Errors, err_6))
 	assert.True(t, util.StringListContains(summary.Errors, err_7))
+	assert.Equal(t, 16, validator.FileCount())
 }
 
 // These good bags are from the old Bagman test suite. We have to make sure they

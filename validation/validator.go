@@ -47,6 +47,8 @@ type Validator struct {
 	// the validator will not be able to open it. If the validator
 	// has it open, others will not be able to open it.
 	db *storage.BoltDB
+	// Total count of files in bag.
+	fileCount int
 }
 
 // NewValidator creates a new Validator. Param pathToBag
@@ -85,6 +87,7 @@ func NewValidator(pathToBag string, bagValidationConfig *BagValidationConfig, pr
 		forbiddenFiles:             make([]string, 0),
 		calculateMd5:               calculateMd5,
 		calculateSha256:            calculateSha256,
+		fileCount:                  0,
 	}
 	return validator, nil
 }
@@ -113,6 +116,14 @@ func validateParams(pathToBag string, bagValidationConfig *BagValidationConfig) 
 	return nil
 }
 
+// FileCount returns the total number of files in the bag (including
+// payload, manifests, tag manifest, and tag files). This number may
+// be low if the validator could not finish reading the bag (e.g. bad
+// tar file), so don't count on it if the validator errored out.
+func (validator *Validator) FileCount() int {
+	return validator.fileCount
+}
+
 // DBName returns the name of the BoltDB file where the validator keeps
 // track of validation data.
 func (validator *Validator) DBName() string {
@@ -139,6 +150,7 @@ func (validator *Validator) getIterator() (fileutil.ReadIterator, error) {
 // Validate reads and validates the bag, and returns a ValidationResult with
 // the IntellectualObject and any errors encountered during validation.
 func (validator *Validator) Validate() (*models.WorkSummary, error) {
+	validator.fileCount = 0
 	db, err := storage.NewBoltDB(validator.DBName())
 	if err != nil {
 		return nil, err
@@ -287,6 +299,7 @@ func (validator *Validator) addFile(readIterator fileutil.ReadIterator) error {
 	// basic bag validation. Even if checksum calculation fails (which
 	// has not yet happened), we still want to keep a record of the
 	// GenericFile in the validation DB for later reporting purposes.
+	validator.fileCount += 1
 	checksumError := validator.calculateChecksums(reader, gf)
 	saveError := validator.db.Save(gf.Identifier, gf)
 	if checksumError != nil {
