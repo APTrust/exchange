@@ -380,8 +380,7 @@ func (fetcher *APTFetcher) assertETagMatch(ingestState *models.IngestState) {
 		etag := strings.Replace(util.PointerToString(s3Client.Response.ETag), "\"", "", -1)
 		if etag != ingestState.WorkItem.ETag {
 			msg := fmt.Sprintf("Ingest services cancelled this ingest because WorkItem etag is %s and etag of item in receiving bucket is %s. There should be a separate WorkItem to ingest the newer version that's currently in the bucket.", ingestState.WorkItem.ETag, etag)
-			ingestState.IngestManifest.FetchResult.AddError(msg)
-			ingestState.IngestManifest.FetchResult.ErrorIsFatal = true
+			ingestState.IngestManifest.FetchResult.Fatal(msg)
 			ingestState.WorkItem.Note = msg
 			ingestState.WorkItem.Status = constants.StatusCancelled
 		}
@@ -500,9 +499,9 @@ func (fetcher *APTFetcher) buildObject(downloader *network.S3Download, ingestSta
 
 	// If we got a bad checksum, note the error in the WorkSummary.
 	if obj.IngestMd5Verifiable && !obj.IngestMd5Verified {
-		ingestState.IngestManifest.FetchResult.AddError("Our md5 '%s' does not match S3 md5 '%s'",
+		ingestState.IngestManifest.FetchResult.Fatal(
+			"Our md5 '%s' does not match S3 md5 '%s'",
 			obj.IngestLocalMd5, obj.IngestRemoteMd5)
-		ingestState.IngestManifest.FetchResult.ErrorIsFatal = true
 	}
 
 	fetcher.Context.MessageLog.Info("Built object %s", obj.Identifier)

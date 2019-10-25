@@ -82,9 +82,9 @@ func (deleter *APTFileDeleter) HandleMessage(message *nsq.Message) error {
 	needsApproval := (deleteState.WorkItem.InstitutionalApprover == nil ||
 		*deleteState.WorkItem.InstitutionalApprover == "")
 	if needsApproval && !deleter.isIntegrationTest {
-		deleteState.DeleteSummary.AddError("Cannot delete %s because institutional approver is missing",
+		deleteState.DeleteSummary.Fatal(
+			"Cannot delete %s because institutional approver is missing",
 			deleteState.GenericFile.Identifier)
-		deleteState.DeleteSummary.ErrorIsFatal = true
 		deleter.PostProcessChannel <- deleteState
 	} else {
 		// OK. We have approval.
@@ -167,8 +167,7 @@ func (deleter *APTFileDeleter) deleteFromStorage(deleteState *models.DeleteState
 	// Find the key we'll need to delete.
 	key, err := deleteState.GenericFile.PreservationStorageFileName()
 	if err != nil {
-		deleteState.DeleteSummary.AddError("For file %s: %v", deleteState.GenericFile.Identifier, err)
-		deleteState.DeleteSummary.ErrorIsFatal = true
+		deleteState.DeleteSummary.Fatal("For file %s: %v", deleteState.GenericFile.Identifier, err)
 		return
 	}
 	keys := make([]string, 1)

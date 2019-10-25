@@ -117,6 +117,15 @@ func (summary *WorkSummary) AddError(format string, a ...interface{}) {
 	summary.getMutex().Unlock()
 }
 
+// Fatal adds an error to the errors list, sets ErrorIsFatal to true,
+// and calls Finish(). This does NOT invoke panic or stop any running
+// systems/processes/routines.
+func (summary *WorkSummary) Fatal(format string, a ...interface{}) {
+	summary.AddError(format, a...)
+	summary.ErrorIsFatal = true
+	summary.Finish()
+}
+
 func (summary *WorkSummary) ClearErrors() {
 	summary.getMutex().Lock()
 	summary.Errors = nil

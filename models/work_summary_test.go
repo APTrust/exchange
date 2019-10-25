@@ -127,3 +127,15 @@ func TestAllErrorsAsString(t *testing.T) {
 	s.AddError("Second error is number %d", 2)
 	assert.Equal(t, "First error is number 1\nSecond error is number 2", s.AllErrorsAsString())
 }
+
+func TestFatal(t *testing.T) {
+	s := models.NewWorkSummary()
+	assert.Equal(t, 0, len(s.Errors))
+	assert.False(t, s.ErrorIsFatal)
+	assert.False(t, s.Finished())
+
+	s.Fatal("Something bad happened: %s", "1234")
+	assert.Equal(t, 1, len(s.Errors))
+	assert.True(t, s.ErrorIsFatal)
+	assert.True(t, s.Finished())
+}

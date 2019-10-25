@@ -126,10 +126,7 @@ func (storer *APTStorer) store() {
 		// a valdb file if it doesn't already exist. This leaves empty
 		// valdb files in the data directory.
 		if !fileutil.FileExists(ingestState.IngestManifest.DBPath) {
-			msg := fmt.Sprintf("BoltDB file %s is missing.", ingestState.IngestManifest.DBPath)
-			ingestState.IngestManifest.StoreResult.AddError(msg)
-			ingestState.IngestManifest.StoreResult.ErrorIsFatal = true
-			ingestState.IngestManifest.StoreResult.Finish()
+			ingestState.IngestManifest.StoreResult.Fatal("BoltDB file %s is missing.", ingestState.IngestManifest.DBPath)
 			storer.CleanupChannel <- ingestState
 			continue
 
@@ -212,8 +209,7 @@ func (storer *APTStorer) store() {
 			// Get a batch of files to save...
 			storageSummaries, hasMoreFiles, err := storer.getStorageSummaryBatch(db, objIdentifier, start, limit)
 			if err != nil {
-				ingestState.IngestManifest.StoreResult.AddError(err.Error())
-				ingestState.IngestManifest.StoreResult.ErrorIsFatal = true
+				ingestState.IngestManifest.StoreResult.Fatal(err.Error())
 				break
 			}
 			fileCount := len(storageSummaries)
@@ -443,7 +439,6 @@ func (storer *APTStorer) changedSincePreviousVersion(storageSummary *models.Stor
 	if err != nil {
 		message := fmt.Sprintf("Cannot find existing UUID for %s: %v", gf.Identifier, err.Error())
 		storageSummary.StoreResult.AddError(message)
-		storer.Context.MessageLog.Error(message)
 		// Probably not fatal, but treat it as such for now,
 		// because we don't want leave orphan objects in S3,
 		// or have the GenericFile.URL not match the actual
@@ -452,16 +447,15 @@ func (storer *APTStorer) changedSincePreviousVersion(storageSummary *models.Stor
 		// we are processing this ingest. The window for that
 		// to happen is usually between a few seconds and a few
 		// hours.
-		storageSummary.StoreResult.ErrorIsFatal = true
+		storer.Context.MessageLog.Fatal(message)
 		return
 	}
 	if uuid == "" {
 		message := fmt.Sprintf("Cannot find existing UUID for %s.", gf.Identifier)
 		storageSummary.StoreResult.AddError(message)
-		storer.Context.MessageLog.Error(message)
 		// Probably not fatal, but treat it as such for now.
 		// Same note as in previous if statement above.
-		storageSummary.StoreResult.ErrorIsFatal = true
+		storer.Context.MessageLog.Fatal(message)
 		return
 	} else {
 		// OK. Set the GenericFile's UUID to match the existing file's
@@ -829,10 +823,9 @@ func (storer *APTStorer) cleanupTempFile(gf *models.GenericFile) {
 func (storer *APTStorer) uuidPresent(storageSummary *models.StorageSummary) bool {
 	gf := storageSummary.GenericFile
 	if !util.LooksLikeUUID(gf.IngestUUID) {
-		storageSummary.StoreResult.AddError("Cannot save %s to S3/Glacier because "+
+		storageSummary.StoreResult.Fatal("Cannot save %s to S3/Glacier because "+
 			"GenericFile.IngestUUID (%s) is missing or invalid",
 			gf.Identifier, gf.IngestUUID)
-		storageSummary.StoreResult.ErrorIsFatal = true
 		return false
 	}
 	return true
@@ -856,9 +849,8 @@ func (storer *APTStorer) initUploader(storageSummary *models.StorageSummary, sen
 	}
 	if err != nil {
 		storageSummary.StoreResult.AddError(err.Error())
-		storageSummary.StoreResult.AddError("Cannot save %s to %s because "+
+		storageSummary.StoreResult.Fatal("Cannot save %s to %s because "+
 			"storer doesn't know where %s is", gf.Identifier, sendWhere, sendWhere)
-		storageSummary.StoreResult.ErrorIsFatal = true
 		return nil
 	}
 	uploader := network.NewS3Upload(
@@ -921,9 +913,8 @@ func (storer *APTStorer) assertRequiredMetadata(storageSummary *models.StorageSu
 	for _, key := range keys {
 		value := s3Upload.UploadInput.Metadata[key]
 		if value == nil || *value == "" {
-			storageSummary.StoreResult.AddError("S3Upload is missing required "+
+			storageSummary.StoreResult.Fatal("S3Upload is missing required "+
 				"metadata key %s", key)
-			storageSummary.StoreResult.ErrorIsFatal = true
 			allKeysPresent = false
 		}
 	}
@@ -1090,10 +1081,9 @@ func (storer *APTStorer) GetUploadOptions(storageSummary *models.StorageSummary,
 
 // NEEDS TEST
 func (storer *APTStorer) ErrS3Metadata(storageSummary *models.StorageSummary, err error) {
-	storageSummary.StoreResult.AddError("Cannot get S3 metadata for %s: %s",
+	storageSummary.StoreResult.Fatal("Cannot get S3 metadata for %s: %s",
 		storageSummary.GenericFile.Identifier,
 		err.Error())
-	storageSummary.StoreResult.ErrorIsFatal = true
 }
 
 // NEEDS TEST

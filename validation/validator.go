@@ -228,8 +228,7 @@ func (validator *Validator) addFiles() {
 		if err != nil && (err == io.EOF || err.Error() == "EOF") {
 			break // readIterator hit the end of the list
 		} else if err != nil {
-			validator.summary.AddError("Error reading bag: %s", err.Error())
-			validator.summary.ErrorIsFatal = true
+			validator.summary.Fatal("Error reading bag: %s", err.Error())
 			break // PT #146289839: Stop on error, or memory usage explodes.
 		}
 	}

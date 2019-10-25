@@ -171,8 +171,7 @@ func (recorder *APTRecorder) saveAllPharosData(ingestState *models.IngestState) 
 	}
 	err = obj.BuildIngestEvents(db.FileCount())
 	if err != nil {
-		ingestState.IngestManifest.RecordResult.AddError(err.Error())
-		ingestState.IngestManifest.RecordResult.ErrorIsFatal = true
+		ingestState.IngestManifest.RecordResult.Fatal(err.Error())
 		return
 	}
 
@@ -208,8 +207,7 @@ func (recorder *APTRecorder) saveFiles(ingestState *models.IngestState, obj *mod
 		for _, gfIdentifier := range batch {
 			gf, err := db.GetGenericFile(gfIdentifier)
 			if err != nil {
-				ingestState.IngestManifest.RecordResult.AddError(err.Error())
-				ingestState.IngestManifest.RecordResult.ErrorIsFatal = true
+				ingestState.IngestManifest.RecordResult.Fatal(err.Error())
 			}
 			gf.IntellectualObjectId = obj.Id
 			if gf.IngestNeedsSave == false {
@@ -466,16 +464,14 @@ func (recorder *APTRecorder) deleteBagFromReceivingBucket(ingestState *models.In
 func (recorder *APTRecorder) buildGenericFileChecksums(gf *models.GenericFile, ingestState *models.IngestState) {
 	err := gf.BuildIngestChecksums()
 	if err != nil {
-		ingestState.IngestManifest.RecordResult.AddError(err.Error())
-		ingestState.IngestManifest.RecordResult.ErrorIsFatal = true
+		ingestState.IngestManifest.RecordResult.Fatal(err.Error())
 	}
 }
 
 func (recorder *APTRecorder) buildGenericFileEvents(gf *models.GenericFile, ingestState *models.IngestState) {
 	err := gf.BuildIngestEvents()
 	if err != nil {
-		ingestState.IngestManifest.RecordResult.AddError(err.Error())
-		ingestState.IngestManifest.RecordResult.ErrorIsFatal = true
+		ingestState.IngestManifest.RecordResult.Fatal(err.Error())
 	}
 }
 
