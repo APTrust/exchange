@@ -196,6 +196,7 @@ func fetcherTestSpecifics(t *testing.T, ingestManifest *models.IngestManifest) {
 
 	gfIdentifiers := db.FileIdentifiers()
 	assert.Equal(t, 16, len(gfIdentifiers))
+	assert.Equal(t, 16, obj.IngestFileCount)
 
 	gf, err := db.GetGenericFile("test.edu/example.edu.tagsample_good/aptrust-info.txt")
 	require.Nil(t, err)

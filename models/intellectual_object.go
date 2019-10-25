@@ -105,6 +105,8 @@ type IntellectualObject struct {
 	// This is a calculated field returned by Pharos. Consider it read-only.
 	// It will only ever be populated by Pharos, when retrieving records
 	// through the Admin REST API. Added for Restoration spot tests.
+	//
+	// For a count of files at ingest, see IngestFileCount.
 	FileCount int `json:"file_count,omitempty"`
 
 	// FileSize is the total size (in bytes) of the files that make up this
@@ -137,6 +139,16 @@ type IntellectualObject struct {
 
 	// IngestSize is the size of the tarred bag we're trying to ingest.
 	IngestSize int64 `json:"ingest_size,omitempty"`
+
+	// IngestFileCount is the total number of files in the bag. This
+	// includes everything in the payload directory, plus manifests,
+	// tag files, tag manifests, and all other files. This number will be
+	// greater than the number of files we actually preserve, because
+	// we do not preserve manifests, tag manifests, or bagit.txt.
+	//
+	// This is set by apt_fetch after the validator validates a bag.
+	// It will be zero before then.
+	IngestFileCount int `json:"ingest_filecount,omitempty"`
 
 	// IngestRemoteMd5 is the etag of this bag as reported by the
 	// depositor's S3 receiving bucket. We use this to verify the download,
