@@ -1,0 +1,181 @@
+{
+	"TarDirectory": "~/tmp/data",
+	"RestoreDirectory": "~/tmp/restore",
+	"LogDirectory": "~/tmp/logs",
+	"ReplicationDirectory": "~/tmp/replication",
+	"MaxFileSize": 5497558138880,
+	"SkipAlreadyProcessed": true,
+	"DeleteOnSuccess": true,
+	"LogToStderr": false,
+	"UseVolumeService": false,
+	"VolumeServicePort": 8898,
+	"LogLevel": 4,
+	"BucketReaderCacheHours": 24,
+	"BagValidationConfigFile": "config/aptrust_bag_validation_config.json",
+
+	"BagItVersion": "0.97",
+	"BagItEncoding": "UTF-8",
+
+	"PharosURL": "https://repo.aptrust.org",
+	"PharosAPIVersion": "v2",
+
+	"NsqdHttpAddress": "http://prod-services.aptrust.org:4151",
+	"NsqLookupd": "prod-services.aptrust.org:4161",
+
+	"APTrustS3Region": "us-east-1",
+	"APTrustGlacierRegion": "us-west-2",
+	"GlacierRegionVA": "us-east-1",
+	"GlacierRegionOH": "us-east-2",
+	"GlacierRegionOR": "us-west-2",
+	"PreservationBucket": "aptrust.preservation.storage",
+	"ReplicationBucket": "aptrust.preservation.oregon",
+	"GlacierBucketVA": "aptrust.preservation.glacier.va",
+	"GlacierBucketOH": "aptrust.preservation.glacier.oh",
+	"GlacierBucketOR": "aptrust.preservation.glacier.or",
+	"GlacierDeepBucketVA": "aptrust.preservation.glacier-deep.va",
+	"GlacierDeepBucketOH": "aptrust.preservation.glacier-deep.oh",
+	"GlacierDeepBucketOR": "aptrust.preservation.glacier-deep.or",
+
+    "RestoreToTestBuckets": false,
+	"MaxDaysSinceFixityCheck": 90,
+
+	"FetchWorker": {
+		"NetworkConnections": 6,
+		"Workers": 6,
+		"NsqTopic": "apt_fetch_topic",
+		"NsqChannel": "apt_fetch_channel",
+		"MaxAttempts": 3,
+		"MaxInFlight": 20,
+		"HeartbeatInterval": "10s",
+		"ReadTimeout": "60s",
+		"WriteTimeout": "10s",
+		"MessageTimeout": "720m"
+	},
+
+	"StoreWorker": {
+		"NetworkConnections": 12,
+		"Workers": 6,
+		"NsqTopic": "apt_store_topic",
+		"NsqChannel": "apt_store_channel",
+		"MaxAttempts": 3,
+		"MaxInFlight": 20,
+		"HeartbeatInterval": "10s",
+		"ReadTimeout": "60s",
+		"WriteTimeout": "10s",
+		"MessageTimeout": "720m"
+	},
+
+	"RecordWorker": {
+		"NetworkConnections": 6,
+		"Workers": 3,
+		"NsqTopic": "apt_record_topic",
+		"NsqChannel": "apt_record_channel",
+		"MaxAttempts": 3,
+		"MaxInFlight": 20,
+		"HeartbeatInterval": "10s",
+		"ReadTimeout": "60s",
+		"WriteTimeout": "10s",
+		"MessageTimeout": "360m"
+	},
+
+	"ReplicationWorker": {
+		"NetworkConnections": 12,
+		"Workers": 8,
+		"NsqTopic": "apt_replication_topic",
+		"NsqChannel": "apt_replication_channel",
+		"MaxAttempts": 5,
+		"MaxInFlight": 20,
+		"HeartbeatInterval": "10s",
+		"ReadTimeout": "60s",
+		"WriteTimeout": "10s",
+		"MessageTimeout": "180m"
+	},
+
+	"RestoreWorker": {
+		"NetworkConnections": 8,
+		"Workers": 4,
+		"NsqTopic": "apt_restore_topic",
+		"NsqChannel": "apt_restore_channel",
+		"MaxAttempts": 3,
+		"MaxInFlight": 20,
+		"HeartbeatInterval": "10s",
+		"ReadTimeout": "60s",
+		"WriteTimeout": "10s",
+		"MessageTimeout": "720m"
+	},
+
+	"FileRestoreWorker": {
+		"NetworkConnections": 8,
+		"Workers": 4,
+		"NsqTopic": "apt_file_restore_topic",
+		"NsqChannel": "apt_file_restore_channel",
+		"MaxAttempts": 3,
+		"MaxInFlight": 20,
+		"HeartbeatInterval": "10s",
+		"ReadTimeout": "60s",
+		"WriteTimeout": "10s",
+		"MessageTimeout": "180m"
+	},
+
+	"GlacierRestoreWorker": {
+		"NetworkConnections": 8,
+		"Workers": 4,
+		"NsqTopic": "apt_glacier_restore_topic",
+		"NsqChannel": "apt_glacier_restore_channel",
+		"MaxAttempts": 8,
+		"MaxInFlight": 20,
+		"HeartbeatInterval": "10s",
+		"ReadTimeout": "60s",
+		"WriteTimeout": "10s",
+		"MessageTimeout": "720m"
+	},
+
+	"FileDeleteWorker": {
+		"NetworkConnections": 12,
+		"Workers": 4,
+		"NsqTopic": "apt_file_delete_topic",
+		"NsqChannel": "apt_file_delete_channel",
+		"MaxAttempts": 3,
+		"MaxInFlight": 20,
+		"HeartbeatInterval": "10s",
+		"ReadTimeout": "60s",
+		"WriteTimeout": "10s",
+		"MessageTimeout": "30m"
+	},
+
+	"FixityWorker": {
+		"NetworkConnections": 4,
+		"Workers": 4,
+		"NsqTopic": "apt_fixity_topic",
+		"NsqChannel": "apt_fixity_channel",
+		"MaxAttempts": 3,
+		"MaxInFlight": 20,
+		"HeartbeatInterval": "10s",
+		"ReadTimeout": "60s",
+		"WriteTimeout": "10s",
+		"MessageTimeout": "180m"
+	},
+
+	"ReceivingBuckets": [
+		"aptrust.receiving.columbia.edu",
+		"aptrust.receiving.fulcrum.org",
+		"aptrust.receiving.georgetown.edu",
+		"aptrust.receiving.indiana.edu",
+		"aptrust.receiving.jhu.edu",
+		"aptrust.receiving.miami.edu",
+		"aptrust.receiving.ncsu.edu",
+		"aptrust.receiving.psu.edu",
+		"aptrust.receiving.syr.edu",
+		"aptrust.receiving.uchicago.edu",
+		"aptrust.receiving.uc.edu",
+		"aptrust.receiving.uchicago.edu",
+		"aptrust.receiving.uconn.edu",
+		"aptrust.receiving.umd.edu",
+		"aptrust.receiving.umich.edu",
+		"aptrust.receiving.unc.edu",
+		"aptrust.receiving.nd.edu",
+		"aptrust.receiving.virginia.edu",
+		"aptrust.receiving.vt.edu",
+		"aptrust.receiving.vwu.edu"
+	]
+}
