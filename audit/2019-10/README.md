@@ -119,6 +119,7 @@ Regarding the missing files:
 
 * Identify commonalities among missing Glacier files.
 * Copy missing Glacier files from S3/VA to Glacier/Oregon.
+* Create Replication PREMIS event after successful copy.
 
 ### Orphan Files
 
@@ -130,3 +131,19 @@ Regarding the missing files:
 
 * Identify commonalities among orphan files.
 * Move to quarantine area (separate S3 bucket, Glacier, or Wasabi).
+
+## Tools for Cleanup
+
+For copying files from S3 to Glacier, and to move orphan files to a
+quarantine area, Minio client is simple and flexible.
+The [download page](https://min.io/download) has packages for several operating
+systems.
+
+After download, the
+[User Guide](https://docs.min.io/docs/minio-client-complete-guide)
+provides setup instructions. The client is easy to configure. To add AWS as a remote
+provider, simply run:
+
+```
+mc config host add s3 https://s3.amazonaws.com $AWS_ACCESS_KEY_ID $AWS_SECRET_ACCESS_KEY --api S3v4
+```
