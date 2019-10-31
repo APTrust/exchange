@@ -418,16 +418,19 @@ func (deleter *APTFileDeleter) markObjectDeletedIfAppropriate(deleteState *model
 }
 
 func (deleter *APTFileDeleter) saveWorkItem(deleteState *models.DeleteState) {
+	msg := fmt.Sprintf("Marking WorkItem %d as %s/%s for object %s.",
+		deleteState.WorkItem.Id,
+		deleteState.WorkItem.Stage,
+		deleteState.WorkItem.Status,
+		deleteState.WorkItem.GenericFileIdentifier)
+	deleter.Context.MessageLog.Info(msg)
 	resp := deleter.Context.PharosClient.WorkItemSave(deleteState.WorkItem)
 	// We can proceed if this call fails. Pharos just won't show users
 	// the current state of processing for this item.
 	if resp.Error != nil {
-		deleter.Context.MessageLog.Warning(
-			"Error marking WorkItem %d as %s/%s for object %s: %v",
-			deleteState.WorkItem.Id,
-			deleteState.WorkItem.Stage,
-			deleteState.WorkItem.Status,
-			deleteState.WorkItem.GenericFileIdentifier,
-			resp.Error)
+		deleter.Context.MessageLog.Warning("Error %s: %v", msg, resp.Error)
+	} else {
+		// Log when finished so we know how long this call takes.
+		deleter.Context.MessageLog.Info("Finished %s", msg)
 	}
 }
