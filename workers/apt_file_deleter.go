@@ -7,6 +7,7 @@ import (
 	"github.com/APTrust/exchange/models"
 	"github.com/APTrust/exchange/network"
 	"github.com/nsqio/go-nsq"
+	"net/url"
 	"os"
 	"strings"
 	"time"
@@ -366,17 +367,17 @@ func (deleter *APTFileDeleter) markObjectDeletedIfAppropriate(deleteState *model
 		return
 	}
 
-	resp := deleter.Context.PharosClient.IntellectualObjectGet(objIdentifier, false, true)
+	resp := deleter.Context.PharosClient.IntellectualObjectGet(objIdentifier, false, false)
 	if resp.Error != nil {
 		deleteState.DeleteSummary.AddError(
-			"Error checking for state and events on IntellectualObject %s: %v",
+			"Error getting IntellectualObject %s from Pharos: %v",
 			objIdentifier, resp.Error)
 		return
 	}
 	obj := resp.IntellectualObject()
 	if obj == nil {
 		deleteState.DeleteSummary.AddError(
-			"When checking for state and events, Pharos returned nil for IntellectualObject %s: %v",
+			"Pharos returned nil for IntellectualObject %s: %v",
 			objIdentifier, resp.Error)
 		return
 	}
@@ -384,52 +385,25 @@ func (deleter *APTFileDeleter) markObjectDeletedIfAppropriate(deleteState *model
 		deleter.Context.MessageLog.Info("Object %s is already marked deleted", objIdentifier)
 		return
 	}
-	lastIngest := time.Time{}
-	lastDelete := time.Time{}
-	// Typical object has ~5 events
-	for _, event := range obj.PremisEvents {
-		if event.GenericFileIdentifier != "" {
-			// This is a file-level event, not an object-level event
-			continue
-		}
-		if event.EventType == constants.EventIngestion && event.Outcome == constants.OutcomeSuccess && event.DateTime.After(lastIngest) {
-			lastIngest = event.DateTime
-		} else if event.EventType == constants.EventDeletion && event.Outcome == constants.OutcomeSuccess && event.DateTime.After(lastDelete) {
-			lastDelete = event.DateTime
-		}
-	}
 
-	deleter.Context.MessageLog.Info("Last ingest for %s: %s", objIdentifier, lastIngest.Format(time.RFC3339))
-	deleter.Context.MessageLog.Info("Last deletion for %s: %s", objIdentifier, lastDelete.Format(time.RFC3339))
+	// See if the object has any active files left.
+	gfParams := url.Values{}
+	gfParams.Add("intellectual_object_identifier", objIdentifier)
+	gfParams.Add("state", "A")
+	gfParams.Add("page", "1")
+	gfParams.Add("per_page", "2")
 
-	// If there is no delete event on this object since last ingest, check to see if the
-	// object still has any active files. This call is can be expensive, so
-	// we avoid it until this point.
-	if !lastDelete.After(lastIngest) {
-		resp = deleter.Context.PharosClient.IntellectualObjectGet(objIdentifier, true, false)
-		if resp.Error != nil {
-			deleteState.DeleteSummary.AddError(
-				"Error checking for active files on IntellectualObject %s: %v",
-				objIdentifier, resp.Error)
-		}
-		obj = resp.IntellectualObject()
-		if obj == nil {
-			deleteState.DeleteSummary.AddError(
-				"When checking for active files, Pharos returned nil for IntellectualObject %s: %v",
-				objIdentifier, resp.Error)
-			return
-		}
-		// Try to detect race condition when deleting multiple files from same object.
-		if obj.State == "D" {
-			deleter.Context.MessageLog.Info("Object %s is already marked deleted", objIdentifier)
-			return
-		}
-	} else {
-		deleter.Context.MessageLog.Info("Delete event already recorded for object %s", objIdentifier)
+	resp = deleter.Context.PharosClient.GenericFileList(gfParams)
+	if resp.Error != nil {
+		deleteState.DeleteSummary.AddError(
+			"Error getting GenericFiles for IntellectualObject %s from Pharos: %v",
+			objIdentifier, resp.Error)
 		return
 	}
+	files := resp.GenericFiles()
+
 	// All files have been deleted. Mark object deleted.
-	if len(obj.GenericFiles) == 0 && !deleter.RecentlyDeleted.Contains(objIdentifier) {
+	if len(files) == 0 && !deleter.RecentlyDeleted.Contains(objIdentifier) {
 		deleter.RecentlyDeleted.Add(objIdentifier)
 		resp := deleter.Context.PharosClient.IntellectualObjectFinishDelete(objIdentifier)
 		if resp.Error != nil {
