@@ -14,6 +14,10 @@ testdata/unit_test_bags/dpn/*.valdb
 
 # List of files copied to Glacier as part of Fall 2019 audit.
 audit/2019-10/create_replication_events.txt
+audit/2019-10/__glacier_copies.json
+
+# List of files manually confirmed present and correct
+audit/2019-10/confirmations.txt
 
 # Binary that copies the files to Glacier
 audit/2019-10/create_events
