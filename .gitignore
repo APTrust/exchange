@@ -11,3 +11,9 @@ apps/apt_restore_from_glacier/apt_restore_from_glacier
 apps/apt_dump_valdb/apt_dump_valdb
 .DS_Store
 testdata/unit_test_bags/dpn/*.valdb
+
+# List of files copied to Glacier as part of Fall 2019 audit.
+audit/2019-10/create_replication_events.txt
+
+# Binary that copies the files to Glacier
+audit/2019-10/create_events
