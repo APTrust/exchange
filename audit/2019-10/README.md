@@ -97,6 +97,8 @@ When analyzing the data with a GUI tool, avoid [DB Browser for SQLite](https://s
 
 The raw audit data is in the APTrust internal bucket (aptrust.internal) under the audit-oct-2019 folder. It includes the data dumped out by the `apt_dump_files` and `apt_audit_list` commands above. It also includes a copy of SQLite database, called `audit.db`.
 
+The raw data also includes `create_replication_events.txt`, which lists the files were copied into aptrust.preservation.oregon as part of the audit.
+
 ## Preliminary Results
 
 ### Missing Files (According to data collected)
