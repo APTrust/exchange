@@ -130,7 +130,7 @@ where p.uuid is null
 
 ----------------------------------------------------------------------------
 
--- Glacier files where size of object in storage does not
+-- S3 files where size of object in storage does not
 -- match size in Pharos.
 --
 -- 1532: All but 3 are Columbia or UVA, from old known issue
@@ -235,7 +235,7 @@ where s.in_glacier_va=1 and s.glacier_va_md5_matches = 0
 
 ------------------------------------------------------------
 
--- S3 files where md5 metadata tag value does not match
+-- S3 files where sha256 metadata tag value does not match
 -- md5 in Pharos.
 --
 -- 1666: All Columbia or UVA from old known issue, except
