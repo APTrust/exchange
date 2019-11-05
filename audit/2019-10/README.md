@@ -97,12 +97,14 @@ When analyzing the data with a GUI tool, avoid [DB Browser for SQLite](https://s
 
 The raw audit data is in the APTrust internal bucket (aptrust.internal) under the audit-oct-2019 folder. It includes the data dumped out by the `apt_dump_files` and `apt_audit_list` commands above. It also includes a copy of SQLite database, called `audit.db`.
 
+The raw data also includes `create_replication_events.txt`, which lists the files were copied into aptrust.preservation.oregon as part of the audit.
+
 ## Preliminary Results
 
 ### Missing Files (According to data collected)
 
 * 9 files missing from S3 Standard/VA
-* 16,630 missing from S3 Glacier/Oregon
+* 16,625 missing from S3 Glacier/Oregon
 * 0 missing from Glacier-VA
 
 Regarding the missing files:
@@ -115,10 +117,19 @@ Regarding the missing files:
   * The ninth item is in S3 and the checksum appears to be correct. Not sure
     why this appears as missing in the audit data.
 
-#### Next Steps for Missing Files
+#### Resolution for Missing Files
 
 * Identify commonalities among missing Glacier files.
+  * Missing S3 files were not actually missing. See above.
+  * All missing Glacier files were ingested between Feb 2016 and Jan 2017,
+    under the old system. About 90% were from a single bag ingested in
+    April 2016.
 * Copy missing Glacier files from S3/VA to Glacier/Oregon.
+  * All files were copied to Glacier between Oct. 31 and Nov. 4, 2019.
+  * A record of the copies is in `aptrust.internal/audit-oct-2019/__glacier_copies.json`
+* Create Replication PREMIS event after successful copy.
+  * Replication events for the 16,625 Glacier files were created Nov. 5, 2019.
+  * Records are in `aptrust.internal/audit-oct-2019/__events_saved.txt`
 
 ### Orphan Files
 
@@ -130,3 +141,19 @@ Regarding the missing files:
 
 * Identify commonalities among orphan files.
 * Move to quarantine area (separate S3 bucket, Glacier, or Wasabi).
+
+## Tools for Cleanup
+
+For copying files from S3 to Glacier, and to move orphan files to a
+quarantine area, Minio client is simple and flexible.
+The [download page](https://min.io/download) has packages for several operating
+systems.
+
+After download, the
+[User Guide](https://docs.min.io/docs/minio-client-complete-guide)
+provides setup instructions. The client is easy to configure. To add AWS as a remote
+provider, simply run:
+
+```
+mc config host add s3 https://s3.amazonaws.com $AWS_ACCESS_KEY_ID $AWS_SECRET_ACCESS_KEY --api S3v4
+```

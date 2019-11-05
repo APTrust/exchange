@@ -1,0 +1,10 @@
+uuid    problem resolution
+234b2adf-4ea2-47b2-8982-d437a22935af    missing from S3 File is present. Was being written to S3 during audit.
+2bad4d8b-11b6-4194-9394-6cd97e334eb9    missing from S3 File is present. Was being written to S3 during audit.
+31a201c3-5024-46dc-9a99-626e71934a9d    missing from S3 File is present. Was being written to S3 during audit.
+1bc6aa54-ec63-491b-be23-fdcab8051795    missing from S3 File is present. Was being written to S3 during audit.
+1404e998-3495-4516-a381-481a26ef3447    missing from S3 File is present. Was being written to S3 during audit.
+ef01da33-cc13-438f-b3e4-a54d735ace38    missing from S3 File is present. Was being written to S3 during audit.
+ed6616de-d15e-431e-a7f3-3e7abf641bf1    missing from S3 File is present. Was being written to S3 during audit.
+aec1fc65-fcb5-4d1c-ad39-3749f09a675c    missing from S3 File is present. Was being written to S3 during audit.
+6392f7d5-3714-4ecb-8462-3a5f4787dd11    missing from S3 File is present. File is confirmed preset in both S3 and Glacier. Not sure why audit missed it.
