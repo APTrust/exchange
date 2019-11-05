@@ -104,7 +104,7 @@ The raw data also includes `create_replication_events.txt`, which lists the file
 ### Missing Files (According to data collected)
 
 * 9 files missing from S3 Standard/VA
-* 16,630 missing from S3 Glacier/Oregon
+* 16,625 missing from S3 Glacier/Oregon
 * 0 missing from Glacier-VA
 
 Regarding the missing files:
@@ -117,11 +117,19 @@ Regarding the missing files:
   * The ninth item is in S3 and the checksum appears to be correct. Not sure
     why this appears as missing in the audit data.
 
-#### Next Steps for Missing Files
+#### Resolution for Missing Files
 
 * Identify commonalities among missing Glacier files.
+  * Missing S3 files were not actually missing. See above.
+  * All missing Glacier files were ingested between Feb 2016 and Jan 2017,
+    under the old system. About 90% were from a single bag ingested in
+    April 2016.
 * Copy missing Glacier files from S3/VA to Glacier/Oregon.
+  * All files were copied to Glacier between Oct. 31 and Nov. 4, 2019.
+  * A record of the copies is in `aptrust.internal/audit-oct-2019/__glacier_copies.json`
 * Create Replication PREMIS event after successful copy.
+  * Replication events for the 16,625 Glacier files were created Nov. 5, 2019.
+  * Records are in `aptrust.internal/audit-oct-2019/__events_saved.txt`
 
 ### Orphan Files
 
