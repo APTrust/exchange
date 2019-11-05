@@ -1,6 +1,7 @@
 package main
 
 // go build -o create_events
+// create_events -config=config/audit_test.json > __events_saved.txt 2>__events_errors.txt
 
 import (
 	"bufio"
@@ -34,14 +35,14 @@ func createEvents() {
 	if err != nil {
 		panic(err)
 	}
-	count := 0
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
-		count += 1
 		parts := strings.Split(scanner.Text(), "\t")
 		uuid := strings.TrimSpace(parts[0])
-		if uuid == "uuid" {
-			continue // first line has headers
+		// Skip first line, which has headers
+		// and all lines that begin with #
+		if uuid == "uuid" || strings.HasPrefix(uuid, "#") {
+			continue
 		}
 		identifier := strings.TrimSpace(parts[1])
 		event, err := createEvent(uuid, identifier)
@@ -51,19 +52,16 @@ func createEvents() {
 				uuid, identifier, err)
 			continue
 		}
-		// resp := _context.PharosClient.PremisEventSave(event)
-		// if resp.Error != nil {
-		// 	fmt.Fprintf(os.Stderr,
-		// 		"Error creating event for uuid %s, file %s: %v",
-		// 		uuid, identifier, err)
-		// 	continue
-		// }
+		resp := _context.PharosClient.PremisEventSave(event)
+		if resp.Error != nil {
+			fmt.Fprintf(os.Stderr,
+				"Error creating event for uuid %s, file %s: %v",
+				uuid, identifier, err)
+			continue
+		}
 		fmt.Printf("Saved event with id %s for uuid %s, file %s.",
 			event.Identifier, uuid, identifier)
 		fmt.Println(event)
-		if count >= 10 {
-			break
-		}
 	}
 }
 
