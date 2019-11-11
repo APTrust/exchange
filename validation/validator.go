@@ -581,7 +581,8 @@ func (validator *Validator) parseManifest(reader io.Reader, fileSummary *fileuti
 		alg = constants.AlgMd5
 	} else {
 		fmt.Fprintln(os.Stderr, "Not verifying checksums in", fileSummary.RelPath,
-			"- unsupported algorithm. Will still verify any md5 or sha256 checksums.")
+			"- unsupported algorithm. Will still verify any md5 or sha256 checksums. "+
+				"Bag ", validator.PathToBag)
 		return
 	}
 	re := regexp.MustCompile(`^(\S*)\s*(.*)`)
