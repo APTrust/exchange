@@ -37,9 +37,14 @@ func NewPharosClient(hostUrl, apiVersion, apiUser, apiKey string) (*PharosClient
 	if err != nil {
 		return nil, fmt.Errorf("Can't create cookie jar for HTTP client: %v", err)
 	}
+
+	// A.D. 2019-11-18: Disable keep alives because Puma 4 seems to be
+	// very aggressive about closing idle connections. This leads to
+	// 'connection reset by peer' errors on localhost during integration
+	// tests, and to numerous connection reset errors in production.
 	transport := &http.Transport{
-		MaxIdleConnsPerHost: 8,
-		DisableKeepAlives:   false,
+		//MaxIdleConnsPerHost: 2,
+		DisableKeepAlives: true,
 	}
 	httpClient := &http.Client{Jar: cookieJar, Transport: transport}
 	return &PharosClient{
