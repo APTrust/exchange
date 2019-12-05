@@ -223,6 +223,11 @@ func (fetcher *APTFetcher) validate() {
 			ingestState.IngestManifest.ValidateResult.AddError(err.Error())
 		} else {
 
+			// New hack to get more granular info about the validator
+			// is doing with very large bags. This need to be worked in
+			// to the validator constructor when we refactor.
+			validator.Logger = fetcher.Context.MessageLog
+
 			// Here's where bag validation actually happens. There's a lot
 			// going on in this call, which can take anywhere from 2 seconds
 			// to several hours to complete, depending on the size of the bag.

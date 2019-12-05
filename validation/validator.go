@@ -10,6 +10,7 @@ import (
 	"github.com/APTrust/exchange/util"
 	"github.com/APTrust/exchange/util/fileutil"
 	"github.com/APTrust/exchange/util/storage"
+	"github.com/op/go-logging"
 	"github.com/satori/go.uuid"
 	"hash"
 	"io"
@@ -49,6 +50,12 @@ type Validator struct {
 	db *storage.BoltDB
 	// Total count of files in bag.
 	fileCount int
+
+	// This is a late addition, hacked in to help diagnose
+	// some issues in validating very large bags. When we rewrite
+	// the validator to work with DART-style bagit profiles, it
+	// should include a Logger option in the constructor.
+	Logger *logging.Logger
 }
 
 // NewValidator creates a new Validator. Param pathToBag
@@ -173,8 +180,10 @@ func (validator *Validator) Validate() (*models.WorkSummary, error) {
 // IntellectualObject in the db, and a for each file in the bag
 // (payload files, manifests, and everything else).
 func (validator *Validator) readBag() {
+	validator.log(fmt.Sprintf("Reading bag %s", validator.PathToBag))
 	// Call this for the side-effect of initializing the IntellectualObject
 	// if it doesn't already exist.
+	// In refactor, don't call anything for side effects!
 	obj, err := validator.getIntellectualObject()
 	if err != nil {
 		validator.summary.AddError("Could not init object: %v", err)
@@ -195,6 +204,7 @@ func (validator *Validator) readBag() {
 	if err != nil {
 		validator.summary.AddError("Could not save intelObj metadata: %v", err)
 	}
+	validator.log(fmt.Sprintf("Finished reading %s", validator.PathToBag))
 }
 
 // getIntellectualObject returns a lightweight representation of the
@@ -230,6 +240,7 @@ func (validator *Validator) initIntellectualObject() (*models.IntellectualObject
 
 // addFiles adds a record for each file to our validation database.
 func (validator *Validator) addFiles() {
+	validator.log(fmt.Sprintf("Creating file records for %s", validator.PathToBag))
 	iterator, err := validator.getIterator()
 	if err != nil {
 		validator.summary.AddError("Error getting file iterator: %v", err)
@@ -367,6 +378,7 @@ func (validator *Validator) setFileType(gf *models.GenericFile, fileSummary *fil
 // parseFiles parses files that the bagging config says to parse,
 // like manifests and certain tag files.
 func (validator *Validator) parseFiles() {
+	validator.log(fmt.Sprintf("Parsing tag files and manifests in %s", validator.PathToBag))
 	// We have to get a new iterator here, because if we're
 	// dealing with a TarFileIterator (which is likely), it's
 	// forward-only. We can't rewind it.
@@ -447,6 +459,7 @@ func (validator *Validator) parseFiles() {
 }
 
 func (validator *Validator) setStorageOption() {
+	validator.log(fmt.Sprintf("Setting storage option for %s", validator.PathToBag))
 	obj, err := validator.getIntellectualObject()
 	if err != nil {
 		validator.summary.AddError("Error getting IntelObj from validation db: %v", err)
@@ -592,7 +605,8 @@ func (validator *Validator) parseManifest(reader io.Reader, fileSummary *fileuti
 		alg = constants.AlgMd5
 	} else {
 		fmt.Fprintln(os.Stderr, "Not verifying checksums in", fileSummary.RelPath,
-			"- unsupported algorithm. Will still verify any md5 or sha256 checksums.")
+			"- unsupported algorithm. Will still verify any md5 or sha256 checksums. "+
+				"Bag ", validator.PathToBag)
 		return
 	}
 	re := regexp.MustCompile(`^(\S*)\s*(.*)`)
@@ -650,6 +664,7 @@ func (validator *Validator) parseManifest(reader io.Reader, fileSummary *fileuti
 // is present in the bag. If not, it adds an error message to the
 // WorkSummary.
 func (validator *Validator) verifyManifestPresent() {
+	validator.log(fmt.Sprintf("Verifying manifests present for %s", validator.PathToBag))
 	if len(validator.manifests) == 0 {
 		validator.summary.AddError("Bag contains no payload manifest.")
 	}
@@ -659,6 +674,7 @@ func (validator *Validator) verifyManifestPresent() {
 // has the same name as the bag. There should be exactly one top-level
 // folder whose name is the same as the bag. Anything else is an error.
 func (validator *Validator) verifyTopLevelFolder() {
+	validator.log(fmt.Sprintf("Verifying top-level folder for %s", validator.PathToBag))
 	obj, err := validator.getIntellectualObject()
 	if err != nil {
 		validator.summary.AddError("Can't get object: %v", err)
@@ -691,6 +707,7 @@ func (validator *Validator) verifyTopLevelFolder() {
 // verifyFileSpecs ensures required files are present and forbidden files
 // are not. This adds an error to the WorkSummary for any violations.
 func (validator *Validator) verifyFileSpecs() {
+	validator.log(fmt.Sprintf("Checking required/forbidden files for %s", validator.PathToBag))
 	for gfPath, fileSpec := range validator.BagValidationConfig.FileSpecs {
 		if fileSpec.Presence == REQUIRED && !util.StringListContains(validator.requiredFiles, gfPath) {
 			validator.summary.AddError("Required file '%s' is missing.", gfPath)
@@ -703,6 +720,7 @@ func (validator *Validator) verifyFileSpecs() {
 
 // verifyTagSpecs ensures required tags are present and values are allowed.
 func (validator *Validator) verifyTagSpecs() {
+	validator.log(fmt.Sprintf("Verifying tags for %s", validator.PathToBag))
 	obj, err := validator.getIntellectualObject()
 	if err != nil {
 		validator.summary.AddError("Cannot get object metadata from db: %v", err)
@@ -770,11 +788,18 @@ func (validator *Validator) checkAllowedTagValue(tagName string, tags []*models.
 // including their checksums, presence in payload manifests, and whether they
 // follow specified naming restrictions.
 func (validator *Validator) verifyGenericFiles() {
+	validator.log(fmt.Sprintf("Verifying generic files for %s", validator.PathToBag))
 	detail := validator.fileValidationDetail()
 	gfIdentifiers := validator.db.FileIdentifiers()
+	validator.log(fmt.Sprintf("Housekeeping DB %d has files for %s", len(gfIdentifiers), validator.PathToBag))
+	count := 0
 	for _, gfIdentifier := range gfIdentifiers {
 		gf, err := validator.db.GetGenericFile(gfIdentifier)
-
+		if err != nil {
+			validator.summary.AddError("Cannot get GenericFile %s from BoltDB: %v", gfIdentifier, err)
+			validator.summary.ErrorIsFatal = true
+			return
+		}
 		// Flag illegal fetch.txt
 		if gf.OriginalPath() == "fetch.txt" && validator.BagValidationConfig.AllowFetchTxt == false {
 			validator.summary.AddError("Bag contains a fetch.txt file, but the profile does not allow it.")
@@ -823,6 +848,10 @@ func (validator *Validator) verifyGenericFiles() {
 			validator.summary.AddError("Cannot save GenericFile %s to db after comparing checksums",
 				gf.Identifier)
 		}
+		count += 1
+		if count%1000 == 0 {
+			validator.log(fmt.Sprintf("Checked %d generic files so far for %s", count, validator.PathToBag))
+		}
 	}
 }
 
@@ -850,4 +879,11 @@ func (validator *Validator) setMimeType(gf *models.GenericFile) {
 		}
 	}
 	gf.FileFormat = mimeType
+}
+
+// Late addition. See Logger in the struct definition above.
+func (validator *Validator) log(message string) {
+	if validator.Logger != nil {
+		validator.Logger.Info("[validator] %s", message)
+	}
 }

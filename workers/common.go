@@ -347,6 +347,7 @@ func MarkWorkItemStarted(ingestState *models.IngestState, _context *context.Cont
 		return resp.Error
 	}
 	ingestState.WorkItem = resp.WorkItem()
+	RecordWorkItemState(ingestState, _context, ingestState.IngestManifest.FetchResult)
 	return nil
 }
 
