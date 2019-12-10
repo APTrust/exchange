@@ -60,6 +60,7 @@ func (aptQueue *APTQueueFixity) Run() {
 	params.Set("per_page", strconv.Itoa(perPage))
 	params.Set("storage_option", constants.StorageStandard)
 	params.Set("page", "1")
+	params.Set("sort", "last_fixity_check") // takes advantage of SQL index
 	if aptQueue.identifierLike != "" {
 		params.Set("identifier_like", aptQueue.identifierLike)
 		aptQueue.Context.MessageLog.Info(
