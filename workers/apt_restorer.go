@@ -155,9 +155,7 @@ func (restorer *APTRestorer) buildBag() {
 		restorer.writeAPTrustInfoFile(restoreState)
 		restorer.writeBagitFile(restoreState)
 		restorer.writeBagInfoFile(restoreState)
-
-		// Temporarily commented out due to problems with SQL performance.
-		//restorer.WritePremisEventFile(restoreState)
+		restorer.WritePremisEventFile(restoreState)
 		restorer.writeManifest(constants.PAYLOAD_MANIFEST, constants.AlgMd5, restoreState)
 		restorer.writeManifest(constants.PAYLOAD_MANIFEST, constants.AlgSha256, restoreState)
 		restorer.writeManifest(constants.TAG_MANIFEST, constants.AlgMd5, restoreState)
