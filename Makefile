@@ -1,7 +1,9 @@
 #!/bin/bash
 
-REGISTRY=registry.gitlab.com/aptrust
-REPOSITORY=container-registry
+## Gitlab
+#REGISTRY=registry.gitlab.com/aptrust
+#REPOSITORY=container-registry
+REGISTRY=docker.io
 NAME=exchange
 REVISION:=$(shell git rev-parse --short=7 HEAD)
 BRANCH = $(subst /,_,$(shell git rev-parse --abbrev-ref HEAD))
@@ -31,7 +33,6 @@ docker_login:
 	if [ ! -z "$(DOCKER_USER)" ]; then echo $(DOCKER_PWD) | docker login --username $(DOCKER_USER) --password-stdin || docker login $(REGISTRY); fi
 
 
-
 lsdirs: ## Show the apps that will be built
 	@for app in $(APP_LIST:apps/%=%); do \
 		echo $$app; \
@@ -45,7 +46,9 @@ build: ## Build the Exchange containers
 	@echo "Branch: ${BRANCH}"
 	@for app in $(APP_LIST:apps/%=%); do \
 		echo $$app; \
-		docker build --build-arg EX_SERVICE=$$app -t aptrust/$(NAME)_$$app -t $(NAME)_$$app:$(REVISION) -t $(REGISTRY)/$(REPOSITORY)/$(NAME)_$$app:$(REVISION)-$(BRANCH) -f Dockerfile-build .; \
+		# Gitlab only
+	    # docker build --build-arg EX_SERVICE=$$app -t aptrust/$(NAME)_$$app -t $(REGISTRY)/$(REPOSITORY)/$(NAME)_$$app:$(REVISION)-$(BRANCH) -f Dockerfile-build .;
+		docker build --build-arg EX_SERVICE=$$app -t aptrust/$(NAME)_$$app -t aptrust/$(NAME)_$$app:$(REVISION)-$(BRANCH) -f Dockerfile-build .; \
 	done
 
 up: ## Start Exchange+NSQ containers
@@ -79,7 +82,7 @@ publish: docker_login
 	@for app in $(APP_LIST:apps/%=%); \
 	do \
 		echo "Publishing $$app:$(REVISION)-$(BRANCH)"; \
-		docker push $(REGISTRY)/$(REPOSITORY)/$(NAME)_$$app:$(REVISION)-$(BRANCH);\
+		docker push aptrust/$(NAME)_$$app:$(REVISION)-$(BRANCH);\
 	done
 
 #publish-ci:
