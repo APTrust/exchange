@@ -12,8 +12,8 @@ addons:
       - libmagic-dev
 jobs:
   include:
-    - stage: Unit Tests
-      script: `go test ./... |grep -v integration`
+    - stage: UnitTests
+      script: go test ./... | grep -v integration
     - stage: build_and_publish
       script: make -w release
       #deploy:
