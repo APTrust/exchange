@@ -28,7 +28,7 @@ help: ## This help.
 .DEFAULT_GOAL := help
 
 docker_login:
-	if [ ! -z "$(DOCKER_USERNAME)" ]; then echo $(DOCKER_PASSWORD) | docker login --username $(DOCKER_USERNAME) --password-stdin || docker login $(REGISTRY); fi
+	if [ ! -z "$(DOCKER_USER)" ]; then echo $(DOCKER_PWD) | docker login --username $(DOCKER_USER) --password-stdin || docker login $(REGISTRY); fi
 
 
 
