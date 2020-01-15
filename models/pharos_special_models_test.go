@@ -41,6 +41,8 @@ func TestNewIntellectualObjectForPharos(t *testing.T) {
 	intelObj.Access = "INSTITUTION" // Just so we can test lowercase
 	intelObj.DPNUUID = "a0903223-e956-40d8-a6e1-4d09edf7cea2"
 	intelObj.ETag = "12345678"
+	intelObj.SourceOrganization = "Popeye's Fried Chicken"
+	intelObj.BagItProfileIdentifier = "https://example.com/profile.json"
 	pharosObj := models.NewIntellectualObjectForPharos(intelObj)
 	assert.Equal(t, intelObj.Identifier, pharosObj.Identifier)
 	assert.Equal(t, intelObj.BagName, pharosObj.BagName)
@@ -54,6 +56,8 @@ func TestNewIntellectualObjectForPharos(t *testing.T) {
 	assert.Equal(t, intelObj.State, pharosObj.State)
 	assert.Equal(t, "US Photos, 1940-1945", pharosObj.BagGroupIdentifier)
 	assert.Equal(t, "A", pharosObj.State)
+	assert.Equal(t, intelObj.SourceOrganization, pharosObj.SourceOrganization)
+	assert.Equal(t, intelObj.BagItProfileIdentifier, pharosObj.BagItProfileIdentifier)
 }
 
 func TestNewPremisEventForPharos(t *testing.T) {

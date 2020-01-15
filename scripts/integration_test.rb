@@ -363,7 +363,7 @@ class IntegrationTest
   #
   def run_all_unit_tests
 	env = @context.env_hash
-	cmd = "go test ./..."
+	cmd = "go test `go list ./... | grep -v integration`"
 	pid = Process.spawn(env, cmd, chdir: @context.exchange_root)
 	Process.wait pid
 	return $?.exitstatus == 0

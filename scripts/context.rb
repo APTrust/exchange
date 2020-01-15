@@ -30,6 +30,8 @@ class Context
 	@apps = {
 	  'apt_audit_list' => App.new('apt_audit_list', 'application'),
 	  'apt_bucket_reader' => App.new('apt_bucket_reader', 'application'),
+      'apt_dump_files' => App.new('apt_dump_files', 'application'),
+      'apt_dump_valdb' => App.new('apt_dump_valdb', 'application'),
 	  'apt_fetch' => App.new('apt_fetch', 'service'),
 	  'apt_file_delete' => App.new('apt_file_delete', 'service'),
 	  'apt_file_restore' => App.new('apt_file_restore', 'service'),
