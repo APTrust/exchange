@@ -27,6 +27,11 @@ help: ## This help.
 
 .DEFAULT_GOAL := help
 
+docker_login:
+	if [ ! -z "$(DOCKER_USERNAME)" ]; then echo $(DOCKER_PASSWORD) | docker login --username $(DOCKER_USERNAME) --password-stdin || docker login $(REGISTRY); fi
+
+
+
 lsdirs: ## Show the apps that will be built
 	@for app in $(APP_LIST:apps/%=%); do \
 		echo $$app; \
@@ -68,17 +73,18 @@ unittest: ## Run unit tests in non Docker setup
 test-ci: ## Run unit tests in CI
 	docker run exchange-ci-test
 
-publish:
-	docker login $(REGISTRY)
+publish: docker_login
+#	@echo $(DOCKER_PWD) | docker login -u $(DOCKER_USER) --password-stdin $(REGISTRY)
+#	docker login $(REGISTRY)
 	@for app in $(APP_LIST:apps/%=%); \
 	do \
 		echo "Publishing $$app:$(REVISION)-$(BRANCH)"; \
 		docker push $(REGISTRY)/$(REPOSITORY)/$(NAME)_$$app:$(REVISION)-$(BRANCH);\
 	done
 
-publish-ci:
-	@echo $(DOCKER_PWD) | docker login -u $(DOCKER_USER) --password-stdin $(REGISTRY)
-	@for app in $(APP_LIST:apps/%=%); \
+#publish-ci:
+#	@echo $(DOCKER_PWD) | docker login -u $(DOCKER_USER) --password-stdin $(REGISTRY)
+#	@for app in $(APP_LIST:apps/%=%); \
 	do \
 	echo "Publishing $$app:$(REVISION)-$(PUSHBRANCH)"; \
 		docker push $(REGISTRY)/$(REPOSITORY)/$(NAME)_$$app:$(REVISION)-$(PUSHBRANCH);\
