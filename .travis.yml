@@ -3,6 +3,9 @@ sudo: required
 go:
   - "1.13.1"
   - tip
+cache:
+  directories:
+    - $HOME/.cache/go-build
 addons:
   apt:
     packages:
