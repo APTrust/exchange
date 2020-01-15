@@ -15,7 +15,7 @@ jobs:
     - stage: Unit Tests
       script: `go test ./... |grep -v integration`
     - stage: build_and_publish
-      script: make -w release-ci
+      script: make -w release
       #deploy:
       #  - provider: script
       # script: make -w publish-ci
