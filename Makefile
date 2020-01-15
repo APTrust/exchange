@@ -1,6 +1,6 @@
 #!/bin/bash
 
-## Gitlab
+# Gitlab
 #REGISTRY=registry.gitlab.com/aptrust
 #REPOSITORY=container-registry
 REGISTRY=docker.io
@@ -43,11 +43,11 @@ revision: ## Show me the git hash
 	@echo "Branch: ${BRANCH}"
 
 build: ## Build the Exchange containers
+# Gitlab only
+# docker build --build-arg EX_SERVICE=$$app -t aptrust/$(NAME)_$$app -t $(REGISTRY)/$(REPOSITORY)/$(NAME)_$$app:$(REVISION)-$(BRANCH) -f Dockerfile-build .;
 	@echo "Branch: ${BRANCH}"
 	@for app in $(APP_LIST:apps/%=%); do \
 		echo $$app; \
-		# Gitlab only
-	    # docker build --build-arg EX_SERVICE=$$app -t aptrust/$(NAME)_$$app -t $(REGISTRY)/$(REPOSITORY)/$(NAME)_$$app:$(REVISION)-$(BRANCH) -f Dockerfile-build .;
 		docker build --build-arg EX_SERVICE=$$app -t aptrust/$(NAME)_$$app -t aptrust/$(NAME)_$$app:$(REVISION)-$(BRANCH) -f Dockerfile-build .; \
 	done
 
