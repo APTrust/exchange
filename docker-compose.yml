@@ -2,7 +2,7 @@ version: '3.7'
 services:
    apt_fetch:
       restart: always
-      image: registry.gitlab.com/aptrust/container-registry/exchange_apt_volume_service:${DOCKER_TAG_NAME:-latest}
+      image: aptrust/exchange_apt_volume_service:${DOCKER_TAG_NAME:-latest}
       volumes:
          - type: bind
            source: "${DOCKER_DATA_PATH:-./docker}"
@@ -14,7 +14,7 @@ services:
          - ".env"
    apt_file_delete:
       restart: always
-      image: registry.gitlab.com/aptrust/container-registry/exchange_apt_file_delete:${DOCKER_TAG_NAME:-latest}
+      image: aptrust/exchange_apt_file_delete:${DOCKER_TAG_NAME:-latest}
       volumes:
          - type: bind
            source: "${DOCKER_DATA_PATH:-./docker}"
@@ -26,7 +26,7 @@ services:
          - ".env"
    apt_file_restore:
       restart: always
-      image: registry.gitlab.com/aptrust/container-registry/exchange_apt_file_restore:${DOCKER_TAG_NAME:-latest}
+      image: aptrust/exchange_apt_file_restore:${DOCKER_TAG_NAME:-latest}
       volumes:
          - type: bind
            source: "${DOCKER_DATA_PATH:-./docker}"
@@ -38,7 +38,7 @@ services:
          - ".env"
    apt_fixity_check:
       restart: always
-      image: registry.gitlab.com/aptrust/container-registry/exchange_apt_fixity_check:${DOCKER_TAG_NAME:-latest}
+      image: aptrust/exchange_apt_fixity_check:${DOCKER_TAG_NAME:-latest}
       volumes:
          - type: bind
            source: "${DOCKER_DATA_PATH:-./docker}"
@@ -50,7 +50,7 @@ services:
          - ".env"
    apt_glacier_restore_init:
       restart: always
-      image: registry.gitlab.com/aptrust/container-registry/exchange_apt_glacier_restore_init:${DOCKER_TAG_NAME:-latest}
+      image: aptrust/exchange_apt_glacier_restore_init:${DOCKER_TAG_NAME:-latest}
       volumes:
          - type: bind
            source: "${DOCKER_DATA_PATH:-./docker}"
@@ -62,7 +62,7 @@ services:
          - ".env"
    apt_record:
       restart: always
-      image: registry.gitlab.com/aptrust/container-registry/exchange_apt_record:${DOCKER_TAG_NAME:-latest}
+      image: aptrust/exchange_apt_record:${DOCKER_TAG_NAME:-latest}
       volumes:
          - type: bind
            source: "${DOCKER_DATA_PATH:-./docker}"
@@ -74,7 +74,7 @@ services:
          - ".env"
    apt_restore:
       restart: always
-      image: registry.gitlab.com/aptrust/container-registry/exchange_apt_restore:${DOCKER_TAG_NAME:-latest}
+      image: aptrust/exchange_apt_restore:${DOCKER_TAG_NAME:-latest}
       volumes:
          - type: bind
            source: "${DOCKER_DATA_PATH:-./docker}"
@@ -86,7 +86,7 @@ services:
          - ".env"
    apt_store:
       restart: always
-      image: registry.gitlab.com/aptrust/container-registry/exchange_apt_store:${DOCKER_TAG_NAME:-latest}
+      image: aptrust/exchange_apt_store:${DOCKER_TAG_NAME:-latest}
       volumes:
          - type: bind
            source: "${DOCKER_DATA_PATH:-./docker}"
@@ -98,7 +98,7 @@ services:
          - ".env"
    apt_volume_service:
       restart: always
-      image: registry.gitlab.com/aptrust/container-registry/exchange_apt_volume_service:${DOCKER_TAG_NAME:-latest}
+      image: aptrust/exchange_apt_volume_service:${DOCKER_TAG_NAME:-latest}
       volumes:
          - type: bind
            source: "${DOCKER_DATA_PATH:-./docker}"
