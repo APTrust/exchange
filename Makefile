@@ -3,7 +3,7 @@
 # Gitlab
 #REGISTRY=registry.gitlab.com/aptrust
 #REPOSITORY=container-registry
-REGISTRY=docker.io
+REGISTRY=hub.docker.com
 NAME=exchange
 REVISION:=$(shell git rev-parse --short=7 HEAD)
 BRANCH = $(subst /,_,$(shell git rev-parse --abbrev-ref HEAD))
