@@ -5,6 +5,9 @@ go:
   - tip
 services:
   - docker
+cache:
+  directories:
+    - $HOME/.cache/go-build
 addons:
   apt:
     packages:
