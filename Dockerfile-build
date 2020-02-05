@@ -1,5 +1,7 @@
 ARG EX_SERVICE=${EX_SERVICE}
-FROM golang:1.13.3-alpine3.10 as builder
+ARG ALPINE_VERSION=3.10
+
+FROM golang:1.13.3-alpine${ALPINE_VERSION} as builder
 # This image provides binaries for Exchange microservices.
 # A CI/CD service will distribute and build/deploy each microservice. TBD
 # .
@@ -18,7 +20,7 @@ RUN go mod download
 #RUN go get -v ...
 RUN go install -a github.com/APTrust/exchange/apps/...
 
-FROM alpine:latest
+FROM alpine:${ALPINE_VERSION}
 
 ARG EX_SERVICE=${EX_SERVICE}
 ARG ENVIRONMENT=${ENVIRONMENT:-development}
