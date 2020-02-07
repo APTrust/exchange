@@ -8,8 +8,8 @@ services:
            source: "${DOCKER_DATA_PATH:-./docker}"
            target: /go/bin/data
          - type: bind
-           source: "${DOCKER_DATA_PATH:-./docker}/config"
-           target: /go/bin/config
+           source: "${DOCKER_DATA_PATH:-./docker}/config/config.json"
+           target: /go/bin/config/config.json
       env_file:
          - ".env"
    apt_file_delete:
@@ -20,8 +20,8 @@ services:
            source: "${DOCKER_DATA_PATH:-./docker}"
            target: /go/bin/data
          - type: bind
-           source: "${DOCKER_DATA_PATH:-./docker}/config"
-           target: /go/bin/config
+           source: "${DOCKER_DATA_PATH:-./docker}/config/config.json"
+           target: /go/bin/config/config.json
       env_file:
          - ".env"
    apt_file_restore:
@@ -32,8 +32,8 @@ services:
            source: "${DOCKER_DATA_PATH:-./docker}"
            target: /go/bin/data
          - type: bind
-           source: "${DOCKER_DATA_PATH:-./docker}/config"
-           target: /go/bin/config
+           source: "${DOCKER_DATA_PATH:-./docker}/config/config.json"
+           target: /go/bin/config/config.json
       env_file:
          - ".env"
    apt_fixity_check:
@@ -44,8 +44,8 @@ services:
            source: "${DOCKER_DATA_PATH:-./docker}"
            target: /go/bin/data
          - type: bind
-           source: "${DOCKER_DATA_PATH:-./docker}/config"
-           target: /go/bin/config
+           source: "${DOCKER_DATA_PATH:-./docker}/config/config.json"
+           target: /go/bin/config/config.json
       env_file:
          - ".env"
    apt_glacier_restore_init:
@@ -56,8 +56,8 @@ services:
            source: "${DOCKER_DATA_PATH:-./docker}"
            target: /go/bin/data
          - type: bind
-           source: "${DOCKER_DATA_PATH:-./docker}/config"
-           target: /go/bin/config
+           source: "${DOCKER_DATA_PATH:-./docker}/config/config.json"
+           target: /go/bin/config/config.json
       env_file:
          - ".env"
    apt_record:
@@ -68,8 +68,8 @@ services:
            source: "${DOCKER_DATA_PATH:-./docker}"
            target: /go/bin/data
          - type: bind
-           source: "${DOCKER_DATA_PATH:-./docker}/config"
-           target: /go/bin/config
+           source: "${DOCKER_DATA_PATH:-./docker}/config/config.json"
+           target: /go/bin/config/config.json
       env_file:
          - ".env"
    apt_restore:
@@ -80,8 +80,8 @@ services:
            source: "${DOCKER_DATA_PATH:-./docker}"
            target: /go/bin/data
          - type: bind
-           source: "${DOCKER_DATA_PATH:-./docker}/config"
-           target: /go/bin/config
+           source: "${DOCKER_DATA_PATH:-./docker}/config/config.json"
+           target: /go/bin/config/config.json
       env_file:
          - ".env"
    apt_store:
@@ -92,8 +92,8 @@ services:
            source: "${DOCKER_DATA_PATH:-./docker}"
            target: /go/bin/data
          - type: bind
-           source: "${DOCKER_DATA_PATH:-./docker}/config"
-           target: /go/bin/config
+           source: "${DOCKER_DATA_PATH:-./docker}/config/config.json"
+           target: /go/bin/config/config.json
       env_file:
          - ".env"
    apt_volume_service:
@@ -104,8 +104,8 @@ services:
            source: "${DOCKER_DATA_PATH:-./docker}"
            target: /go/bin/data
          - type: bind
-           source: "${DOCKER_DATA_PATH:-./docker}/config"
-           target: /go/bin/config
+           source: "${DOCKER_DATA_PATH:-./docker}/config/config.json"
+           target: /go/bin/config/config.json
       env_file:
          - ".env"
    nsqlookupd:
