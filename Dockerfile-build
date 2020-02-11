@@ -12,7 +12,7 @@ RUN apk update && \
 
 ENV APP_PATH=/go/src/github.com/APTrust/exchange
 
-RUN mkdir -p $APP_PATH
+#RUN mkdir -p $APP_PATH
 WORKDIR $APP_PATH
 
 COPY . .
