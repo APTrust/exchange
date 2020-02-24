@@ -61,6 +61,13 @@ func NewGlacierRestore(_context *context.Context) *APTGlacierRestoreInit {
 	restorer := &APTGlacierRestoreInit{
 		Context: _context,
 	}
+
+	// Patch for https://trello.com/c/Ep4pKzZB
+	err := CacheBucketNames(_context)
+	if err != nil {
+		panic(fmt.Sprintf("Cannot cache bucket names from Pharos: %v", err))
+	}
+
 	// Set up buffered channels
 	restorerBufferSize := _context.Config.GlacierRestoreWorker.NetworkConnections * 4
 	workerBufferSize := _context.Config.GlacierRestoreWorker.Workers * 10

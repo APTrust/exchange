@@ -1,6 +1,7 @@
 package workers
 
 import (
+	"fmt"
 	"github.com/APTrust/exchange/constants"
 	"github.com/APTrust/exchange/context"
 	"github.com/APTrust/exchange/models"
@@ -27,6 +28,13 @@ type APTQueueFixity struct {
 func NewAPTQueueFixity(_context *context.Context, identifierLike string, maxFiles int) *APTQueueFixity {
 	_context.MessageLog.Info("NSQ address: %s", _context.Config.NsqdHttpAddress)
 	nsqClient := network.NewNSQClient(_context.Config.NsqdHttpAddress)
+
+	// Patch for https://trello.com/c/Ep4pKzZB
+	err := CacheBucketNames(_context)
+	if err != nil {
+		panic(fmt.Sprintf("Cannot cache bucket names from Pharos: %v", err))
+	}
+
 	aptQueue := &APTQueueFixity{
 		Context:        _context,
 		NSQClient:      nsqClient,

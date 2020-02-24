@@ -31,6 +31,13 @@ func NewAPTRecorder(_context *context.Context) *APTRecorder {
 	recorder := &APTRecorder{
 		Context: _context,
 	}
+
+	// Patch for https://trello.com/c/Ep4pKzZB
+	err := CacheBucketNames(_context)
+	if err != nil {
+		panic(fmt.Sprintf("Cannot cache bucket names from Pharos: %v", err))
+	}
+
 	// Set up buffered channels
 	workerBufferSize := _context.Config.RecordWorker.Workers * 10
 	recorder.RecordChannel = make(chan *models.IngestState, workerBufferSize)

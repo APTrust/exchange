@@ -54,6 +54,12 @@ func NewAPTRestorer(_context *context.Context) *APTRestorer {
 		Context: _context,
 	}
 
+	// Patch for https://trello.com/c/Ep4pKzZB
+	err := CacheBucketNames(_context)
+	if err != nil {
+		panic(fmt.Sprintf("Cannot cache bucket names from Pharos: %v", err))
+	}
+
 	restorer.BagValidationConfig = LoadAPTrustBagValidationConfig(restorer.Context)
 
 	// Set up buffered channels

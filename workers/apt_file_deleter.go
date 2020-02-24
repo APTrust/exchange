@@ -45,6 +45,12 @@ func NewAPTFileDeleter(_context *context.Context) *APTFileDeleter {
 		RecentlyDeleted: models.NewRingList(20),
 	}
 
+	// Patch for https://trello.com/c/Ep4pKzZB
+	err := CacheBucketNames(_context)
+	if err != nil {
+		panic(fmt.Sprintf("Cannot cache bucket names from Pharos: %v", err))
+	}
+
 	// Set up buffered channels
 	workerBufferSize := _context.Config.FileDeleteWorker.Workers * 10
 	deleter.DeleteChannel = make(chan *models.DeleteState, workerBufferSize)

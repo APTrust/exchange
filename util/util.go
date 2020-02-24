@@ -11,6 +11,18 @@ import (
 	"unicode"
 )
 
+// This is part of a temporary patch to read bucket names from Pharos.
+// This will be properly fixed in the forthcoming preservation-services
+// code, which will replace Exchange. In the following two maps, the
+// key is the bucket name and the value is the institition identifier.
+// For example: "aptrust.receiving.test.edu" = "test.edu"
+var OwnerOfReceivingBucket = make(map[string]string)
+var OwnerOfRestoreBucket = make(map[string]string)
+
+// This map uses institution identifier as key, restoration bucket name
+// as value.
+var RestoreBucketFor = make(map[string]string)
+
 var reManifest *regexp.Regexp = regexp.MustCompile("^manifest-[A-Za-z0-9]+\\.txt$")
 var reTagManifest *regexp.Regexp = regexp.MustCompile("^tagmanifest-[A-Za-z0-9]+\\.txt$")
 var reLegal *regexp.Regexp = regexp.MustCompile("^[A-Za-z0-9\\-_\\.]+$")
@@ -19,6 +31,15 @@ var reLegal *regexp.Regexp = regexp.MustCompile("^[A-Za-z0-9\\-_\\.]+$")
 // specified bucket. For example, if bucketName is 'aptrust.receiving.unc.edu'
 // the return value will be 'unc.edu'.
 func OwnerOf(bucketName string) (institution string) {
+	// If we've loaded authoritative bucket names from
+	// Pharos, use those.
+	if inst, ok := OwnerOfReceivingBucket[bucketName]; ok {
+		return inst
+	}
+	if inst, ok := OwnerOfRestoreBucket[bucketName]; ok {
+		return inst
+	}
+	// Otherwise, fall back to the old method that uses naming patterns.
 	if bucketName == constants.ReceiveTestBucketPrefix+"edu" {
 		// Actual test.edu receiving bucket for production.
 		// Didn't anticipate this case back in 2014. Oops.
@@ -44,9 +65,17 @@ func OwnerOf(bucketName string) (institution string) {
 // except in the production environment. If true, this will return
 // 'aptrust.restore.test.unc.edu'.
 func RestorationBucketFor(institution string, restoreToTestBuckets bool) (bucketName string) {
+	// Special case for testing. New preservation-services code should
+	// get rid of this.
 	if restoreToTestBuckets {
 		return constants.RestoreBucketPrefix + "test." + institution
 	}
+	// If we've loaded authoritative bucket names from
+	// Pharos, use those.
+	if bucket, ok := RestoreBucketFor[institution]; ok {
+		return bucket
+	}
+	// Otherwise, fall back to old pattern-based naming.
 	return constants.RestoreBucketPrefix + institution
 }
 
