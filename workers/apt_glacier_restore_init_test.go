@@ -57,6 +57,9 @@ var s3TestServer = httptest.NewServer(http.HandlerFunc(s3Handler))
 func getGlacierRestoreWorker(t *testing.T) *workers.APTGlacierRestoreInit {
 	_context, err := testutil.GetContext("integration.json")
 	require.Nil(t, err)
+	if !testutil.ShouldRunIntegrationTests() {
+		_context.PharosClient = getPharosClientForTest(pharosTestServer.URL)
+	}
 	return workers.NewGlacierRestore(_context)
 }
 
@@ -66,23 +69,23 @@ func getObjectWorkItem(id int, objectIdentifier string) *models.WorkItem {
 		Id:                    id,
 		ObjectIdentifier:      objectIdentifier,
 		GenericFileIdentifier: "",
-		Name:             "glacier_bag.tar",
-		Bucket:           "aptrust.receiving.test.edu",
-		ETag:             "0000000000000000",
-		BagDate:          testutil.RandomDateTime(),
-		InstitutionId:    33,
-		User:             "frank.zappa@example.com",
-		Date:             testutil.RandomDateTime(),
-		Note:             "",
-		Action:           constants.ActionGlacierRestore,
-		Stage:            constants.StageRequested,
-		Status:           constants.StatusPending,
-		Outcome:          "",
-		Retry:            true,
-		Node:             "",
-		Pid:              0,
-		NeedsAdminReview: false,
-		WorkItemStateId:  &workItemStateId,
+		Name:                  "glacier_bag.tar",
+		Bucket:                "aptrust.receiving.test.edu",
+		ETag:                  "0000000000000000",
+		BagDate:               testutil.RandomDateTime(),
+		InstitutionId:         33,
+		User:                  "frank.zappa@example.com",
+		Date:                  testutil.RandomDateTime(),
+		Note:                  "",
+		Action:                constants.ActionGlacierRestore,
+		Stage:                 constants.StageRequested,
+		Status:                constants.StatusPending,
+		Outcome:               "",
+		Retry:                 true,
+		Node:                  "",
+		Pid:                   0,
+		NeedsAdminReview:      false,
+		WorkItemStateId:       &workItemStateId,
 	}
 }
 
@@ -931,6 +934,23 @@ func workItemGetHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintln(w, string(objJson))
 }
 
+func institutionListHandler(w http.ResponseWriter, r *http.Request) {
+	jsonData := `{
+	"count": 1,
+	"next": null,
+	"previous": "https://repo.aptrust.org/institutions?page=-1&per_page=0",
+	"results": [{
+		"id": 8675309,
+		"name": "Test University",
+		"identifier": "test.edu",
+	    "receiving_bucket": "aptrust.receiving.test.test.edu",
+	    "restore_bucket": "aptrust.restore.test.test.edu"
+	}]
+}`
+	w.Header().Set("Content-Type", "application/json")
+	fmt.Fprintln(w, jsonData)
+}
+
 // Simulate updating of WorkItem. Pharos returns the updated WorkItem,
 // so this mock can just return the JSON as-is, and then the test
 // code can check that to see whether the worker sent the right data
@@ -1041,6 +1061,8 @@ func pharosHandler(w http.ResponseWriter, r *http.Request) {
 
 	} else if strings.Contains(url, "/objects/") {
 		intellectualObjectGetHandler(w, r)
+	} else if strings.Contains(url, "/institutions/") {
+		institutionListHandler(w, r)
 	} else if strings.Contains(url, "/files/") {
 		genericFileGetHandler(w, r)
 	} else {

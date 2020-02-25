@@ -48,6 +48,13 @@ func NewAPTBucketReader(context *context.Context, enableStats bool) *APTBucketRe
 		RecentIngestItems: make(map[string]*models.WorkItem),
 		statsEnabled:      enableStats,
 	}
+
+	// Patch for https://trello.com/c/Ep4pKzZB
+	err := CacheBucketNames(context)
+	if err != nil {
+		panic(fmt.Sprintf("Cannot cache bucket names from Pharos: %v", err))
+	}
+
 	if enableStats {
 		reader.stats = stats.NewAPTBucketReaderStats()
 	}

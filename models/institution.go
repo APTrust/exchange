@@ -20,4 +20,10 @@ type Institution struct {
 	// empty if the depositing institution is not a
 	// DPN member.
 	DPNUUID string `json:"dpn_uuid"`
+
+	// The name of the institution's receiving bucket.
+	ReceivingBucket string `json:"receiving_bucket"`
+
+	// The name of the institution's restore bucket.
+	RestoreBucket string `json:"restore_bucket"`
 }

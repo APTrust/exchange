@@ -36,6 +36,13 @@ func NewAPTFixityChecker(_context *context.Context) *APTFixityChecker {
 		Context:        _context,
 		ItemsInProcess: models.NewSynchronizedMap(),
 	}
+
+	// Patch for https://trello.com/c/Ep4pKzZB
+	err := CacheBucketNames(_context)
+	if err != nil {
+		panic(fmt.Sprintf("Cannot cache bucket names from Pharos: %v", err))
+	}
+
 	workerBufferSize := _context.Config.FixityWorker.Workers * 10
 	checker.FixityChannel = make(chan *models.FixityResult, workerBufferSize)
 	checker.RecordChannel = make(chan *models.FixityResult, workerBufferSize)

@@ -77,6 +77,13 @@ func NewAPTAuditList(context *context.Context, region, bucket, keyPrefix, format
 		delimiter = '\t'
 	}
 	recordType := STORED_FILE
+
+	// Patch for https://trello.com/c/Ep4pKzZB
+	err := CacheBucketNames(context)
+	if err != nil {
+		panic(fmt.Sprintf("Cannot cache bucket names from Pharos: %v", err))
+	}
+
 	return &APTAuditList{
 		context:      context,
 		region:       region,

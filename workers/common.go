@@ -12,6 +12,7 @@ import (
 	"github.com/nsqio/go-nsq"
 	"log"
 	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -21,6 +22,24 @@ import (
 )
 
 var TAR_SUFFIX = regexp.MustCompile("\\.tar$")
+
+func CacheBucketNames(_context *context.Context) error {
+	params := url.Values{}
+	params.Add("page", "1")
+	params.Add("per_page", "100")
+	resp := _context.PharosClient.InstitutionList(params)
+	if resp.Error != nil {
+		return resp.Error
+	}
+	for _, inst := range resp.Institutions() {
+		util.OwnerOfReceivingBucket[inst.ReceivingBucket] = inst.Identifier
+		util.OwnerOfRestoreBucket[inst.RestoreBucket] = inst.Identifier
+		util.RestoreBucketFor[inst.Identifier] = inst.RestoreBucket
+	}
+	_context.MessageLog.Info(
+		"Loaded %d bucket names for institutions", len(resp.Institutions()))
+	return nil
+}
 
 // CreateNSQConsumer creates and returns an NSQ consumer for a worker process.
 func CreateNsqConsumer(config *models.Config, workerConfig *models.WorkerConfig) (*nsq.Consumer, error) {

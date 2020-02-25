@@ -32,6 +32,12 @@ func NewAPTFetcher(_context *context.Context) *APTFetcher {
 		Context: _context,
 	}
 
+	// Patch for https://trello.com/c/Ep4pKzZB
+	err := CacheBucketNames(_context)
+	if err != nil {
+		panic(fmt.Sprintf("Cannot cache bucket names from Pharos: %v", err))
+	}
+
 	// Load the config settings that describe how to validate
 	// APTrust bags. We'll exit here if the config can't be
 	// loaded or is invalid.

@@ -52,6 +52,12 @@ func NewAPTStorer(_context *context.Context) *APTStorer {
 		SyncMap: models.NewSynchronizedMap(),
 	}
 
+	// Patch for https://trello.com/c/Ep4pKzZB
+	err := CacheBucketNames(_context)
+	if err != nil {
+		panic(fmt.Sprintf("Cannot cache bucket names from Pharos: %v", err))
+	}
+
 	// Set up buffered channels
 	workerBufferSize := _context.Config.StoreWorker.Workers * 10
 	storer.StorageChannel = make(chan *models.IngestState, workerBufferSize)

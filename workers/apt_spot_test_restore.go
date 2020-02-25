@@ -27,6 +27,13 @@ type APTSpotTestRestore struct {
 // bags that have not been restored since this date (which helps
 // prevent us restoring the same bag again and again).
 func NewAPTSpotTestRestore(_context *context.Context, maxSize int64, createdBefore, notRestoredSince time.Time) *APTSpotTestRestore {
+
+	// Patch for https://trello.com/c/Ep4pKzZB
+	err := CacheBucketNames(_context)
+	if err != nil {
+		panic(fmt.Sprintf("Cannot cache bucket names from Pharos: %v", err))
+	}
+
 	return &APTSpotTestRestore{
 		Context:          _context,
 		CreatedBefore:    createdBefore,

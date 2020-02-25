@@ -24,6 +24,9 @@ var spotPharosTestServer = httptest.NewServer(http.HandlerFunc(spotPharosHandler
 func getSpotRestoreWorker(t *testing.T) *workers.APTSpotTestRestore {
 	_context, err := testutil.GetContext("integration.json")
 	require.Nil(t, err)
+	if !testutil.ShouldRunIntegrationTests() {
+		_context.PharosClient = getPharosClientForTest(pharosTestServer.URL)
+	}
 	worker := workers.NewAPTSpotTestRestore(_context, 1000000,
 		testutil.TEST_TIMESTAMP, testutil.TEST_TIMESTAMP)
 	require.NotNil(t, worker)

@@ -31,6 +31,13 @@ type APTQueue struct {
 // queued, without actually pushing anything to NSQ.
 func NewAPTQueue(_context *context.Context, topic string, enableStats, dryRun bool) *APTQueue {
 	_context.MessageLog.Info("NSQ address: %s", _context.Config.NsqdHttpAddress)
+
+	// Patch for https://trello.com/c/Ep4pKzZB
+	err := CacheBucketNames(_context)
+	if err != nil {
+		panic(fmt.Sprintf("Cannot cache bucket names from Pharos: %v", err))
+	}
+
 	nsqClient := network.NewNSQClient(_context.Config.NsqdHttpAddress)
 	aptQueue := &APTQueue{
 		Context:      _context,
