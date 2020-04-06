@@ -12,6 +12,9 @@ services:
            target: /go/bin/config/config.json
       env_file:
          - ".env"
+      networks:
+         - default
+         - gateway
    apt_file_delete:
       restart: always
       image: aptrust/exchange_apt_file_delete:${DOCKER_TAG_NAME:-latest}
@@ -24,6 +27,9 @@ services:
            target: /go/bin/config/config.json
       env_file:
          - ".env"
+      networks:
+         - default
+         - gateway
    apt_file_restore:
       restart: always
       image: aptrust/exchange_apt_file_restore:${DOCKER_TAG_NAME:-latest}
@@ -36,6 +42,9 @@ services:
            target: /go/bin/config/config.json
       env_file:
          - ".env"
+      networks:
+         - default
+         - gateway
    apt_fixity_check:
       restart: always
       image: aptrust/exchange_apt_fixity_check:${DOCKER_TAG_NAME:-latest}
@@ -48,6 +57,9 @@ services:
            target: /go/bin/config/config.json
       env_file:
          - ".env"
+      networks:
+         - default
+         - gateway
    apt_glacier_restore_init:
       restart: always
       image: aptrust/exchange_apt_glacier_restore_init:${DOCKER_TAG_NAME:-latest}
@@ -60,6 +72,9 @@ services:
            target: /go/bin/config/config.json
       env_file:
          - ".env"
+      networks:
+         - default
+         - gateway
    apt_record:
       restart: always
       image: aptrust/exchange_apt_record:${DOCKER_TAG_NAME:-latest}
@@ -72,6 +87,9 @@ services:
            target: /go/bin/config/config.json
       env_file:
          - ".env"
+      networks:
+         - default
+         - gateway
    apt_restore:
       restart: always
       image: aptrust/exchange_apt_restore:${DOCKER_TAG_NAME:-latest}
@@ -84,6 +102,9 @@ services:
            target: /go/bin/config/config.json
       env_file:
          - ".env"
+      networks:
+         - default
+         - gateway
    apt_store:
       restart: always
       image: aptrust/exchange_apt_store:${DOCKER_TAG_NAME:-latest}
@@ -96,6 +117,9 @@ services:
            target: /go/bin/config/config.json
       env_file:
          - ".env"
+      networks:
+         - default
+         - gateway
    apt_volume_service:
       restart: always
       image: aptrust/exchange_apt_volume_service:${DOCKER_TAG_NAME:-latest}
@@ -108,6 +132,9 @@ services:
            target: /go/bin/config/config.json
       env_file:
          - ".env"
+      networks:
+         - default
+         - gateway
    nsqlookupd:
       image: nsqio/nsq:v1.2.0
       hostname: nsqlookupd
@@ -150,4 +177,7 @@ services:
          - "4171:4171"
       restart: always
 networks:
+   gateway:
+      external:
+         name: gateway
    default:
