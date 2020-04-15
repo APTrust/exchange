@@ -2,7 +2,7 @@ version: '3.7'
 services:
    apt_fetch:
       restart: always
-      image: aptrust/exchange_apt_volume_service:${DOCKER_TAG_NAME:-latest}
+      image: aptrust/exchange_apt_fetch:${DOCKER_TAG_NAME:-latest}
       volumes:
          - type: bind
            source: "${DOCKER_DATA_PATH:-./docker}"
