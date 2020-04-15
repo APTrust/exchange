@@ -1,8 +1,9 @@
+---
 version: '3.7'
 services:
-   apt_fetch:
-      restart: always
+   apt_fetch: &default
       image: aptrust/exchange_apt_fetch:${DOCKER_TAG_NAME:-latest}
+      restart: always
       volumes:
          - type: bind
            source: "${DOCKER_DATA_PATH:-./docker}"
@@ -16,125 +17,30 @@ services:
          - default
          - gateway
    apt_file_delete:
-      restart: always
       image: aptrust/exchange_apt_file_delete:${DOCKER_TAG_NAME:-latest}
-      volumes:
-         - type: bind
-           source: "${DOCKER_DATA_PATH:-./docker}"
-           target: /go/bin/data
-         - type: bind
-           source: "${DOCKER_DATA_PATH:-./docker}/config/config.json"
-           target: /go/bin/config/config.json
-      env_file:
-         - ".env"
-      networks:
-         - default
-         - gateway
+      restart: always
+      <<: *default
    apt_file_restore:
-      restart: always
       image: aptrust/exchange_apt_file_restore:${DOCKER_TAG_NAME:-latest}
-      volumes:
-         - type: bind
-           source: "${DOCKER_DATA_PATH:-./docker}"
-           target: /go/bin/data
-         - type: bind
-           source: "${DOCKER_DATA_PATH:-./docker}/config/config.json"
-           target: /go/bin/config/config.json
-      env_file:
-         - ".env"
-      networks:
-         - default
-         - gateway
+      <<: *default
    apt_fixity_check:
-      restart: always
       image: aptrust/exchange_apt_fixity_check:${DOCKER_TAG_NAME:-latest}
-      volumes:
-         - type: bind
-           source: "${DOCKER_DATA_PATH:-./docker}"
-           target: /go/bin/data
-         - type: bind
-           source: "${DOCKER_DATA_PATH:-./docker}/config/config.json"
-           target: /go/bin/config/config.json
-      env_file:
-         - ".env"
-      networks:
-         - default
-         - gateway
+      <<: *default
    apt_glacier_restore_init:
-      restart: always
       image: aptrust/exchange_apt_glacier_restore_init:${DOCKER_TAG_NAME:-latest}
-      volumes:
-         - type: bind
-           source: "${DOCKER_DATA_PATH:-./docker}"
-           target: /go/bin/data
-         - type: bind
-           source: "${DOCKER_DATA_PATH:-./docker}/config/config.json"
-           target: /go/bin/config/config.json
-      env_file:
-         - ".env"
-      networks:
-         - default
-         - gateway
+      <<: *default
    apt_record:
-      restart: always
       image: aptrust/exchange_apt_record:${DOCKER_TAG_NAME:-latest}
-      volumes:
-         - type: bind
-           source: "${DOCKER_DATA_PATH:-./docker}"
-           target: /go/bin/data
-         - type: bind
-           source: "${DOCKER_DATA_PATH:-./docker}/config/config.json"
-           target: /go/bin/config/config.json
-      env_file:
-         - ".env"
-      networks:
-         - default
-         - gateway
+      <<: *default
    apt_restore:
-      restart: always
       image: aptrust/exchange_apt_restore:${DOCKER_TAG_NAME:-latest}
-      volumes:
-         - type: bind
-           source: "${DOCKER_DATA_PATH:-./docker}"
-           target: /go/bin/data
-         - type: bind
-           source: "${DOCKER_DATA_PATH:-./docker}/config/config.json"
-           target: /go/bin/config/config.json
-      env_file:
-         - ".env"
-      networks:
-         - default
-         - gateway
+      <<: *default
    apt_store:
-      restart: always
       image: aptrust/exchange_apt_store:${DOCKER_TAG_NAME:-latest}
-      volumes:
-         - type: bind
-           source: "${DOCKER_DATA_PATH:-./docker}"
-           target: /go/bin/data
-         - type: bind
-           source: "${DOCKER_DATA_PATH:-./docker}/config/config.json"
-           target: /go/bin/config/config.json
-      env_file:
-         - ".env"
-      networks:
-         - default
-         - gateway
+      <<: *default
    apt_volume_service:
-      restart: always
       image: aptrust/exchange_apt_volume_service:${DOCKER_TAG_NAME:-latest}
-      volumes:
-         - type: bind
-           source: "${DOCKER_DATA_PATH:-./docker}"
-           target: /go/bin/data
-         - type: bind
-           source: "${DOCKER_DATA_PATH:-./docker}/config/config.json"
-           target: /go/bin/config/config.json
-      env_file:
-         - ".env"
-      networks:
-         - default
-         - gateway
+      <<: *default
    nsqlookupd:
       image: nsqio/nsq:v1.2.0
       hostname: nsqlookupd
