@@ -1,0 +1,92 @@
+---
+version: '3.7'
+services:
+   apt_fetch: &default
+      image: aptrust/exchange_apt_fetch:${DOCKER_TAG_NAME:-latest}
+      restart: always
+      volumes:
+         - type: bind
+           source: "${DOCKER_DATA_PATH:-./docker}"
+           target: /go/bin/data
+         - type: bind
+           source: "${DOCKER_DATA_PATH:-./docker}/config/config.json"
+           target: /go/bin/config/config.json
+      env_file:
+         - ".env"
+      networks:
+         - default
+         - gateway
+   apt_file_delete:
+      image: aptrust/exchange_apt_file_delete:${DOCKER_TAG_NAME:-latest}
+      restart: always
+      <<: *default
+   apt_file_restore:
+      image: aptrust/exchange_apt_file_restore:${DOCKER_TAG_NAME:-latest}
+      <<: *default
+   apt_fixity_check:
+      image: aptrust/exchange_apt_fixity_check:${DOCKER_TAG_NAME:-latest}
+      <<: *default
+   apt_glacier_restore_init:
+      image: aptrust/exchange_apt_glacier_restore_init:${DOCKER_TAG_NAME:-latest}
+      <<: *default
+   apt_record:
+      image: aptrust/exchange_apt_record:${DOCKER_TAG_NAME:-latest}
+      <<: *default
+   apt_restore:
+      image: aptrust/exchange_apt_restore:${DOCKER_TAG_NAME:-latest}
+      <<: *default
+   apt_store:
+      image: aptrust/exchange_apt_store:${DOCKER_TAG_NAME:-latest}
+      <<: *default
+   apt_volume_service:
+      image: aptrust/exchange_apt_volume_service:${DOCKER_TAG_NAME:-latest}
+      <<: *default
+   nsqlookupd:
+      image: nsqio/nsq:v1.2.0
+      restart: always
+      hostname: nsqlookupd
+      command: /nsqlookupd
+      volumes:
+         - type: bind
+           source: "${DOCKER_DATA_PATH:-./docker}/nsq"
+           target: /data
+      ports:
+         - "4160:4160"
+         - "4161:4161"
+   nsqd:
+      image: nsqio/nsq:v1.2.0
+      hostname: nsqd
+      restart: always
+      command: /nsqd --lookupd-tcp-address=${nsq_lookupd_tcp_address} --data-path=/data --broadcast-address=${nsq_broadcast_address} --msg-timeout=${nsq_msg_timeout} --max-msg-timeout=${nsq_max_msg_timeout} --max-msg-size=${nsq_max_msg_size} -mem-queue-size=${nsq_mem_queue_size} -max-req-timeout=${nsq_max_req_timeout} -max-heartbeat-interval=${nsq_max_heartbeat_interval}
+      volumes:
+         - type: bind
+           source: "${DOCKER_DATA_PATH:-./docker}/nsq"
+           target: /data
+      env_file:
+         - ".env"
+      networks:
+         - default
+         - gateway
+      depends_on:
+         - nsqlookupd
+      ports:
+         - "4150:4150"
+         - "4151:4151"
+   nsqadmin:
+      image: nsqio/nsq:v1.2.0
+      restart: always
+      command: /nsqadmin --lookupd-http-address=${nsq_lookupd_http_address}
+      depends_on:
+         - nsqlookupd
+      env_file:
+         - ".env"
+      networks:
+         - default
+         - gateway
+      ports:
+         - "4171:4171"
+networks:
+   gateway:
+      external:
+         name: gateway
+   default:
