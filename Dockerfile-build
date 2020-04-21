@@ -1,7 +1,7 @@
 ARG EX_SERVICE=${EX_SERVICE}
-ARG ALPINE_VERSION=3.10
+ARG ALPINE_VERSION=3.11
 
-FROM golang:1.13.3-alpine${ALPINE_VERSION} as builder
+FROM golang:1.13.10-alpine${ALPINE_VERSION} as builder
 # This image provides binaries for Exchange microservices.
 # A CI/CD service will distribute and build/deploy each microservice. TBD
 # .
@@ -17,6 +17,10 @@ WORKDIR $APP_PATH
 
 COPY . .
 RUN go mod download
+# mod-vendor - chache go modules
+# ldflags - ignore debugging files
+#RUN CGO_ENABLED=0 go build -mod=vendor -ldflags '-w' github.com/APTrust/exchange/apps/...
+
 #RUN go get -v ...
 RUN go install -a github.com/APTrust/exchange/apps/...
 
@@ -32,6 +36,8 @@ VOLUME ["/go/bin/config"]
 # Note: Using main as app name because CMD doesn't support env expansion and
 # Docker images are tagged with app names already.
 COPY --from=builder /go/bin/${EX_SERVICE} /go/bin/main
+# Compress binary
+#RUN UPX /go/bin/main -1
 COPY --from=builder /go/src/github.com/APTrust/exchange/config/${ENVIRONMENT}.json config/config.json
 COPY --from=builder /go/src/github.com/APTrust/exchange/config/aptrust_bag_validation_config.json config/aptrust_bag_validation_config.json
 
