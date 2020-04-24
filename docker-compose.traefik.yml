@@ -6,8 +6,11 @@ services:
       restart: always
       volumes:
          - type: bind
-           source: "${DOCKER_DATA_PATH:-./docker}"
+           source: "${EXCHANGE_DATA_PATH:-./docker}"
            target: /go/bin/data
+         - type: bind
+           source: "${DOCKER_DATA_PATH:-./docker}"
+           target: /go/bin/logs
          - type: bind
            source: "${DOCKER_DATA_PATH:-./docker}/config/config.json"
            target: /go/bin/config/config.json
