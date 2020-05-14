@@ -44,11 +44,11 @@ revision: ## Show me the git hash
 
 build: ## Build the Exchange containers
 # Gitlab only
-# docker build --build-arg EX_SERVICE=$$app -t aptrust/$(NAME)_$$app -t $(REGISTRY)/$(REPOSITORY)/$(NAME)_$$app:$(REVISION)-$(BRANCH) -f Dockerfile-build .;
+# docker build --build-arg EX_SERVICE=$$app -t aptrust/$(NAME)_$$app -t $(REGISTRY)/$(REPOSITORY)/$(NAME)_$$app:$(REVISION)-$(BRANCH) -f Dockerfile.build .;
 	@echo "Branch: ${BRANCH}"
 	@for app in $(APP_LIST:apps/%=%); do \
 		echo $$app; \
-		docker build --build-arg EX_SERVICE=$$app -t aptrust/$(NAME)_$$app -t aptrust/$(NAME)_$$app:$(REVISION)-$(BRANCH) -f Dockerfile-build .; \
+		docker build --build-arg EX_SERVICE=$$app -t aptrust/$(NAME)_$$app -t aptrust/$(NAME)_$$app:$(REVISION)-$(BRANCH) -f Dockerfile.build .; \
 	done
 
 up: ## Start Exchange+NSQ containers
