@@ -7,8 +7,7 @@ FROM golang:1.13.10-alpine${ALPINE_VERSION} as builder
 # .
 
 RUN apk update && \
-    apk add --no-cache libmagic file-dev g++ make build-base \
-    imagemagick-dev bash git
+    apk add --no-cache libmagic file-dev g++ make build-base imagemagick-dev bash git
 
 ENV APP_PATH=/go/src/github.com/APTrust/exchange
 
@@ -18,11 +17,13 @@ WORKDIR $APP_PATH
 COPY . .
 RUN go mod download
 # mod-vendor - chache go modules
+#RUN go mod vendor
 # ldflags - ignore debugging files
-#RUN CGO_ENABLED=0 go build -mod=vendor -ldflags '-w' github.com/APTrust/exchange/apps/...
+RUN go build -mod=vendor -ldflags '-w' github.com/APTrust/exchange/apps/...
+#RUN CGO_ENABLED=0 go build -ldflags '-w' github.com/APTrust/exchange/apps/...
 
 #RUN go get -v ...
-RUN go install -a github.com/APTrust/exchange/apps/...
+#RUN go install -a github.com/APTrust/exchange/apps/...
 
 FROM alpine:${ALPINE_VERSION}
 
