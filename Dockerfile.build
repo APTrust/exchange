@@ -7,51 +7,52 @@ FROM golang:1.13.10-alpine${ALPINE_VERSION} as builder
 # .
 
 RUN apk update && \
-    apk add --no-cache libmagic file-dev g++ make build-base imagemagick-dev bash git
+    apk add --no-cache libmagic file-dev g++ make build-base \
+	imagemagick-dev bash git upx
 
-ENV APP_PATH=/go/src/github.com/APTrust/exchange
+#ENV CGO_ENABLED=0 \
+ENV GOOS=linux \
+    GOARCH=amd64
 
-#RUN mkdir -p $APP_PATH
-WORKDIR $APP_PATH
+WORKDIR /app
+
+# Copy and download dependency using go mod
+ADD go.mod go.sum ./
+RUN go mod download
 
 COPY . .
-RUN go mod download
-# mod-vendor - chache go modules
-#RUN go mod vendor
-# ldflags - ignore debugging files
-RUN go build -mod=vendor -ldflags '-w' github.com/APTrust/exchange/apps/...
-#RUN CGO_ENABLED=0 go build -ldflags '-w' github.com/APTrust/exchange/apps/...
 
-#RUN go get -v ...
-#RUN go install -a github.com/APTrust/exchange/apps/...
+#RUN go build -mod=vendor -ldflags '-w' github.com/APTrust/exchange/apps/...
+#RUN CGO_ENABLED=0 go build -ldflags '-w' github.com/APTrust/exchange/apps/...
+#RUN go build -ldflags '-w' github.com/APTrust/exchange/apps/...
+RUN make build-bin
+
+# Compress binary
+RUN upx /app/bin/* -1
 
 FROM alpine:${ALPINE_VERSION}
 
 ARG EX_SERVICE=${EX_SERVICE}
 ARG ENVIRONMENT=${ENVIRONMENT:-development}
 
-WORKDIR /go/bin
+WORKDIR /app
 
-VOLUME ["/go/bin/data"]
-VOLUME ["/go/bin/config"]
+VOLUME ["/app/data"]
+VOLUME ["/app/config"]
 # Note: Using main as app name because CMD doesn't support env expansion and
 # Docker images are tagged with app names already.
-COPY --from=builder /go/bin/${EX_SERVICE} /go/bin/main
-# Compress binary
-#RUN UPX /go/bin/main -1
-COPY --from=builder /go/src/github.com/APTrust/exchange/config/${ENVIRONMENT}.json config/config.json
-COPY --from=builder /go/src/github.com/APTrust/exchange/config/aptrust_bag_validation_config.json config/aptrust_bag_validation_config.json
+COPY --from=builder /app//bin/${EX_SERVICE} /app/main
+COPY --from=builder /app/bin/${EX_SERVICE} /app/${EX_SERVICE}
 
-# TODO: These libraries are needed for the exchange services if they were build
-# statically linked. Need more testing. Current workaround is to install
-# packages like below.
-#    /usr/lib/x86_64-linux-gnu/libmagic.so.1 \
-#    /lib/x86_64-linux-gnu/libpthread.so.0 \
-#    /lib/x86_64-linux-gnu/libc.so.6 \
-#    /lib/x86_64-linux-gnu/libz.so.1 \
-#    /lib64/ld-linux-x86-64.so.2 /go/bin/
+COPY --from=builder /app/config/${ENVIRONMENT}.json config/config.json
+COPY --from=builder /app/config/aptrust_bag_validation_config.json config/aptrust_bag_validation_config.json
 
 RUN apk update && \
     apk add --no-cache imagemagick-dev libmagic bash
 
-CMD ["/go/bin/main", "-config=/go/bin/config/config.json"]
+RUN addgroup -S somegroup -g 1000 && adduser -S -G somegroup somebody -u 1000
+RUN chown -R somebody:somegroup /app
+USER somebody
+
+#CMD ["/go/bin/main", "-config=/go/bin/config/config.json"]
+CMD ["sh", "-c", "./${EX_SERVICE} -config=/go/bin/config/config.json"]
