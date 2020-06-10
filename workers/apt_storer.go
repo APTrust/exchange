@@ -726,10 +726,28 @@ func (storer *APTStorer) getFileReader(reader io.Reader, gf *models.GenericFile,
 			return nil, err
 		}
 	}
+
+	// Have to stat twice now, first to check for zero-length files
+	// that sometimes show up during heavy ingest. Possibly due to
+	// writes being started as services are shutting down.
 	stat, err := os.Stat(filePath)
 	if err != nil {
 		storer.Context.MessageLog.Error("Can't stat %s (%s): %v", filePath, gf.Identifier, err)
 	}
+	// If zero-size file exists, fix it by recopying.
+	if stat != nil && stat.Size() == int64(0) {
+		err = storer.createTempFile(reader, gf, attemptNumber)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	// Now proceed to upload the temp file if all looks well.
+	stat, err = os.Stat(filePath)
+	if err != nil {
+		storer.Context.MessageLog.Error("Can't stat %s (%s): %v", filePath, gf.Identifier, err)
+	}
+
 	if stat != nil && stat.Size() == gf.Size {
 		tempFile, err = os.Open(filePath)
 		if err == nil {
