@@ -736,10 +736,12 @@ func (storer *APTStorer) getFileReader(reader io.Reader, gf *models.GenericFile,
 	}
 	// If zero-size file exists, fix it by recopying.
 	if stat != nil && stat.Size() == int64(0) {
+		storer.Context.MessageLog.Error("Attempting to fix zero-length temp file %s (%s)", filePath, gf.Identifier)
 		err = storer.createTempFile(reader, gf, attemptNumber)
 		if err != nil {
 			return nil, err
 		}
+		storer.Context.MessageLog.Error("Fixed zero-length temp file %s (%s)", filePath, gf.Identifier)
 	}
 
 	// Now proceed to upload the temp file if all looks well.
