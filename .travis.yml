@@ -1,5 +1,6 @@
 language: go
-sudo: required
+os: linux
+dist: bionic
 go:
   - "1.13.1"
   - tip
