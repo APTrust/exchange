@@ -417,9 +417,14 @@ func (storer *APTStorer) saveFile(db *storage.BoltDB, storageSummary *models.Sto
 				storer.copyToLongTermStorage(storageSummary, "glacier")
 			}
 		} else {
-			storer.Context.MessageLog.Info("Skipping S3 because file %s is %s", gf.Identifier, gf.StorageOption)
-			// Send directly to Glacier VA, OH or OR.
-			storer.copyToLongTermStorage(storageSummary, gf.StorageOption)
+			// A.D. 2020-06-10: Don't re-upload unnecessarily.
+			if gf.IngestStoredAt.IsZero() || gf.IngestStorageURL == "" {
+				storer.Context.MessageLog.Info("Skipping S3 because file %s is %s", gf.Identifier, gf.StorageOption)
+				// Send directly to Glacier VA, OH or OR.
+				storer.copyToLongTermStorage(storageSummary, gf.StorageOption)
+			} else {
+				storer.Context.MessageLog.Info("Skipping upload of %s because it was stored at %s at %s", gf.Identifier, gf.IngestStorageURL, gf.IngestStoredAt.Format(time.RFC3339))
+			}
 		}
 		// Don't do cleanup until both copies are saved.
 		defer storer.cleanupTempFile(gf)
