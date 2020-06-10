@@ -12,6 +12,7 @@ APP_LIST:=$(wildcard apps/apt_*)
 APPS_LIST:=$(APP_LIST:apps/%=%)
 TAG=$(name):$(REVISION)
 
+OUTPUT_DIR:=bin
 DOCKER_TAG_NAME=${REVISION}-${BRANCH}
 
 ifdef TRAVIS
@@ -41,6 +42,14 @@ lsdirs: ## Show the apps that will be built
 revision: ## Show me the git hash
 	@echo "Revision: ${REVISION}"
 	@echo "Branch: ${BRANCH}"
+
+build-bin: ## Build Go binaries
+	@[[ -d ${OUTPUT_DIR} ]] || mkdir ${OUTPUT_DIR}
+	@for app in $$(find ./apps -name *.go); do \
+		APP_NAME=$$(basename $$app .go); \
+		echo "Building $$APP_NAME" binary; \
+		$$(go build -ldflags '-w' -o ${OUTPUT_DIR}/$$APP_NAME $$app); \
+	done
 
 build: ## Build the Exchange containers
 # Gitlab only
