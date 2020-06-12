@@ -325,7 +325,7 @@ func (storer *APTStorer) record() {
 			storer.logFailedToStore(ingestState)
 			ingestState.FinishNSQ()
 			MarkWorkItemFailed(ingestState, storer.Context)
-		} else if ingestState.IngestManifest.HasErrors() {
+		} else if ingestState.IngestManifest.StoreResult.HasErrors() {
 			timeout := 30000 // thirty seconds
 			if strings.Contains(ingestState.IngestManifest.StoreResult.Errors[0], "[High Resource Bag]") {
 				storer.Context.MessageLog.Info("Setting long timeout for high resource bag %s", objIdentifier)
