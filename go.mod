@@ -4,7 +4,7 @@ go 1.13
 
 require (
 	github.com/APTrust/bagins v0.0.0-20161121172035-5bc945341498
-	github.com/aws/aws-sdk-go v1.33.17
+	github.com/aws/aws-sdk-go v1.34.0
 	github.com/boltdb/bolt v1.3.1
 	github.com/corpix/uarand v0.1.2-0.20190826213412-6fd8ff1ca6b2 // indirect
 	github.com/crowdmob/goamz v0.0.0-20150128194925-3a06871fe9fc
