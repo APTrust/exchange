@@ -851,7 +851,10 @@ func (storer *APTStorer) cleanupTempFile(gf *models.GenericFile) {
 		storer.Context.MessageLog.Info("Deleting temp file %s: "+
 			"file %s has been stored and replicated",
 			tempFilePath, gf.Identifier)
-		os.Remove(tempFilePath)
+		err := os.Remove(tempFilePath)
+		if err != nil {
+			storer.Context.MessageLog.Error(fmt.Sprintf("Error deleting temp file %s: %v", tempFilePath, err))
+		}
 	}
 }
 
