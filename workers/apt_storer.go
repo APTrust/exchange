@@ -843,8 +843,11 @@ func (storer *APTStorer) cleanupTempFile(gf *models.GenericFile) {
 		return
 	}
 	// Delete the file only if it's been copied to both S3 and Glacier
+	// A.D. 2020-09-11:
+	// If it's a Glacier-only file, it doesn't need to be replicated.
+	// See issue https://trello.com/c/w2Yx9J96
 	fileIsStored := !gf.IngestStoredAt.IsZero()
-	fileIsReplicated := !gf.IngestReplicatedAt.IsZero()
+	fileIsReplicated := !gf.IngestReplicatedAt.IsZero() || strings.HasPrefix(gf.StorageOption, "Glacier")
 	looksSafeToDelete := fileutil.LooksSafeToDelete(tempFilePath, 12, 3)
 
 	if fileIsStored && fileIsReplicated && looksSafeToDelete {
