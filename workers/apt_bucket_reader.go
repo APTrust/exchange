@@ -160,7 +160,24 @@ func (reader *APTBucketReader) makeHashKey(key, etag string) string {
 }
 
 func (reader *APTBucketReader) readAllBuckets() {
-	for _, bucketName := range reader.Context.Config.ReceivingBuckets {
+	// A.D. 2021-02-04: Get bucket from Pharos, not from the config files.
+	// Ideally, we should check buckets for active institutions only, but
+	// Pharos isn't giving us institution state info right now, and it's
+	// too brittle to mess with.
+	bucketNames := make([]string, 0)
+	// This sucks, but the integration tests rely on reading bucket
+	// names from config files. I'm hacking this rather than going
+	// through a painful fix, because we'll be retiring Exchange soon.
+	if strings.HasSuffix(reader.Context.Config.ActiveConfig, "integration.json") {
+		reader.Context.MessageLog.Info("Using bucket names from config file for integration tests.")
+		bucketNames = reader.Context.Config.ReceivingBuckets
+	} else {
+		reader.Context.MessageLog.Info("Using bucket names from Pharos institution records.")
+		for _, inst := range reader.Institutions {
+			bucketNames = append(bucketNames, inst.ReceivingBucket)
+		}
+	}
+	for _, bucketName := range bucketNames {
 		reader.processBucket(bucketName)
 	}
 }
