@@ -5,13 +5,6 @@ import (
 	"crypto/md5"
 	"crypto/sha256"
 	"fmt"
-	"github.com/APTrust/exchange/constants"
-	"github.com/APTrust/exchange/models"
-	"github.com/APTrust/exchange/util"
-	"github.com/APTrust/exchange/util/fileutil"
-	"github.com/APTrust/exchange/util/storage"
-	"github.com/op/go-logging"
-	"github.com/satori/go.uuid"
 	"hash"
 	"io"
 	"os"
@@ -20,6 +13,14 @@ import (
 	"runtime"
 	"strings"
 	"time"
+
+	"github.com/APTrust/exchange/constants"
+	"github.com/APTrust/exchange/models"
+	"github.com/APTrust/exchange/util"
+	"github.com/APTrust/exchange/util/fileutil"
+	"github.com/APTrust/exchange/util/storage"
+	"github.com/google/uuid"
+	"github.com/op/go-logging"
 )
 
 const VALIDATION_DB_SUFFIX = ".valdb"
@@ -275,7 +276,7 @@ func (validator *Validator) addFile(readIterator fileutil.ReadIterator) error {
 	// but is not relevant to anyone doing validation outside
 	// the APTrust organization.
 	if validator.PreserveExtendedAttributes {
-		_uuid := uuid.NewV4()
+		_uuid := uuid.New()
 		gf.Size = fileSummary.Size
 		gf.FileModified = fileSummary.ModTime
 		gf.IngestLocalPath = fileSummary.AbsPath // will be empty if bag is tarred

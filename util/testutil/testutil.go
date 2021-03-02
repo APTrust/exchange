@@ -3,19 +3,20 @@ package testutil
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/APTrust/exchange/constants"
-	"github.com/APTrust/exchange/context"
-	"github.com/APTrust/exchange/models"
-	"github.com/APTrust/exchange/util/fileutil"
-	"github.com/icrowley/fake"
-	"github.com/nsqio/go-nsq"
-	"github.com/satori/go.uuid"
 	"math"
 	"math/rand"
 	"os"
 	"path/filepath"
 	"strings"
 	"time"
+
+	"github.com/APTrust/exchange/constants"
+	"github.com/APTrust/exchange/context"
+	"github.com/APTrust/exchange/models"
+	"github.com/APTrust/exchange/util/fileutil"
+	"github.com/google/uuid"
+	"github.com/icrowley/fake"
+	"github.com/nsqio/go-nsq"
 )
 
 // Bloomsday
@@ -103,7 +104,7 @@ func MakeGenericFile(eventCount, checksumCount int, objIdentifier string) *model
 	inst := objIdParts[0]
 	objName := objIdParts[1]
 	fileIdentifier := RandomFileIdentifier(objIdentifier)
-	_uuid := uuid.NewV4()
+	_uuid := uuid.New()
 	checksums := make([]*models.Checksum, checksumCount)
 	events := make([]*models.PremisEvent, eventCount)
 	for i := 0; i < checksumCount; i++ {
@@ -186,7 +187,7 @@ func MakeIntellectualObject(fileCount, eventCount, checksumCount, tagCount int) 
 		PremisEvents:        events,
 		CreatedAt:           RandomDateTime(),
 		UpdatedAt:           RandomDateTime(),
-		DPNUUID:             uuid.NewV4().String(),
+		DPNUUID:             uuid.New().String(),
 		ETag:                fake.Word(),
 		FileSize:            int64(rand.Intn(50000) + 1),
 		FileCount:           rand.Intn(100) + 1,
@@ -207,7 +208,7 @@ func MakeIntellectualObject(fileCount, eventCount, checksumCount, tagCount int) 
 }
 
 func MakePremisEvent() *models.PremisEvent {
-	_uuid := uuid.NewV4()
+	_uuid := uuid.New()
 	return &models.PremisEvent{
 		Id:                 rand.Intn(50000) + 1,
 		Identifier:         _uuid.String(),
@@ -279,7 +280,7 @@ func MakeStoredFile() *models.StoredFile {
 	now := time.Now().UTC()
 	return &models.StoredFile{
 		Id:           int64(rand.Intn(100000)),
-		Key:          uuid.NewV4().String(),
+		Key:          uuid.New().String(),
 		Bucket:       fake.Word(),
 		Size:         int64(rand.Intn(900000000)),
 		ContentType:  fake.Word(),

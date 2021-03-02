@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"github.com/APTrust/exchange/constants"
 	"github.com/APTrust/exchange/util"
-	"github.com/satori/go.uuid"
+	"github.com/google/uuid"
 	"strings"
 	"time"
 )
@@ -92,7 +92,7 @@ func (premisEvent *PremisEvent) EventTypeValid() bool {
 }
 
 func NewEventObjectCreation() *PremisEvent {
-	eventId := uuid.NewV4()
+	eventId := uuid.New()
 	return &PremisEvent{
 		Identifier:         eventId.String(),
 		EventType:          constants.EventCreation,
@@ -110,7 +110,7 @@ func NewEventObjectIngest(numberOfFilesIngested int) (*PremisEvent, error) {
 	if numberOfFilesIngested <= 0 {
 		return nil, fmt.Errorf("Param numberOfFilesIngested must be greater than zero.")
 	}
-	eventId := uuid.NewV4()
+	eventId := uuid.New()
 	return &PremisEvent{
 		Identifier:         eventId.String(),
 		EventType:          constants.EventIngestion,
@@ -128,7 +128,7 @@ func NewEventObjectIdentifierAssignment(objectIdentifier string) (*PremisEvent, 
 	if objectIdentifier == "" {
 		return nil, fmt.Errorf("Param objectIdentifier cannot be empty.")
 	}
-	eventId := uuid.NewV4()
+	eventId := uuid.New()
 	return &PremisEvent{
 		Identifier:         eventId.String(),
 		EventType:          constants.EventIdentifierAssignment,
@@ -146,7 +146,7 @@ func NewEventObjectRights(accessSetting string) (*PremisEvent, error) {
 	if !util.StringListContains(constants.AccessRights, strings.ToLower(accessSetting)) {
 		return nil, fmt.Errorf("Param accessSetting '%s' is not valid.", accessSetting)
 	}
-	eventId := uuid.NewV4()
+	eventId := uuid.New()
 	return &PremisEvent{
 		Identifier:         eventId.String(),
 		EventType:          constants.EventAccessAssignment,
@@ -173,7 +173,7 @@ func NewEventGenericFileIngest(storedAt time.Time, md5Digest, _uuid string) (*Pr
 		return nil, fmt.Errorf("Param _uuid with value '%s' doesn't look like a uuid.",
 			_uuid)
 	}
-	eventId := uuid.NewV4()
+	eventId := uuid.New()
 	return &PremisEvent{
 		Identifier:         eventId.String(),
 		EventType:          constants.EventIngestion,
@@ -200,7 +200,7 @@ func NewEventGenericFileFixityCheck(checksumVerifiedAt time.Time, fixityAlg, dig
 		return nil, fmt.Errorf("Param digest must have 32 or 64 characters. '%s' doesn't.",
 			digest)
 	}
-	eventId := uuid.NewV4()
+	eventId := uuid.New()
 	object := "Go language crypto/md5"
 	agent := "http://golang.org/pkg/crypto/md5/"
 	outcomeInformation := "Fixity matches"
@@ -238,7 +238,7 @@ func NewEventGenericFileDigestCalculation(checksumGeneratedAt time.Time, fixityA
 		return nil, fmt.Errorf("Param digest must have 32 or 64 characters. '%s' doesn't.",
 			digest)
 	}
-	eventId := uuid.NewV4()
+	eventId := uuid.New()
 	object := "Go language crypto/md5"
 	agent := "http://golang.org/pkg/crypto/md5/"
 	if fixityAlg == constants.AlgSha256 {
@@ -272,13 +272,13 @@ func NewEventGenericFileIdentifierAssignment(identifierGeneratedAt time.Time, id
 	if identifier == "" {
 		return nil, fmt.Errorf("Param identifier cannot be empty.")
 	}
-	eventId := uuid.NewV4()
+	eventId := uuid.New()
 	object := "APTrust exchange/ingest processor"
 	agent := "https://github.com/APTrust/exchange"
 	detail := "Assigned new institution.bag/path identifier"
 	if identifierType == constants.IdTypeStorageURL {
 		object = "Go uuid library + AWS Go SDK S3 library"
-		agent = "http://github.com/satori/go.uuid"
+		agent = "http://github.com/google/uuid"
 		// Don't change these words. They're used in IsUrlAssignment below.
 		detail = fmt.Sprintf("Assigned new storage URL identifier, and item was stored at %s",
 			identifierGeneratedAt.Format(time.RFC3339))
@@ -305,7 +305,7 @@ func NewEventGenericFileReplication(replicatedAt time.Time, replicationUrl strin
 		return nil, fmt.Errorf("Param identifier cannot be empty.")
 	}
 
-	eventId := uuid.NewV4()
+	eventId := uuid.New()
 	return &PremisEvent{
 		Identifier:         eventId.String(),
 		EventType:          constants.EventReplication,
@@ -314,14 +314,14 @@ func NewEventGenericFileReplication(replicatedAt time.Time, replicationUrl strin
 		Outcome:            string(constants.StatusSuccess),
 		OutcomeDetail:      replicationUrl,
 		Object:             "Go uuid library + AWS Go SDK S3 library",
-		Agent:              "http://github.com/satori/go.uuid",
+		Agent:              "http://github.com/google/uuid",
 		OutcomeInformation: "Replicated to secondary storage",
 	}, nil
 }
 
 // NewEventFileDeletion creates a new file deletion event.
 func NewEventFileDeletion(fileUUID, requestedBy, instApprover, aptrustApprover string, timestamp time.Time) *PremisEvent {
-	eventId := uuid.NewV4()
+	eventId := uuid.New()
 	outcomeDetail := requestedBy // fmt.Sprintf("File %s deleted from preservation storage.", fileUUID)
 	outcomeInfo := fmt.Sprintf("File deleted at the request of %s.", requestedBy)
 	if instApprover != "" {

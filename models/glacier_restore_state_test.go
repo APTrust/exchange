@@ -6,7 +6,7 @@ import (
 	"github.com/APTrust/exchange/models"
 	"github.com/APTrust/exchange/util"
 	"github.com/APTrust/exchange/util/testutil"
-	"github.com/satori/go.uuid"
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"math/rand"
@@ -24,7 +24,7 @@ func getGlacierRestoreRequest(gfIdentifier string, accepted bool) *models.Glacie
 	return &models.GlacierRestoreRequest{
 		GenericFileIdentifier:   gfIdentifier,
 		GlacierBucket:           "bucket",
-		GlacierKey:              uuid.NewV4().String(),
+		GlacierKey:              uuid.New().String(),
 		RequestAccepted:         accepted,
 		RequestedAt:             requestedAt,
 		EstimatedDeletionFromS3: requestedAt.Add(time.Duration(5*24) * time.Hour),

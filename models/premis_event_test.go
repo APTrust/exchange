@@ -2,15 +2,16 @@ package models_test
 
 import (
 	"fmt"
-	"github.com/APTrust/exchange/constants"
-	"github.com/APTrust/exchange/models"
-	"github.com/APTrust/exchange/util/testutil"
-	"github.com/satori/go.uuid"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/APTrust/exchange/constants"
+	"github.com/APTrust/exchange/models"
+	"github.com/APTrust/exchange/util/testutil"
+	"github.com/google/uuid"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 const digest = "12345678901234567890123456789012"
@@ -301,7 +302,7 @@ func TestNewEventGenericFileIdentifierAssignment(t *testing.T) {
 	assert.Equal(t, "Success", event.Outcome)
 	assert.Equal(t, "https://example.com/000-000-999", event.OutcomeDetail)
 	assert.Equal(t, "Go uuid library + AWS Go SDK S3 library", event.Object)
-	assert.Equal(t, "http://github.com/satori/go.uuid", event.Agent)
+	assert.Equal(t, "http://github.com/google/uuid", event.Agent)
 	assert.Equal(t, "Assigned url identifier", event.OutcomeInformation)
 
 }
@@ -331,12 +332,12 @@ func TestNewEventGenericFileReplication(t *testing.T) {
 	assert.Equal(t, "Success", event.Outcome)
 	assert.Equal(t, "https://example.com/123456789", event.OutcomeDetail)
 	assert.Equal(t, "Go uuid library + AWS Go SDK S3 library", event.Object)
-	assert.Equal(t, "http://github.com/satori/go.uuid", event.Agent)
+	assert.Equal(t, "http://github.com/google/uuid", event.Agent)
 	assert.Equal(t, "Replicated to secondary storage", event.OutcomeInformation)
 }
 
 func TestNewEventFileDeletion(t *testing.T) {
-	fileUUID := uuid.NewV4().String()
+	fileUUID := uuid.New().String()
 	utcNow := time.Now().UTC()
 	event := models.NewEventFileDeletion(fileUUID, "user@example.com", "admin@example.com", "", utcNow)
 	assert.Len(t, event.Identifier, 36)
