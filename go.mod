@@ -9,7 +9,7 @@ require (
 	github.com/crowdmob/goamz v0.0.0-20150128194925-3a06871fe9fc
 	github.com/go-ini/ini v1.48.0 // indirect
 	github.com/golang/snappy v0.0.2-0.20190904063534-ff6b7dc882cf // indirect
-	github.com/google/uuid v1.2.0
+	github.com/google/uuid v1.3.0
 	github.com/icrowley/fake v0.0.0-20180203215853-4178557ae428
 	github.com/kr/pretty v0.1.1-0.20190720101428-71e7e4993750 // indirect
 	github.com/minio/minio-go v6.0.14+incompatible
