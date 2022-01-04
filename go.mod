@@ -13,7 +13,7 @@ require (
 	github.com/icrowley/fake v0.0.0-20180203215853-4178557ae428
 	github.com/kr/pretty v0.1.1-0.20190720101428-71e7e4993750 // indirect
 	github.com/minio/minio-go v6.0.14+incompatible
-	github.com/nsqio/go-nsq v1.0.8
+	github.com/nsqio/go-nsq v1.1.0
 	github.com/nsqio/nsq v1.2.0
 	github.com/op/go-logging v0.0.0-20160211212156-b2cb9fa56473
 	github.com/rakyll/magicmime v0.1.1-0.20180111184428-8698a7074799

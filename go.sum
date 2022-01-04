@@ -56,8 +56,8 @@ github.com/ngdinhtoan/glide-cleanup v0.2.0/go.mod h1:UQzsmiDOb8YV3nOsCxK/c9zPpCZ
 github.com/nsqio/go-diskqueue v0.0.0-20180306152900-74cfbc9de839 h1:nZ0z0haJRzCXAWH9Jl+BUnfD2n2MCSbGRSl8VBX+zR0=
 github.com/nsqio/go-diskqueue v0.0.0-20180306152900-74cfbc9de839/go.mod h1:AYinRDfdKMmVKTPI8wOcLgjcw2pTS3jo8fib1VxOzsE=
 github.com/nsqio/go-nsq v1.0.7/go.mod h1:XP5zaUs3pqf+Q71EqUJs3HYfBIqfK6G83WQMdNN+Ito=
-github.com/nsqio/go-nsq v1.0.8 h1:3L2F8tNLlwXXlp2slDUrUWSBn2O3nMh8R1/KEDFTHPk=
-github.com/nsqio/go-nsq v1.0.8/go.mod h1:vKq36oyeVXgsS5Q8YEO7WghqidAVXQlcFxzQbQTuDEY=
+github.com/nsqio/go-nsq v1.1.0 h1:PQg+xxiUjA7V+TLdXw7nVrJ5Jbl3sN86EhGCQj4+FYE=
+github.com/nsqio/go-nsq v1.1.0/go.mod h1:vKq36oyeVXgsS5Q8YEO7WghqidAVXQlcFxzQbQTuDEY=
 github.com/nsqio/nsq v1.2.0 h1:inbQG4LAl8PpMMZAUi0FhLvjQ+57wOfPzWczVFdng7Q=
 github.com/nsqio/nsq v1.2.0/go.mod h1:hrx5K/ukZ1mebJBTNpv6og98a7I5zR279qjYNPdgdL0=
 github.com/op/go-logging v0.0.0-20160211212156-b2cb9fa56473 h1:J1QZwDXgZ4dJD2s19iqR9+U00OWM2kDzbf1O/fmvCWg=
