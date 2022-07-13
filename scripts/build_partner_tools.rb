@@ -40,7 +40,7 @@ def run()
     cmd = "go build -a #{tags} #{ldflags} -o #{build_dir}/#{app_name} #{app_name}.go"
     puts "cd #{source_dir}"
     puts cmd
-    pid = Process.spawn(cmd, chdir: source_dir)
+    pid = Process.spawn(ENV, cmd, chdir: source_dir)
     Process.wait pid
     if $?.exitstatus != 0
       raise "Build failed for #{app_name}"

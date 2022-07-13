@@ -20,6 +20,10 @@ Build for the Mac on Mac, for Linux on Linux and for Windows on Windows.
 To ensure the build gets stamped with the proper Git commit hash, make
 your build *after* committing changes.
 
+To build for M1 Macs, use:
+
+`GOARCH=arm64 ./scripts/build_partner_tools.rb --version 2.2-beta --platform mac`
+
 ## Distribution
 
 The build tool places the binaries in the parter_apps/bin directory, which
